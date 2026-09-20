@@ -103,6 +103,12 @@ class SamuraiAI:
                     ai_fighter.trigger_throw_bomb(opponent.wx, opponent.wy, projectiles)
                     return
 
+            # Purple Ninja (Murasaki): arremessar Kusarigama para puxar a média distância
+            if hasattr(ai_fighter, "trigger_kusarigama_pull") and projectiles is not None:
+                if 2.0 <= dist <= 5.0 and random.random() < 0.55:
+                    ai_fighter.trigger_kusarigama_pull(opponent.wx, opponent.wy, projectiles)
+                    return
+
             if dist > 3.2:
                 # Aproximar
                 dx = opponent.wx - ai_fighter.wx
@@ -145,3 +151,5 @@ class SamuraiAI:
         elif hasattr(fighter, "trigger_throw_bomb"):
             if projectiles is not None:
                 fighter.trigger_throw_bomb(target.wx, target.wy, projectiles)
+        elif hasattr(fighter, "trigger_kama_strike"):
+            fighter.trigger_kama_strike(target.wx, target.wy)

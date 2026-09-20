@@ -3,6 +3,7 @@ Entidade KunaiProjectile: projétil arremessado pelo Ninja Amarelo.
 Mortal à distância; se errar, crava no solo e pode ser recuperada.
 """
 import math
+import random
 import pygame
 from src.config import (
     COLOR_STEEL, COLOR_BLACK, COLOR_GOLD, COLOR_WHITE, COLOR_YELLOW_AURA
@@ -274,5 +275,143 @@ class SmokeCloudEntity:
             pygame.draw.circle(smoke_surf, (185, 195, 200, alpha // 2), (px, py), r - 4)
 
         surface.blit(smoke_surf, (sx - 90, sy - 70))
+
+
+class KusarigamaChainEntity:
+    """
+    Corrente da Kusarigama com peso de ferro na ponta.
+    Lançada a média distância; ao atingir o alvo, engata e puxa o oponente rapidamente para perto.
+    O oponente puxado permanece livre para agir ou desferir golpes durante/após a puxada.
+    """
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner):
+        self.owner = owner
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.dir_x = dir_x
+        self.dir_y = dir_y
+
+        self.speed = 17.0
+        self.pull_speed = 11.0
+        self.max_reach = 5.2
+        self.reach_traveled = 0.0
+
+        self.state = "FLYING"  # "FLYING", "HOOKED_PULLING", "RETRACTING"
+        self.target = None
+        self.hook_timer = 0.0
+        self.max_pull_time = 0.65
+        self.is_active = True
+
+    def update(self, dt: float, game_map, particles: list = None) -> bool:
+        if not self.is_active:
+            return False
+
+        if self.state == "FLYING":
+            step = self.speed * dt
+            self.wx += self.dir_x * step
+            self.wy += self.dir_y * step
+            self.reach_traveled += step
+
+            # Corte de bambus na trajetória da corrente pesada
+            for b in game_map.bamboos:
+                if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.45:
+                    slice_part = b.cut((self.dir_x, self.dir_y))
+                    if slice_part and particles is not None:
+                        particles.append(slice_part)
+
+            # Colisão com rochas ou poço retrai a corrente
+            hit_obs = False
+            for r in game_map.rocks:
+                if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
+                    hit_obs = True
+                    break
+            if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
+                hit_obs = True
+
+            if hit_obs or self.reach_traveled >= self.max_reach:
+                self.state = "RETRACTING"
+                if particles is not None:
+                    for _ in range(4):
+                        particles.append(SparkParticle(self.wx, self.wy, 0.3))
+
+        elif self.state == "HOOKED_PULLING":
+            if not self.target or not self.target.is_alive:
+                self.state = "RETRACTING"
+                return True
+
+            # Ponta da corrente permanece fixada no adversário
+            self.wx = self.target.wx
+            self.wy = self.target.wy
+
+            # Puxar o oponente em linha reta em direção ao Ninja Roxo
+            dx = self.owner.wx - self.target.wx
+            dy = self.owner.wy - self.target.wy
+            dist = math.hypot(dx, dy)
+
+            self.hook_timer += dt
+
+            # Se já puxou bem para perto (dist <= 0.95) ou o tempo limite estourou, solta
+            if dist <= 0.95 or self.hook_timer >= self.max_pull_time:
+                self.state = "RETRACTING"
+            else:
+                step_pull = min(dist, self.pull_speed * dt)
+                nx, ny = dx / dist, dy / dist
+                self.target.wx += nx * step_pull
+                self.target.wy += ny * step_pull
+
+                if particles is not None and random.random() < 0.3:
+                    particles.append(SparkParticle(self.target.wx, self.target.wy, 0.2))
+
+        elif self.state == "RETRACTING":
+            dx = self.owner.wx - self.wx
+            dy = self.owner.wy - self.wy
+            dist = math.hypot(dx, dy)
+
+            if dist < 0.6:
+                self.is_active = False
+                return False
+
+            step_retract = min(dist, (self.speed * 1.6) * dt)
+            self.wx += (dx / dist) * step_retract
+            self.wy += (dy / dist) * step_retract
+
+        return True
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+
+        # Ponto de origem: mãos/cintura do dono
+        ox = self.owner.wx
+        oy = self.owner.wy
+        oz = 0.4
+        sx1, sy1 = camera.apply(ox, oy, oz)
+        sx2, sy2 = camera.apply(self.wx, self.wy, self.wz)
+
+        # Desenhar elos de corrente entre a origem e a ponta
+        chain_dx = sx2 - sx1
+        chain_dy = sy2 - sy1
+        chain_dist = math.hypot(chain_dx, chain_dy)
+
+        if chain_dist > 5:
+            num_links = max(2, int(chain_dist / 11))
+            for i in range(num_links + 1):
+                t = i / float(num_links)
+                lx = int(sx1 + chain_dx * t)
+                ly = int(sy1 + chain_dy * t)
+                # Efeito ondulatório tênue na corrente
+                wobble = int(math.sin(t * math.pi * 3 + self.reach_traveled * 4) * 2)
+                link_color = (185, 190, 200) if i % 2 == 0 else (130, 135, 145)
+                pygame.draw.circle(surface, link_color, (lx, ly + wobble), 2)
+
+        # Ponta: Peso de ferro esférico multifacetado (Fundo)
+        pygame.draw.circle(surface, (20, 20, 25), (int(sx2), int(sy2)), 6)
+        pygame.draw.circle(surface, (140, 145, 160), (int(sx2 - 1), int(sy2 - 1)), 4)
+        pygame.draw.circle(surface, (210, 215, 230), (int(sx2 - 2), int(sy2 - 2)), 2)
+
+        # Brilho místico se estiver puxando o oponente
+        if self.state == "HOOKED_PULLING":
+            pygame.draw.circle(surface, (195, 120, 255), (int(sx2), int(sy2)), 8, 1)
+
 
 

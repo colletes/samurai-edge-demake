@@ -2,7 +2,7 @@
 
 Um jogo de duelo isométrico 2.5D em pixel art tático, inspirado nos clássicos jogos de luta de espadas e demakes retrô.
 
-![Samurai Edge Demake](char_select_5p_preview.png)
+![Samurai Edge Demake](char_select_6p_preview.png)
 
 ---
 
@@ -12,7 +12,7 @@ Em um cenário isométrico ricamente detalhado com floresta de bambus cortáveis
 
 O jogo suporta **Duelo 1P contra IA inteligente adaptativa** e **Modo 2 Jogadores Local** no mesmo teclado.
 
-![Gameplay Preview](gray_ninja_gameplay_preview.png)
+![Gameplay Preview](murasaki_gameplay_preview.png)
 
 ---
 
@@ -47,6 +47,12 @@ O jogo suporta **Duelo 1P contra IA inteligente adaptativa** e **Modo 2 Jogadore
 - **Velocidade**: Ágil (4/5)
 - **Ataque Primário [E / U]**: Bomba explosiva com delay de pavio (1.5s) que causa detonação mortal em área (AOE) e corta todos os bambus circundantes.
 - **Secundário [R / I]**: Bomba de fumaça instantânea que camufla o ninja com recuo evasivo e reduz a velocidade do oponente em 65% (Slow), permitindo escapar de combos.
+
+### 6. Murasaki (Ninja Roxo)
+- **Estilo**: Kusarigama & Foice de Precedência
+- **Velocidade**: Ágil (4/5)
+- **Ataque Primário [E / U]**: Corte curto de foice (*Kama Strike*) com **Precedência Absoluta** sobre qualquer outro ataque (cancela e vence contra qualquer golpe adversário simultâneo sem entrar em Clash).
+- **Secundário [R / I]**: Puxão de corrente (*Kusarigama Hook*) que agarra o oponente a média distância e o puxa rapidamente para perto, enquanto o alvo permanece livre para agir ou contra-atacar.
 
 ---
 

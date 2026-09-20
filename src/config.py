@@ -66,6 +66,12 @@ COLOR_GRAY_DARK = (46, 52, 58)        # Cinza escuro para máscara/colete
 COLOR_SMOKE = (165, 175, 185)         # Fumaça densa
 COLOR_BOMB_FUSE = (255, 140, 20)      # Pavio aceso faiscante
 
+# Cores do Ninja Roxo (Murasaki & Kusarigama)
+COLOR_PURPLE_NINJA = (150, 75, 205)   # Púrpura profundo shinobi
+COLOR_PURPLE_DARK = (55, 25, 80)      # Roxo escuro para colete e máscara
+COLOR_PURPLE_AURA = (195, 120, 255)   # Brilho místico da foice
+COLOR_CHAIN = (175, 180, 192)         # Corrente metálica da Kusarigama
+
 COLOR_STEEL = (220, 230, 242)         # Aço afiado da katana/kunai/shuriken
 COLOR_GOLD = (235, 195, 50)           # Guarda (Tsuba) e detalhes
 COLOR_WHITE = (255, 255, 255)
@@ -78,6 +84,7 @@ CHAR_MUSASHI = "musashi"
 CHAR_NINJA = "ninja"
 CHAR_AMERICAN = "american"
 CHAR_GRAY = "gray"
+CHAR_PURPLE = "purple"
 
 # Mapeamento de Teclas Padrão
 # Jogador 1 (Samurai Vermelho - Kenshin)

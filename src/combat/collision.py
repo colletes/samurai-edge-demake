@@ -9,7 +9,8 @@ from src.effects.particles import (
 )
 from src.entities.samurai import STATE_PARRY
 from src.entities.projectile import (
-    KunaiProjectile, ShurikenProjectile, TimedBombEntity, SmokeCloudEntity
+    KunaiProjectile, ShurikenProjectile, TimedBombEntity, SmokeCloudEntity,
+    KusarigamaChainEntity
 )
 from src.entities.doberman import STATE_DOG_CHARGE
 
@@ -113,6 +114,25 @@ class CombatSystem:
                 if target.is_alive and proj.is_inside(target.wx, target.wy):
                     target.apply_slow(2.5)  # Reduz velocidade em 65%!
 
+            # Se for CORRENTE DE KUSARIGAMA (KusarigamaChainEntity)
+            elif isinstance(proj, KusarigamaChainEntity) and proj.is_active:
+                target = p2 if proj.owner == p1 else p1
+                if proj.state == "FLYING" and target.is_alive:
+                    if world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.55 + target.radius):
+                        if target.state == STATE_PARRY:
+                            for _ in range(10):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
+                            banners.append(FloatingBanner("PARRY CHAIN!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
+                            camera.add_shake(5.0)
+                            proj.state = "RETRACTING"
+                        else:
+                            proj.state = "HOOKED_PULLING"
+                            proj.target = target
+                            camera.add_shake(6.0)
+                            banners.append(FloatingBanner("KUSARIGAMA HOOK!", target.wx, target.wy, wz=1.8, color=(195, 120, 255)))
+                            for _ in range(12):
+                                particles.append(SparkParticle(target.wx, target.wy, 0.4))
+
             if proj.is_active:
                 active_projectiles.append(proj)
 
@@ -190,21 +210,49 @@ class CombatSystem:
             return winner
 
         # -------------------------------------------------------------
-        # 4. CHOQUE SIMULTÂNEO DE ATAQUES (CLASH)
+        # 4. CHOQUE SIMULTÂNEO DE ATAQUES (CLASH & PRECEDÊNCIA ABSOLUTA)
         # -------------------------------------------------------------
         if p1.hitbox_active and p2.hitbox_active:
             hx1, hy1 = p1.hitbox_center
             hx2, hy2 = p2.hitbox_center
             if world_distance(hx1, hy1, hx2, hy2) < (p1.hitbox_radius + p2.hitbox_radius) * 0.7:
-                mid_x = (hx1 + hx2) / 2
-                mid_y = (hy1 + hy2) / 2
-                for _ in range(15):
-                    particles.append(SparkParticle(mid_x, mid_y, 0.6))
-                banners.append(FloatingBanner("CLASH!", mid_x, mid_y, wz=1.6, color=(255, 230, 80)))
-                camera.add_shake(7.0)
-                p1.stun(0.4)
-                p2.stun(0.4)
-                return None
+                p1_priority = getattr(p1, "is_priority_strike", False)
+                p2_priority = getattr(p2, "is_priority_strike", False)
+
+                # PRECEDÊNCIA ABSOLUTA: Foice curta do Ninja Roxo ganha de qualquer outro ataque!
+                if p1_priority and not p2_priority:
+                    # P1 tem precedência absoluta! Cancela ataque do P2 e desfere golpe fatal
+                    p2.hitbox_active = False
+                    hit, dead = p2.take_hit(p1.slash_dir, damage=2)
+                    camera.add_shake(16.0)
+                    banners.append(FloatingBanner("PRECEDÊNCIA ABSOLUTA! (FOICE)", p2.wx, p2.wy, wz=1.8, color=(220, 140, 255)))
+                    for _ in range(25):
+                        particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
+                    self.hitstop_timer = 0.14
+                    return "P1_WINS"
+
+                elif p2_priority and not p1_priority:
+                    # P2 tem precedência absoluta! Cancela ataque do P1 e desfere golpe fatal
+                    p1.hitbox_active = False
+                    hit, dead = p1.take_hit(p2.slash_dir, damage=2)
+                    camera.add_shake(16.0)
+                    banners.append(FloatingBanner("PRECEDÊNCIA ABSOLUTA! (FOICE)", p1.wx, p1.wy, wz=1.8, color=(220, 140, 255)))
+                    for _ in range(25):
+                        particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
+                    self.hitstop_timer = 0.14
+                    return "P2_WINS"
+
+                else:
+                    # Ambos têm mesma prioridade -> Choque de Lâminas (CLASH!)
+                    mid_x = (hx1 + hx2) / 2
+                    mid_y = (hy1 + hy2) / 2
+                    for _ in range(15):
+                        particles.append(SparkParticle(mid_x, mid_y, 0.6))
+                    banners.append(FloatingBanner("CLASH!", mid_x, mid_y, wz=1.6, color=(255, 230, 80)))
+                    camera.add_shake(7.0)
+                    p1.stun(0.4)
+                    p2.stun(0.4)
+                    return None
 
         # -------------------------------------------------------------
         # 5. ATAQUE MELEE: P1 CONTRA P2

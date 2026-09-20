@@ -10,7 +10,8 @@ from src.config import (
     COLOR_AMERICAN_NINJA, COLOR_AMERICAN_VEST, COLOR_AMERICAN_BANDANA,
     COLOR_DOBERMAN_BLACK, COLOR_DOBERMAN_RUST, COLOR_DOBERMAN_COLLAR,
     COLOR_GRAY_NINJA, COLOR_GRAY_DARK, COLOR_SMOKE, COLOR_BOMB_FUSE,
-    CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY
+    COLOR_PURPLE_NINJA, COLOR_PURPLE_DARK, COLOR_PURPLE_AURA, COLOR_CHAIN,
+    CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE
 )
 
 class CharacterSelectScreen:
@@ -82,6 +83,18 @@ class CharacterSelectScreen:
                 "special_desc": "Fumaça (Slow + Fuga)",
                 "keys_p1": "[E] Bomba | [R] Fumaça",
                 "keys_p2": "[U] Bomba | [I] Fumaça",
+            },
+            {
+                "id": CHAR_PURPLE,
+                "name": "MURASAKI",
+                "title": "Ninja Roxo",
+                "style": "Kusarigama & Foice",
+                "color": COLOR_PURPLE_AURA,
+                "speed_stars": "[ 4 / 5 ] Ágil",
+                "damage_desc": "Foice de Precedência",
+                "special_desc": "Puxão de Corrente",
+                "keys_p1": "[E] Foice | [R] Puxar",
+                "keys_p2": "[U] Foice | [I] Puxar",
             }
         ]
 
@@ -144,11 +157,12 @@ class CharacterSelectScreen:
         mode_surf = font_small.render(mode_text, True, COLOR_GOLD)
         surface.blit(mode_surf, (ai_btn.centerx - mode_surf.get_width() // 2, ai_btn.y + 7))
 
-        # 3. Cinco Cards de Personagens
-        card_w = 224
+        # 3. Seis Cards de Personagens
+        card_w = 186
         card_h = 445
-        spacing = 15
-        start_x = (SCREEN_WIDTH - (card_w * 5 + spacing * 4)) // 2
+        spacing = 14
+        num_cards = len(self.characters)
+        start_x = (SCREEN_WIDTH - (card_w * num_cards + spacing * (num_cards - 1))) // 2
         start_y = 130
 
         self.card_rects.clear()
@@ -271,6 +285,23 @@ class CharacterSelectScreen:
                 # Bomba ao lado
                 pygame.draw.circle(surface, (20, 20, 25), (portrait_center_x + 18, portrait_center_y + 12), 6)
                 pygame.draw.circle(surface, COLOR_BOMB_FUSE, (portrait_center_x + 20, portrait_center_y + 5), 2)
+
+            elif char_info["id"] == CHAR_PURPLE:
+                # Ninja Murasaki (Kusarigama)
+                pygame.draw.circle(surface, COLOR_PURPLE_NINJA, (portrait_center_x, portrait_center_y - 12), 15)
+                pygame.draw.rect(surface, COLOR_PURPLE_DARK, (portrait_center_x - 9, portrait_center_y - 7, 18, 11), border_radius=3)
+                pygame.draw.polygon(surface, COLOR_PURPLE_NINJA, [
+                    (portrait_center_x - 15, portrait_center_y + 24),
+                    (portrait_center_x + 15, portrait_center_y + 24),
+                    (portrait_center_x + 10, portrait_center_y),
+                    (portrait_center_x - 10, portrait_center_y)
+                ])
+                # Foice curta
+                pygame.draw.line(surface, (80, 50, 30), (portrait_center_x + 8, portrait_center_y + 12), (portrait_center_x + 18, portrait_center_y), 3)
+                pygame.draw.line(surface, COLOR_STEEL, (portrait_center_x + 18, portrait_center_y), (portrait_center_x + 22, portrait_center_y - 8), 3)
+                # Corrente pendurada com peso de ferro
+                pygame.draw.line(surface, COLOR_CHAIN, (portrait_center_x - 10, portrait_center_y + 10), (portrait_center_x - 14, portrait_center_y + 18), 2)
+                pygame.draw.circle(surface, (25, 25, 30), (portrait_center_x - 14, portrait_center_y + 20), 4)
 
             # Atributos
             stats_y = rect.y + 215

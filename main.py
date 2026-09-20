@@ -8,8 +8,8 @@ from src.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, TITLE,
     COLOR_BG, COLOR_WHITE, COLOR_GOLD, COLOR_RED_AURA, COLOR_BLUE_AURA, COLOR_YELLOW_AURA,
     KEY_RESTART, KEY_TOGGLE_AI, KEY_SETTINGS, DEFAULT_CONTROLS,
-    CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY,
-    COLOR_GRAY_NINJA
+    CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
+    COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA
 )
 from src.isometric.iso_math import input_to_world_direction
 from src.isometric.camera import Camera
@@ -19,6 +19,7 @@ from src.entities.blue_samurai import BlueSamurai
 from src.entities.yellow_ninja import YellowNinja
 from src.entities.american_ninja import AmericanNinja
 from src.entities.gray_ninja import GrayNinja
+from src.entities.purple_ninja import PurpleNinja
 from src.entities.ai_controller import SamuraiAI
 from src.combat.collision import CombatSystem
 from src.effects.particles import AmbientLeafParticle
@@ -41,6 +42,8 @@ def create_fighter(char_id: str, wx: float, wy: float):
         return AmericanNinja(wx, wy)
     elif char_id == CHAR_GRAY:
         return GrayNinja(wx, wy)
+    elif char_id == CHAR_PURPLE:
+        return PurpleNinja(wx, wy)
     return RedSamurai(wx, wy)
 
 def get_fighter_color(fighter):
@@ -54,6 +57,8 @@ def get_fighter_color(fighter):
         return (255, 130, 45)
     elif isinstance(fighter, GrayNinja):
         return COLOR_GRAY_NINJA
+    elif isinstance(fighter, PurpleNinja):
+        return COLOR_PURPLE_NINJA
     return COLOR_WHITE
 
 def get_fighter_action_labels(fighter):
@@ -68,6 +73,8 @@ def get_fighter_action_labels(fighter):
         return "Shuriken", "Cão Dash"
     elif isinstance(fighter, GrayNinja):
         return "Bomba Relógio", "Bomba Fumaça"
+    elif isinstance(fighter, PurpleNinja):
+        return "Corte Foice", "Kusarigama Puxão"
     return "Ataque", "Especial"
 
 def run_game():
@@ -195,6 +202,8 @@ def run_game():
                             p1.trigger_shuriken(p2.wx, p2.wy, projectiles)
                         elif isinstance(p1, GrayNinja):
                             p1.trigger_throw_bomb(p2.wx, p2.wy, projectiles)
+                        elif isinstance(p1, PurpleNinja):
+                            p1.trigger_kama_strike(p2.wx, p2.wy)
 
                     elif event.key == controls["P1_DASH"]:
                         if isinstance(p1, RedSamurai):
@@ -212,6 +221,8 @@ def run_game():
                             p1.trigger_dog_attack(p2.wx, p2.wy)
                         elif isinstance(p1, GrayNinja):
                             p1.trigger_smoke_bomb(p2.wx, p2.wy, projectiles)
+                        elif isinstance(p1, PurpleNinja):
+                            p1.trigger_kusarigama_pull(p2.wx, p2.wy, projectiles)
 
                 # Comandos Jogador 2 (se não for IA)
                 if not vs_ai_mode and p2.is_alive and round_winner is None:
@@ -226,6 +237,8 @@ def run_game():
                             p2.trigger_shuriken(p1.wx, p1.wy, projectiles)
                         elif isinstance(p2, GrayNinja):
                             p2.trigger_throw_bomb(p1.wx, p1.wy, projectiles)
+                        elif isinstance(p2, PurpleNinja):
+                            p2.trigger_kama_strike(p1.wx, p1.wy)
 
                     elif event.key == controls["P2_PARRY"]:
                         if isinstance(p2, RedSamurai):
@@ -243,6 +256,8 @@ def run_game():
                             p2.trigger_dog_attack(p1.wx, p1.wy)
                         elif isinstance(p2, GrayNinja):
                             p2.trigger_smoke_bomb(p1.wx, p1.wy, projectiles)
+                        elif isinstance(p2, PurpleNinja):
+                            p2.trigger_kusarigama_pull(p1.wx, p1.wy, projectiles)
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
