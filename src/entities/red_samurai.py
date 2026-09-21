@@ -45,19 +45,43 @@ class RedSamurai(Samurai):
         self.hitbox_center = (self.wx + self.facing_x * 0.8, self.wy + self.facing_y * 0.8)
 
     def trigger_dash(self, dir_x: float, dir_y: float):
-        """Esquiva rápida de reposicionamento."""
+        """Passo Relâmpago Shukuchi (縮地): Deslocamento veloz com pós-imagens."""
         if not self.can_move():
             return
         if dir_x == 0 and dir_y == 0:
             dir_x, dir_y = -self.facing_x, -self.facing_y # Recuo para trás
+        else:
+            mag = math.hypot(dir_x, dir_y)
+            if mag > 0.001:
+                dir_x /= mag
+                dir_y /= mag
 
-        self.state = STATE_DASH
-        self.state_timer = 0.22
+        self.state = "SHUKUCHI"
+        self.state_timer = 0.15
+        self.shukuchi_speed = 28.0
         self.facing_x = dir_x
         self.facing_y = dir_y
+        self.zanzou_spawn_timer = 0.0
+        # Registrar primeira pós-imagem fantasma (zanzou)
+        if not hasattr(self, "zanzou_ghosts"):
+            self.zanzou_ghosts = []
+        self.zanzou_ghosts.append({
+            "wx": self.wx, "wy": self.wy,
+            "facing_x": self.facing_x, "facing_y": self.facing_y,
+            "alpha": 200, "duration": 0.28
+        })
 
-    def update(self, dt: float, game_map):
+    def update(self, dt: float, game_map, particles: list = None):
         """Atualiza os estados e timings do Samurai Vermelho."""
+        if not hasattr(self, "zanzou_ghosts"):
+            self.zanzou_ghosts = []
+
+        # Atualizar e desvanecer pós-imagens zanzou
+        for g in self.zanzou_ghosts:
+            g["duration"] -= dt
+            g["alpha"] = max(0, int(200 * (g["duration"] / 0.28)))
+        self.zanzou_ghosts = [g for g in self.zanzou_ghosts if g["duration"] > 0]
+
         if not self.is_alive:
             return
 
@@ -106,14 +130,50 @@ class RedSamurai(Samurai):
                 self.state = STATE_IDLE
                 self.slash_trail_points.clear()
 
-        elif self.state == STATE_DASH:
+        elif self.state == "SHUKUCHI":
             self.state_timer -= dt
-            new_wx = self.wx + self.facing_x * 8.5 * dt
-            new_wy = self.wy + self.facing_y * 8.5 * dt
-            self.wx = max(1.0, min(game_map.cols - 1.0, new_wx))
-            self.wy = max(1.0, min(game_map.rows - 1.0, new_wy))
+            step = self.shukuchi_speed * dt
+            new_wx = self.wx + self.facing_x * step
+            new_wy = self.wy + self.facing_y * step
+
+            # Cortar bambus no caminho com a velocidade extrema do passo relâmpago
+            for b in game_map.bamboos:
+                if not b.is_cut:
+                    b_dist = math.hypot(new_wx - b.wx, new_wy - b.wy)
+                    if b_dist < 0.55:
+                        part = b.cut((self.facing_x, self.facing_y))
+                        if part and particles is not None:
+                            particles.append(part)
+
+            # Parar em obstáculos sólidos
+            hit_col = False
+            for r in game_map.rocks:
+                c, _, _ = r.check_collision(new_wx, new_wy, self.radius)
+                if c: hit_col = True; break
+            if game_map.well:
+                c, _, _ = game_map.well.check_collision(new_wx, new_wy, self.radius)
+                if c: hit_col = True
+
+            if not hit_col:
+                self.wx = max(1.0, min(game_map.cols - 1.0, new_wx))
+                self.wy = max(1.0, min(game_map.rows - 1.0, new_wy))
+
+            # Gerar pós-imagens sucessivas (Zanzou)
+            self.zanzou_spawn_timer += dt
+            if self.zanzou_spawn_timer >= 0.035:
+                self.zanzou_spawn_timer = 0.0
+                self.zanzou_ghosts.append({
+                    "wx": self.wx, "wy": self.wy,
+                    "facing_x": self.facing_x, "facing_y": self.facing_y,
+                    "alpha": 180, "duration": 0.28
+                })
+
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
+
+        elif self.state == STATE_DASH:
+            self.state = "SHUKUCHI"
+            self.state_timer = 0.15
 
         elif self.state == STATE_STUNNED:
             self.state_timer -= dt
@@ -121,13 +181,26 @@ class RedSamurai(Samurai):
                 self.state = STATE_IDLE
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza o Samurai Vermelho no autêntico estilo Voxel 3D Isométrico."""
+        """Renderiza o Samurai Vermelho e suas pós-imagens Shukuchi no estilo Voxel 3D."""
         # Renderizar rastro brilhante do corte do Iai no chão
         if len(self.slash_trail_points) >= 2:
             pts = [camera.apply(px, py, 0.05) for px, py in self.slash_trail_points]
             if len(pts) >= 2:
                 pygame.draw.lines(surface, COLOR_RED_AURA, False, pts, 4)
                 pygame.draw.lines(surface, COLOR_WHITE, False, pts, 2)
+
+        # Renderizar pós-imagens zanzou translúcidas deixadas pelo Shukuchi
+        if hasattr(self, "zanzou_ghosts"):
+            for g in self.zanzou_ghosts:
+                if g["alpha"] > 20:
+                    render_voxel_humanoid(
+                        surface, camera,
+                        g["wx"], g["wy"], self.wz,
+                        g["facing_x"], g["facing_y"],
+                        "IDLE", 0.0, True,
+                        char_type="kenshin",
+                        alpha=g["alpha"]
+                    )
 
         # Indicador de stealth (camuflagem no bambuzal)
         if self.is_hidden:

@@ -84,6 +84,27 @@ COLOR_SAITOU_HAORI_DARK = (75, 140, 170)  # Sombra do haori
 COLOR_SAITOU_HAKAMA = (32, 35, 40)        # Hakama escuro tradicional
 COLOR_SAITOU_AURA = (140, 220, 255)       # Brilho cortante da estocada Gatotsu
 
+# Cores do Rifleman (Tanegashima / Atirador de Mosquete)
+COLOR_RIFLE_COAT = (135, 90, 58)          # Colete de laca marrom escuro
+COLOR_RIFLE_HAT = (48, 44, 40)            # Jingasa (chapéu de ferro)
+COLOR_RIFLE_AURA = (220, 165, 95)         # Clarão de pólvora dourado
+COLOR_RIFLE_WOOD = (100, 65, 40)          # Coronha de madeira de cerejeira
+
+# Cores do Kabuki (Dançarino do Sopro Venenoso)
+COLOR_KABUKI_WHITE = (245, 245, 250)      # Maquiagem Kumadori branca
+COLOR_KABUKI_RED = (225, 40, 40)          # Linhas Kumadori carmim
+COLOR_KABUKI_HAIR = (240, 115, 30)        # Juba leonina Renjishi laranja
+COLOR_KABUKI_KIMONO = (180, 45, 90)       # Quimono teatral multicor
+COLOR_KABUKI_AURA = (165, 60, 225)        # Brilho do veneno púrpura-esmeralda
+COLOR_POISON_GREEN = (80, 220, 120)       # Névoa ácida venenosa
+
+# Cores do Arqueiro Kyudo (Arqueiro de Hakama)
+COLOR_ARCHER_HAKAMA = (35, 70, 50)        # Hakama verde-musgo tradicional
+COLOR_ARCHER_KIMONO = (225, 230, 225)     # Gi branco marfim tradicional
+COLOR_ARCHER_AURA = (100, 190, 130)       # Aura zen do tiro com arco
+COLOR_BOW_WOOD = (145, 95, 55)            # Madeira curvada do arco Yumi
+COLOR_ROPE = (210, 195, 160)              # Corda de cânhamo trançada
+
 # Identificadores de Personagens
 CHAR_KENSHIN = "kenshin"
 CHAR_MUSASHI = "musashi"
@@ -92,6 +113,9 @@ CHAR_AMERICAN = "american"
 CHAR_GRAY = "gray"
 CHAR_PURPLE = "purple"
 CHAR_SAITOU = "saitou"
+CHAR_RIFLE = "rifleman"
+CHAR_KABUKI = "kabuki"
+CHAR_ARCHER = "archer"
 
 # Mapeamento de Teclas Padrão
 # Jogador 1 (Samurai Vermelho - Kenshin)

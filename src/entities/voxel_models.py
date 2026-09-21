@@ -20,7 +20,10 @@ from src.config import (
     COLOR_DOBERMAN_BLACK, COLOR_DOBERMAN_RUST, COLOR_DOBERMAN_COLLAR,
     COLOR_GRAY_NINJA, COLOR_GRAY_DARK, COLOR_SMOKE, COLOR_BOMB_FUSE,
     COLOR_PURPLE_NINJA, COLOR_PURPLE_DARK, COLOR_PURPLE_AURA, COLOR_CHAIN,
-    COLOR_SAITOU_LIGHT_BLUE, COLOR_SAITOU_HAORI_DARK, COLOR_SAITOU_HAKAMA, COLOR_SAITOU_AURA
+    COLOR_SAITOU_LIGHT_BLUE, COLOR_SAITOU_HAORI_DARK, COLOR_SAITOU_HAKAMA, COLOR_SAITOU_AURA,
+    COLOR_RIFLE_COAT, COLOR_RIFLE_HAT, COLOR_RIFLE_AURA, COLOR_RIFLE_WOOD,
+    COLOR_KABUKI_WHITE, COLOR_KABUKI_RED, COLOR_KABUKI_HAIR, COLOR_KABUKI_KIMONO, COLOR_KABUKI_AURA, COLOR_POISON_GREEN,
+    COLOR_ARCHER_HAKAMA, COLOR_ARCHER_KIMONO, COLOR_ARCHER_AURA, COLOR_BOW_WOOD, COLOR_ROPE
 )
 
 SKIN_COLOR = (245, 210, 180)
@@ -46,7 +49,7 @@ def render_voxel_humanoid(
     if extra_props is None:
         extra_props = {}
 
-    # Normalizar nomes de char_type para aceitar sufixos _ninja
+    # Normalizar nomes de char_type para aceitar sufixos
     char_type = char_type.lower()
     if "yellow" in char_type: char_type = "ninja"
     elif "american" in char_type: char_type = "american"
@@ -55,6 +58,9 @@ def render_voxel_humanoid(
     elif "kenshin" in char_type or "red" in char_type: char_type = "kenshin"
     elif "musashi" in char_type or "blue" in char_type: char_type = "musashi"
     elif "saitou" in char_type or "saito" in char_type: char_type = "saitou"
+    elif "rifle" in char_type or "teppo" in char_type: char_type = "rifleman"
+    elif "kabuki" in char_type: char_type = "kabuki"
+    elif "archer" in char_type or "kyudo" in char_type: char_type = "archer"
 
     # Estado de Morte (corpo tombado em blocos no solo)
     if not is_alive or state == "DEAD":
@@ -173,6 +179,25 @@ def render_voxel_humanoid(
         # Franja frontal pontuda característica
         draw_voxel_box(surface, camera, base_x - 0.08 + fx * 0.10, base_y - 0.08 + fy * 0.10, head_z + 0.12, 0.16, 0.16, 0.10, (25, 25, 30), outline=False, alpha=alpha)
 
+    elif char_type == "rifleman":
+        # Jingasa (chapéu cônico de infantaria) e coque
+        draw_voxel_box(surface, camera, base_x - 0.22, base_y - 0.20, head_z + 0.22, 0.44, 0.40, 0.08, COLOR_RIFLE_HAT, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.12, base_y - 0.10, head_z + 0.30, 0.24, 0.20, 0.06, COLOR_RIFLE_HAT, outline=True, alpha=alpha)
+
+    elif char_type == "kabuki":
+        # Maquiagem Kumadori branca no rosto e juba leonina Renjishi alaranjada
+        draw_voxel_box(surface, camera, base_x - 0.15 + fx * 0.05, base_y - 0.13 + fy * 0.05, head_z, 0.30, 0.26, 0.22, COLOR_KABUKI_WHITE, outline=True, alpha=alpha)
+        # Linhas dramáticas vermelhas Kumadori
+        draw_voxel_box(surface, camera, base_x - 0.10 + fx * 0.08, base_y - 0.08 + fy * 0.08, head_z + 0.06, 0.20, 0.16, 0.08, COLOR_KABUKI_RED, outline=False, alpha=alpha)
+        # Juba leonina volumosa Renjishi
+        draw_voxel_box(surface, camera, base_x - 0.20, base_y - 0.18, head_z + 0.16, 0.40, 0.36, 0.20, COLOR_KABUKI_HAIR, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.22 - fx * 0.10, base_y - 0.20 - fy * 0.10, head_z + 0.02, 0.44, 0.40, 0.22, COLOR_KABUKI_HAIR, outline=True, alpha=alpha)
+
+    elif char_type == "archer":
+        # Cabelo samurai preso com faixa branca Hachimaki
+        draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.14, head_z + 0.20, 0.32, 0.28, 0.12, (26, 26, 30), outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.17, base_y - 0.15, head_z + 0.15, 0.34, 0.30, 0.06, COLOR_WHITE, outline=True, alpha=alpha)
+
     # -------------------------------------------------------------
     # 4. BRAÇOS E ARMAS EM VOXEL
     # -------------------------------------------------------------
@@ -288,6 +313,44 @@ def render_voxel_humanoid(
             draw_voxel_box(surface, camera, scab_x - 0.05, scab_y - 0.05, torso_z + 0.05, 0.10, 0.10, 0.65, (30, 32, 38), outline=True, alpha=alpha)
             draw_voxel_box(surface, camera, scab_x - fx * 0.16 - 0.04, scab_y - fy * 0.16 - 0.04, torso_z + 0.10, 0.08, 0.08, 0.20, COLOR_WHITE, outline=True, alpha=alpha)
 
+    elif char_type == "rifleman":
+        # Arcabuz Tanegashima longo
+        rx = arm_r_x + fx * 0.25
+        ry = arm_r_y + fy * 0.25
+        rz = torso_z + 0.10
+        # Coronha de madeira de cerejeira
+        draw_voxel_box(surface, camera, rx - fx * 0.22 - 0.05, ry - fy * 0.22 - 0.05, rz - 0.04, 0.10, 0.10, 0.12, COLOR_RIFLE_WOOD, outline=True, alpha=alpha)
+        # Cano longo de ferro
+        draw_voxel_box(surface, camera, rx - 0.04, ry - 0.04, rz, 0.08, 0.08, 0.12, COLOR_STEEL, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, rx + fx * 0.25 - 0.03, ry + fy * 0.25 - 0.03, rz + 0.02, 0.06, 0.06, 0.10, COLOR_STEEL, outline=False, alpha=alpha)
+        # Mecha acesa fumegante
+        draw_voxel_box(surface, camera, rx - fx * 0.08 - 0.02, ry - fy * 0.08 - 0.02, rz + 0.08, 0.05, 0.05, 0.05, (255, 130, 30), outline=False, alpha=alpha)
+
+    elif char_type == "kabuki":
+        # Leque teatral Sensu dourado e carmim na mão direita
+        kx = arm_r_x + fx * 0.18
+        ky = arm_r_y + fy * 0.18
+        draw_voxel_box(surface, camera, kx - 0.08, ky - 0.08, arm_z - 0.05, 0.16, 0.16, 0.22, COLOR_KABUKI_RED, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, kx - 0.06, ky - 0.06, arm_z + 0.08, 0.12, 0.12, 0.10, COLOR_GOLD, outline=False, alpha=alpha)
+        if extra_props.get("has_poisoned", False):
+            # Efeito de veneno esmeralda sutil nas mãos
+            draw_voxel_box(surface, camera, kx - 0.05, ky - 0.05, arm_z + 0.15, 0.10, 0.10, 0.10, COLOR_POISON_GREEN, outline=False, alpha=150)
+
+    elif char_type == "archer":
+        # Grande Arco Yumi japonês na mão esquerda
+        bx = arm_l_x + fx * 0.15
+        by = arm_l_y + fy * 0.15
+        bz = torso_z + 0.05
+        # Arco curvado longo de madeira
+        draw_voxel_box(surface, camera, bx - 0.04, by - 0.04, bz - 0.40, 0.08, 0.08, 0.95, COLOR_BOW_WOOD, outline=True, alpha=alpha)
+        # Corda do arco (linha branca)
+        sx_top, sy_top = camera.apply(bx, by, bz + 0.55)
+        sx_bot, sy_bot = camera.apply(bx, by, bz - 0.40)
+        pygame.draw.line(surface, COLOR_WHITE, (sx_top, sy_top), (sx_bot, sy_bot), 1)
+        # Flecha pronta se estiver retesando o arco
+        if extra_props.get("is_drawing", False):
+            draw_voxel_box(surface, camera, bx + fx * 0.20 - 0.03, by + fy * 0.20 - 0.03, bz + 0.10, 0.06, 0.06, 0.55, (180, 140, 80), outline=False, alpha=alpha)
+
 
 def render_voxel_doberman(
     surface: pygame.Surface,
@@ -387,6 +450,9 @@ def _get_char_torso_color(char_type: str):
     if char_type == "gray": return COLOR_GRAY_NINJA
     if char_type == "purple": return COLOR_PURPLE_NINJA
     if char_type == "saitou": return COLOR_SAITOU_LIGHT_BLUE
+    if char_type == "rifleman": return COLOR_RIFLE_COAT
+    if char_type == "kabuki": return COLOR_KABUKI_KIMONO
+    if char_type == "archer": return COLOR_ARCHER_KIMONO
     return (200, 200, 200)
 
 def _get_char_pants_color(char_type: str):
@@ -397,6 +463,9 @@ def _get_char_pants_color(char_type: str):
     if char_type == "gray": return COLOR_GRAY_DARK
     if char_type == "purple": return COLOR_PURPLE_DARK
     if char_type == "saitou": return COLOR_SAITOU_HAKAMA
+    if char_type == "rifleman": return (45, 42, 38)
+    if char_type == "kabuki": return (45, 20, 32)
+    if char_type == "archer": return COLOR_ARCHER_HAKAMA
     return (150, 150, 150)
 
 def _get_char_hair_color(char_type: str):
@@ -407,6 +476,9 @@ def _get_char_hair_color(char_type: str):
     if char_type == "gray": return COLOR_GRAY_NINJA
     if char_type == "purple": return COLOR_PURPLE_NINJA
     if char_type == "saitou": return (25, 25, 30)
+    if char_type == "rifleman": return (30, 28, 25)
+    if char_type == "kabuki": return COLOR_KABUKI_HAIR
+    if char_type == "archer": return (25, 25, 30)
     return (50, 50, 50)
 
 def _get_char_belt_color(char_type: str):
@@ -417,6 +489,9 @@ def _get_char_belt_color(char_type: str):
     if char_type == "gray": return (35, 38, 42)
     if char_type == "purple": return (35, 18, 50)
     if char_type == "saitou": return COLOR_WHITE
+    if char_type == "rifleman": return (65, 45, 30)
+    if char_type == "kabuki": return COLOR_GOLD
+    if char_type == "archer": return (60, 55, 48)
     return (20, 20, 20)
 
 def _get_char_mask_color(char_type: str):

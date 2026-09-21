@@ -12,7 +12,8 @@ from src.config import (
     COLOR_GRAY_NINJA, COLOR_GRAY_DARK, COLOR_SMOKE, COLOR_BOMB_FUSE,
     COLOR_PURPLE_NINJA, COLOR_PURPLE_DARK, COLOR_PURPLE_AURA, COLOR_CHAIN,
     COLOR_SAITOU_LIGHT_BLUE, CHAR_SAITOU,
-    CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE
+    CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
+    CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER
 )
 
 from src.isometric.iso_math import world_to_iso
@@ -28,8 +29,8 @@ class PreviewCamera:
 
 class CharacterSelectScreen:
     def __init__(self):
-        self.p1_choice_idx = 0  # 0: Kenshin, 1: Musashi, 2: Ninja, 3: American Ninja, 4: Ninja Cinza, 5: Murasaki, 6: Saitou
-        self.p2_choice_idx = 4  # Padrão: Ninja Cinza
+        self.p1_choice_idx = 0  # Kenshin
+        self.p2_choice_idx = 1  # Musashi
         self.p1_ready = False
         self.p2_ready = False
         self.vs_ai = True
@@ -40,13 +41,13 @@ class CharacterSelectScreen:
                 "id": CHAR_KENSHIN,
                 "name": "KENSHIN",
                 "title": "Retalhador Carmim",
-                "style": "Iai-jutsu (Saque)",
+                "style": "Iai & Shukuchi",
                 "color": COLOR_RED_AURA,
                 "speed_stars": "[ 5 / 5 ] MAX",
                 "damage_desc": "1-Hit Kill Instantâneo",
-                "special_desc": "Dash Evasivo | Cooldown",
-                "keys_p1": "[E] Iai | [R] Dash",
-                "keys_p2": "[U] Iai | [I] Dash",
+                "special_desc": "Shukuchi (Relâmpago)",
+                "keys_p1": "[E] Iai | [R] Shukuchi",
+                "keys_p2": "[U] Iai | [I] Shukuchi",
             },
             {
                 "id": CHAR_MUSASHI,
@@ -91,7 +92,7 @@ class CharacterSelectScreen:
                 "style": "Pólvora & Fumaça",
                 "color": (165, 180, 190),
                 "speed_stars": "[ 4 / 5 ] Ágil",
-                "damage_desc": "Bomba c/ Delay (AOE)",
+                "damage_desc": "Bomba em Arco (Auto-Dano)",
                 "special_desc": "Fumaça (Slow + Fuga)",
                 "keys_p1": "[E] Bomba | [R] Fumaça",
                 "keys_p2": "[U] Bomba | [I] Fumaça",
@@ -100,7 +101,7 @@ class CharacterSelectScreen:
                 "id": CHAR_PURPLE,
                 "name": "MURASAKI",
                 "title": "Ninja Roxo",
-                "style": "Kusarigama & Foice",
+                "style": "Kusarigama",
                 "color": COLOR_PURPLE_AURA,
                 "speed_stars": "[ 4 / 5 ] Ágil",
                 "damage_desc": "Foice de Precedência",
@@ -111,61 +112,124 @@ class CharacterSelectScreen:
             {
                 "id": CHAR_SAITOU,
                 "name": "SAITOU",
-                "title": "Líder Shinsengumi",
-                "style": "Gatotsu (Estocada)",
+                "title": "Shinsengumi",
+                "style": "Gatotsu",
                 "color": COLOR_SAITOU_LIGHT_BLUE,
                 "speed_stars": "[ 5 / 5 ] Impulso",
                 "damage_desc": "1-Hit Kill Acelerado",
                 "special_desc": "Zeroshiki (Curto)",
                 "keys_p1": "[E] Gatotsu | [R] Curto",
                 "keys_p2": "[U] Gatotsu | [I] Curto",
+            },
+            {
+                "id": CHAR_RIFLE,
+                "name": "TEPPO",
+                "title": "Marksman",
+                "style": "Arcabuz Feudal",
+                "color": (225, 170, 100),
+                "speed_stars": "[ 3 / 5 ] Cadência",
+                "damage_desc": "Tiro Fatal (1-Hit Kill)",
+                "special_desc": "Carregar Pólvora (Hold)",
+                "keys_p1": "[E] Tiro | [R] Carregar",
+                "keys_p2": "[U] Tiro | [I] Carregar",
+            },
+            {
+                "id": CHAR_KABUKI,
+                "name": "KABUKI",
+                "title": "Dançarino",
+                "style": "Sopro Tóxico",
+                "color": (240, 115, 30),
+                "speed_stars": "[ 4 / 5 ] Ágil",
+                "damage_desc": "Veneno (10s Morte)",
+                "special_desc": "Pirueta Evasiva",
+                "keys_p1": "[E] Sopro | [R] Pirueta",
+                "keys_p2": "[U] Sopro | [I] Pirueta",
+            },
+            {
+                "id": CHAR_ARCHER,
+                "name": "KYUDO",
+                "title": "Arqueiro Zen",
+                "style": "Arco Yumi",
+                "color": (110, 195, 135),
+                "speed_stars": "[ 4 / 5 ] Ágil",
+                "damage_desc": "Flecha Letal (Windup)",
+                "special_desc": "Flecha de Corda (Fuga)",
+                "keys_p1": "[E] Yumi | [R] Corda",
+                "keys_p2": "[U] Yumi | [I] Corda",
             }
         ]
 
         self.card_rects: list[pygame.Rect] = []
 
     def handle_event(self, event: pygame.event.Event) -> bool:
+        num_c = len(self.characters)
+        cols = 5
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_TAB:
                 self.vs_ai = not self.vs_ai
 
-            # Navegação P1 em grade 2D (Linha 1: 0..3, Linha 2: 4..6)
-            if event.key in (pygame.K_a, pygame.K_LEFT):
-                self.p1_choice_idx = (self.p1_choice_idx - 1) % len(self.characters)
-            elif event.key in (pygame.K_d, pygame.K_RIGHT):
-                self.p1_choice_idx = (self.p1_choice_idx + 1) % len(self.characters)
-            elif event.key in (pygame.K_w, pygame.K_UP):
-                if self.p1_choice_idx >= 4:
-                    self.p1_choice_idx -= 4
-                else:
-                    self.p1_choice_idx = min(len(self.characters) - 1, self.p1_choice_idx + 4)
-            elif event.key in (pygame.K_s, pygame.K_DOWN):
-                if self.p1_choice_idx < 4:
-                    self.p1_choice_idx = min(len(self.characters) - 1, self.p1_choice_idx + 4)
-                else:
-                    self.p1_choice_idx -= 4
-            elif event.key in (pygame.K_e, pygame.K_SPACE, pygame.K_RETURN):
-                return True
+            if self.vs_ai:
+                # No modo 1P vs IA: tanto WASD quanto SETAS movem o Jogador 1
+                if event.key in (pygame.K_a, pygame.K_LEFT):
+                    self.p1_choice_idx = (self.p1_choice_idx - 1) % num_c
+                elif event.key in (pygame.K_d, pygame.K_RIGHT):
+                    self.p1_choice_idx = (self.p1_choice_idx + 1) % num_c
+                elif event.key in (pygame.K_w, pygame.K_UP):
+                    self.p1_choice_idx = (self.p1_choice_idx - cols) % num_c
+                elif event.key in (pygame.K_s, pygame.K_DOWN):
+                    self.p1_choice_idx = (self.p1_choice_idx + cols) % num_c
+                elif event.key in (pygame.K_e, pygame.K_SPACE, pygame.K_RETURN):
+                    return True
+            else:
+                # No modo 2 JOGADORES:
+                # P1 controla exclusivamente com WASD (confirma com E / Espaço)
+                if event.key == pygame.K_a:
+                    self.p1_choice_idx = (self.p1_choice_idx - 1) % num_c
+                elif event.key == pygame.K_d:
+                    self.p1_choice_idx = (self.p1_choice_idx + 1) % num_c
+                elif event.key == pygame.K_w:
+                    self.p1_choice_idx = (self.p1_choice_idx - cols) % num_c
+                elif event.key == pygame.K_s:
+                    self.p1_choice_idx = (self.p1_choice_idx + cols) % num_c
+                elif event.key in (pygame.K_e, pygame.K_SPACE):
+                    self.p1_ready = True
 
-            if not self.vs_ai:
-                if event.key == pygame.K_q:
-                    self.p2_choice_idx = (self.p2_choice_idx - 1) % len(self.characters)
-                elif event.key == pygame.K_p:
-                    self.p2_choice_idx = (self.p2_choice_idx + 1) % len(self.characters)
+                # P2 controla exclusivamente com SETAS (confirma com U / Enter)
+                if event.key == pygame.K_LEFT:
+                    self.p2_choice_idx = (self.p2_choice_idx - 1) % num_c
+                elif event.key == pygame.K_RIGHT:
+                    self.p2_choice_idx = (self.p2_choice_idx + 1) % num_c
+                elif event.key == pygame.K_UP:
+                    self.p2_choice_idx = (self.p2_choice_idx - cols) % num_c
+                elif event.key == pygame.K_DOWN:
+                    self.p2_choice_idx = (self.p2_choice_idx + cols) % num_c
+                elif event.key in (pygame.K_u, pygame.K_RETURN):
+                    return True
 
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    return True
+
+        elif event.type == pygame.MOUSEBUTTONDOWN:
             mx, my = event.pos
-            for idx, rect in enumerate(self.card_rects):
-                if rect.collidepoint(mx, my):
-                    self.p1_choice_idx = idx
+            # Botão esquerdo: P1
+            if event.button == 1:
+                for idx, rect in enumerate(self.card_rects):
+                    if rect.collidepoint(mx, my):
+                        self.p1_choice_idx = idx
 
-            start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 64, 320, 44)
-            if start_btn.collidepoint(mx, my):
-                return True
+                start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 64, 320, 44)
+                if start_btn.collidepoint(mx, my):
+                    return True
 
-            ai_btn = pygame.Rect(SCREEN_WIDTH // 2 - 140, 66, 280, 32)
-            if ai_btn.collidepoint(mx, my):
-                self.vs_ai = not self.vs_ai
+                ai_btn = pygame.Rect(SCREEN_WIDTH // 2 - 140, 66, 280, 32)
+                if ai_btn.collidepoint(mx, my):
+                    self.vs_ai = not self.vs_ai
+            # Botão direito: P2
+            elif event.button == 3:
+                for idx, rect in enumerate(self.card_rects):
+                    if rect.collidepoint(mx, my):
+                        self.p2_choice_idx = idx
 
         return False
 
@@ -188,32 +252,27 @@ class CharacterSelectScreen:
         ai_btn = pygame.Rect(SCREEN_WIDTH // 2 - 140, 66, 280, 32)
         pygame.draw.rect(surface, (30, 40, 35), ai_btn, border_radius=6)
         pygame.draw.rect(surface, COLOR_GOLD, ai_btn, 1, border_radius=6)
-        mode_text = "[1P vs IA] (TAB para 2P)" if self.vs_ai else "[2 JOGADORES] (TAB para IA)"
+        mode_text = "[1P vs IA] (TAB para 2P)" if self.vs_ai else "[2 JOGADORES] (P1: WASD | P2: Setas)"
         mode_surf = font_small.render(mode_text, True, COLOR_GOLD)
         surface.blit(mode_surf, (ai_btn.centerx - mode_surf.get_width() // 2, ai_btn.y + 7))
 
-        # 3. Grade em Duas Linhas (4 cards na Linha 1, 3 cards centralizados na Linha 2)
-        card_w = 280
+        # 3. Grade Simétrica 5x2 (5 cards na Linha 1, 5 cards na Linha 2)
+        card_w = 230
         card_h = 236
-        spacing_x = 24
+        spacing_x = 16
         spacing_y = 14
 
-        total_w_row1 = 4 * card_w + 3 * spacing_x
-        start_x_row1 = (SCREEN_WIDTH - total_w_row1) // 2
-
-        total_w_row2 = 3 * card_w + 2 * spacing_x
-        start_x_row2 = (SCREEN_WIDTH - total_w_row2) // 2
-
+        total_w = 5 * card_w + 4 * spacing_x
+        start_x = (SCREEN_WIDTH - total_w) // 2
         start_y = 114
+
         self.card_rects.clear()
 
         for idx, char_info in enumerate(self.characters):
-            if idx < 4:
-                cx = start_x_row1 + idx * (card_w + spacing_x)
-                cy = start_y
-            else:
-                cx = start_x_row2 + (idx - 4) * (card_w + spacing_x)
-                cy = start_y + card_h + spacing_y
+            row = idx // 5
+            col = idx % 5
+            cx = start_x + col * (card_w + spacing_x)
+            cy = start_y + row * (card_h + spacing_y)
 
             rect = pygame.Rect(cx, cy, card_w, card_h)
             self.card_rects.append(rect)
@@ -242,28 +301,28 @@ class CharacterSelectScreen:
             pygame.draw.rect(surface, border_color, rect, border_width, border_radius=12)
 
             # Badges P1 / P2 no topo direito
-            badge_y = rect.y + 12
+            badge_y = rect.y + 10
             if is_p1 and is_p2:
                 p1_badge = font_small.render("[ P1 ]", True, COLOR_RED_AURA)
                 p2_label = "[ IA ]" if self.vs_ai else "[ P2 ]"
                 p2_badge = font_small.render(p2_label, True, COLOR_BLUE_AURA)
-                surface.blit(p2_badge, (rect.right - p2_badge.get_width() - 14, badge_y))
-                surface.blit(p1_badge, (rect.right - p2_badge.get_width() - p1_badge.get_width() - 20, badge_y))
+                surface.blit(p2_badge, (rect.right - p2_badge.get_width() - 10, badge_y))
+                surface.blit(p1_badge, (rect.right - p2_badge.get_width() - p1_badge.get_width() - 16, badge_y))
             elif is_p1:
                 p1_badge = font_small.render("[ P1 ]", True, COLOR_RED_AURA)
-                surface.blit(p1_badge, (rect.right - p1_badge.get_width() - 14, badge_y))
+                surface.blit(p1_badge, (rect.right - p1_badge.get_width() - 10, badge_y))
             elif is_p2:
                 p2_label = "[ IA ]" if self.vs_ai else "[ P2 ]"
                 p2_badge = font_small.render(p2_label, True, COLOR_BLUE_AURA)
-                surface.blit(p2_badge, (rect.right - p2_badge.get_width() - 14, badge_y))
+                surface.blit(p2_badge, (rect.right - p2_badge.get_width() - 10, badge_y))
 
             # Retrato Voxel 3D do Personagem (no topo esquerdo da carta)
-            portrait_cx = rect.x + 46
-            portrait_cy = rect.y + 48
-            pygame.draw.circle(surface, (18, 22, 20), (portrait_cx, portrait_cy), 34)
-            pygame.draw.circle(surface, char_info["color"], (portrait_cx, portrait_cy), 34, 2)
+            portrait_cx = rect.x + 38
+            portrait_cy = rect.y + 42
+            pygame.draw.circle(surface, (18, 22, 20), (portrait_cx, portrait_cy), 28)
+            pygame.draw.circle(surface, char_info["color"], (portrait_cx, portrait_cy), 28, 2)
 
-            cam = PreviewCamera(portrait_cx, portrait_cy + 20)
+            cam = PreviewCamera(portrait_cx, portrait_cy + 18)
             char_id = char_info["id"]
 
             if char_id == CHAR_KENSHIN:
@@ -273,48 +332,54 @@ class CharacterSelectScreen:
             elif char_id == CHAR_NINJA:
                 render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="yellow_ninja", extra_props={"has_kunai": True})
             elif char_id == CHAR_AMERICAN:
-                render_voxel_humanoid(surface, cam, -0.22, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="american_ninja")
-                render_voxel_doberman(surface, cam, 0.38, -0.10, 0, 1.0, 0.0, "IDLE", 0.0, True)
+                render_voxel_humanoid(surface, cam, -0.20, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="american_ninja")
+                render_voxel_doberman(surface, cam, 0.35, -0.10, 0, 1.0, 0.0, "IDLE", 0.0, True)
             elif char_id == CHAR_GRAY:
                 render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="gray_ninja")
             elif char_id == CHAR_PURPLE:
                 render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="purple_ninja")
             elif char_id == CHAR_SAITOU:
                 render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="saitou")
+            elif char_id == CHAR_RIFLE:
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="rifleman")
+            elif char_id == CHAR_KABUKI:
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="kabuki")
+            elif char_id == CHAR_ARCHER:
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="archer")
 
             # Nome, Título e Estilo ao lado do Retrato
-            text_left = rect.x + 90
+            text_left = rect.x + 74
             name_surf = font_mid.render(char_info["name"], True, char_info["color"])
-            surface.blit(name_surf, (text_left, rect.y + 12))
+            surface.blit(name_surf, (text_left, rect.y + 10))
 
             title_s = font_small.render(char_info["title"], True, (185, 195, 190))
-            surface.blit(title_s, (text_left, rect.y + 36))
+            surface.blit(title_s, (text_left, rect.y + 32))
 
             style_s = font_small.render(f"Estilo: {char_info['style']}", True, COLOR_WHITE)
-            surface.blit(style_s, (text_left, rect.y + 58))
+            surface.blit(style_s, (text_left, rect.y + 52))
 
             # Linha divisória sutil
-            sep_y = rect.y + 88
-            pygame.draw.line(surface, (45, 55, 50), (rect.x + 14, sep_y), (rect.right - 14, sep_y), 1)
+            sep_y = rect.y + 78
+            pygame.draw.line(surface, (45, 55, 50), (rect.x + 12, sep_y), (rect.right - 12, sep_y), 1)
 
             # Atributos e Estatísticas em largura total (sem truncar texto)
-            stats_y = rect.y + 96
+            stats_y = rect.y + 86
             line_vel = font_small.render(f"Vel: {char_info['speed_stars']}", True, COLOR_GOLD)
             line_dmg = font_small.render(f"Dano: {char_info['damage_desc']}", True, (240, 200, 200))
             line_esp = font_small.render(f"Esp: {char_info['special_desc']}", True, (200, 225, 240))
 
-            surface.blit(line_vel, (rect.x + 14, stats_y))
-            surface.blit(line_dmg, (rect.x + 14, stats_y + 22))
-            surface.blit(line_esp, (rect.x + 14, stats_y + 44))
+            surface.blit(line_vel, (rect.x + 12, stats_y))
+            surface.blit(line_dmg, (rect.x + 12, stats_y + 20))
+            surface.blit(line_esp, (rect.x + 12, stats_y + 40))
 
             # Caixa de Comandos / Teclas
-            ctrl_box = pygame.Rect(rect.x + 10, rect.bottom - 52, card_w - 20, 44)
+            ctrl_box = pygame.Rect(rect.x + 8, rect.bottom - 48, card_w - 16, 40)
             pygame.draw.rect(surface, (18, 24, 21), ctrl_box, border_radius=6)
             pygame.draw.rect(surface, (40, 50, 45), ctrl_box, 1, border_radius=6)
             p1_key_label = font_small.render(f"P1: {char_info['keys_p1']}", True, (255, 200, 180))
             p2_key_label = font_small.render(f"P2: {char_info['keys_p2']}", True, (180, 220, 255))
-            surface.blit(p1_key_label, (ctrl_box.x + 8, ctrl_box.y + 5))
-            surface.blit(p2_key_label, (ctrl_box.x + 8, ctrl_box.y + 24))
+            surface.blit(p1_key_label, (ctrl_box.x + 6, ctrl_box.y + 4))
+            surface.blit(p2_key_label, (ctrl_box.x + 6, ctrl_box.y + 21))
 
         # 4. Botão INICIAR DUELO
         start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 64, 320, 44)

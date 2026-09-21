@@ -22,21 +22,27 @@ class GrayNinja(Samurai):
         self.smoke_timer = 0.0
 
     def trigger_throw_bomb(self, target_wx: float, target_wy: float, projectiles: list):
-        """Ataque Primário: Arremessa bomba com pavio de 1.5s que explode em área (1-hit fatal)."""
-        if not self.can_move() or self.bomb_timer > 0:
+        """Ataque Primário: Arremessa bomba em arco 3D (até 2 ativas). Detona por contato ou tempo."""
+        if not self.can_move():
+            return
+
+        # Limitar a no máximo 2 bombas ativas no mapa simultaneamente
+        active_bombs = sum(1 for p in projectiles if isinstance(p, TimedBombEntity) and p.owner == self and p.is_active)
+        if active_bombs >= 2:
             return
 
         self.set_facing(target_wx, target_wy)
-        self.bomb_timer = self.bomb_cooldown
         self.state = STATE_RECOVERY
-        self.state_timer = 0.14
+        self.state_timer = 0.12
 
-        # Lança a bomba na direção do alvo a ~2.5 tiles
-        throw_dist = min(3.5, math.hypot(target_wx - self.wx, target_wy - self.wy))
-        bx = self.wx + self.facing_x * throw_dist
-        by = self.wy + self.facing_y * throw_dist
+        dx = target_wx - self.wx
+        dy = target_wy - self.wy
+        dist = math.hypot(dx, dy)
+        dir_x = dx / dist if dist > 0.001 else self.facing_x
+        dir_y = dy / dist if dist > 0.001 else self.facing_y
 
-        bomb = TimedBombEntity(wx=bx, wy=by, owner=self)
+        # Arremessada a partir das mãos em arco tridimensional (wz=0.75)
+        bomb = TimedBombEntity(wx=self.wx, wy=self.wy, wz=0.75, dir_x=dir_x, dir_y=dir_y, owner=self)
         projectiles.append(bomb)
 
     def trigger_smoke_bomb(self, target_wx: float, target_wy: float, projectiles: list):

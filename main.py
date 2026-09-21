@@ -3,13 +3,17 @@ Ponto de entrada principal: Duelo de Samurais Isométrico 2.5D.
 Suporte à Seleção de Personagens: Kenshin (Vermelho), Musashi (Azul) e Ninja Hanzo (Amarelo).
 """
 import sys
+import math
+import random
 import pygame
 from src.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, TITLE,
     COLOR_BG, COLOR_WHITE, COLOR_GOLD, COLOR_RED_AURA, COLOR_BLUE_AURA, COLOR_YELLOW_AURA,
     KEY_RESTART, KEY_TOGGLE_AI, KEY_SETTINGS, DEFAULT_CONTROLS,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
-    CHAR_SAITOU, COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA, COLOR_SAITOU_AURA
+    CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER,
+    COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA, COLOR_SAITOU_AURA,
+    COLOR_RIFLE_AURA, COLOR_KABUKI_AURA, COLOR_ARCHER_AURA
 )
 from src.isometric.iso_math import input_to_world_direction
 from src.isometric.camera import Camera
@@ -21,6 +25,9 @@ from src.entities.american_ninja import AmericanNinja
 from src.entities.gray_ninja import GrayNinja
 from src.entities.purple_ninja import PurpleNinja
 from src.entities.saitou_samurai import SaitouSamurai
+from src.entities.rifleman import Rifleman
+from src.entities.kabuki import Kabuki
+from src.entities.kyudo_archer import KyudoArcher
 from src.entities.ai_controller import SamuraiAI
 from src.combat.collision import CombatSystem
 from src.effects.particles import AmbientLeafParticle
@@ -47,6 +54,12 @@ def create_fighter(char_id: str, wx: float, wy: float):
         return PurpleNinja(wx, wy)
     elif char_id == CHAR_SAITOU:
         return SaitouSamurai(wx, wy)
+    elif char_id == CHAR_RIFLE:
+        return Rifleman(wx, wy)
+    elif char_id == CHAR_KABUKI:
+        return Kabuki(wx, wy)
+    elif char_id == CHAR_ARCHER:
+        return KyudoArcher(wx, wy)
     return RedSamurai(wx, wy)
 
 def get_fighter_color(fighter):
@@ -64,12 +77,18 @@ def get_fighter_color(fighter):
         return COLOR_PURPLE_NINJA
     elif isinstance(fighter, SaitouSamurai):
         return COLOR_SAITOU_AURA
+    elif isinstance(fighter, Rifleman):
+        return COLOR_RIFLE_AURA
+    elif isinstance(fighter, Kabuki):
+        return COLOR_KABUKI_AURA
+    elif isinstance(fighter, KyudoArcher):
+        return COLOR_ARCHER_AURA
     return COLOR_WHITE
 
 def get_fighter_action_labels(fighter):
     """Retorna os rótulos de comandos (Ataque, Secundário)."""
     if isinstance(fighter, RedSamurai):
-        return "Iai Flash", "Dash"
+        return "Iai Flash", "Shukuchi"
     elif isinstance(fighter, BlueSamurai):
         return "3-Cortes", "Parry"
     elif isinstance(fighter, YellowNinja):
@@ -77,12 +96,53 @@ def get_fighter_action_labels(fighter):
     elif isinstance(fighter, AmericanNinja):
         return "Shuriken", "Cão Dash"
     elif isinstance(fighter, GrayNinja):
-        return "Bomba Relógio", "Bomba Fumaça"
+        return "Bomba Arco", "Bomba Fumaça"
     elif isinstance(fighter, PurpleNinja):
         return "Corte Foice", "Kusarigama Puxão"
     elif isinstance(fighter, SaitouSamurai):
         return "Gatotsu", "Zeroshiki"
+    elif isinstance(fighter, Rifleman):
+        return "Tiro Mosquete", "Recarga (Hold) / Salto"
+    elif isinstance(fighter, Kabuki):
+        return "Sopro Veneno", "Esquiva Kabuki"
+    elif isinstance(fighter, KyudoArcher):
+        return "Puxar Yumi", "Flecha Corda"
     return "Ataque", "Especial"
+
+def get_random_arena_spawns(game_map, min_distance: float = 7.0) -> tuple[tuple[float, float], tuple[float, float]]:
+    """
+    Gera duas posições aleatórias válidas (chão firme) no mapa
+    com distância euclidiana mínima garantida (>= min_distance) para evitar acerto melee de início.
+    """
+    for _ in range(250):
+        wx1 = round(random.uniform(3.0, game_map.cols - 3.0), 1)
+        wy1 = round(random.uniform(3.0, game_map.rows - 3.0), 1)
+        if game_map.is_water(wx1, wy1):
+            continue
+        if any(math.hypot(wx1 - r.wx, wy1 - r.wy) < (r.radius + 0.65) for r in game_map.rocks):
+            continue
+        if game_map.well and math.hypot(wx1 - game_map.well.wx, wy1 - game_map.well.wy) < 1.6:
+            continue
+        if any(math.hypot(wx1 - t.wx, wy1 - t.wy) < 1.7 for t in game_map.trees):
+            continue
+
+        for _ in range(40):
+            wx2 = round(random.uniform(3.0, game_map.cols - 3.0), 1)
+            wy2 = round(random.uniform(3.0, game_map.rows - 3.0), 1)
+            if math.hypot(wx1 - wx2, wy1 - wy2) < min_distance:
+                continue
+            if game_map.is_water(wx2, wy2):
+                continue
+            if any(math.hypot(wx2 - r.wx, wy2 - r.wy) < (r.radius + 0.65) for r in game_map.rocks):
+                continue
+            if game_map.well and math.hypot(wx2 - game_map.well.wx, wy2 - game_map.well.wy) < 1.6:
+                continue
+            if any(math.hypot(wx2 - t.wx, wy2 - t.wy) < 1.7 for t in game_map.trees):
+                continue
+            return (wx1, wy1), (wx2, wy2)
+
+    # Fallback garantido: extremidades norte e sul da ponte de madeira (distância = 8.0 tiles)
+    return (10.5, 7.0), (10.5, 15.0)
 
 def run_game():
     pygame.init()
@@ -123,21 +183,23 @@ def run_game():
 
     round_winner = None
     game_time = 0.0
+    round_start_timer = 2.4
 
     def start_new_match():
-        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, round_winner
+        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, round_winner, round_start_timer
         game_map = GameMap()
-        # Oponentes posicionados nas extremidades norte e sul da ponte de madeira
-        p1 = create_fighter(p1_char_id, wx=10.5, wy=7.0)
-        p2 = create_fighter(p2_char_id, wx=10.5, wy=15.0)
+        (p1_wx, p1_wy), (p2_wx, p2_wy) = get_random_arena_spawns(game_map, min_distance=7.0)
+        p1 = create_fighter(p1_char_id, wx=p1_wx, wy=p1_wy)
+        p2 = create_fighter(p2_char_id, wx=p2_wx, wy=p2_wy)
         p1.set_facing(p2.wx, p2.wy)
         p2.set_facing(p1.wx, p1.wy)
-        camera = Camera(target_wx=10.5, target_wy=11.0)
+        camera = Camera(target_wx=(p1_wx + p2_wx) / 2.0, target_wy=(p1_wy + p2_wy) / 2.0)
         particles.clear()
         banners.clear()
         projectiles.clear()
         ambient_leaves = [AmbientLeafParticle(game_map.cols, game_map.rows) for _ in range(45)]
         round_winner = None
+        round_start_timer = 2.4
 
     running = True
     while running:
@@ -214,6 +276,12 @@ def run_game():
                             p1.trigger_kama_strike(p2.wx, p2.wy)
                         elif isinstance(p1, SaitouSamurai):
                             p1.trigger_gatotsu_thrust(p2.wx, p2.wy)
+                        elif isinstance(p1, Rifleman):
+                            p1.trigger_shoot(p2.wx, p2.wy, projectiles, particles)
+                        elif isinstance(p1, Kabuki):
+                            p1.trigger_poison_spit(p2.wx, p2.wy, projectiles, particles)
+                        elif isinstance(p1, KyudoArcher):
+                            p1.trigger_bow_draw(p2.wx, p2.wy, projectiles)
 
                     elif event.key == controls["P1_DASH"]:
                         if isinstance(p1, RedSamurai):
@@ -235,6 +303,16 @@ def run_game():
                             p1.trigger_kusarigama_pull(p2.wx, p2.wy, projectiles)
                         elif isinstance(p1, SaitouSamurai):
                             p1.trigger_zeroshiki(p2.wx, p2.wy)
+                        elif isinstance(p1, Rifleman):
+                            p1.trigger_evasive_backstep(particles)
+                        elif isinstance(p1, Kabuki):
+                            keys = pygame.key.get_pressed()
+                            dx = (keys[controls["P1_RIGHT"]] - keys[controls["P1_LEFT"]])
+                            dy = (keys[controls["P1_DOWN"]] - keys[controls["P1_UP"]])
+                            dwx, dwy = input_to_world_direction(dx, dy)
+                            p1.trigger_acrobatic_dodge(dwx, dwy, particles)
+                        elif isinstance(p1, KyudoArcher):
+                            p1.trigger_rope_arrow(p2.wx, p2.wy, projectiles, particles)
 
                 # Comandos Jogador 2 (se não for IA)
                 if not vs_ai_mode and p2.is_alive and round_winner is None:
@@ -253,6 +331,12 @@ def run_game():
                             p2.trigger_kama_strike(p1.wx, p1.wy)
                         elif isinstance(p2, SaitouSamurai):
                             p2.trigger_gatotsu_thrust(p1.wx, p1.wy)
+                        elif isinstance(p2, Rifleman):
+                            p2.trigger_shoot(p1.wx, p1.wy, projectiles, particles)
+                        elif isinstance(p2, Kabuki):
+                            p2.trigger_poison_spit(p1.wx, p1.wy, projectiles, particles)
+                        elif isinstance(p2, KyudoArcher):
+                            p2.trigger_bow_draw(p1.wx, p1.wy, projectiles)
 
                     elif event.key == controls["P2_PARRY"]:
                         if isinstance(p2, RedSamurai):
@@ -274,6 +358,16 @@ def run_game():
                             p2.trigger_kusarigama_pull(p1.wx, p1.wy, projectiles)
                         elif isinstance(p2, SaitouSamurai):
                             p2.trigger_zeroshiki(p1.wx, p1.wy)
+                        elif isinstance(p2, Rifleman):
+                            p2.trigger_evasive_backstep(particles)
+                        elif isinstance(p2, Kabuki):
+                            keys = pygame.key.get_pressed()
+                            dx = (keys[controls["P2_RIGHT"]] - keys[controls["P2_LEFT"]])
+                            dy = (keys[controls["P2_DOWN"]] - keys[controls["P2_UP"]])
+                            dwx, dwy = input_to_world_direction(dx, dy)
+                            p2.trigger_acrobatic_dodge(dwx, dwy, particles)
+                        elif isinstance(p2, KyudoArcher):
+                            p2.trigger_rope_arrow(p1.wx, p1.wy, projectiles, particles)
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
@@ -292,6 +386,19 @@ def run_game():
 
         game_time += dt
         keys = pygame.key.get_pressed()
+
+        # Suporte ao carregamento contínuo de pólvora do Rifleman (segurando botão de ação secundária)
+        if isinstance(p1, Rifleman) and p1.is_alive and round_winner is None:
+            if keys[controls["P1_DASH"]]:
+                p1.trigger_reload_hold()
+            else:
+                p1.is_reloading = False
+
+        if not vs_ai_mode and isinstance(p2, Rifleman) and p2.is_alive and round_winner is None:
+            if keys[controls["P2_PARRY"]]:
+                p2.trigger_reload_hold()
+            else:
+                p2.is_reloading = False
 
         # Movimento Jogador 1
         p1_dx = (keys[controls["P1_RIGHT"]] - keys[controls["P1_LEFT"]])
@@ -314,16 +421,16 @@ def run_game():
             else:
                 p2.apply_movement(p2_dwx, p2_dwy, dt, game_map)
 
-        # Atualizações
-        if isinstance(p1, SaitouSamurai):
-            p1.update(dt, game_map, particles)
-        else:
-            p1.update(dt, game_map)
-
-        if isinstance(p2, SaitouSamurai):
-            p2.update(dt, game_map, particles)
-        else:
-            p2.update(dt, game_map)
+        # Atualizações dos combatentes
+        for f in (p1, p2):
+            if isinstance(f, SaitouSamurai):
+                f.update(dt, game_map, particles)
+            elif isinstance(f, (Rifleman, Kabuki)):
+                f.update(dt, game_map, particles)
+            elif isinstance(f, KyudoArcher):
+                f.update(dt, game_map, particles, projectiles)
+            else:
+                f.update(dt, game_map)
 
         # Processar Combate & Projéteis
         winner = combat_system.process_combat(p1, p2, game_map, particles, banners, camera, projectiles, dt)
@@ -397,6 +504,23 @@ def run_game():
 
         for banner in banners:
             banner.render(screen, camera, font_mid)
+
+        # Marcadores piscantes [ P1 ] e [ P2 ] no início de cada round
+        if round_start_timer > 0:
+            round_start_timer -= dt
+            if (int(round_start_timer * 6.5)) % 2 == 0:
+                for fighter, label, col in ((p1, "P1", (255, 85, 85)), (p2, "P2", (95, 170, 255))):
+                    if fighter and fighter.is_alive:
+                        sx, sy = camera.apply(fighter.wx, fighter.wy, 1.80)
+                        txt = font_mid.render(f"[ {label} ]", True, col)
+                        bg_w = txt.get_width() + 14
+                        bg_h = 24
+                        bg_rect = pygame.Rect(sx - bg_w // 2, sy - 34, bg_w, bg_h)
+                        pygame.draw.rect(screen, (18, 22, 24), bg_rect, border_radius=6)
+                        pygame.draw.rect(screen, col, bg_rect, 2, border_radius=6)
+                        screen.blit(txt, (bg_rect.centerx - txt.get_width() // 2, bg_rect.centery - txt.get_height() // 2))
+                        # Pequena seta indicadora apontando para a cabeça
+                        pygame.draw.polygon(screen, col, [(sx, sy - 8), (sx - 6, sy - 16), (sx + 6, sy - 16)])
 
         # -------------------------------------------------------------
         # INTERFACE DE USUÁRIO (HUD)

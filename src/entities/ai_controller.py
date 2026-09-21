@@ -55,6 +55,20 @@ class SamuraiAI:
             elif hasattr(ai_fighter, "trigger_smoke_bomb") and projectiles is not None and random.random() < 0.60:
                 ai_fighter.trigger_smoke_bomb(opponent.wx, opponent.wy, projectiles)
                 return
+            # Se for Rifleman: salto evasivo para trás
+            elif hasattr(ai_fighter, "trigger_evasive_backstep") and random.random() < 0.70:
+                ai_fighter.trigger_evasive_backstep()
+                return
+            # Se for Kabuki: pirueta acrobática evasiva
+            elif hasattr(ai_fighter, "trigger_acrobatic_dodge") and random.random() < 0.75:
+                dx = ai_fighter.wx - opponent.wx
+                dy = ai_fighter.wy - opponent.wy
+                ai_fighter.trigger_acrobatic_dodge(dx, dy)
+                return
+            # Se for Kyudo Archer: flecha de corda para fuga rápida
+            elif hasattr(ai_fighter, "trigger_rope_arrow") and projectiles is not None and random.random() < 0.65:
+                ai_fighter.trigger_rope_arrow(opponent.wx, opponent.wy, projectiles)
+                return
 
         # 3. Punição quando o oponente estiver em RECOVERY ou STUNNED
         if opponent.state in (STATE_RECOVERY, "STUNNED"):
@@ -75,7 +89,32 @@ class SamuraiAI:
                     ai_fighter.apply_movement(dx / length, dy / length, dt, game_map)
                 return
 
-        # 4. Comportamento Neutro / Espaçamento
+        # 4. Comportamento Específico: Kabuki pós-veneno (Sobrevivência Pura!)
+        if hasattr(ai_fighter, "has_poisoned_target") and ai_fighter.has_poisoned_target:
+            # Fugir ativamente do oponente envenenado que está sob efeito de fúria!
+            dx = ai_fighter.wx - opponent.wx
+            dy = ai_fighter.wy - opponent.wy
+            length = math.hypot(dx, dy)
+            if dist < 2.8 and hasattr(ai_fighter, "trigger_acrobatic_dodge"):
+                ai_fighter.trigger_acrobatic_dodge(dx, dy)
+            elif length > 0 and ai_fighter.can_move():
+                ai_fighter.apply_movement(dx / length, dy / length, dt, game_map)
+            return
+
+        # 5. Comportamento Específico: Rifleman recarregando
+        if hasattr(ai_fighter, "has_ammo") and not ai_fighter.has_ammo:
+            ai_fighter.trigger_reload_hold()
+            # Manter distância enquanto recarrega
+            dx = ai_fighter.wx - opponent.wx
+            dy = ai_fighter.wy - opponent.wy
+            length = math.hypot(dx, dy)
+            if dist < 2.2 and hasattr(ai_fighter, "trigger_evasive_backstep"):
+                ai_fighter.trigger_evasive_backstep()
+            elif length > 0 and ai_fighter.can_move():
+                ai_fighter.apply_movement(dx / length, dy / length, dt, game_map)
+            return
+
+        # 6. Comportamento Neutro / Espaçamento
         if self.decision_timer <= 0:
             self.decision_timer = random.uniform(0.3, 0.65)
             # Chance de Ninja arremessar kunai a média distância
@@ -113,6 +152,24 @@ class SamuraiAI:
             if hasattr(ai_fighter, "trigger_gatotsu_thrust"):
                 if 2.8 <= dist <= 6.8 and random.random() < 0.50:
                     ai_fighter.trigger_gatotsu_thrust(opponent.wx, opponent.wy)
+                    return
+
+            # Rifleman: disparar tiro supersônico se tiver munição
+            if hasattr(ai_fighter, "trigger_shoot") and getattr(ai_fighter, "has_ammo", False) and projectiles is not None:
+                if 2.5 <= dist <= 8.5 and random.random() < 0.65:
+                    ai_fighter.trigger_shoot(opponent.wx, opponent.wy, projectiles)
+                    return
+
+            # Kabuki: sopro de veneno a média distância
+            if hasattr(ai_fighter, "trigger_poison_spit") and not getattr(ai_fighter, "has_poisoned_target", False) and projectiles is not None:
+                if 1.8 <= dist <= 4.8 and random.random() < 0.55:
+                    ai_fighter.trigger_poison_spit(opponent.wx, opponent.wy, projectiles)
+                    return
+
+            # Kyudo Archer: puxar corda do arco a média/longa distância
+            if hasattr(ai_fighter, "trigger_bow_draw") and projectiles is not None:
+                if 2.8 <= dist <= 7.5 and random.random() < 0.55:
+                    ai_fighter.trigger_bow_draw(opponent.wx, opponent.wy, projectiles)
                     return
 
             if dist > 3.2:
@@ -165,3 +222,11 @@ class SamuraiAI:
                 fighter.trigger_zeroshiki(target.wx, target.wy)
             else:
                 fighter.trigger_gatotsu_thrust(target.wx, target.wy)
+        elif hasattr(fighter, "trigger_shoot") and getattr(fighter, "has_ammo", False):
+            if projectiles is not None:
+                fighter.trigger_shoot(target.wx, target.wy, projectiles)
+        elif hasattr(fighter, "trigger_poison_spit") and not getattr(fighter, "has_poisoned_target", False):
+            if projectiles is not None:
+                fighter.trigger_poison_spit(target.wx, target.wy, projectiles)
+        elif hasattr(fighter, "trigger_bow_draw"):
+            fighter.trigger_bow_draw(target.wx, target.wy, projectiles)

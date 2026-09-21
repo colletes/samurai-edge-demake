@@ -181,14 +181,22 @@ class ShurikenProjectile:
 
 
 class TimedBombEntity:
-    """Bomba explosiva com delay de pavio (1.5s). Causa explosão fatal em área (AOE)."""
-    def __init__(self, wx: float, wy: float, owner):
+    """Bomba explosiva arremessada em arco parabólico 3D lento. Detona por contato ou tempo (2.0s)."""
+    def __init__(self, wx: float, wy: float, wz: float = 0.65, dir_x: float = 0.0, dir_y: float = 0.0, owner = None):
         self.wx = wx
         self.wy = wy
-        self.wz = 0.05
+        self.wz = wz
         self.owner = owner
-        self.fuse_timer = 1.5
-        self.explosion_radius = 2.2
+
+        speed = 7.5
+        self.vx = dir_x * speed
+        self.vy = dir_y * speed
+        self.vz = 3.2
+        self.gz = -11.5
+        self.is_airborne = True
+
+        self.fuse_timer = 2.0
+        self.explosion_radius = 2.4
         self.is_active = True
         self.spark_timer = 0.0
 
@@ -199,11 +207,37 @@ class TimedBombEntity:
         self.fuse_timer -= dt
         self.spark_timer += dt
 
+        # Movimento balístico em arco 3D
+        if self.is_airborne:
+            self.wx += self.vx * dt
+            self.wy += self.vy * dt
+            self.wz += self.vz * dt
+            self.vz += self.gz * dt
+
+            # Colisão com rochas ou poço durante o voo
+            for r in game_map.rocks:
+                if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
+                    self.vx = 0.0
+                    self.vy = 0.0
+                    break
+            if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
+                self.vx = 0.0
+                self.vy = 0.0
+
+            if self.wz <= 0.05:
+                self.wz = 0.05
+                self.is_airborne = False
+                self.vx = 0.0
+                self.vy = 0.0
+                if particles is not None:
+                    for _ in range(4):
+                        particles.append(SparkParticle(self.wx, self.wy, 0.2))
+
         # Faíscas saindo do pavio enquanto queima
         if self.spark_timer > 0.08:
             self.spark_timer = 0.0
             if particles is not None:
-                particles.append(SparkParticle(self.wx, self.wy, 0.45))
+                particles.append(SparkParticle(self.wx, self.wy, self.wz + 0.3))
 
         return True
 
@@ -213,8 +247,12 @@ class TimedBombEntity:
 
         from src.isometric.voxel_renderer import draw_voxel_box
 
+        # Sombra no solo projetada
         base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
-        pygame.draw.ellipse(surface, (12, 16, 14), (base_sx - 10, base_sy - 5, 20, 10))
+        shadow_scale = max(0.4, 1.0 - self.wz * 0.4)
+        sw = max(6, int(20 * shadow_scale))
+        sh = max(3, int(10 * shadow_scale))
+        pygame.draw.ellipse(surface, (12, 16, 14), (base_sx - sw // 2, base_sy - sh // 2, sw, sh))
 
         # Cubo de ferro da bomba
         draw_voxel_box(surface, camera, self.wx - 0.13, self.wy - 0.13, self.wz, 0.26, 0.26, 0.26, (30, 32, 38))
@@ -413,6 +451,261 @@ class KusarigamaChainEntity:
         # Brilho místico se estiver puxando o oponente
         if self.state == "HOOKED_PULLING":
             pygame.draw.circle(surface, (195, 120, 255), (int(sx2), int(sy2)), 10, 2)
+
+
+class MusketBulletProjectile:
+    """Bala de chumbo supersônica disparada pelo Rifleman Tanegashima. 1-Hit Kill."""
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.dir_x = dir_x
+        self.dir_y = dir_y
+        self.owner = owner
+        speed = 34.0
+        self.vx = dir_x * speed
+        self.vy = dir_y * speed
+        self.is_active = True
+        self.dist_traveled = 0.0
+        self.max_range = 18.0
+
+    def update(self, dt: float, game_map, particles: list = None) -> bool:
+        if not self.is_active:
+            return False
+
+        step = math.hypot(self.vx * dt, self.vy * dt)
+        self.wx += self.vx * dt
+        self.wy += self.vy * dt
+        self.dist_traveled += step
+
+        # Fumaça no rastro da bala
+        if particles is not None and random.random() < 0.4:
+            particles.append(SparkParticle(self.wx, self.wy, self.wz))
+
+        # Cortar bambus no caminho
+        for b in game_map.bamboos:
+            if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.5:
+                part = b.cut((self.dir_x, self.dir_y))
+                if part and particles is not None:
+                    particles.append(part)
+
+        # Colisão com rochas ou poço
+        hit_obstacle = False
+        for r in game_map.rocks:
+            if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
+                hit_obstacle = True; break
+        if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
+            hit_obstacle = True
+
+        if hit_obstacle or self.dist_traveled >= self.max_range:
+            self.is_active = False
+            if particles is not None:
+                for _ in range(6):
+                    particles.append(SparkParticle(self.wx, self.wy, 0.4))
+            return False
+
+        return True
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+        from src.isometric.voxel_renderer import draw_voxel_box
+        draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.05, self.wz, 0.10, 0.10, 0.10, (230, 220, 180))
+        # Brilho do tiro de pólvora
+        sx, sy = camera.apply(self.wx, self.wy, self.wz)
+        pygame.draw.circle(surface, (255, 235, 120), (sx, sy), 3)
+
+
+class PoisonCloudProjectile:
+    """Nuvem de veneno cusparada pelo Kabuki. Aplica contagem regressiva fatal de 10s."""
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.dir_x = dir_x
+        self.dir_y = dir_y
+        self.owner = owner
+        speed = 7.2
+        self.vx = dir_x * speed
+        self.vy = dir_y * speed
+        self.radius = 0.55
+        self.max_radius = 1.40
+        self.lifetime = 1.35
+        self.age = 0.0
+        self.is_active = True
+
+    def update(self, dt: float, game_map, particles: list = None) -> bool:
+        if not self.is_active:
+            return False
+        self.age += dt
+        if self.age >= self.lifetime:
+            self.is_active = False
+            return False
+
+        # Desacelera e expande em raio
+        friction = max(0.0, 1.0 - (self.age / self.lifetime))
+        self.wx += self.vx * friction * dt
+        self.wy += self.vy * friction * dt
+        self.radius = 0.55 + (self.max_radius - 0.55) * (self.age / self.lifetime)
+        return True
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+        from src.isometric.voxel_renderer import draw_voxel_box
+        color_p = (165, 60, 215)
+        color_g = (70, 220, 125)
+
+        for i in range(4):
+            angle = i * 1.57 + self.age * 3.5
+            ox = math.cos(angle) * (self.radius * 0.45)
+            oy = math.sin(angle) * (self.radius * 0.45)
+            c = color_p if i % 2 == 0 else color_g
+            draw_voxel_box(surface, camera, self.wx + ox - 0.12, self.wy + oy - 0.12, self.wz, 0.24, 0.24, 0.24, c)
+
+
+class KyudoArrowProjectile:
+    """Flecha letal disparada pelo grande arco Yumi do arqueiro tradicional. 1-Hit Kill."""
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.dir_x = dir_x
+        self.dir_y = dir_y
+        self.owner = owner
+        speed = 28.0
+        self.vx = dir_x * speed
+        self.vy = dir_y * speed
+        self.dist_traveled = 0.0
+        self.max_range = 16.0
+        self.is_active = True
+
+    def update(self, dt: float, game_map, particles: list = None) -> bool:
+        if not self.is_active:
+            return False
+        step = math.hypot(self.vx * dt, self.vy * dt)
+        self.wx += self.vx * dt
+        self.wy += self.vy * dt
+        self.dist_traveled += step
+
+        # Cortar bambus no caminho
+        for b in game_map.bamboos:
+            if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.45:
+                part = b.cut((self.dir_x, self.dir_y))
+                if part and particles is not None:
+                    particles.append(part)
+
+        # Colisão com rochas ou poço
+        hit_obstacle = False
+        for r in game_map.rocks:
+            if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
+                hit_obstacle = True; break
+        if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
+            hit_obstacle = True
+
+        if hit_obstacle or self.dist_traveled >= self.max_range:
+            self.is_active = False
+            if particles is not None:
+                for _ in range(4):
+                    particles.append(SparkParticle(self.wx, self.wy, 0.3))
+            return False
+        return True
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+        from src.isometric.voxel_renderer import draw_voxel_box
+        # Ponta de ferro
+        draw_voxel_box(surface, camera, self.wx - 0.04, self.wy - 0.04, self.wz, 0.08, 0.08, 0.08, COLOR_STEEL)
+        # Haste de bambu
+        hx = self.wx - self.dir_x * 0.16
+        hy = self.wy - self.dir_y * 0.16
+        draw_voxel_box(surface, camera, hx - 0.03, hy - 0.03, self.wz, 0.06, 0.06, 0.06, (180, 140, 80))
+        # Penas brancas
+        fx = self.wx - self.dir_x * 0.30
+        fy = self.wy - self.dir_y * 0.30
+        draw_voxel_box(surface, camera, fx - 0.04, fy - 0.04, self.wz, 0.08, 0.08, 0.08, COLOR_WHITE)
+
+
+class RopeArrowProjectile:
+    """Flecha de corda do Arqueiro Kyudo. Ao se fixar em obstáculo ou solo, puxa o arqueiro velozmente."""
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.dir_x = dir_x
+        self.dir_y = dir_y
+        self.owner = owner
+        speed = 22.0
+        self.vx = dir_x * speed
+        self.vy = dir_y * speed
+        self.state = "FLYING" # "FLYING", "LATCHED_PULLING"
+        self.dist_traveled = 0.0
+        self.max_range = 11.5
+        self.is_active = True
+        self.pull_timer = 0.0
+
+    def update(self, dt: float, game_map, particles: list = None) -> bool:
+        if not self.is_active:
+            return False
+
+        if self.state == "FLYING":
+            step = math.hypot(self.vx * dt, self.vy * dt)
+            self.wx += self.vx * dt
+            self.wy += self.vy * dt
+            self.dist_traveled += step
+
+            # Cravar em obstáculos ou alcance
+            hit = False
+            for r in game_map.rocks:
+                if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius + 0.2:
+                    hit = True; break
+            if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius + 0.2:
+                hit = True
+            for b in game_map.bamboos:
+                if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.5:
+                    hit = True; break
+
+            if hit or self.dist_traveled >= self.max_range:
+                self.state = "LATCHED_PULLING"
+                if particles is not None:
+                    for _ in range(6):
+                        particles.append(SparkParticle(self.wx, self.wy, 0.3))
+
+        elif self.state == "LATCHED_PULLING":
+            self.pull_timer += dt
+            # Puxar o arqueiro até a ponta cravada
+            dx = self.wx - self.owner.wx
+            dy = self.wy - self.owner.wy
+            dist = math.hypot(dx, dy)
+            if dist <= 0.85 or self.pull_timer >= 0.60:
+                self.is_active = False
+                return False
+            else:
+                pull_speed = 20.0
+                step = min(dist, pull_speed * dt)
+                self.owner.wx += (dx / dist) * step
+                self.owner.wy += (dy / dist) * step
+                if particles is not None and random.random() < 0.4:
+                    particles.append(SparkParticle(self.owner.wx, self.owner.wy, 0.2))
+
+        return True
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+        from src.isometric.voxel_renderer import draw_voxel_box
+
+        # Desenhar corda entre o arqueiro e a ponta
+        ox, oy = self.owner.wx, self.owner.wy
+        sx1, sy1 = camera.apply(ox, oy, 0.4)
+        sx2, sy2 = camera.apply(self.wx, self.wy, self.wz)
+        pygame.draw.line(surface, (190, 175, 140), (sx1, sy1), (sx2, sy2), 2)
+
+        # Gancho / ponta da flecha cravada
+        draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.05, self.wz, 0.10, 0.10, 0.10, (140, 145, 155))
+        if self.state == "LATCHED_PULLING":
+            pygame.draw.circle(surface, (120, 220, 160), (int(sx2), int(sy2)), 8, 2)
 
 
 

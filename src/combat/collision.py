@@ -10,7 +10,8 @@ from src.effects.particles import (
 from src.entities.samurai import STATE_PARRY
 from src.entities.projectile import (
     KunaiProjectile, ShurikenProjectile, TimedBombEntity, SmokeCloudEntity,
-    KusarigamaChainEntity
+    KusarigamaChainEntity, MusketBulletProjectile, PoisonCloudProjectile,
+    KyudoArrowProjectile, RopeArrowProjectile
 )
 from src.entities.doberman import STATE_DOG_CHARGE
 
@@ -75,13 +76,12 @@ class CombatSystem:
                             particles.append(SparkParticle(target.wx, target.wy, 0.6))
                     proj.is_active = False
 
-            # Se for BOMBA NORMAL COM DELAY (TimedBombEntity)
+            # Se for BOMBA NORMAL EM ARCO (TimedBombEntity)
             elif isinstance(proj, TimedBombEntity):
-                target = p2 if proj.owner == p1 else p1
-                winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
-
-                # Detona se o timer zerar ou se o inimigo pisar perto
-                should_detonate = (proj.fuse_timer <= 0) or (target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < 0.7)
+                # Detona por contato com qualquer combatente ou por término do pavio
+                p1_touch = p1.is_alive and world_distance(proj.wx, proj.wy, p1.wx, p1.wy) < (0.65 + p1.radius)
+                p2_touch = p2.is_alive and world_distance(proj.wx, proj.wy, p2.wx, p2.wy) < (0.65 + p2.radius)
+                should_detonate = (proj.fuse_timer <= 0) or p1_touch or p2_touch
 
                 if should_detonate:
                     proj.is_active = False
@@ -99,10 +99,79 @@ class CombatSystem:
                             if slice_part:
                                 particles.append(slice_part)
 
-                    # Acertou o alvo no raio da explosão?
-                    if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < proj.explosion_radius:
-                        hit, dead = target.take_hit((proj.wx - target.wx, proj.wy - target.wy), damage=2)
+                    # Dano em área (inclui Fogo Amigo / Auto-Dano se o próprio Kemuri estiver perto!)
+                    p1_in_range = p1.is_alive and world_distance(proj.wx, proj.wy, p1.wx, p1.wy) < proj.explosion_radius
+                    p2_in_range = p2.is_alive and world_distance(proj.wx, proj.wy, p2.wx, p2.wy) < proj.explosion_radius
+
+                    if p1_in_range and p2_in_range:
+                        p1.take_hit((0, 0), damage=2)
+                        p2.take_hit((0, 0), damage=2)
+                        for _ in range(35):
+                            particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
+                            particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
+                        winner = "DRAW"
+                    elif p1_in_range:
+                        p1.take_hit((0, 0), damage=2)
+                        for _ in range(25):
+                            particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
+                        winner = "P2_WINS"
+                    elif p2_in_range:
+                        p2.take_hit((0, 0), damage=2)
+                        for _ in range(25):
+                            particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
+                        winner = "P1_WINS"
+
+            # Se for TIRO DE MOSQUETE (MusketBulletProjectile)
+            elif isinstance(proj, MusketBulletProjectile) and proj.is_active:
+                target = p2 if proj.owner == p1 else p1
+                winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
+                if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.55 + target.radius):
+                    proj.is_active = False
+                    if target.state == STATE_PARRY:
+                        banners.append(FloatingBanner("PARRY BULLET!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
+                        for _ in range(14):
+                            particles.append(SparkParticle(proj.wx, proj.wy, 0.7))
+                    else:
+                        hit, dead = target.take_hit((proj.vx, proj.vy), damage=2)
                         if dead:
+                            camera.add_shake(16.0)
+                            banners.append(FloatingBanner("TANEGASHIMA HEADSHOT!", target.wx, target.wy, wz=1.8, color=(255, 180, 50)))
+                            for _ in range(30):
+                                particles.append(BloodParticle(target.wx, target.wy, 0.6))
+                            self.hitstop_timer = 0.14
+                            winner = winner_id
+
+            # Se for NUVEM DE VENENO (PoisonCloudProjectile)
+            elif isinstance(proj, PoisonCloudProjectile) and proj.is_active:
+                target = p2 if proj.owner == p1 else p1
+                if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (proj.radius + target.radius):
+                    if not getattr(target, "is_poisoned", False):
+                        proj.is_active = False
+                        target.is_poisoned = True
+                        target.poison_timer = 10.0
+                        target.speed *= 1.40  # Boost de velocidade
+                        if hasattr(proj.owner, "on_poison_inflicted"):
+                            proj.owner.on_poison_inflicted(target)
+                        camera.add_shake(7.0)
+                        banners.append(FloatingBanner("POISONED! 10s TO SURVIVE!", target.wx, target.wy, wz=1.8, color=(80, 225, 120), duration=3.5))
+                        for _ in range(16):
+                            particles.append(SparkParticle(target.wx, target.wy, 0.5))
+
+            # Se for FLECHA DE KYUDO (KyudoArrowProjectile)
+            elif isinstance(proj, KyudoArrowProjectile) and proj.is_active:
+                target = p2 if proj.owner == p1 else p1
+                winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
+                if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.50 + target.radius):
+                    proj.is_active = False
+                    if target.state == STATE_PARRY:
+                        banners.append(FloatingBanner("PARRY ARROW!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
+                        for _ in range(10):
+                            particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
+                    else:
+                        hit, dead = target.take_hit((proj.vx, proj.vy), damage=2)
+                        if dead:
+                            camera.add_shake(15.0)
+                            banners.append(FloatingBanner("YUMI HEART SHOT!", target.wx, target.wy, wz=1.8, color=(100, 220, 140)))
                             for _ in range(25):
                                 particles.append(BloodParticle(target.wx, target.wy, 0.6))
                             self.hitstop_timer = 0.12
@@ -138,6 +207,19 @@ class CombatSystem:
 
         projectiles.clear()
         projectiles.extend(active_projectiles)
+
+        # Atualizar cronômetro de veneno dos combatentes
+        for fighter, other_id in ((p1, "P2_WINS"), (p2, "P1_WINS")):
+            if fighter.is_alive and getattr(fighter, "is_poisoned", False):
+                fighter.poison_timer -= dt
+                if fighter.poison_timer <= 0:
+                    fighter.is_poisoned = False
+                    fighter.take_hit((0, 0), damage=99)
+                    banners.append(FloatingBanner("POISON DEATH!", fighter.wx, fighter.wy, wz=1.8, color=(80, 225, 120)))
+                    for _ in range(30):
+                        particles.append(BloodParticle(fighter.wx, fighter.wy, 0.6))
+                    if winner is None:
+                        winner = other_id
 
         # -------------------------------------------------------------
         # 2. COMBATE DO CÃO DOBERMAN (SE HOUVER AMERICAN NINJA)
