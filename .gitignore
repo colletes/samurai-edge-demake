@@ -16,4 +16,5 @@ Thumbs.db
 # PyInstaller / Build artifacts
 build/
 dist/
+.pyinstaller/
 *.egg-info/

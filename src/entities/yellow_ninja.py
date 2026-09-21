@@ -17,7 +17,8 @@ from src.entities.voxel_models import render_voxel_humanoid
 
 class YellowNinja(Samurai):
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, name="Hanzo (Ninja)")
+        super().__init__(wx, wy, name="Hanzo")
+        self.char_type = "ninja"
         self.speed = 5.4  # Mesma velocidade máxima do Kenshin!
 
         # Atributos de Kunai

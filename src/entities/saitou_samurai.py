@@ -23,7 +23,7 @@ STATE_ZEROSHIKI = "ZEROSHIKI"
 
 class SaitouSamurai(Samurai):
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, name="Hajime Saitou")
+        super().__init__(wx, wy, name="Saitou")
         self.speed = 4.6  # Velocidade padrão de deslocamento
 
         # -------------------------------------------------------------
@@ -31,8 +31,8 @@ class SaitouSamurai(Samurai):
         # -------------------------------------------------------------
         self.initial_charge_speed = 4.8  # Começa na velocidade normal
         self.charge_speed = self.initial_charge_speed
-        self.max_charge_speed = 19.0      # Acelera até velocidade supersônica
-        self.charge_accel = 22.0          # Taxa de ganho de velocidade (tiles/s²)
+        self.max_charge_speed = 15.5      # Calibrado: velocidade alta com reação viável
+        self.charge_accel = 18.0          # Taxa de ganho de velocidade (tiles/s²)
 
         self.charge_dir_x = 1.0
         self.charge_dir_y = 0.0

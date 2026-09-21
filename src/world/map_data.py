@@ -79,7 +79,7 @@ class GameMap:
 
         # 4. Floresta de Bambus Cortáveis
         # Criar aglomerados densos para permitir emboscadas e cobertura
-        random.seed(42) # Semente fixa para mapa consistente e belo
+        bamboo_rng = random.Random(42) # Semente fixa para mapa consistente e belo
         for x in range(self.cols):
             for y in range(self.rows):
                 # Não colocar bambu na água, na ponte ou no meio exato do caminho
@@ -105,9 +105,9 @@ class GameMap:
                 dist_to_center = math.hypot(x - 11, y - 11)
                 chance = 0.65 if dist_to_center > 5.5 else 0.15
 
-                if random.random() < chance:
-                    offset_x = random.uniform(-0.35, 0.35)
-                    offset_y = random.uniform(-0.35, 0.35)
+                if bamboo_rng.random() < chance:
+                    offset_x = bamboo_rng.uniform(-0.35, 0.35)
+                    offset_y = bamboo_rng.uniform(-0.35, 0.35)
                     self.bamboos.append(Bamboo(x + 0.5 + offset_x, y + 0.5 + offset_y))
 
     def is_water(self, wx: float, wy: float) -> bool:

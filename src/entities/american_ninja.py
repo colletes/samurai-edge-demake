@@ -17,14 +17,15 @@ from src.entities.voxel_models import render_voxel_humanoid
 
 class AmericanNinja(Samurai):
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, name="Joe (American Ninja)")
+        super().__init__(wx, wy, name="Joe")
+        self.char_type = "joe"
         self.speed = 4.8
 
         # O Cão Doberman companheiro
         self.dog = DobermanDog(self)
 
         # Timings de Shuriken e Comando
-        self.shuriken_cooldown = 0.35
+        self.shuriken_cooldown = 0.55
         self.shuriken_timer = 0.0
 
     def trigger_shuriken(self, target_wx: float, target_wy: float, projectiles: list):

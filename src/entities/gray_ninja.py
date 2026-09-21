@@ -14,11 +14,12 @@ from src.entities.voxel_models import render_voxel_humanoid
 
 class GrayNinja(Samurai):
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, name="Kemuri (Gray Ninja)")
+        super().__init__(wx, wy, name="Kasumi")
+        self.char_type = "kasumi"
         self.speed = 4.8
-        self.bomb_cooldown = 1.2
+        self.bomb_cooldown = 0.65
         self.bomb_timer = 0.0
-        self.smoke_cooldown = 3.5
+        self.smoke_cooldown = 2.8
         self.smoke_timer = 0.0
 
     def trigger_throw_bomb(self, target_wx: float, target_wy: float, projectiles: list):
@@ -41,8 +42,8 @@ class GrayNinja(Samurai):
         dir_x = dx / dist if dist > 0.001 else self.facing_x
         dir_y = dy / dist if dist > 0.001 else self.facing_y
 
-        # Arremessada a partir das mãos em arco tridimensional (wz=0.75)
-        bomb = TimedBombEntity(wx=self.wx, wy=self.wy, wz=0.75, dir_x=dir_x, dir_y=dir_y, owner=self)
+        # Arremessada a partir das mãos em arco tridimensional (wz=0.75) com avanço seguro
+        bomb = TimedBombEntity(wx=self.wx + dir_x * 0.40, wy=self.wy + dir_y * 0.40, wz=0.75, dir_x=dir_x, dir_y=dir_y, owner=self)
         projectiles.append(bomb)
 
     def trigger_smoke_bomb(self, target_wx: float, target_wy: float, projectiles: list):

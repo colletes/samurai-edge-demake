@@ -23,7 +23,8 @@ STATE_BOW_DRAW = "BOW_DRAW"
 
 class KyudoArcher(Samurai):
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, name="Kyudo (Archer)")
+        super().__init__(wx, wy, name="Tomoe")
+        self.char_type = "tomoe"
         self.speed = 4.2
 
         # Mecânica de Disparo com Yumi

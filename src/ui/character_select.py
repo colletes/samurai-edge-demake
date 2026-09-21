@@ -19,6 +19,8 @@ from src.config import (
 
 from src.isometric.iso_math import world_to_iso
 from src.entities.voxel_models import render_voxel_humanoid, render_voxel_doberman
+from src.ui.game_help import GameHelpModal
+from src.i18n import t, get_lang, toggle_lang, LANG_PT, LANG_EN
 
 class PreviewCamera:
     def __init__(self, cx, cy):
@@ -36,6 +38,13 @@ class CharacterSelectScreen:
         self.p2_ready = False
         self.vs_ai = True
         self.anim_timer = 0.0
+
+        # Modal de Ajuda Completa do Jogo e Guia dos 12 Guerreiros
+        self.help_modal = GameHelpModal()
+        self.help_btn_rect = pygame.Rect(0, 0, 0, 0)
+        self.lang_btn_rect = pygame.Rect(0, 0, 0, 0)
+        self.info_btn_rects: list[pygame.Rect] = []
+
 
         self.characters = [
             {
@@ -187,58 +196,73 @@ class CharacterSelectScreen:
         self.card_rects: list[pygame.Rect] = []
 
     def handle_event(self, event: pygame.event.Event) -> bool:
+        # Se o modal de ajuda estiver aberto, repassar eventos exclusivamente para ele
+        if self.help_modal.is_open:
+            self.help_modal.handle_event(event)
+            return False
+
         num_c = len(self.characters)
         cols = 6
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_TAB:
                 self.vs_ai = not self.vs_ai
+                return False
+            elif event.key == pygame.K_h:
+                self.help_modal.open(GameHelpModal.TAB_RULES)
+                return False
+            elif event.key == pygame.K_f:
+                self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=self.p1_choice_idx)
+                return False
+            elif event.key == pygame.K_l:
+                toggle_lang()
+                return False
 
-            if self.vs_ai:
-                # No modo 1P vs IA: tanto WASD quanto SETAS movem o Jogador 1
-                if event.key in (pygame.K_a, pygame.K_LEFT):
-                    self.p1_choice_idx = (self.p1_choice_idx - 1) % num_c
-                elif event.key in (pygame.K_d, pygame.K_RIGHT):
-                    self.p1_choice_idx = (self.p1_choice_idx + 1) % num_c
-                elif event.key in (pygame.K_w, pygame.K_UP):
-                    self.p1_choice_idx = (self.p1_choice_idx - cols) % num_c
-                elif event.key in (pygame.K_s, pygame.K_DOWN):
-                    self.p1_choice_idx = (self.p1_choice_idx + cols) % num_c
-                elif event.key in (pygame.K_e, pygame.K_SPACE, pygame.K_RETURN):
-                    return True
-            else:
-                # No modo 2 JOGADORES:
-                # P1 controla exclusivamente com WASD (confirma com E / Espaço)
-                if event.key == pygame.K_a:
-                    self.p1_choice_idx = (self.p1_choice_idx - 1) % num_c
-                elif event.key == pygame.K_d:
-                    self.p1_choice_idx = (self.p1_choice_idx + 1) % num_c
-                elif event.key == pygame.K_w:
-                    self.p1_choice_idx = (self.p1_choice_idx - cols) % num_c
-                elif event.key == pygame.K_s:
-                    self.p1_choice_idx = (self.p1_choice_idx + cols) % num_c
-                elif event.key in (pygame.K_e, pygame.K_SPACE):
-                    self.p1_ready = True
+            # P1 (Você): Controles WASD navegam na grade
+            if event.key == pygame.K_a:
+                self.p1_choice_idx = (self.p1_choice_idx - 1) % num_c
+            elif event.key == pygame.K_d:
+                self.p1_choice_idx = (self.p1_choice_idx + 1) % num_c
+            elif event.key == pygame.K_w:
+                self.p1_choice_idx = (self.p1_choice_idx - cols) % num_c
+            elif event.key == pygame.K_s:
+                self.p1_choice_idx = (self.p1_choice_idx + cols) % num_c
 
-                # P2 controla exclusivamente com SETAS (confirma com U / Enter)
-                if event.key == pygame.K_LEFT:
-                    self.p2_choice_idx = (self.p2_choice_idx - 1) % num_c
-                elif event.key == pygame.K_RIGHT:
-                    self.p2_choice_idx = (self.p2_choice_idx + 1) % num_c
-                elif event.key == pygame.K_UP:
-                    self.p2_choice_idx = (self.p2_choice_idx - cols) % num_c
-                elif event.key == pygame.K_DOWN:
-                    self.p2_choice_idx = (self.p2_choice_idx + cols) % num_c
-                elif event.key in (pygame.K_u, pygame.K_RETURN):
-                    return True
+            # P2 / IA (Oponente): Controles SETAS navegam na grade
+            elif event.key == pygame.K_LEFT:
+                self.p2_choice_idx = (self.p2_choice_idx - 1) % num_c
+            elif event.key == pygame.K_RIGHT:
+                self.p2_choice_idx = (self.p2_choice_idx + 1) % num_c
+            elif event.key == pygame.K_UP:
+                self.p2_choice_idx = (self.p2_choice_idx - cols) % num_c
+            elif event.key == pygame.K_DOWN:
+                self.p2_choice_idx = (self.p2_choice_idx + cols) % num_c
 
-                if event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                    return True
+            # Iniciar partida
+            elif event.key in (pygame.K_SPACE, pygame.K_RETURN):
+                return True
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mx, my = event.pos
-            # Botão esquerdo: P1
+            # Botão esquerdo: Seleciona P1 (Você) ou Botões de Ajuda / Idioma
             if event.button == 1:
+                # Botão seletor de idioma [ PT | EN ]
+                if self.lang_btn_rect.collidepoint(mx, my):
+                    toggle_lang()
+                    return False
+
+                # Botão superior do Guia Completo
+                if self.help_btn_rect.collidepoint(mx, my):
+                    self.help_modal.open(GameHelpModal.TAB_RULES)
+                    return False
+
+
+                # Botões [ ? ] de cada card de personagem
+                for idx, irect in enumerate(self.info_btn_rects):
+                    if irect.collidepoint(mx, my):
+                        self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=idx)
+                        return False
+
                 for idx, rect in enumerate(self.card_rects):
                     if rect.collidepoint(mx, my):
                         self.p1_choice_idx = idx
@@ -250,7 +274,7 @@ class CharacterSelectScreen:
                 ai_btn = pygame.Rect(SCREEN_WIDTH // 2 - 140, 66, 280, 32)
                 if ai_btn.collidepoint(mx, my):
                     self.vs_ai = not self.vs_ai
-            # Botão direito: P2
+            # Botão direito: Seleciona IA (Oponente) / P2
             elif event.button == 3:
                 for idx, rect in enumerate(self.card_rects):
                     if rect.collidepoint(mx, my):
@@ -260,6 +284,8 @@ class CharacterSelectScreen:
 
     def update(self, dt: float):
         self.anim_timer += dt
+        self.help_modal.update(dt)
+
 
     def get_selected_characters(self) -> tuple[str, str, bool]:
         p1_char = self.characters[self.p1_choice_idx]["id"]
@@ -270,16 +296,46 @@ class CharacterSelectScreen:
         surface.fill(COLOR_BG)
 
         # 1. Título
-        title_surf = font_large.render("ESCOLHA SEU GUERREIRO", True, COLOR_GOLD)
+        title_surf = font_large.render(t("select_title"), True, COLOR_GOLD)
         surface.blit(title_surf, (SCREEN_WIDTH // 2 - title_surf.get_width() // 2, 18))
+
+        # Botão Seletor Flutuante de Idioma [ PT | EN ] (Padrão Boardbots)
+        lang = get_lang()
+        self.lang_btn_rect = pygame.Rect(SCREEN_WIDTH - 365, 18, 100, 36)
+        pygame.draw.rect(surface, (30, 40, 35), self.lang_btn_rect, border_radius=6)
+        pygame.draw.rect(surface, COLOR_GOLD, self.lang_btn_rect, 1, border_radius=6)
+
+        pt_col = COLOR_GOLD if lang == LANG_PT else (140, 155, 148)
+        en_col = COLOR_GOLD if lang == LANG_EN else (140, 155, 148)
+        pt_bg = (48, 64, 54) if lang == LANG_PT else (25, 34, 29)
+        en_bg = (48, 64, 54) if lang == LANG_EN else (25, 34, 29)
+
+        r_pt = pygame.Rect(self.lang_btn_rect.x + 3, self.lang_btn_rect.y + 3, 44, 30)
+        r_en = pygame.Rect(self.lang_btn_rect.x + 53, self.lang_btn_rect.y + 3, 44, 30)
+        pygame.draw.rect(surface, pt_bg, r_pt, border_radius=4)
+        pygame.draw.rect(surface, en_bg, r_en, border_radius=4)
+
+        s_pt = font_small.render("PT", True, pt_col)
+        s_en = font_small.render("EN", True, en_col)
+        surface.blit(s_pt, (r_pt.centerx - s_pt.get_width() // 2, r_pt.centery - s_pt.get_height() // 2))
+        surface.blit(s_en, (r_en.centerx - s_en.get_width() // 2, r_en.centery - s_en.get_height() // 2))
+
+        # Botão Superior Guia do Jogo & Ajuda
+        self.help_btn_rect = pygame.Rect(SCREEN_WIDTH - 250, 18, 226, 36)
+        pygame.draw.rect(surface, (28, 38, 33), self.help_btn_rect, border_radius=6)
+        pygame.draw.rect(surface, COLOR_GOLD, self.help_btn_rect, 1, border_radius=6)
+        h_txt = font_small.render(t("btn_help"), True, COLOR_GOLD)
+        surface.blit(h_txt, (self.help_btn_rect.centerx - h_txt.get_width() // 2, self.help_btn_rect.centery - h_txt.get_height() // 2))
 
         # 2. Botão Modo de Jogo
         ai_btn = pygame.Rect(SCREEN_WIDTH // 2 - 140, 66, 280, 32)
         pygame.draw.rect(surface, (30, 40, 35), ai_btn, border_radius=6)
         pygame.draw.rect(surface, COLOR_GOLD, ai_btn, 1, border_radius=6)
-        mode_text = "[1P vs IA] (TAB para 2P)" if self.vs_ai else "[2 JOGADORES] (P1: WASD | P2: Setas)"
+        mode_text = t("mode_1p") if self.vs_ai else t("mode_2p")
         mode_surf = font_small.render(mode_text, True, COLOR_GOLD)
         surface.blit(mode_surf, (ai_btn.centerx - mode_surf.get_width() // 2, ai_btn.y + 7))
+
+
 
         # 3. Grade Simétrica 5x2 (5 cards na Linha 1, 5 cards na Linha 2)
         card_w = 230
@@ -298,6 +354,7 @@ class CharacterSelectScreen:
         start_y = 114
 
         self.card_rects.clear()
+        self.info_btn_rects.clear()
 
         for idx, char_info in enumerate(self.characters):
             row = idx // 6
@@ -334,18 +391,21 @@ class CharacterSelectScreen:
             # Badges P1 / P2 no topo direito
             badge_y = rect.y + 8
             if is_p1 and is_p2:
-                p1_badge = font_small.render("[P1]", True, COLOR_RED_AURA)
-                p2_label = "[IA]" if self.vs_ai else "[P2]"
+                p1_label = t("badge_p1")
+                p2_label = t("badge_ia") if self.vs_ai else t("badge_p2")
+                p1_badge = font_small.render(p1_label, True, COLOR_RED_AURA)
                 p2_badge = font_small.render(p2_label, True, COLOR_BLUE_AURA)
                 surface.blit(p2_badge, (rect.right - p2_badge.get_width() - 8, badge_y))
                 surface.blit(p1_badge, (rect.right - p2_badge.get_width() - p1_badge.get_width() - 12, badge_y))
             elif is_p1:
-                p1_badge = font_small.render("[P1]", True, COLOR_RED_AURA)
+                p1_label = t("badge_p1")
+                p1_badge = font_small.render(p1_label, True, COLOR_RED_AURA)
                 surface.blit(p1_badge, (rect.right - p1_badge.get_width() - 8, badge_y))
             elif is_p2:
-                p2_label = "[IA]" if self.vs_ai else "[P2]"
+                p2_label = t("badge_ia") if self.vs_ai else t("badge_p2")
                 p2_badge = font_small.render(p2_label, True, COLOR_BLUE_AURA)
                 surface.blit(p2_badge, (rect.right - p2_badge.get_width() - 8, badge_y))
+
 
             # Retrato Voxel 3D do Personagem (no topo esquerdo da carta)
             portrait_cx = rect.x + 28
@@ -407,14 +467,28 @@ class CharacterSelectScreen:
             surface.blit(line_dmg, (rect.x + 8, stats_y + 19))
             surface.blit(line_esp, (rect.x + 8, stats_y + 38))
 
-            # Caixa de Comandos / Teclas
-            ctrl_box = pygame.Rect(rect.x + 6, rect.bottom - 46, card_w - 12, 38)
+            # Caixa de Comandos / Teclas com espaço para o botão [ ? ] de Estratégia
+            ctrl_w = card_w - 40
+            ctrl_box = pygame.Rect(rect.x + 6, rect.bottom - 46, ctrl_w, 38)
             pygame.draw.rect(surface, (18, 24, 21), ctrl_box, border_radius=6)
             pygame.draw.rect(surface, (40, 50, 45), ctrl_box, 1, border_radius=6)
             p1_key_label = font_small.render(f"P1: {char_info['keys_p1']}", True, (255, 200, 180))
             p2_key_label = font_small.render(f"P2: {char_info['keys_p2']}", True, (180, 220, 255))
             surface.blit(p1_key_label, (ctrl_box.x + 4, ctrl_box.y + 3))
             surface.blit(p2_key_label, (ctrl_box.x + 4, ctrl_box.y + 19))
+
+            # Botão [ ? ] para abrir estratégia individual deste guerreiro
+            info_btn = pygame.Rect(rect.right - 30, rect.bottom - 46, 24, 38)
+            self.info_btn_rects.append(info_btn)
+            pygame.draw.rect(surface, (26, 36, 31), info_btn, border_radius=6)
+            pygame.draw.rect(surface, COLOR_GOLD, info_btn, 1, border_radius=6)
+            q_surf = font_mid.render("?", True, COLOR_GOLD)
+            surface.blit(q_surf, (info_btn.centerx - q_surf.get_width() // 2, info_btn.centery - q_surf.get_height() // 2))
+
+        # Guia de Navegação e Controles
+        guide_text = t("guide_nav")
+        guide_surf = font_small.render(guide_text, True, (210, 225, 220))
+        surface.blit(guide_surf, (SCREEN_WIDTH // 2 - guide_surf.get_width() // 2, SCREEN_HEIGHT - 94))
 
         # 4. Botão INICIAR DUELO
         start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 64, 320, 44)
@@ -423,5 +497,11 @@ class CharacterSelectScreen:
         pygame.draw.rect(surface, btn_bg, start_btn, border_radius=8)
         pygame.draw.rect(surface, COLOR_GOLD, start_btn, 2, border_radius=8)
 
-        st_text = font_mid.render("INICIAR DUELO (ENTER)", True, COLOR_GOLD)
+        st_text = font_mid.render(t("btn_start"), True, COLOR_GOLD)
         surface.blit(st_text, (start_btn.centerx - st_text.get_width() // 2, start_btn.y + 11))
+
+
+        # 5. Renderizar Modal de Ajuda se aberto (sobreposto a toda a tela)
+        if self.help_modal.is_open:
+            self.help_modal.render(surface, font_large, font_mid, font_small)
+

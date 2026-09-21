@@ -188,15 +188,15 @@ class TimedBombEntity:
         self.wz = wz
         self.owner = owner
 
-        speed = 7.5
+        speed = 9.2
         self.vx = dir_x * speed
         self.vy = dir_y * speed
-        self.vz = 3.2
-        self.gz = -11.5
+        self.vz = 3.6
+        self.gz = -12.5
         self.is_airborne = True
 
-        self.fuse_timer = 2.0
-        self.explosion_radius = 2.4
+        self.fuse_timer = 1.2
+        self.explosion_radius = 2.1
         self.is_active = True
         self.spark_timer = 0.0
 
@@ -462,7 +462,7 @@ class MusketBulletProjectile:
         self.dir_x = dir_x
         self.dir_y = dir_y
         self.owner = owner
-        speed = 34.0
+        speed = 24.0
         self.vx = dir_x * speed
         self.vy = dir_y * speed
         self.is_active = True

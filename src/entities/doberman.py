@@ -13,6 +13,7 @@ from src.isometric.iso_math import world_distance
 from src.entities.voxel_models import render_voxel_doberman
 
 STATE_DOG_FOLLOW = "FOLLOW"
+STATE_DOG_BARK = "BARK"
 STATE_DOG_CHARGE = "CHARGE"
 STATE_DOG_KNOCKED_OUT = "KNOCKED_OUT"
 
@@ -28,6 +29,7 @@ class DobermanDog:
 
         self.state = STATE_DOG_FOLLOW
         self.state_timer = 0.0
+        self.cooldown_timer = 0.0
         self.knockout_duration = 4.5
 
         # Atributos de corrida
@@ -46,10 +48,10 @@ class DobermanDog:
 
     def can_attack(self) -> bool:
         """Retorna True se o cão está apto a receber o comando de ataque."""
-        return self.state == STATE_DOG_FOLLOW
+        return self.state == STATE_DOG_FOLLOW and self.cooldown_timer <= 0
 
     def charge(self, target_wx: float, target_wy: float):
-        """Inicia o dash veloz de mordida letal."""
+        """Inicia o aviso sonoro/latido antes do dash letal."""
         if not self.can_attack():
             return
 
@@ -60,9 +62,10 @@ class DobermanDog:
             self.facing_x = dx / dist
             self.facing_y = dy / dist
 
-        self.state = STATE_DOG_CHARGE
-        self.charge_dist = 0.0
-        self.hitbox_active = True
+        # Windup de latido (0.20s): alerta sonoro e visual para reação justa
+        self.state = STATE_DOG_BARK
+        self.state_timer = 0.20
+        self.hitbox_active = False
 
     def knock_out(self, duration: float = 4.5):
         """Nocauteia o cão temporariamente quando golpeado pelo adversário."""
@@ -74,6 +77,9 @@ class DobermanDog:
     def update(self, dt: float, game_map):
         """Atualiza a movimentação, corrida ou recuperação do Doberman."""
         self.run_cycle += dt * 14.0
+
+        if self.cooldown_timer > 0:
+            self.cooldown_timer -= dt
 
         if self.state == STATE_DOG_FOLLOW:
             self.hitbox_active = False
@@ -91,6 +97,14 @@ class DobermanDog:
                 self.facing_x = dx / dist
                 self.facing_y = dy / dist
 
+        elif self.state == STATE_DOG_BARK:
+            self.hitbox_active = False
+            self.state_timer -= dt
+            if self.state_timer <= 0:
+                self.state = STATE_DOG_CHARGE
+                self.charge_dist = 0.0
+                self.hitbox_active = True
+
         elif self.state == STATE_DOG_CHARGE:
             # Dash letal
             step = self.charge_speed * dt
@@ -105,12 +119,14 @@ class DobermanDog:
                 if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
                     self.state = STATE_DOG_FOLLOW
                     self.hitbox_active = False
+                    self.cooldown_timer = 2.0
                     return
 
             if self.charge_dist >= self.charge_range:
-                # Terminou o dash sem acertar: retorna a seguir o dono
+                # Terminou o dash sem acertar: retorna a seguir o dono com cooldown de comando
                 self.state = STATE_DOG_FOLLOW
                 self.hitbox_active = False
+                self.cooldown_timer = 2.5
 
         elif self.state == STATE_DOG_KNOCKED_OUT:
             self.hitbox_active = False

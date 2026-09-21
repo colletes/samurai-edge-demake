@@ -17,7 +17,8 @@ from src.entities.voxel_models import render_voxel_humanoid
 
 class PurpleNinja(Samurai):
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, name="Murasaki (Purple Ninja)")
+        super().__init__(wx, wy, name="Murasaki")
+        self.char_type = "murasaki"
         self.speed = 4.6
 
         # Ataque Curto de Foice (Kama Strike) com Precedência Absoluta
@@ -52,10 +53,10 @@ class PurpleNinja(Samurai):
         self.vx = self.facing_x * 4.5
         self.vy = self.facing_y * 4.5
 
-        # Hitbox curta
+        # Hitbox curta calibrada
         self.hitbox_active = False
-        self.hitbox_center = (self.wx + self.facing_x * 0.65, self.wy + self.facing_y * 0.65)
-        self.hitbox_radius = 0.70  # Bem curto conforme especificado
+        self.hitbox_center = (self.wx + self.facing_x * 0.70, self.wy + self.facing_y * 0.70)
+        self.hitbox_radius = 0.90  # Alcance ampliado para 0.90 para consistência tática
 
     def trigger_kusarigama_pull(self, target_wx: float, target_wy: float, projectiles: list):
         """

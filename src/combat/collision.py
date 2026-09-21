@@ -31,14 +31,14 @@ def _get_death_style_for_attacker(attacker):
     elif "rifle" in char_type or "teppo" in char_type:
         return "HEADSHOT_EXPLODE"
     elif "kabuki" in char_type or "okuni" in char_type:
-        return "OKUNI_MELT"
+        return "MURASAKI_DECAP"
     return "KENSHIN_SPLIT"
 
 class CombatSystem:
     def __init__(self):
         self.hitstop_timer = 0.0
 
-    def process_combat(self, p1, p2, game_map, particles: list, banners: list, camera, projectiles: list, dt: float = 0.016, cinematic_director = None) -> str | None:
+    def process_combat(self, p1, p2, game_map, particles: list, banners: list, camera, projectiles: list, dt: float = 0.016, cinematic_director = None, decoys: list = None) -> str | None:
         """
         Processa interações de combate: corpo a corpo, projéteis e ataques de cães.
         Retorna 'P1_WINS', 'P2_WINS' ou None.
@@ -46,13 +46,42 @@ class CombatSystem:
         winner = None
 
         # -------------------------------------------------------------
-        # 1. ATUALIZAR E PROCESSAR PROJÉTEIS (KUNAI E SHURIKEN)
+        # 1. ATUALIZAR E PROCESSAR PROJÉTEIS (KUNAI, SHURIKEN, BALAS, FLECHAS, ETC.)
         # -------------------------------------------------------------
+        # Deflexão de Projéteis pela Lâmina do Kenshin (Iai Flash ou Shukuchi)
+        for k_fighter in (p1, p2):
+            if getattr(k_fighter, "char_type", "") == "kenshin" and k_fighter.is_alive:
+                if k_fighter.hitbox_active or k_fighter.state in ("ATTACK", "SHUKUCHI"):
+                    kx = k_fighter.hitbox_center[0] if k_fighter.hitbox_active else k_fighter.wx
+                    ky = k_fighter.hitbox_center[1] if k_fighter.hitbox_active else k_fighter.wy
+                    kr = k_fighter.hitbox_radius if k_fighter.hitbox_active else 1.25
+                    for proj in projectiles:
+                        if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != k_fighter:
+                            if world_distance(kx, ky, proj.wx, proj.wy) < (kr + 0.45):
+                                proj.is_active = False
+                                for _ in range(12):
+                                    particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
+                                banners.append(FloatingBanner("SLASH DEFLECTION!", proj.wx, proj.wy, wz=1.7, color=(255, 230, 80)))
+                                camera.add_shake(5.0)
+
         active_projectiles = []
         for proj in projectiles:
             still_valid = proj.update(dt, game_map, particles)
             if not still_valid:
                 continue
+
+            # Interceptação de projéteis por bonecos Kawarimi (Decoys)
+            if decoys:
+                decoy_intercepted = False
+                for decoy in decoys:
+                    if decoy.is_active and getattr(proj, "owner", None) != decoy.owner:
+                        if world_distance(proj.wx, proj.wy, decoy.wx, decoy.wy) < (decoy.radius + 0.45):
+                            proj.is_active = False
+                            decoy.on_hit(getattr(proj, "owner", None), particles, banners, camera)
+                            decoy_intercepted = True
+                            break
+                if decoy_intercepted or not getattr(proj, "is_active", True):
+                    continue
 
             # Se for KUNAI em vôo
             if isinstance(proj, KunaiProjectile) and proj.state == "FLYING":
@@ -78,7 +107,8 @@ class CombatSystem:
                             winner = winner_id
                             proj.is_active = False
                             if cinematic_director:
-                                cinematic_director.trigger_fatal_strike(proj.owner, target, "KENSHIN_SPLIT", (proj.dir_x, proj.dir_y))
+                                death_style = _get_death_style_for_attacker(proj.owner)
+                                cinematic_director.trigger_fatal_strike(proj.owner, target, death_style, (proj.dir_x, proj.dir_y))
 
             # Se for SHURIKEN (Não mata! Apenas aplica stun!)
             elif isinstance(proj, ShurikenProjectile) and proj.is_active:
@@ -90,7 +120,7 @@ class CombatSystem:
                             particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
                         banners.append(FloatingBanner("PARRY!", target.wx, target.wy, wz=1.6, color=(100, 200, 255)))
                     else:
-                        target.stun(0.48)  # Atordoamento tático!
+                        target.stun(0.24)  # Atordoamento tático calibrado!
                         camera.add_shake(4.0)
                         banners.append(FloatingBanner("STUNNED!", target.wx, target.wy, wz=1.7, color=(200, 220, 255)))
                         for _ in range(8):
@@ -99,10 +129,12 @@ class CombatSystem:
 
             # Se for BOMBA NORMAL EM ARCO (TimedBombEntity)
             elif isinstance(proj, TimedBombEntity):
-                # Detona por contato com qualquer combatente ou por término do pavio
-                p1_touch = p1.is_alive and world_distance(proj.wx, proj.wy, p1.wx, p1.wy) < (0.65 + p1.radius)
-                p2_touch = p2.is_alive and world_distance(proj.wx, proj.wy, p2.wx, p2.wy) < (0.65 + p2.radius)
-                should_detonate = (proj.fuse_timer <= 0) or p1_touch or p2_touch
+                # Detona por término do pavio ou por contato com combatentes (evitando colisão aérea imediata com o lançador)
+                target = p2 if proj.owner == p1 else p1
+                owner = proj.owner
+                target_touch = target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.65 + target.radius)
+                owner_touch = (not proj.is_airborne) and (proj.fuse_timer < 0.9) and world_distance(proj.wx, proj.wy, owner.wx, owner.wy) < (0.65 + owner.radius)
+                should_detonate = (proj.fuse_timer <= 0) or target_touch or owner_touch
 
                 if should_detonate:
                     proj.is_active = False
@@ -120,34 +152,44 @@ class CombatSystem:
                             if slice_part:
                                 particles.append(slice_part)
 
-                    # Dano em área (inclui Fogo Amigo / Auto-Dano se o próprio Kemuri estiver perto!)
+                    # Dano em área (com 50% de redução de dano para Kasumi contra sua própria bomba)
                     p1_in_range = p1.is_alive and world_distance(proj.wx, proj.wy, p1.wx, p1.wy) < proj.explosion_radius
                     p2_in_range = p2.is_alive and world_distance(proj.wx, proj.wy, p2.wx, p2.wy) < proj.explosion_radius
 
-                    if p1_in_range and p2_in_range:
-                        p1.take_hit((0, 0), damage=2)
-                        p2.take_hit((0, 0), damage=2)
-                        for _ in range(35):
+                    p1_dmg = 1 if (proj.owner == p1 and getattr(p1, "char_type", "") == "kasumi") else 2
+                    p2_dmg = 1 if (proj.owner == p2 and getattr(p2, "char_type", "") == "kasumi") else 2
+
+                    p1_dead = False
+                    p2_dead = False
+
+                    if p1_in_range:
+                        _, p1_dead = p1.take_hit((0, 0), damage=p1_dmg)
+                        for _ in range(25 if p1_dead else 10):
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
+                        if p1_dead and cinematic_director:
+                            cinematic_director.trigger_fatal_strike(proj.owner, p1, "KASUMI_EXPLODE", (0, 0))
+
+                    if p2_in_range:
+                        _, p2_dead = p2.take_hit((0, 0), damage=p2_dmg)
+                        for _ in range(25 if p2_dead else 10):
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
+                        if p2_dead and cinematic_director:
+                            cinematic_director.trigger_fatal_strike(proj.owner, p2, "KASUMI_EXPLODE", (0, 0))
+
+                    if p1_dead and p2_dead:
                         winner = "DRAW"
-                        if cinematic_director:
-                            cinematic_director.trigger_fatal_strike(proj.owner, p1, "KASUMI_EXPLODE", (0, 0))
-                            cinematic_director.trigger_fatal_strike(proj.owner, p2, "KASUMI_EXPLODE", (0, 0))
-                    elif p1_in_range:
-                        p1.take_hit((0, 0), damage=2)
-                        for _ in range(25):
-                            particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
-                        winner = "P2_WINS"
-                        if cinematic_director:
-                            cinematic_director.trigger_fatal_strike(proj.owner, p1, "KASUMI_EXPLODE", (0, 0))
-                    elif p2_in_range:
-                        p2.take_hit((0, 0), damage=2)
-                        for _ in range(25):
-                            particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
-                        winner = "P1_WINS"
-                        if cinematic_director:
-                            cinematic_director.trigger_fatal_strike(proj.owner, p2, "KASUMI_EXPLODE", (0, 0))
+                    elif p1_dead:
+                        # Se p2 já estiver morto (ex: abatido por kunai antes) ou se P1 já tinha vencido, resulta em Double KO (DRAW)
+                        if (not p2.is_alive) or (winner == "P1_WINS"):
+                            winner = "DRAW"
+                        else:
+                            winner = "P2_WINS"
+                    elif p2_dead:
+                        # Se p1 já estiver morto ou se P2 já tinha vencido, resulta em Double KO (DRAW)
+                        if (not p1.is_alive) or (winner == "P2_WINS"):
+                            winner = "DRAW"
+                        else:
+                            winner = "P1_WINS"
 
             # Se for TIRO DE MOSQUETE (MusketBulletProjectile)
             elif isinstance(proj, MusketBulletProjectile) and proj.is_active:
@@ -178,12 +220,12 @@ class CombatSystem:
                     if not getattr(target, "is_poisoned", False):
                         proj.is_active = False
                         target.is_poisoned = True
-                        target.poison_timer = 10.0
-                        target.speed *= 1.40  # Boost de velocidade
+                        target.poison_timer = 4.0
+                        target.speed *= 1.08  # Leve boost de adrenalina sem torná-lo invencível
                         if hasattr(proj.owner, "on_poison_inflicted"):
                             proj.owner.on_poison_inflicted(target)
                         camera.add_shake(7.0)
-                        banners.append(FloatingBanner("POISONED! 10s TO SURVIVE!", target.wx, target.wy, wz=1.8, color=(80, 225, 120), duration=3.5))
+                        banners.append(FloatingBanner("POISONED! 4s TO SURVIVE!", target.wx, target.wy, wz=1.8, color=(80, 225, 120), duration=3.5))
                         for _ in range(16):
                             particles.append(SparkParticle(target.wx, target.wy, 0.5))
 
@@ -229,6 +271,7 @@ class CombatSystem:
                         else:
                             proj.state = "HOOKED_PULLING"
                             proj.target = target
+                            target.stun(0.35)
                             camera.add_shake(6.0)
                             banners.append(FloatingBanner("KUSARIGAMA HOOK!", target.wx, target.wy, wz=1.8, color=(195, 120, 255)))
                             for _ in range(12):
@@ -379,13 +422,21 @@ class CombatSystem:
                     return None
 
         # -------------------------------------------------------------
-        # 5. ATAQUE MELEE: P1 CONTRA P2
+        # 5. ATAQUE MELEE: P1 CONTRA DECOYS OU P2
         # -------------------------------------------------------------
+        if p1.hitbox_active and decoys:
+            hx, hy = p1.hitbox_center
+            for decoy in decoys:
+                if decoy.is_active and getattr(decoy, "owner", None) != p1:
+                    if world_distance(hx, hy, decoy.wx, decoy.wy) < (p1.hitbox_radius + decoy.radius):
+                        p1.hitbox_active = False
+                        decoy.on_hit(p1, particles, banners, camera)
+                        break
+
         if p1.hitbox_active and p2.is_alive:
             hx, hy = p1.hitbox_center
             if world_distance(hx, hy, p2.wx, p2.wy) < (p1.hitbox_radius + p2.radius):
                 p1.hitbox_active = False
-                damage = 1 if hasattr(p1, "has_kunai") else 2
 
                 if p2.state == STATE_PARRY:
                     for _ in range(12):
@@ -394,7 +445,22 @@ class CombatSystem:
                     banners.append(FloatingBanner(parry_msg, p2.wx, p2.wy, wz=1.7, color=(100, 200, 255)))
                     camera.add_shake(8.0)
                     p1.stun(0.85)
+                elif getattr(p1, "is_rifle_butt", False):
+                    # Coronhada agressiva do Teppo: causa 1 de dano, afasta 1.6m e atordoa o adversário
+                    hit, dead = p2.take_hit(p1.slash_dir, damage=1)
+                    p2.stun(0.50)
+                    p2.wx = max(1.0, min(game_map.cols - 1.0, p2.wx + p1.facing_x * 1.6))
+                    p2.wy = max(1.0, min(game_map.rows - 1.0, p2.wy + p1.facing_y * 1.6))
+                    camera.add_shake(8.0)
+                    banners.append(FloatingBanner("RIFLE BUTT - 1 DMG!", p2.wx, p2.wy, wz=1.7, color=(210, 210, 230)))
+                    for _ in range(12):
+                        particles.append(SparkParticle(p2.wx, p2.wy, 0.5))
+                    if dead:
+                        winner = "P1_WINS"
+                        if cinematic_director:
+                            cinematic_director.trigger_fatal_strike(p1, p2, "HEADSHOT_EXPLODE", p1.slash_dir)
                 else:
+                    damage = 1 if hasattr(p1, "has_kunai") else 2
                     hit, dead = p2.take_hit(p1.slash_dir, damage=damage)
                     if dead:
                         camera.add_shake(14.0)
@@ -414,13 +480,21 @@ class CombatSystem:
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
 
         # -------------------------------------------------------------
-        # 6. ATAQUE MELEE: P2 CONTRA P1
+        # 6. ATAQUE MELEE: P2 CONTRA DECOYS OU P1
         # -------------------------------------------------------------
+        if p2.hitbox_active and decoys:
+            hx, hy = p2.hitbox_center
+            for decoy in decoys:
+                if decoy.is_active and getattr(decoy, "owner", None) != p2:
+                    if world_distance(hx, hy, decoy.wx, decoy.wy) < (p2.hitbox_radius + decoy.radius):
+                        p2.hitbox_active = False
+                        decoy.on_hit(p2, particles, banners, camera)
+                        break
+
         if p2.hitbox_active and p1.is_alive and winner is None:
             hx, hy = p2.hitbox_center
             if world_distance(hx, hy, p1.wx, p1.wy) < (p2.hitbox_radius + p1.radius):
                 p2.hitbox_active = False
-                damage = 1 if hasattr(p2, "has_kunai") else 2
 
                 if p1.state == STATE_PARRY:
                     for _ in range(12):
@@ -429,7 +503,22 @@ class CombatSystem:
                     banners.append(FloatingBanner(parry_msg, p1.wx, p1.wy, wz=1.7, color=(100, 200, 255)))
                     camera.add_shake(8.0)
                     p2.stun(0.85)
+                elif getattr(p2, "is_rifle_butt", False):
+                    # Coronhada agressiva do Teppo: causa 1 de dano, afasta 1.6m e atordoa o adversário
+                    hit, dead = p1.take_hit(p2.slash_dir, damage=1)
+                    p1.stun(0.50)
+                    p1.wx = max(1.0, min(game_map.cols - 1.0, p1.wx + p2.facing_x * 1.6))
+                    p1.wy = max(1.0, min(game_map.rows - 1.0, p1.wy + p2.facing_y * 1.6))
+                    camera.add_shake(8.0)
+                    banners.append(FloatingBanner("RIFLE BUTT - 1 DMG!", p1.wx, p1.wy, wz=1.7, color=(210, 210, 230)))
+                    for _ in range(12):
+                        particles.append(SparkParticle(p1.wx, p1.wy, 0.5))
+                    if dead:
+                        winner = "P2_WINS"
+                        if cinematic_director:
+                            cinematic_director.trigger_fatal_strike(p2, p1, "HEADSHOT_EXPLODE", p2.slash_dir)
                 else:
+                    damage = 1 if hasattr(p2, "has_kunai") else 2
                     hit, dead = p1.take_hit(p2.slash_dir, damage=damage)
                     if dead:
                         camera.add_shake(14.0)
@@ -447,6 +536,14 @@ class CombatSystem:
                         banners.append(FloatingBanner("KUNAI STAB (1/2)!", p1.wx, p1.wy, wz=1.7, color=(255, 200, 50)))
                         for _ in range(12):
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
+
+        # -------------------------------------------------------------
+        # 7. ATUALIZAR E REMOVER DECOYS EXPIRADOS
+        # -------------------------------------------------------------
+        if decoys:
+            for d in decoys:
+                d.update(dt)
+            decoys[:] = [d for d in decoys if d.is_active]
 
         return winner
 

@@ -18,35 +18,76 @@ from src.isometric.iso_math import world_to_iso
 
 class RedSamurai(Samurai):
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, name="Kenshin (Red)")
+        super().__init__(wx, wy, name="Kenshin")
+        self.char_type = "kenshin"
         self.speed = 5.4  # Agilidade máxima do retalhador
 
         # Parâmetros do Iai-jutsu
         self.dash_speed = 22.0
         self.dash_duration = 0.16   # Avanço supersônico
-        self.recovery_duration = 1.35 # ALTO COOLDOWN embainhando a katana!
+        self.recovery_duration = 0.80 # Calibrado: cooldown justo embainhando a katana!
         self.attack_range = 2.4
 
         # Efeito visual de rastro de lâmina
         self.slash_trail_points: list[tuple[float, float]] = []
 
+    def can_move(self) -> bool:
+        """Kenshin pode se movimentar em IDLE, WALK e durante o RECOVERY (guardando a espada na bainha)."""
+        return self.is_alive and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY)
+
+    def apply_movement(self, move_x: float, move_y: float, dt: float, game_map):
+        if not self.can_move():
+            return
+        if self.state == STATE_RECOVERY:
+            # Movimento gracioso (75% da velocidade) enquanto embainha a katana (Noto)
+            self.is_moving = (move_x != 0 or move_y != 0)
+            if not self.is_moving:
+                return
+            self.walk_cycle += dt * 8.0
+            current_speed = self.speed * 0.75
+            if self.slow_timer > 0:
+                current_speed *= 0.35
+                self.slow_timer -= dt
+            if game_map.is_water(self.wx, self.wy):
+                current_speed *= 0.55
+
+            new_wx = self.wx + move_x * current_speed * dt
+            new_wy = self.wy + move_y * current_speed * dt
+            self.facing_x = move_x
+            self.facing_y = move_y
+
+            new_wx = max(1.0, min(game_map.cols - 1.0, new_wx))
+            new_wy = max(1.0, min(game_map.rows - 1.0, new_wy))
+
+            for rock in game_map.rocks:
+                col, ox, oy = rock.check_collision(new_wx, new_wy, self.radius)
+                if col:
+                    new_wx, new_wy = ox, oy
+            if game_map.well:
+                col, ox, oy = game_map.well.check_collision(new_wx, new_wy, self.radius)
+                if col:
+                    new_wx, new_wy = ox, oy
+            self.wx, self.wy = new_wx, new_wy
+        else:
+            super().apply_movement(move_x, move_y, dt, game_map)
+
     def trigger_iai_attack(self, target_wx: float, target_wy: float):
         """Inicia o golpe Iai-jutsu se puder agir."""
-        if not self.can_move():
+        if self.state not in (STATE_IDLE, STATE_WALK):
             return
 
         self.set_facing(target_wx, target_wy)
         self.state = STATE_ATTACK
         self.state_timer = self.dash_duration
         self.hitbox_active = True
-        self.hitbox_radius = 1.2
+        self.hitbox_radius = 1.25  # Arco ampliado para 1.25 para consistência do corte
         self.slash_dir = (self.facing_x, self.facing_y)
         self.slash_trail_points = [(self.wx, self.wy)]
         self.hitbox_center = (self.wx + self.facing_x * 0.8, self.wy + self.facing_y * 0.8)
 
     def trigger_dash(self, dir_x: float, dir_y: float):
         """Passo Relâmpago Shukuchi (縮地): Deslocamento veloz com pós-imagens."""
-        if not self.can_move():
+        if self.state not in (STATE_IDLE, STATE_WALK):
             return
         if dir_x == 0 and dir_y == 0:
             dir_x, dir_y = -self.facing_x, -self.facing_y # Recuo para trás

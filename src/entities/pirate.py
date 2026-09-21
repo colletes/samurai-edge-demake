@@ -17,37 +17,40 @@ from src.effects.particles import SparkParticle
 
 class PirateSwordswoman(Samurai):
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, name="Anne (Pirate Captain)")
+        super().__init__(wx, wy, name="Anne")
         self.char_type = "pirate"
         self.speed = 4.3
 
         # Mecânica do Alfanje (Corte Amplo em Meia-Lua)
-        self.cleave_cooldown = 0.55
+        self.cleave_cooldown = 0.40
         self.cleave_timer = 0.0
 
         # Truque Sujo: Pólvora nos Olhos & Recuo
-        self.powder_cooldown = 3.2
+        self.powder_cooldown = 2.0
         self.powder_timer = 0.0
 
     def can_act(self) -> bool:
         return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD)
 
     def trigger_cutlass_cleave(self, target_wx: float, target_wy: float):
-        """Ataque Primário: Golpe horizontal em meia-lua de 180° com o alfanje."""
+        """Ataque Primário: Golpe horizontal em meia-lua de 180° com o alfanje e avanço frontal."""
         if not self.can_act() or self.cleave_timer > 0:
             return
 
         self.set_facing(target_wx, target_wy)
         self.state = STATE_ATTACK
-        self.state_timer = 0.26
+        self.state_timer = 0.24
         self.hitbox_active = True
-        self.hitbox_radius = 1.35
+        self.hitbox_radius = 1.40
         self.slash_dir = (self.facing_x, self.facing_y)
+        # Avanço frontal inicial com o corte
+        self.wx += self.facing_x * 0.40
+        self.wy += self.facing_y * 0.40
         self.hitbox_center = (self.wx + self.facing_x * 0.75, self.wy + self.facing_y * 0.75)
         self.cleave_timer = self.cleave_cooldown
 
     def trigger_gunpowder_blind(self, target_wx: float = None, target_wy: float = None, opponent = None, particles: list = None):
-        """Ação Secundária: Lança pó de pólvora abrasivo nos olhos do rival a curta distância."""
+        """Ação Secundária: Lança pó de pólvora abrasivo nos olhos do rival a curta distância (Stun + Slow 1.5s)."""
         if not self.can_act() or self.powder_timer > 0:
             return
 
@@ -55,7 +58,7 @@ class PirateSwordswoman(Samurai):
             self.set_facing(target_wx, target_wy)
         self.powder_timer = self.powder_cooldown
         self.state = STATE_RECOVERY
-        self.state_timer = 0.20
+        self.state_timer = 0.16
 
         # Nuvem de pólvora à queima-roupa
         cloud_x = self.wx + self.facing_x * 0.9
@@ -65,11 +68,14 @@ class PirateSwordswoman(Samurai):
         self.wx -= self.facing_x * 0.5
         self.wy -= self.facing_y * 0.5
 
-        # Se o oponente estiver perto, fica atordoado pela pólvora abrasiva nos olhos!
-        if opponent is not None and hasattr(opponent, "stun"):
+        # Se o oponente estiver perto, fica atordoado e lento pela pólvora abrasiva nos olhos!
+        if opponent is not None:
             from src.isometric.iso_math import world_distance
-            if world_distance(self.wx, self.wy, opponent.wx, opponent.wy) < 2.5:
-                opponent.stun(0.85)
+            if world_distance(self.wx, self.wy, opponent.wx, opponent.wy) < 3.0:
+                if hasattr(opponent, "stun"):
+                    opponent.stun(0.60)
+                if hasattr(opponent, "apply_slow"):
+                    opponent.apply_slow(1.5)
 
         if particles is not None:
             for _ in range(16):
@@ -96,7 +102,7 @@ class PirateSwordswoman(Samurai):
 
             if self.state_timer <= 0:
                 self.state = STATE_RECOVERY
-                self.state_timer = 0.16
+                self.state_timer = 0.08  # Recuperação ultrarrápida do alfanje
                 self.hitbox_active = False
 
         elif self.state == STATE_RECOVERY:

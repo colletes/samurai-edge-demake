@@ -1,6 +1,7 @@
 """
-Inteligência Artificial tática capaz de controlar Musashi, Kenshin ou Ninja Hanzo.
-Adapta-se ao kit de habilidades de cada guerreiro (combos, parry, iai ou arremesso/coleta de kunai).
+Inteligência Artificial tática capaz de controlar todos os combatentes da arena.
+Adapta-se ao kit de habilidades de cada guerreiro (combos, parry, iai, kunai,
+tiro de Tanegashima com coleta de pólvora, leques de aço com finta Kawarimi, etc.).
 """
 import math
 import random
@@ -13,7 +14,7 @@ class SamuraiAI:
         self.move_dir_x = 0.0
         self.move_dir_y = 0.0
 
-    def update(self, ai_fighter, opponent, dt: float, game_map, projectiles: list = None):
+    def update(self, ai_fighter, opponent, dt: float, game_map, projectiles: list = None, powder_pouches: list = None, decoys: list = None):
         """Atualiza a IA controlando ai_fighter contra o opponent."""
         if not ai_fighter.is_alive or not opponent.is_alive:
             return
@@ -36,8 +37,37 @@ class SamuraiAI:
                     ai_fighter.apply_movement(dx / length, dy / length, dt, game_map)
                     return
 
-        # 2. Reação defensiva a ataques adversários
-        if opponent.state == STATE_ATTACK and dist < 2.5:
+        # 2. Se for Teppo (Rifleman) e estiver SEM MUNIÇÃO: caçar PowderPouch mais próximo!
+        if getattr(ai_fighter, "char_type", "") in ("rifleman", "teppo") and not getattr(ai_fighter, "has_ammo", False) and powder_pouches:
+            active_pouches = [p for p in powder_pouches if p.is_active]
+            if active_pouches:
+                nearest_pouch = min(active_pouches, key=lambda p: world_distance(ai_fighter.wx, ai_fighter.wy, p.wx, p.wy))
+                # Se o oponente estiver muito próximo durante a busca, defender com coronhada ou backstep
+                if dist < 1.5:
+                    if hasattr(ai_fighter, "trigger_rifle_butt") and random.random() < 0.70:
+                        ai_fighter.trigger_rifle_butt(opponent.wx, opponent.wy)
+                        return
+                    elif hasattr(ai_fighter, "trigger_evasive_backstep") and random.random() < 0.60:
+                        ai_fighter.trigger_evasive_backstep()
+                        return
+
+                dx = nearest_pouch.wx - ai_fighter.wx
+                dy = nearest_pouch.wy - ai_fighter.wy
+                length = math.hypot(dx, dy)
+                if length > 0.05 and ai_fighter.can_move():
+                    ai_fighter.apply_movement(dx / length, dy / length, dt, game_map)
+                    return
+
+        # 3. Reação defensiva a ataques adversários ou projéteis perigosos em aproximação
+        incoming_projectile = False
+        if projectiles:
+            for p in projectiles:
+                if getattr(p, "is_active", True) and getattr(p, "owner", None) == opponent:
+                    if world_distance(ai_fighter.wx, ai_fighter.wy, p.wx, p.wy) < 3.2:
+                        incoming_projectile = True
+                        break
+
+        if (opponent.state == STATE_ATTACK and dist < 2.5) or incoming_projectile:
             # Se for Musashi: tenta Parry
             if hasattr(ai_fighter, "trigger_parry") and random.random() < 0.65:
                 ai_fighter.set_facing(opponent.wx, opponent.wy)
@@ -59,11 +89,11 @@ class SamuraiAI:
             elif hasattr(ai_fighter, "trigger_evasive_backstep") and random.random() < 0.70:
                 ai_fighter.trigger_evasive_backstep()
                 return
-            # Se for Kabuki: pirueta acrobática evasiva
-            elif hasattr(ai_fighter, "trigger_acrobatic_dodge") and random.random() < 0.75:
+            # Se for Okuni (Kabuki): finta Kawarimi Decoy (deixa boneco e evade)
+            elif hasattr(ai_fighter, "trigger_kawarimi_decoy") and (decoys is not None) and random.random() < 0.75:
                 dx = ai_fighter.wx - opponent.wx
                 dy = ai_fighter.wy - opponent.wy
-                ai_fighter.trigger_acrobatic_dodge(dx, dy)
+                ai_fighter.trigger_kawarimi_decoy(dx, dy, decoys)
                 return
             # Se for Kyudo Archer: flecha de corda para fuga rápida
             elif hasattr(ai_fighter, "trigger_rope_arrow") and projectiles is not None and random.random() < 0.65:
@@ -71,14 +101,14 @@ class SamuraiAI:
                 return
             # Se for Pirata (Anne): pólvora nos olhos para cegar o oponente
             elif hasattr(ai_fighter, "trigger_gunpowder_blind") and random.random() < 0.60:
-                ai_fighter.trigger_gunpowder_blind(opponent.wx, opponent.wy)
+                ai_fighter.trigger_gunpowder_blind(opponent.wx, opponent.wy, opponent=opponent)
                 return
             # Se for Mosqueteira (Julie): riposte com a capa para anular o golpe
             elif hasattr(ai_fighter, "trigger_cloak_riposte") and random.random() < 0.65:
                 ai_fighter.trigger_cloak_riposte()
                 return
 
-        # 3. Punição quando o oponente estiver em RECOVERY ou STUNNED
+        # 4. Punição quando o oponente estiver em RECOVERY ou STUNNED
         if opponent.state in (STATE_RECOVERY, "STUNNED"):
             ai_fighter.set_facing(opponent.wx, opponent.wy)
             # Se for American Ninja e o oponente estiver atordoado ou vulnerável: MANDA O DOBERMAN!
@@ -97,34 +127,9 @@ class SamuraiAI:
                     ai_fighter.apply_movement(dx / length, dy / length, dt, game_map)
                 return
 
-        # 4. Comportamento Específico: Kabuki pós-veneno (Sobrevivência Pura!)
-        if hasattr(ai_fighter, "has_poisoned_target") and ai_fighter.has_poisoned_target:
-            # Fugir ativamente do oponente envenenado que está sob efeito de fúria!
-            dx = ai_fighter.wx - opponent.wx
-            dy = ai_fighter.wy - opponent.wy
-            length = math.hypot(dx, dy)
-            if dist < 2.8 and hasattr(ai_fighter, "trigger_acrobatic_dodge"):
-                ai_fighter.trigger_acrobatic_dodge(dx, dy)
-            elif length > 0 and ai_fighter.can_move():
-                ai_fighter.apply_movement(dx / length, dy / length, dt, game_map)
-            return
-
-        # 5. Comportamento Específico: Rifleman recarregando
-        if hasattr(ai_fighter, "has_ammo") and not ai_fighter.has_ammo:
-            ai_fighter.trigger_reload_hold()
-            # Manter distância enquanto recarrega
-            dx = ai_fighter.wx - opponent.wx
-            dy = ai_fighter.wy - opponent.wy
-            length = math.hypot(dx, dy)
-            if dist < 2.2 and hasattr(ai_fighter, "trigger_evasive_backstep"):
-                ai_fighter.trigger_evasive_backstep()
-            elif length > 0 and ai_fighter.can_move():
-                ai_fighter.apply_movement(dx / length, dy / length, dt, game_map)
-            return
-
-        # 6. Comportamento Neutro / Espaçamento
+        # 5. Comportamento Neutro / Espaçamento
         if self.decision_timer <= 0:
-            self.decision_timer = random.uniform(0.3, 0.65)
+            self.decision_timer = random.uniform(0.28, 0.55)
             # Chance de Ninja arremessar kunai a média distância
             if hasattr(ai_fighter, "has_kunai") and ai_fighter.has_kunai and projectiles is not None:
                 if 2.2 <= dist <= 5.5 and random.random() < 0.4:
@@ -162,16 +167,28 @@ class SamuraiAI:
                     ai_fighter.trigger_gatotsu_thrust(opponent.wx, opponent.wy)
                     return
 
-            # Rifleman: disparar tiro supersônico se tiver munição
-            if hasattr(ai_fighter, "trigger_shoot") and getattr(ai_fighter, "has_ammo", False) and projectiles is not None:
-                if 2.5 <= dist <= 8.5 and random.random() < 0.65:
-                    ai_fighter.trigger_shoot(opponent.wx, opponent.wy, projectiles)
-                    return
+            # Teppo (Rifleman): disparar tiro se tiver munição e arma engatilhada
+            if hasattr(ai_fighter, "trigger_shoot"):
+                if getattr(ai_fighter, "has_ammo", False) and getattr(ai_fighter, "cocking_timer", 0.0) <= 0 and projectiles is not None:
+                    if 2.5 <= dist <= 8.5 and random.random() < 0.70:
+                        ai_fighter.trigger_shoot(opponent.wx, opponent.wy, projectiles)
+                        return
+                else:
+                    if dist < 1.6:
+                        if hasattr(ai_fighter, "trigger_rifle_butt") and random.random() < 0.75:
+                            ai_fighter.trigger_rifle_butt(opponent.wx, opponent.wy)
+                            return
+                        elif hasattr(ai_fighter, "trigger_evasive_backstep") and random.random() < 0.65:
+                            ai_fighter.trigger_evasive_backstep()
+                            return
 
-            # Kabuki: sopro de veneno a média distância
-            if hasattr(ai_fighter, "trigger_poison_spit") and not getattr(ai_fighter, "has_poisoned_target", False) and projectiles is not None:
-                if 1.8 <= dist <= 4.8 and random.random() < 0.55:
-                    ai_fighter.trigger_poison_spit(opponent.wx, opponent.wy, projectiles)
+            # Okuni: dança dos leques em aproximação corpo a corpo ou finta Kawarimi
+            if hasattr(ai_fighter, "trigger_fan_strike"):
+                if dist <= 1.45:
+                    ai_fighter.trigger_fan_strike(opponent.wx, opponent.wy)
+                    return
+                elif dist <= 2.2 and random.random() < 0.35 and decoys is not None:
+                    ai_fighter.trigger_kawarimi_decoy(-ai_fighter.facing_x, -ai_fighter.facing_y, decoys)
                     return
 
             # Kyudo Archer: puxar corda do arco a média/longa distância
@@ -182,8 +199,8 @@ class SamuraiAI:
 
             # Pirata (Anne): sopro de pólvora nos olhos a curta/média distância
             if hasattr(ai_fighter, "trigger_gunpowder_blind"):
-                if 1.8 <= dist <= 3.4 and random.random() < 0.50:
-                    ai_fighter.trigger_gunpowder_blind(opponent.wx, opponent.wy)
+                if 1.6 <= dist <= 3.2 and random.random() < 0.60:
+                    ai_fighter.trigger_gunpowder_blind(opponent.wx, opponent.wy, opponent=opponent)
                     return
 
             # Mosqueteira (Julie): investida longa Fleche
@@ -192,29 +209,53 @@ class SamuraiAI:
                     ai_fighter.trigger_fleche_thrust(opponent.wx, opponent.wy)
                     return
 
-            if dist > 3.2:
+            # Comportamento de Movimentação do Teppo (afasta se armado, busca se desarmado)
+            if hasattr(ai_fighter, "trigger_shoot") and not getattr(ai_fighter, "has_ammo", False):
+                # Se não há pouches por perto, recua do adversário
+                dx = ai_fighter.wx - opponent.wx
+                dy = ai_fighter.wy - opponent.wy
+                length = math.hypot(dx, dy)
+                if length > 0.001:
+                    self.move_dir_x = dx / length
+                    self.move_dir_y = dy / length
+                else:
+                    self.move_dir_x = 1.0
+                    self.move_dir_y = 0.0
+            elif dist > 3.0:
                 # Aproximar
                 dx = opponent.wx - ai_fighter.wx
                 dy = opponent.wy - ai_fighter.wy
                 length = math.hypot(dx, dy)
-                self.move_dir_x = dx / length
-                self.move_dir_y = dy / length
-            elif dist < 1.6:
-                if random.random() < 0.55:
+                if length > 0.001:
+                    self.move_dir_x = dx / length
+                    self.move_dir_y = dy / length
+                else:
+                    self.move_dir_x = 1.0
+                    self.move_dir_y = 0.0
+            elif dist < 1.45:
+                if random.random() < 0.60:
                     self._execute_attack(ai_fighter, opponent, projectiles)
                 else:
-                    # Recuar um pouco
+                    # Recuar ligeiramente
                     dx = ai_fighter.wx - opponent.wx
                     dy = ai_fighter.wy - opponent.wy
                     length = math.hypot(dx, dy)
-                    self.move_dir_x = dx / length
-                    self.move_dir_y = dy / length
+                    if length > 0.001:
+                        self.move_dir_x = dx / length
+                        self.move_dir_y = dy / length
+                    else:
+                        self.move_dir_x = -1.0
+                        self.move_dir_y = 0.0
             else:
                 # Circunavegar lateralmente
                 dx = opponent.wx - ai_fighter.wx
                 dy = opponent.wy - ai_fighter.wy
-                self.move_dir_x = -dy / dist
-                self.move_dir_y = dx / dist
+                if dist > 0.001:
+                    self.move_dir_x = -dy / dist
+                    self.move_dir_y = dx / dist
+                else:
+                    self.move_dir_x = 1.0
+                    self.move_dir_y = 0.0
 
         if ai_fighter.can_move():
             ai_fighter.apply_movement(self.move_dir_x, self.move_dir_y, dt, game_map)
@@ -228,6 +269,8 @@ class SamuraiAI:
             fighter.trigger_combo_attack(target.wx, target.wy)
         elif hasattr(fighter, "trigger_thrust_attack"):
             fighter.trigger_thrust_attack(target.wx, target.wy)
+        elif hasattr(fighter, "trigger_fan_strike"):
+            fighter.trigger_fan_strike(target.wx, target.wy)
         elif hasattr(fighter, "trigger_shuriken"):
             if projectiles is not None:
                 fighter.trigger_shuriken(target.wx, target.wy, projectiles)
@@ -242,12 +285,11 @@ class SamuraiAI:
                 fighter.trigger_zeroshiki(target.wx, target.wy)
             else:
                 fighter.trigger_gatotsu_thrust(target.wx, target.wy)
-        elif hasattr(fighter, "trigger_shoot") and getattr(fighter, "has_ammo", False):
-            if projectiles is not None:
+        elif hasattr(fighter, "trigger_shoot"):
+            if getattr(fighter, "has_ammo", False) and getattr(fighter, "cocking_timer", 0.0) <= 0 and projectiles is not None:
                 fighter.trigger_shoot(target.wx, target.wy, projectiles)
-        elif hasattr(fighter, "trigger_poison_spit") and not getattr(fighter, "has_poisoned_target", False):
-            if projectiles is not None:
-                fighter.trigger_poison_spit(target.wx, target.wy, projectiles)
+            elif hasattr(fighter, "trigger_rifle_butt"):
+                fighter.trigger_rifle_butt(target.wx, target.wy)
         elif hasattr(fighter, "trigger_bow_draw"):
             fighter.trigger_bow_draw(target.wx, target.wy, projectiles)
         elif hasattr(fighter, "trigger_cutlass_cleave"):

@@ -18,12 +18,12 @@ from src.effects.particles import SparkParticle
 
 class Musketeer(Samurai):
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, name="Julie (Musketeer)")
+        super().__init__(wx, wy, name="Julie")
         self.char_type = "musketeer"
         self.speed = 4.4
 
         # Mecânica do Florete (Fleche Lunge)
-        self.thrust_cooldown = 0.45
+        self.thrust_cooldown = 0.58
         self.thrust_timer = 0.0
 
         # Riposte com Capa & Pistola Flintlock
@@ -60,7 +60,7 @@ class Musketeer(Samurai):
             self.set_facing(target_wx, target_wy)
         self.riposte_timer = self.riposte_cooldown
         self.state = STATE_PARRY
-        self.state_timer = 0.28
+        self.state_timer = 0.22
         self.is_riposte_ready = True
 
         # Disparo da pistola de pederneira (se projectiles fornecido)
@@ -95,7 +95,7 @@ class Musketeer(Samurai):
 
             if self.state_timer <= 0:
                 self.state = STATE_RECOVERY
-                self.state_timer = 0.14
+                self.state_timer = 0.24  # Punição no erro do bote
                 self.hitbox_active = False
 
         elif self.state == STATE_PARRY:

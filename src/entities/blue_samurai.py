@@ -17,7 +17,7 @@ from src.entities.voxel_models import render_voxel_humanoid
 
 class BlueSamurai(Samurai):
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, name="Musashi (Blue)")
+        super().__init__(wx, wy, name="Musashi")
         self.speed = 2.8  # Passos pesados, deliberados e firmes
 
         # Parâmetros do Combo de 3 Cortes

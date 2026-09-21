@@ -20,26 +20,51 @@ STATE_BACKSTEP = "BACKSTEP"
 
 class Rifleman(Samurai):
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, name="Tanegashima (Rifleman)")
-        self.speed = 3.9
+        super().__init__(wx, wy, name="Teppo")
+        self.char_type = "teppo"
+        self.speed = 4.3  # Velocidade ágil para caçar pólvora na arena
 
         # Mecânica de Munição e Pólvora
-        self.has_ammo = True          # Inicia com 1 tiro pronto
+        self.has_ammo = False          # Inicia DESCARREGADO (requer coletar chifre de pólvora na arena)
+        self.cocking_timer = 0.0       # Breve engatilhamento ao coletar (0.3s)
+        self.reload_time = 0.0
         self.is_reloading = False
         self.reload_progress = 0.0
-        self.reload_time = 1.75        # Tempo segurando secundário para carregar
 
-        # Subterfúgio Evasivo durante recarga
-        self.backstep_cooldown = 1.6
+        # Subterfúgio Evasivo
+        self.backstep_cooldown = 0.60   # Calibrado: reposicionamento ágil
         self.backstep_timer = 0.0
         self.backstep_duration = 0.20
+
+    def check_powder_pickup(self, pouches: list, particles: list = None) -> bool:
+        """Verifica se Teppo passou por cima de um saquinho de pólvora para carregar o arcabuz."""
+        if self.has_ammo or not self.is_alive:
+            return False
+        for pouch in pouches:
+            if getattr(pouch, "is_active", False):
+                if math.hypot(self.wx - pouch.wx, self.wy - pouch.wy) < (pouch.radius + self.radius + 0.25):
+                    pouch.is_active = False
+                    pouch.respawn_timer = 4.0
+                    self.has_ammo = True
+                    self.cocking_timer = 0.40
+                    if particles is not None:
+                        for _ in range(14):
+                            particles.append(SparkParticle(self.wx, self.wy, 0.6))
+                    return True
+        return False
 
     def can_act(self) -> bool:
         return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD)
 
     def trigger_shoot(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None):
-        """Ataque Primário: Disparo fatal supersônico de arcabuz (1-Hit Kill)."""
-        if not self.can_act() or not self.has_ammo:
+        """Ataque Primário: Disparo fatal de arcabuz se tiver munição e engatilhado, ou coronhada defensiva se descarregado."""
+        if not self.can_act():
+            return
+
+        if not self.has_ammo or self.cocking_timer > 0:
+            # Se descarregado, desfere coronhada tática; se ainda engatilhando, aguarda
+            if not self.has_ammo:
+                self.trigger_rifle_butt(target_wx, target_wy, particles)
             return
 
         self.set_facing(target_wx, target_wy)
@@ -63,6 +88,22 @@ class Rifleman(Samurai):
         if particles is not None:
             for _ in range(14):
                 particles.append(SparkParticle(bx, by, 0.55))
+
+    def trigger_rifle_butt(self, target_wx: float, target_wy: float, particles: list = None):
+        """Coronhada Defensiva: Golpe de madeira de curto alcance que atordoa e afasta o adversário."""
+        if not self.can_act():
+            return
+        self.set_facing(target_wx, target_wy)
+        self.state = STATE_ATTACK
+        self.state_timer = 0.20
+        self.hitbox_active = True
+        self.hitbox_radius = 1.15
+        self.is_rifle_butt = True
+        self.hitbox_center = (self.wx + self.facing_x * 0.75, self.wy + self.facing_y * 0.75)
+        self.slash_dir = (self.facing_x, self.facing_y)
+        if particles is not None:
+            for _ in range(6):
+                particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.3))
 
     def trigger_reload_hold(self):
         """Ativado enquanto o jogador mantém pressionado o botão de ação secundária."""
@@ -92,21 +133,17 @@ class Rifleman(Samurai):
         if self.backstep_timer > 0:
             self.backstep_timer -= dt
 
-        # Progresso de recarga se estiver segurando o botão
-        if self.is_reloading and not self.has_ammo:
-            self.reload_progress += dt / self.reload_time
-            if particles is not None and random.random() < 0.25:
-                particles.append(SparkParticle(self.wx, self.wy, 0.4))
+        if self.cocking_timer > 0:
+            self.cocking_timer -= dt
 
-            if self.reload_progress >= 1.0:
-                self.has_ammo = True
-                self.is_reloading = False
-                self.reload_progress = 0.0
-                if particles is not None:
-                    for _ in range(8):
-                        particles.append(SparkParticle(self.wx, self.wy, 0.7))
+        if self.state == STATE_ATTACK:
+            self.state_timer -= dt
+            if self.state_timer <= 0:
+                self.state = STATE_IDLE
+                self.hitbox_active = False
+                self.is_rifle_butt = False
 
-        if self.state == STATE_BACKSTEP:
+        elif self.state == STATE_BACKSTEP:
             self.state_timer -= dt
             # Recuo evasivo na direção oposta ao olhar
             step = 7.5 * dt
@@ -138,7 +175,7 @@ class Rifleman(Samurai):
                 self.state = STATE_IDLE
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza o Rifleman e sua barra de recarga."""
+        """Renderiza o Rifleman e indicador de munição/pólvora."""
         if self.is_hidden:
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
@@ -152,15 +189,15 @@ class Rifleman(Samurai):
             walk_timer=self.walk_cycle,
             alpha=self.alpha,
             is_moving=self.is_moving,
-            extra_props={"has_ammo": self.has_ammo, "is_reloading": self.is_reloading}
+            extra_props={"has_ammo": self.has_ammo, "is_reloading": False}
         )
 
-        # Barra visual de preparo de pólvora / recarga
-        if self.is_reloading and not self.has_ammo:
-            bx, by = camera.apply(self.wx, self.wy, 1.35)
-            bar_w = 40
-            bar_h = 6
-            pygame.draw.rect(surface, (20, 20, 25), (bx - bar_w // 2 - 1, by - 1, bar_w + 2, bar_h + 2), border_radius=3)
-            fill_w = int(bar_w * max(0.0, min(1.0, self.reload_progress)))
-            pygame.draw.rect(surface, (230, 160, 40), (bx - bar_w // 2, by, fill_w, bar_h), border_radius=2)
-            pygame.draw.rect(surface, COLOR_GOLD, (bx - bar_w // 2 - 1, by - 1, bar_w + 2, bar_h + 2), 1, border_radius=3)
+        # Indicador de Munição na cabeça do Teppo
+        bx, by = camera.apply(self.wx, self.wy, 1.45)
+        if self.has_ammo:
+            # Bala de chumbo dourada carregada
+            pygame.draw.circle(surface, COLOR_GOLD, (bx, by), 5)
+            pygame.draw.circle(surface, (255, 255, 200), (bx - 1, by - 1), 2)
+        else:
+            # Silhueta vazia cinza/vermelha indicando necessidade de coletar pólvora
+            pygame.draw.circle(surface, (140, 50, 50), (bx, by), 4, 1)
