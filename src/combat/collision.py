@@ -266,14 +266,16 @@ class CombatSystem:
                 if p2.state == STATE_PARRY:
                     for _ in range(12):
                         particles.append(SparkParticle(p2.wx, p2.wy, 0.7))
-                    banners.append(FloatingBanner("PARRY!", p2.wx, p2.wy, wz=1.7, color=(100, 200, 255)))
+                    parry_msg = "PARRY GATOTSU!" if p1.state == "GATOTSU_CHARGE" else "PARRY!"
+                    banners.append(FloatingBanner(parry_msg, p2.wx, p2.wy, wz=1.7, color=(100, 200, 255)))
                     camera.add_shake(8.0)
                     p1.stun(0.85)
                 else:
                     hit, dead = p2.take_hit(p1.slash_dir, damage=damage)
                     if dead:
                         camera.add_shake(14.0)
-                        banners.append(FloatingBanner("FATAL STRIKE!", p2.wx, p2.wy, wz=1.8, color=(255, 60, 60)))
+                        kill_msg = "GATOTSU - 1 HIT KILL!" if p1.state == "GATOTSU_CHARGE" else "FATAL STRIKE!"
+                        banners.append(FloatingBanner(kill_msg, p2.wx, p2.wy, wz=1.8, color=(120, 210, 255) if p1.state == "GATOTSU_CHARGE" else (255, 60, 60)))
                         for _ in range(25):
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                         self.hitstop_timer = 0.12
@@ -296,14 +298,16 @@ class CombatSystem:
                 if p1.state == STATE_PARRY:
                     for _ in range(12):
                         particles.append(SparkParticle(p1.wx, p1.wy, 0.7))
-                    banners.append(FloatingBanner("PARRY!", p1.wx, p1.wy, wz=1.7, color=(100, 200, 255)))
+                    parry_msg = "PARRY GATOTSU!" if p2.state == "GATOTSU_CHARGE" else "PARRY!"
+                    banners.append(FloatingBanner(parry_msg, p1.wx, p1.wy, wz=1.7, color=(100, 200, 255)))
                     camera.add_shake(8.0)
                     p2.stun(0.85)
                 else:
                     hit, dead = p1.take_hit(p2.slash_dir, damage=damage)
                     if dead:
                         camera.add_shake(14.0)
-                        banners.append(FloatingBanner("FATAL STRIKE!", p1.wx, p1.wy, wz=1.8, color=(70, 150, 255)))
+                        kill_msg = "GATOTSU - 1 HIT KILL!" if p2.state == "GATOTSU_CHARGE" else "FATAL STRIKE!"
+                        banners.append(FloatingBanner(kill_msg, p1.wx, p1.wy, wz=1.8, color=(120, 210, 255) if p2.state == "GATOTSU_CHARGE" else (70, 150, 255)))
                         for _ in range(25):
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                         self.hitstop_timer = 0.12

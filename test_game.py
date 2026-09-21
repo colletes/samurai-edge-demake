@@ -10,7 +10,7 @@ import os
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 import pygame
-from src.config import CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE
+from src.config import CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE, CHAR_SAITOU
 from src.isometric.camera import Camera
 from src.world.map_data import GameMap
 from src.entities.red_samurai import RedSamurai
@@ -19,6 +19,7 @@ from src.entities.yellow_ninja import YellowNinja
 from src.entities.american_ninja import AmericanNinja
 from src.entities.gray_ninja import GrayNinja
 from src.entities.purple_ninja import PurpleNinja
+from src.entities.saitou_samurai import SaitouSamurai
 from src.combat.collision import CombatSystem
 from src.ui.character_select import CharacterSelectScreen
 
@@ -27,13 +28,13 @@ def test_complete_roster():
     pygame.font.init()
     screen = pygame.display.set_mode((1280, 720))
 
-    # 1. Testar Tela de Seleção com 6 Guerreiros
+    # 1. Testar Tela de Seleção com 7 Guerreiros
     select_screen = CharacterSelectScreen()
-    assert len(select_screen.characters) == 6
-    select_screen.p1_choice_idx = 5  # Murasaki (Purple Ninja)
+    assert len(select_screen.characters) == 7
+    select_screen.p1_choice_idx = 6  # Hajime Saitou
     p1_id, p2_id, vs_ai = select_screen.get_selected_characters()
-    assert p1_id == CHAR_PURPLE
-    print("Teste 1: Tela de Seleção com 6 guerreiros OK!")
+    assert p1_id == CHAR_SAITOU
+    print("Teste 1: Tela de Seleção com 7 guerreiros (incluindo Hajime Saitou) OK!")
 
     game_map = GameMap()
     camera = Camera(11.0, 11.0)
@@ -166,6 +167,68 @@ def test_complete_roster():
     assert kenshin2.is_alive == False
     assert murasaki2.is_alive == True
     print("Teste 8: Precedência Absoluta do Ninja Roxo anula golpe adversário e vence OK!")
+
+    # 9. Testar Spawns nas Extremidades da Ponte
+    from main import create_fighter
+    p1 = create_fighter(CHAR_SAITOU, wx=10.5, wy=7.0)
+    p2 = create_fighter(CHAR_KENSHIN, wx=10.5, wy=15.0)
+    p1.set_facing(p2.wx, p2.wy)
+    p2.set_facing(p1.wx, p1.wy)
+    assert p1.wx == 10.5 and p1.wy == 7.0
+    assert p2.wx == 10.5 and p2.wy == 15.0
+    assert abs(p1.facing_y - 1.0) < 0.01  # Olhando para o Sul (em direção à ponte)
+    assert abs(p2.facing_y - (-1.0)) < 0.01 # Olhando para o Norte (em direção à ponte)
+    print("Teste 9: Spawns posicionados perfeitamente nas extremidades da ponte OK!")
+
+    # 10. Testar Hajime Saitou: Aceleração contínua do Gatotsu
+    saitou = SaitouSamurai(wx=10.5, wy=7.0)
+    saitou.trigger_gatotsu(10.5, 15.0)
+    assert saitou.state == "GATOTSU_CHARGE"
+    assert saitou.charge_speed == 4.8  # Velocidade inicial moderada
+
+    # Atualizar dt e verificar aceleração
+    saitou.update(0.1, game_map, particles)
+    assert saitou.charge_speed > 4.8  # Ganhou velocidade
+    for _ in range(15):
+        saitou.update(0.05, game_map, particles)
+    assert saitou.charge_speed >= 12.0  # Velocidade extrema acumulada!
+    print("Teste 10: Gatotsu acelera continuamente de 4.8 até alta velocidade OK!")
+
+    # 11. Testar Hajime Saitou: Inércia de Frenagem (Braking State)
+    saitou_brake = SaitouSamurai(wx=10.5, wy=7.0)
+    saitou_brake.trigger_gatotsu(10.5, 15.0)
+    saitou_brake.gatotsu_timer = 0.89
+    saitou_brake.update(0.02, game_map, particles)
+    assert saitou_brake.state == "BRAKING"
+    assert saitou_brake.can_move() == False
+    assert saitou_brake.state_timer > 0.0
+    print("Teste 11: Whiff do Gatotsu entra em frenagem com inércia e punição OK!")
+
+    # 12. Testar Hajime Saitou: Recuo e Stun ao colidir com obstáculo sólido
+    target_rock = game_map.rocks[0]
+    saitou_wall = SaitouSamurai(wx=target_rock.wx - (target_rock.radius + 0.3), wy=target_rock.wy)
+    saitou_wall.trigger_gatotsu(target_rock.wx, target_rock.wy)
+    saitou_wall.update(0.05, game_map, particles)
+    assert saitou_wall.state == "STUNNED"
+    assert saitou_wall.state_timer > 0.0
+    print("Teste 12: Colisão com obstáculo sólido causa recuo e Stun no Saitou OK!")
+
+    # 13. Testar Musashi Parry contra Gatotsu de Saitou
+    saitou_atk = SaitouSamurai(wx=10.5, wy=10.0)
+    musashi_def = BlueSamurai(wx=10.5, wy=11.2)
+    musashi_def.trigger_parry()  # Entra em PARRY
+    assert musashi_def.state == "PARRY"
+
+    saitou_atk.trigger_gatotsu(musashi_def.wx, musashi_def.wy)
+    saitou_atk.hitbox_active = True
+    saitou_atk.hitbox_center = (musashi_def.wx, musashi_def.wy)
+    saitou_atk.hitbox_radius = 0.8
+
+    winner = combat.process_combat(saitou_atk, musashi_def, game_map, particles, banners, camera, projectiles, 0.016)
+    assert winner is None
+    assert musashi_def.is_alive == True
+    assert saitou_atk.state == "STUNNED"
+    print("Teste 13: Parry do Musashi repele e atordoa o Gatotsu de Saitou com sucesso OK!")
 
     print("SUÍTE COMPLETA PASSOU COM 100% DE SUCESSO!")
     pygame.quit()

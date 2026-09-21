@@ -11,6 +11,7 @@ from src.config import (
     COLOR_DOBERMAN_BLACK, COLOR_DOBERMAN_RUST, COLOR_DOBERMAN_COLLAR,
     COLOR_GRAY_NINJA, COLOR_GRAY_DARK, COLOR_SMOKE, COLOR_BOMB_FUSE,
     COLOR_PURPLE_NINJA, COLOR_PURPLE_DARK, COLOR_PURPLE_AURA, COLOR_CHAIN,
+    COLOR_SAITOU_LIGHT_BLUE, CHAR_SAITOU,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE
 )
 
@@ -95,6 +96,18 @@ class CharacterSelectScreen:
                 "special_desc": "Puxão de Corrente",
                 "keys_p1": "[E] Foice | [R] Puxar",
                 "keys_p2": "[U] Foice | [I] Puxar",
+            },
+            {
+                "id": CHAR_SAITOU,
+                "name": "SAITOU",
+                "title": "Líder Shinsengumi",
+                "style": "Gatotsu (Estocada)",
+                "color": COLOR_SAITOU_LIGHT_BLUE,
+                "speed_stars": "[ 5 / 5 ] Impulso",
+                "damage_desc": "1-Hit Kill Acelerado",
+                "special_desc": "Zeroshiki (Curto)",
+                "keys_p1": "[E] Gatotsu | [R] Curto",
+                "keys_p2": "[U] Gatotsu | [I] Curto",
             }
         ]
 
@@ -157,10 +170,10 @@ class CharacterSelectScreen:
         mode_surf = font_small.render(mode_text, True, COLOR_GOLD)
         surface.blit(mode_surf, (ai_btn.centerx - mode_surf.get_width() // 2, ai_btn.y + 7))
 
-        # 3. Seis Cards de Personagens
-        card_w = 186
+        # 3. Sete Cards de Personagens
+        card_w = 162
         card_h = 445
-        spacing = 14
+        spacing = 12
         num_cards = len(self.characters)
         start_x = (SCREEN_WIDTH - (card_w * num_cards + spacing * (num_cards - 1))) // 2
         start_y = 130
@@ -247,6 +260,8 @@ class CharacterSelectScreen:
                 render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="gray_ninja")
             elif char_id == CHAR_PURPLE:
                 render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="purple_ninja")
+            elif char_id == CHAR_SAITOU:
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="saitou")
 
             # Atributos
             stats_y = rect.y + 215

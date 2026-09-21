@@ -19,7 +19,8 @@ from src.config import (
     COLOR_AMERICAN_NINJA, COLOR_AMERICAN_VEST, COLOR_AMERICAN_BANDANA,
     COLOR_DOBERMAN_BLACK, COLOR_DOBERMAN_RUST, COLOR_DOBERMAN_COLLAR,
     COLOR_GRAY_NINJA, COLOR_GRAY_DARK, COLOR_SMOKE, COLOR_BOMB_FUSE,
-    COLOR_PURPLE_NINJA, COLOR_PURPLE_DARK, COLOR_PURPLE_AURA, COLOR_CHAIN
+    COLOR_PURPLE_NINJA, COLOR_PURPLE_DARK, COLOR_PURPLE_AURA, COLOR_CHAIN,
+    COLOR_SAITOU_LIGHT_BLUE, COLOR_SAITOU_HAORI_DARK, COLOR_SAITOU_HAKAMA, COLOR_SAITOU_AURA
 )
 
 SKIN_COLOR = (245, 210, 180)
@@ -53,6 +54,7 @@ def render_voxel_humanoid(
     elif "purple" in char_type or "murasaki" in char_type: char_type = "purple"
     elif "kenshin" in char_type or "red" in char_type: char_type = "kenshin"
     elif "musashi" in char_type or "blue" in char_type: char_type = "musashi"
+    elif "saitou" in char_type or "saito" in char_type: char_type = "saitou"
 
     # Estado de Morte (corpo tombado em blocos no solo)
     if not is_alive or state == "DEAD":
@@ -165,6 +167,12 @@ def render_voxel_humanoid(
         # Faixa vermelha da bandana
         draw_voxel_box(surface, camera, base_x - 0.17, base_y - 0.15, head_z + 0.16, 0.34, 0.30, 0.08, COLOR_AMERICAN_BANDANA, outline=True, alpha=alpha)
 
+    elif char_type == "saitou":
+        # Cabelo preto samurai com a franja frontal de Saitou
+        draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.14, head_z + 0.20, 0.32, 0.28, 0.12, (25, 25, 30), outline=True, alpha=alpha)
+        # Franja frontal pontuda característica
+        draw_voxel_box(surface, camera, base_x - 0.08 + fx * 0.10, base_y - 0.08 + fy * 0.10, head_z + 0.12, 0.16, 0.16, 0.10, (25, 25, 30), outline=False, alpha=alpha)
+
     # -------------------------------------------------------------
     # 4. BRAÇOS E ARMAS EM VOXEL
     # -------------------------------------------------------------
@@ -245,6 +253,40 @@ def render_voxel_humanoid(
         if state == "ATTACK":
             # Brilho de Precedência Absoluta
             draw_voxel_box(surface, camera, kx + fx * 0.20 - 0.08, ky + fy * 0.20 - 0.08, arm_z + 0.05, 0.24, 0.24, 0.20, COLOR_PURPLE_AURA, outline=False, alpha=160)
+
+    elif char_type == "saitou":
+        # Detalhes das mangas Shinsengumi (triângulos brancos)
+        draw_voxel_box(surface, camera, arm_l_x - 0.07, arm_l_y - 0.07, arm_z - 0.12, 0.14, 0.14, 0.06, COLOR_WHITE, outline=False, alpha=alpha)
+        draw_voxel_box(surface, camera, arm_r_x - 0.07, arm_r_y - 0.07, arm_z - 0.12, 0.14, 0.14, 0.06, COLOR_WHITE, outline=False, alpha=alpha)
+
+        # Postura de Gatotsu Canhoto (Katana empunhada com a mão esquerda à frente)
+        if state == "GATOTSU_CHARGE":
+            # Investida baixa do Gatotsu: lâmina longa estendida frontalmente
+            blade_x = base_x + fx * 0.72
+            blade_y = base_y + fy * 0.72
+            # Lâmina de aço estendida na horizontal
+            draw_voxel_box(surface, camera, blade_x - 0.04, blade_y - 0.04, torso_z + 0.18, 0.08, 0.08, 0.88, COLOR_STEEL, outline=True, alpha=alpha)
+            # Tsuba (guarda) dourada
+            draw_voxel_box(surface, camera, blade_x - fx * 0.25 - 0.06, blade_y - fy * 0.25 - 0.06, torso_z + 0.15, 0.12, 0.12, 0.06, COLOR_GOLD, outline=True, alpha=alpha)
+            # Brilho cortante ciano (Aura Gatotsu)
+            draw_voxel_box(surface, camera, blade_x + fx * 0.30 - 0.06, blade_y + fy * 0.30 - 0.06, torso_z + 0.16, 0.12, 0.12, 0.55, COLOR_SAITOU_AURA, outline=False, alpha=170)
+        elif state == "BRAKING":
+            # Derrapagem de frenagem com lâmina em guarda recuada
+            blade_x = base_x + fx * 0.40
+            blade_y = base_y + fy * 0.40
+            draw_voxel_box(surface, camera, blade_x - 0.04, blade_y - 0.04, torso_z + 0.12, 0.08, 0.08, 0.65, COLOR_STEEL, outline=True, alpha=alpha)
+        elif state == "ZEROSHIKI":
+            # Estocada súbita curta
+            blade_x = base_x + fx * 0.50
+            blade_y = base_y + fy * 0.50
+            draw_voxel_box(surface, camera, blade_x - 0.04, blade_y - 0.04, torso_z + 0.18, 0.08, 0.08, 0.60, COLOR_STEEL, outline=True, alpha=alpha)
+            draw_voxel_box(surface, camera, blade_x + fx * 0.15 - 0.04, blade_y + fy * 0.15 - 0.04, torso_z + 0.17, 0.08, 0.08, 0.25, COLOR_SAITOU_AURA, outline=False, alpha=150)
+        else:
+            # Em repouso / caminhada: bainha na cintura esquerda e empunhadura pronta
+            scab_x = base_x - px * 0.18
+            scab_y = base_y - py * 0.18
+            draw_voxel_box(surface, camera, scab_x - 0.05, scab_y - 0.05, torso_z + 0.05, 0.10, 0.10, 0.65, (30, 32, 38), outline=True, alpha=alpha)
+            draw_voxel_box(surface, camera, scab_x - fx * 0.16 - 0.04, scab_y - fy * 0.16 - 0.04, torso_z + 0.10, 0.08, 0.08, 0.20, COLOR_WHITE, outline=True, alpha=alpha)
 
 
 def render_voxel_doberman(
@@ -344,6 +386,7 @@ def _get_char_torso_color(char_type: str):
     if char_type == "american": return COLOR_AMERICAN_NINJA
     if char_type == "gray": return COLOR_GRAY_NINJA
     if char_type == "purple": return COLOR_PURPLE_NINJA
+    if char_type == "saitou": return COLOR_SAITOU_LIGHT_BLUE
     return (200, 200, 200)
 
 def _get_char_pants_color(char_type: str):
@@ -353,6 +396,7 @@ def _get_char_pants_color(char_type: str):
     if char_type == "american": return (30, 32, 36)
     if char_type == "gray": return COLOR_GRAY_DARK
     if char_type == "purple": return COLOR_PURPLE_DARK
+    if char_type == "saitou": return COLOR_SAITOU_HAKAMA
     return (150, 150, 150)
 
 def _get_char_hair_color(char_type: str):
@@ -362,6 +406,7 @@ def _get_char_hair_color(char_type: str):
     if char_type == "american": return (32, 28, 26)
     if char_type == "gray": return COLOR_GRAY_NINJA
     if char_type == "purple": return COLOR_PURPLE_NINJA
+    if char_type == "saitou": return (25, 25, 30)
     return (50, 50, 50)
 
 def _get_char_belt_color(char_type: str):
@@ -371,6 +416,7 @@ def _get_char_belt_color(char_type: str):
     if char_type == "american": return (45, 48, 52)
     if char_type == "gray": return (35, 38, 42)
     if char_type == "purple": return (35, 18, 50)
+    if char_type == "saitou": return COLOR_WHITE
     return (20, 20, 20)
 
 def _get_char_mask_color(char_type: str):

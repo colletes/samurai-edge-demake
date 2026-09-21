@@ -78,6 +78,12 @@ COLOR_WHITE = (255, 255, 255)
 COLOR_BLACK = (0, 0, 0)
 COLOR_BLOOD = (180, 20, 25)           # Sangue no golpe fatal
 
+# Cores do Samurai Azul Claro (Hajime Saitou & Shinsengumi)
+COLOR_SAITOU_LIGHT_BLUE = (115, 190, 220) # Asagi-iro Shinsengumi (Azul bem claro)
+COLOR_SAITOU_HAORI_DARK = (75, 140, 170)  # Sombra do haori
+COLOR_SAITOU_HAKAMA = (32, 35, 40)        # Hakama escuro tradicional
+COLOR_SAITOU_AURA = (140, 220, 255)       # Brilho cortante da estocada Gatotsu
+
 # Identificadores de Personagens
 CHAR_KENSHIN = "kenshin"
 CHAR_MUSASHI = "musashi"
@@ -85,6 +91,7 @@ CHAR_NINJA = "ninja"
 CHAR_AMERICAN = "american"
 CHAR_GRAY = "gray"
 CHAR_PURPLE = "purple"
+CHAR_SAITOU = "saitou"
 
 # Mapeamento de Teclas Padrão
 # Jogador 1 (Samurai Vermelho - Kenshin)

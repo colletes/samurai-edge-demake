@@ -109,6 +109,12 @@ class SamuraiAI:
                     ai_fighter.trigger_kusarigama_pull(opponent.wx, opponent.wy, projectiles)
                     return
 
+            # Hajime Saitou: disparar Gatotsu acelerado na média/longa distância
+            if hasattr(ai_fighter, "trigger_gatotsu_thrust"):
+                if 2.8 <= dist <= 6.8 and random.random() < 0.50:
+                    ai_fighter.trigger_gatotsu_thrust(opponent.wx, opponent.wy)
+                    return
+
             if dist > 3.2:
                 # Aproximar
                 dx = opponent.wx - ai_fighter.wx
@@ -153,3 +159,9 @@ class SamuraiAI:
                 fighter.trigger_throw_bomb(target.wx, target.wy, projectiles)
         elif hasattr(fighter, "trigger_kama_strike"):
             fighter.trigger_kama_strike(target.wx, target.wy)
+        elif hasattr(fighter, "trigger_gatotsu_thrust"):
+            dist = world_distance(fighter.wx, fighter.wy, target.wx, target.wy)
+            if dist < 1.3:
+                fighter.trigger_zeroshiki(target.wx, target.wy)
+            else:
+                fighter.trigger_gatotsu_thrust(target.wx, target.wy)

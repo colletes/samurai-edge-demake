@@ -9,7 +9,7 @@ from src.config import (
     COLOR_BG, COLOR_WHITE, COLOR_GOLD, COLOR_RED_AURA, COLOR_BLUE_AURA, COLOR_YELLOW_AURA,
     KEY_RESTART, KEY_TOGGLE_AI, KEY_SETTINGS, DEFAULT_CONTROLS,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
-    COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA
+    CHAR_SAITOU, COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA, COLOR_SAITOU_AURA
 )
 from src.isometric.iso_math import input_to_world_direction
 from src.isometric.camera import Camera
@@ -20,6 +20,7 @@ from src.entities.yellow_ninja import YellowNinja
 from src.entities.american_ninja import AmericanNinja
 from src.entities.gray_ninja import GrayNinja
 from src.entities.purple_ninja import PurpleNinja
+from src.entities.saitou_samurai import SaitouSamurai
 from src.entities.ai_controller import SamuraiAI
 from src.combat.collision import CombatSystem
 from src.effects.particles import AmbientLeafParticle
@@ -44,6 +45,8 @@ def create_fighter(char_id: str, wx: float, wy: float):
         return GrayNinja(wx, wy)
     elif char_id == CHAR_PURPLE:
         return PurpleNinja(wx, wy)
+    elif char_id == CHAR_SAITOU:
+        return SaitouSamurai(wx, wy)
     return RedSamurai(wx, wy)
 
 def get_fighter_color(fighter):
@@ -59,6 +62,8 @@ def get_fighter_color(fighter):
         return COLOR_GRAY_NINJA
     elif isinstance(fighter, PurpleNinja):
         return COLOR_PURPLE_NINJA
+    elif isinstance(fighter, SaitouSamurai):
+        return COLOR_SAITOU_AURA
     return COLOR_WHITE
 
 def get_fighter_action_labels(fighter):
@@ -75,6 +80,8 @@ def get_fighter_action_labels(fighter):
         return "Bomba Relógio", "Bomba Fumaça"
     elif isinstance(fighter, PurpleNinja):
         return "Corte Foice", "Kusarigama Puxão"
+    elif isinstance(fighter, SaitouSamurai):
+        return "Gatotsu", "Zeroshiki"
     return "Ataque", "Especial"
 
 def run_game():
@@ -120,11 +127,12 @@ def run_game():
     def start_new_match():
         nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, round_winner
         game_map = GameMap()
-        p1 = create_fighter(p1_char_id, wx=8.0, wy=11.0)
-        p2 = create_fighter(p2_char_id, wx=14.0, wy=11.0)
+        # Oponentes posicionados nas extremidades norte e sul da ponte de madeira
+        p1 = create_fighter(p1_char_id, wx=10.5, wy=7.0)
+        p2 = create_fighter(p2_char_id, wx=10.5, wy=15.0)
         p1.set_facing(p2.wx, p2.wy)
         p2.set_facing(p1.wx, p1.wy)
-        camera = Camera(target_wx=11.0, target_wy=11.0)
+        camera = Camera(target_wx=10.5, target_wy=11.0)
         particles.clear()
         banners.clear()
         projectiles.clear()
@@ -173,7 +181,7 @@ def run_game():
             continue
 
         # -------------------------------------------------------------
-        # DUELO EM ANDAMENTO (GAMEPLAY)
+        # DUELO EM ANDAMENTO (GAME LOOP)
         # -------------------------------------------------------------
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -204,6 +212,8 @@ def run_game():
                             p1.trigger_throw_bomb(p2.wx, p2.wy, projectiles)
                         elif isinstance(p1, PurpleNinja):
                             p1.trigger_kama_strike(p2.wx, p2.wy)
+                        elif isinstance(p1, SaitouSamurai):
+                            p1.trigger_gatotsu_thrust(p2.wx, p2.wy)
 
                     elif event.key == controls["P1_DASH"]:
                         if isinstance(p1, RedSamurai):
@@ -223,6 +233,8 @@ def run_game():
                             p1.trigger_smoke_bomb(p2.wx, p2.wy, projectiles)
                         elif isinstance(p1, PurpleNinja):
                             p1.trigger_kusarigama_pull(p2.wx, p2.wy, projectiles)
+                        elif isinstance(p1, SaitouSamurai):
+                            p1.trigger_zeroshiki(p2.wx, p2.wy)
 
                 # Comandos Jogador 2 (se não for IA)
                 if not vs_ai_mode and p2.is_alive and round_winner is None:
@@ -239,6 +251,8 @@ def run_game():
                             p2.trigger_throw_bomb(p1.wx, p1.wy, projectiles)
                         elif isinstance(p2, PurpleNinja):
                             p2.trigger_kama_strike(p1.wx, p1.wy)
+                        elif isinstance(p2, SaitouSamurai):
+                            p2.trigger_gatotsu_thrust(p1.wx, p1.wy)
 
                     elif event.key == controls["P2_PARRY"]:
                         if isinstance(p2, RedSamurai):
@@ -258,6 +272,8 @@ def run_game():
                             p2.trigger_smoke_bomb(p1.wx, p1.wy, projectiles)
                         elif isinstance(p2, PurpleNinja):
                             p2.trigger_kusarigama_pull(p1.wx, p1.wy, projectiles)
+                        elif isinstance(p2, SaitouSamurai):
+                            p2.trigger_zeroshiki(p1.wx, p1.wy)
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
@@ -281,7 +297,10 @@ def run_game():
         p1_dx = (keys[controls["P1_RIGHT"]] - keys[controls["P1_LEFT"]])
         p1_dy = (keys[controls["P1_DOWN"]] - keys[controls["P1_UP"]])
         p1_dwx, p1_dwy = input_to_world_direction(p1_dx, p1_dy)
-        p1.apply_movement(p1_dwx, p1_dwy, dt, game_map)
+        if hasattr(p1, "apply_gatotsu_steering") and p1.state == "GATOTSU_CHARGE":
+            p1.apply_gatotsu_steering(p1_dwx, p1_dwy, dt)
+        else:
+            p1.apply_movement(p1_dwx, p1_dwy, dt, game_map)
 
         # Movimento Jogador 2 (IA ou Humano)
         if vs_ai_mode:
@@ -290,11 +309,21 @@ def run_game():
             p2_dx = (keys[controls["P2_RIGHT"]] - keys[controls["P2_LEFT"]])
             p2_dy = (keys[controls["P2_DOWN"]] - keys[controls["P2_UP"]])
             p2_dwx, p2_dwy = input_to_world_direction(p2_dx, p2_dy)
-            p2.apply_movement(p2_dwx, p2_dwy, dt, game_map)
+            if hasattr(p2, "apply_gatotsu_steering") and p2.state == "GATOTSU_CHARGE":
+                p2.apply_gatotsu_steering(p2_dwx, p2_dwy, dt)
+            else:
+                p2.apply_movement(p2_dwx, p2_dwy, dt, game_map)
 
         # Atualizações
-        p1.update(dt, game_map)
-        p2.update(dt, game_map)
+        if isinstance(p1, SaitouSamurai):
+            p1.update(dt, game_map, particles)
+        else:
+            p1.update(dt, game_map)
+
+        if isinstance(p2, SaitouSamurai):
+            p2.update(dt, game_map, particles)
+        else:
+            p2.update(dt, game_map)
 
         # Processar Combate & Projéteis
         winner = combat_system.process_combat(p1, p2, game_map, particles, banners, camera, projectiles, dt)
