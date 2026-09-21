@@ -6,6 +6,18 @@ Um jogo de duelo isométrico em estilo **3D Voxel Art** tático, inspirado nos c
 
 ---
 
+## 📦 Downloads & Releases Prontas (GitHub Releases)
+
+Você pode baixar os executáveis compilados diretamente na aba de **[Releases no GitHub](https://github.com/colletes/samurai-edge-demake/releases)**:
+
+| Plataforma | Pacote de Download | Como Executar |
+| :--- | :--- | :--- |
+| 🍏 **macOS** | [`Samurai-Edge-Demake-macOS.zip`](https://github.com/colletes/samurai-edge-demake/releases/latest) | Descompacte e execute `SamuraiEdge.app`. Se o macOS exibir aviso de desenvolvedor não verificado: clique com botão direito $\to$ *Abrir*, ou execute no terminal: `xattr -cr /path/to/SamuraiEdge.app` |
+| 🪟 **Windows** | [`Samurai-Edge-Demake-Windows.zip`](https://github.com/colletes/samurai-edge-demake/releases/latest) | Extraia a pasta zipada e dê dois cliques em `SamuraiEdge.exe` para jogar. |
+| 🐧 **Linux** | [`Samurai-Edge-Demake-Linux.tar.gz`](https://github.com/colletes/samurai-edge-demake/releases/latest) | Extraia com `tar -xzvf Samurai-Edge-Demake-Linux.tar.gz` e execute `./SamuraiEdge/SamuraiEdge`. |
+
+---
+
 ## 🎬 Violência Cinematográfica & Efeitos de Cinema Samurai (Kurosawa Noir)
 
 - **Congelamento Dramático (Hitstop Freeze)**: Ao conectar um golpe letal, a simulação congela momentaneamente no impacto.

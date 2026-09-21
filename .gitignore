@@ -12,3 +12,8 @@ __pycache__/
 # OS artifacts
 .DS_Store
 Thumbs.db
+
+# PyInstaller / Build artifacts
+build/
+dist/
+*.egg-info/

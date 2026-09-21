@@ -1,0 +1,140 @@
+name: Build & Release Multiplatform
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag Name (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Automated Game Tests
+        run: |
+          python test_game.py
+
+  build:
+    name: Build (${{ matrix.platform }})
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: macos
+            artifact_name: Samurai-Edge-Demake-macOS.zip
+          - os: ubuntu-latest
+            platform: linux
+            artifact_name: Samurai-Edge-Demake-Linux.tar.gz
+          - os: windows-latest
+            platform: windows
+            artifact_name: Samurai-Edge-Demake-Windows.zip
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build with PyInstaller (macOS / Linux)
+        if: runner.os != 'Windows'
+        run: |
+          pyinstaller --clean -y samurai_edge.spec
+
+      - name: Build with PyInstaller (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pyinstaller --clean -y samurai_edge.spec
+
+      - name: Package Release (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          xattr -cr dist/SamuraiEdge.app || true
+          codesign -s - --force --deep dist/SamuraiEdge.app || true
+          ditto -c -k --keepParent dist/SamuraiEdge.app ${{ matrix.artifact_name }}
+
+      - name: Package Release (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          tar -czvf ${{ matrix.artifact_name }} -C dist SamuraiEdge
+
+      - name: Package Release (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          Compress-Archive -Path dist\SamuraiEdge -DestinationPath ${{ matrix.artifact_name }}
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-build
+          path: ${{ matrix.artifact_name }}
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Determine Tag Name
+        id: release_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_assets
+          merge-multiple: true
+
+      - name: List Artifacts
+        run: |
+          ls -la release_assets/
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_tag.outputs.tag }}
+          name: Samurai Edge Demake ${{ steps.release_tag.outputs.tag }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: release_assets/*
