@@ -32,33 +32,49 @@ class Rock:
         return False, 0.0, 0.0
 
     def render(self, surface: pygame.Surface, camera):
+        from src.isometric.voxel_renderer import draw_voxel_box
+
         base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
-        top_sx, top_sy = camera.apply(self.wx, self.wy, self.height)
 
-        # Sombra na base
-        pygame.draw.ellipse(surface, (15, 22, 18), (base_sx - 24, base_sy - 12, 48, 24))
+        # Sombra suave na base
+        pygame.draw.ellipse(surface, (14, 20, 16), (base_sx - 24, base_sy - 12, 48, 24))
 
-        # Corpo da rocha (Voxel estilizado)
-        poly_points = [
-            (base_sx - 20, base_sy - 4),
-            (base_sx + 20, base_sy - 4),
-            (top_sx + 15, top_sy + 2),
-            (top_sx - 14, top_sy - 6),
-            (top_sx - 22, top_sy + 4)
-        ]
-        pygame.draw.polygon(surface, COLOR_STONE_DARK, poly_points)
-
-        # Face iluminada superior
-        top_poly = [
-            (top_sx - 14, top_sy - 6),
-            (top_sx + 15, top_sy + 2),
-            (top_sx + 6, top_sy - 12),
-            (top_sx - 12, top_sy - 15)
-        ]
-        pygame.draw.polygon(surface, COLOR_STONE, top_poly)
-        # Detalhes de musgo
-        pygame.draw.circle(surface, (50, 75, 45), (top_sx - 3, top_sy - 2), 4)
-        pygame.draw.circle(surface, (50, 75, 45), (base_sx + 5, base_sy - 6), 5)
+        # Rocha composta por blocos orgânicos de voxel
+        # 1. Base rochosa
+        draw_voxel_box(
+            surface, camera,
+            self.wx - self.radius * 0.7, self.wy - self.radius * 0.7, 0.0,
+            self.radius * 1.4, self.radius * 1.4, self.height * 0.42,
+            COLOR_STONE_DARK
+        )
+        # 2. Projeção lateral
+        draw_voxel_box(
+            surface, camera,
+            self.wx + self.radius * 0.15, self.wy - self.radius * 0.55, 0.04,
+            self.radius * 0.65, self.radius * 0.65, self.height * 0.45,
+            (68, 76, 80)
+        )
+        # 3. Bloco central maciço
+        draw_voxel_box(
+            surface, camera,
+            self.wx - self.radius * 0.55, self.wy - self.radius * 0.55, self.height * 0.38,
+            self.radius * 1.1, self.radius * 1.1, self.height * 0.48,
+            COLOR_STONE
+        )
+        # 4. Topo chanfrado angulado
+        draw_voxel_box(
+            surface, camera,
+            self.wx - self.radius * 0.32, self.wy - self.radius * 0.32, self.height * 0.82,
+            self.radius * 0.64, self.radius * 0.64, self.height * 0.22,
+            (145, 155, 160)
+        )
+        # 5. Detalhe de musgo feudal no topo da pedra
+        draw_voxel_box(
+            surface, camera,
+            self.wx - self.radius * 0.4, self.wy - self.radius * 0.15, self.height * 0.85,
+            self.radius * 0.35, self.radius * 0.35, 0.05,
+            (52, 85, 48), outline=False
+        )
 
 
 class Well:
@@ -83,37 +99,43 @@ class Well:
         return False, 0.0, 0.0
 
     def render(self, surface: pygame.Surface, camera):
+        from src.isometric.voxel_renderer import draw_voxel_box
+
         base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
-        wall_sx, wall_sy = camera.apply(self.wx, self.wy, 0.5)
-        roof_sx, roof_sy = camera.apply(self.wx, self.wy, 1.4)
 
         # Sombra no chão
         pygame.draw.ellipse(surface, (12, 18, 14), (base_sx - 28, base_sy - 14, 56, 28))
 
-        # Base de pedra cilíndrica
-        pygame.draw.ellipse(surface, COLOR_STONE_DARK, (base_sx - 24, base_sy - 10, 48, 20))
-        # Paredes de pedra do poço
-        pygame.draw.rect(surface, COLOR_STONE, (base_sx - 24, wall_sy, 48, base_sy - wall_sy))
-        pygame.draw.ellipse(surface, (20, 24, 28), (wall_sx - 22, wall_sy - 9, 44, 18)) # Abertura escura da água
+        # 1. Estrutura de cantaria do poço (4 paredes de pedra)
+        # Parede Norte
+        draw_voxel_box(surface, camera, self.wx - 0.55, self.wy - 0.55, 0.0, 1.10, 0.24, 0.55, COLOR_STONE)
+        # Parede Sul
+        draw_voxel_box(surface, camera, self.wx - 0.55, self.wy + 0.31, 0.0, 1.10, 0.24, 0.55, COLOR_STONE)
+        # Parede Oeste
+        draw_voxel_box(surface, camera, self.wx - 0.55, self.wy - 0.31, 0.0, 0.24, 0.62, 0.55, COLOR_STONE_DARK)
+        # Parede Leste
+        draw_voxel_box(surface, camera, self.wx + 0.31, self.wy - 0.31, 0.0, 0.24, 0.62, 0.55, COLOR_STONE_DARK)
 
-        # Vigas de suporte de madeira
-        post_l_x, post_l_y = base_sx - 18, wall_sy
-        post_r_x, post_r_y = base_sx + 18, wall_sy
-        roof_l_x, roof_l_y = roof_sx - 20, roof_sy + 8
-        roof_r_x, roof_r_y = roof_sx + 20, roof_sy + 8
+        # Água escura e profunda dentro do poço
+        draw_voxel_box(surface, camera, self.wx - 0.31, self.wy - 0.31, 0.15, 0.62, 0.62, 0.05, (16, 32, 45), outline=False)
 
-        pygame.draw.line(surface, COLOR_BRIDGE_DARK, (post_l_x, post_l_y), (roof_l_x, roof_l_y), 4)
-        pygame.draw.line(surface, COLOR_BRIDGE_DARK, (post_r_x, post_r_y), (roof_r_x, roof_r_y), 4)
+        # 2. Pilares de sustentação de madeira
+        draw_voxel_box(surface, camera, self.wx - 0.48, self.wy - 0.05, 0.55, 0.10, 0.10, 0.70, COLOR_BRIDGE_DARK)
+        draw_voxel_box(surface, camera, self.wx + 0.38, self.wy - 0.05, 0.55, 0.10, 0.10, 0.70, COLOR_BRIDGE_DARK)
 
-        # Telhadinho de madeira (roof)
-        roof_poly = [
-            (roof_sx - 26, roof_sy + 10),
-            (roof_sx + 26, roof_sy + 10),
-            (roof_sx + 18, roof_sy - 10),
-            (roof_sx - 18, roof_sy - 10),
-        ]
-        pygame.draw.polygon(surface, COLOR_BRIDGE, roof_poly)
-        pygame.draw.polygon(surface, COLOR_BRIDGE_DARK, roof_poly, 2)
+        # Viga mestra horizontal
+        draw_voxel_box(surface, camera, self.wx - 0.54, self.wy - 0.05, 1.22, 1.08, 0.10, 0.08, COLOR_BRIDGE)
+
+        # Carretilha / corda
+        draw_voxel_box(surface, camera, self.wx - 0.06, self.wy - 0.05, 1.08, 0.12, 0.10, 0.14, (155, 125, 80))
+
+        # 3. Telhadinho de madeira tradicional em voxel (camadas chanfradas)
+        # Camada inferior do telhado
+        draw_voxel_box(surface, camera, self.wx - 0.68, self.wy - 0.45, 1.28, 1.36, 0.90, 0.08, COLOR_BRIDGE)
+        # Camada superior inclinada
+        draw_voxel_box(surface, camera, self.wx - 0.58, self.wy - 0.32, 1.36, 1.16, 0.64, 0.08, COLOR_BRIDGE_DARK)
+        # Cumeeira / viga de topo
+        draw_voxel_box(surface, camera, self.wx - 0.72, self.wy - 0.08, 1.44, 1.44, 0.16, 0.08, (52, 34, 18))
 
 
 class AncientTree:
@@ -138,19 +160,36 @@ class AncientTree:
         return False, 0.0, 0.0
 
     def render(self, surface: pygame.Surface, camera):
+        from src.isometric.voxel_renderer import draw_voxel_box
+
         base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
-        trunk_sx, trunk_sy = camera.apply(self.wx, self.wy, 1.2)
-        crown_sx, crown_sy = camera.apply(self.wx, self.wy, self.height)
 
-        # Sombra
-        pygame.draw.ellipse(surface, (12, 18, 14), (base_sx - 36, base_sy - 18, 72, 36))
+        # Sombra volumosa no solo
+        pygame.draw.ellipse(surface, (12, 18, 14), (base_sx - 38, base_sy - 19, 76, 38))
 
-        # Tronco retorcido de madeira escura
-        pygame.draw.line(surface, (55, 35, 22), (base_sx, base_sy), (trunk_sx - 6, trunk_sy), 14)
-        pygame.draw.line(surface, (75, 48, 28), (trunk_sx - 6, trunk_sy), (crown_sx, crown_sy), 10)
+        # 1. Tronco retorcido de voxel
+        # Raízes / Base
+        draw_voxel_box(surface, camera, self.wx - 0.32, self.wy - 0.32, 0.0, 0.64, 0.64, 0.65, (52, 34, 20))
+        # Tronco intermediário com ligeira inclinação
+        draw_voxel_box(surface, camera, self.wx - 0.26, self.wy - 0.22, 0.62, 0.52, 0.52, 0.65, (66, 42, 26))
+        # Tronco superior
+        draw_voxel_box(surface, camera, self.wx - 0.20, self.wy - 0.16, 1.22, 0.42, 0.42, 0.55, (78, 50, 32))
 
-        # Copa da árvore em camadas de sakura
-        pygame.draw.circle(surface, (200, 110, 145), (crown_sx - 20, crown_sy), 26)
-        pygame.draw.circle(surface, (215, 125, 160), (crown_sx + 20, crown_sy - 6), 28)
-        pygame.draw.circle(surface, COLOR_SAKURA_PINK, (crown_sx, crown_sy - 16), 32)
-        pygame.draw.circle(surface, (255, 185, 210), (crown_sx + 4, crown_sy - 22), 20)
+        # Galhos laterais
+        draw_voxel_box(surface, camera, self.wx - 0.58, self.wy - 0.16, 1.35, 0.40, 0.28, 0.24, (56, 36, 22))
+        draw_voxel_box(surface, camera, self.wx + 0.18, self.wy - 0.24, 1.42, 0.44, 0.32, 0.24, (56, 36, 22))
+
+        # 2. Copa de Sakura volumétrica em blocos de voxel
+        # Folhagens de base mais escuras
+        draw_voxel_box(surface, camera, self.wx - 0.85, self.wy - 0.38, 1.50, 0.52, 0.52, 0.45, (200, 110, 145))
+        draw_voxel_box(surface, camera, self.wx + 0.35, self.wy - 0.55, 1.55, 0.55, 0.52, 0.45, (215, 125, 160))
+        draw_voxel_box(surface, camera, self.wx - 0.38, self.wy + 0.35, 1.52, 0.52, 0.55, 0.45, (225, 135, 170))
+
+        # Bloco central principal da copa
+        draw_voxel_box(surface, camera, self.wx - 0.72, self.wy - 0.72, 1.68, 1.44, 1.44, 0.68, COLOR_SAKURA_PINK)
+
+        # Camada superior de flores
+        draw_voxel_box(surface, camera, self.wx - 0.52, self.wy - 0.52, 2.32, 1.04, 1.04, 0.55, (255, 185, 210))
+
+        # Topo em flor branca/rosada
+        draw_voxel_box(surface, camera, self.wx - 0.30, self.wy - 0.30, 2.84, 0.60, 0.60, 0.35, (255, 220, 235))

@@ -10,9 +10,10 @@ from src.config import (
     COLOR_RED_AURA, COLOR_STEEL, COLOR_GOLD, COLOR_WHITE, COLOR_BLACK
 )
 from src.entities.samurai import (
-    Samurai, STATE_IDLE, STATE_WALK, STATE_WINDUP,
-    STATE_ATTACK, STATE_RECOVERY, STATE_DASH, STATE_STUNNED, STATE_DEAD
+    Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY,
+    STATE_DASH, STATE_STUNNED, STATE_DEAD
 )
+from src.entities.voxel_models import render_voxel_humanoid
 from src.isometric.iso_math import world_to_iso
 
 class RedSamurai(Samurai):
@@ -120,88 +121,26 @@ class RedSamurai(Samurai):
                 self.state = STATE_IDLE
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza o Samurai Vermelho em pixel art procedural estilizado."""
-        base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
-
-        # Superfície com canal alfa para transparência de camuflagem
-        char_surf = pygame.Surface((70, 70), pygame.SRCALPHA)
-        cx, cy = 35, 45  # Centro dos pés dentro da mini-superfície
-
-        # 1. Sombra no chão
-        pygame.draw.ellipse(char_surf, (10, 15, 12, 120), (cx - 14, cy - 6, 28, 12))
-
-        # Se estiver morto: pose caída
-        if not self.is_alive:
-            pygame.draw.ellipse(char_surf, (*COLOR_RED_KIMONO, self.alpha), (cx - 16, cy - 8, 32, 14))
-            pygame.draw.circle(char_surf, (*COLOR_RED_HAIR, self.alpha), (cx - 14, cy - 4), 6)
-            char_surf.set_alpha(self.alpha)
-            surface.blit(char_surf, (base_sx - 35, base_sy - 45))
-            return
-
-        # 2. Hakama (Calça branca ampla tradicional)
-        leg_offset = math.sin(self.walk_cycle) * 4.0 if self.state == STATE_WALK else 0.0
-        # Perna esquerda e direita
-        pygame.draw.polygon(char_surf, (*COLOR_RED_HAKAMA, self.alpha), [
-            (cx - 8, cy - 14), (cx + 8, cy - 14),
-            (cx + 6 + leg_offset, cy), (cx - 6 - leg_offset, cy)
-        ])
-
-        # 3. Quimono Vermelho Carmim (Tronco)
-        chest_y = cy - 26
-        body_poly = [
-            (cx - 9, chest_y), (cx + 9, chest_y),
-            (cx + 7, cy - 12), (cx - 7, cy - 12)
-        ]
-        pygame.draw.polygon(char_surf, (*COLOR_RED_KIMONO, self.alpha), body_poly)
-        # Faixa preta na cintura (Obi)
-        pygame.draw.line(char_surf, (*COLOR_BLACK, self.alpha), (cx - 7, cy - 13), (cx + 7, cy - 13), 3)
-
-        # 4. Pose dos Braços e Katana
-        # Na pose do Iai: Katana embainhada na cintura esquerda
-        sword_angle = math.atan2(self.facing_y, self.facing_x)
-
-        if self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY):
-            # Bainha preta na cintura
-            pygame.draw.line(char_surf, (*COLOR_BLACK, self.alpha), (cx - 4, cy - 15), (cx - 14, cy - 9), 3)
-            # Tsuka (empunhadura dourada) na mão direita pronta para puxar
-            pygame.draw.line(char_surf, (*COLOR_GOLD, self.alpha), (cx - 4, cy - 15), (cx + 2, cy - 18), 3)
-
-            if self.state == STATE_RECOVERY:
-                # Pose agachada e concentrada embainhando devagar (notō)
-                pygame.draw.circle(char_surf, (*COLOR_GOLD, self.alpha), (cx - 4, cy - 15), 3)
-                # Barra sutil de cooldown sobre a cabeça
-                progress = max(0.0, self.state_timer / self.recovery_duration)
-                bar_w = 24
-                pygame.draw.rect(char_surf, (50, 50, 50, 180), (cx - 12, cy - 42, bar_w, 3))
-                pygame.draw.rect(char_surf, (*COLOR_RED_AURA, 220), (cx - 12, cy - 42, int(bar_w * (1.0 - progress)), 3))
-
-        elif self.state == STATE_ATTACK:
-            # Lâmina desembainhada cortando em avanço supersônico!
-            kx = cx + int(math.cos(sword_angle) * 22)
-            ky = chest_y + int(math.sin(sword_angle) * 14)
-            pygame.draw.line(char_surf, (*COLOR_STEEL, self.alpha), (cx, chest_y), (kx, ky), 3)
-            pygame.draw.line(char_surf, (*COLOR_WHITE, self.alpha), (cx, chest_y), (kx, ky), 1)
-
-        # 5. Cabeça e Cabelo Ruivo (Kenshin)
-        head_y = cy - 32
-        pygame.draw.circle(char_surf, (245, 215, 190, self.alpha), (cx, head_y), 5)  # Rosto
-        # Cabelo ruivo volumoso com franja
-        pygame.draw.circle(char_surf, (*COLOR_RED_HAIR, self.alpha), (cx - 2, head_y - 2), 6)
-        # Rabo de cavalo longo balançando para trás
-        tail_offset_x = -int(self.facing_x * 8)
-        tail_offset_y = -int(self.facing_y * 4) + 2
-        pygame.draw.line(char_surf, (*COLOR_RED_HAIR, self.alpha), (cx, head_y - 2), (cx + tail_offset_x, head_y + tail_offset_y), 4)
-
-        # Efeito de Camuflagem (ícone de stealth)
-        if self.is_hidden:
-            pygame.draw.circle(char_surf, (120, 220, 100, 200), (cx, cy - 45), 3)
-
-        char_surf.set_alpha(self.alpha)
-        surface.blit(char_surf, (base_sx - 35, base_sy - 45))
-
+        """Renderiza o Samurai Vermelho no autêntico estilo Voxel 3D Isométrico."""
         # Renderizar rastro brilhante do corte do Iai no chão
         if len(self.slash_trail_points) >= 2:
-            pts = [camera.apply(px, py, 0.4) for px, py in self.slash_trail_points]
+            pts = [camera.apply(px, py, 0.05) for px, py in self.slash_trail_points]
             if len(pts) >= 2:
-                pygame.draw.lines(surface, COLOR_RED_AURA, False, pts, 3)
-                pygame.draw.lines(surface, COLOR_WHITE, False, pts, 1)
+                pygame.draw.lines(surface, COLOR_RED_AURA, False, pts, 4)
+                pygame.draw.lines(surface, COLOR_WHITE, False, pts, 2)
+
+        # Indicador de stealth (camuflagem no bambuzal)
+        if self.is_hidden:
+            sx, sy = camera.apply(self.wx, self.wy, 1.4)
+            pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
+
+        render_voxel_humanoid(
+            surface, camera,
+            self.wx, self.wy, self.wz,
+            self.facing_x, self.facing_y,
+            self.state, self.state_timer, self.is_alive,
+            char_type="kenshin",
+            walk_timer=self.walk_cycle,
+            alpha=self.alpha,
+            is_moving=self.is_moving
+        )

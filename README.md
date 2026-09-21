@@ -1,18 +1,18 @@
 # Samurai Edge Demake
 
-Um jogo de duelo isométrico 2.5D em pixel art tático, inspirado nos clássicos jogos de luta de espadas e demakes retrô.
+Um jogo de duelo isométrico em estilo **3D Voxel Art** tático, inspirado nos clássicos jogos de luta de espadas e demakes retrô com iluminação volumétrica direcional.
 
-![Samurai Edge Demake](char_select_6p_preview.png)
+![Samurai Edge Demake - Seleção Voxel](char_select_voxel.png)
 
 ---
 
 ## 🗡️ Visão Geral
 
-Em um cenário isométrico ricamente detalhado com floresta de bambus cortáveis por golpes e explosões, laguinho com ponte, poço de pedra e cerejeiras em flor, dois guerreiros se enfrentam em duelos mortais onde precisão, alcance e timing definem a vitória.
+Ambientado em uma arena construída inteiramente em voxels 3D (estilo *3D Dot Game Heroes*, *Voxatron* e *Crossy Road*), com floresta de bambus em colunas de voxels cortáveis, lago rebaixado com margens em desnível, ponte de madeira com guarda-corpo elevado, poço de cantaria tradicional com telhado de telhas e cerejeiras de sakura com copa volumétrica. Dois guerreiros se enfrentam em duelos mortais onde precisão, alcance e timing definem a vitória.
 
 O jogo suporta **Duelo 1P contra IA inteligente adaptativa** e **Modo 2 Jogadores Local** no mesmo teclado.
 
-![Gameplay Preview](murasaki_gameplay_preview.png)
+![Gameplay Preview - Mundo Voxel 3D](gameplay_voxel.png)
 
 ---
 

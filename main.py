@@ -323,29 +323,29 @@ def run_game():
 
         render_queue = []
         for bamboo in game_map.bamboos:
-            render_queue.append((bamboo.wy, 'bamboo', bamboo))
+            render_queue.append((bamboo.wx + bamboo.wy, 'bamboo', bamboo))
         for rock in game_map.rocks:
-            render_queue.append((rock.wy, 'rock', rock))
+            render_queue.append((rock.wx + rock.wy, 'rock', rock))
         if game_map.well:
-            render_queue.append((game_map.well.wy, 'well', game_map.well))
+            render_queue.append((game_map.well.wx + game_map.well.wy, 'well', game_map.well))
         for tree in game_map.trees:
-            render_queue.append((tree.wy, 'tree', tree))
+            render_queue.append((tree.wx + tree.wy, 'tree', tree))
 
-        render_queue.append((p1.wy, 'fighter', p1))
-        render_queue.append((p2.wy, 'fighter', p2))
+        render_queue.append((p1.wx + p1.wy, 'fighter', p1))
+        render_queue.append((p2.wx + p2.wy, 'fighter', p2))
 
         # Adicionar cão Doberman ao Y-sorting se houver American Ninja na partida
         if hasattr(p1, "dog") and p1.dog:
-            render_queue.append((p1.dog.wy, 'dog', p1.dog))
+            render_queue.append((p1.dog.wx + p1.dog.wy, 'dog', p1.dog))
         if hasattr(p2, "dog") and p2.dog:
-            render_queue.append((p2.dog.wy, 'dog', p2.dog))
+            render_queue.append((p2.dog.wx + p2.dog.wy, 'dog', p2.dog))
 
         for proj in projectiles:
-            render_queue.append((proj.wy, 'projectile', proj))
+            render_queue.append((proj.wx + proj.wy, 'projectile', proj))
 
         for p in particles:
-            if hasattr(p, 'wy'):
-                render_queue.append((p.wy, 'particle', p))
+            if hasattr(p, 'wx') and hasattr(p, 'wy'):
+                render_queue.append((p.wx + p.wy, 'particle', p))
 
         render_queue.sort(key=lambda item: item[0])
 

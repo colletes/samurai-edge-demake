@@ -83,32 +83,28 @@ class KunaiProjectile:
         return True
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza a kunai no ar ou cravada no chão."""
+        """Renderiza a kunai no ar ou cravada no chão como modelo voxel 3D."""
         if not self.is_active:
             return
 
-        sx, sy = camera.apply(self.wx, self.wy, self.wz)
+        from src.isometric.voxel_renderer import draw_voxel_box
 
         if self.state == "FLYING":
-            # Lâmina em vôo orientada para a direção
-            rad = self.angle
-            tail_x = int(sx - math.cos(rad) * 12)
-            tail_y = int(sy - math.sin(rad) * 8)
-            head_x = int(sx + math.cos(rad) * 12)
-            head_y = int(sy + math.sin(rad) * 8)
-
-            pygame.draw.line(surface, COLOR_STEEL, (tail_x, tail_y), (head_x, head_y), 4)
-            pygame.draw.line(surface, COLOR_WHITE, (tail_x, tail_y), (head_x, head_y), 2)
-            # Rastro de velocidade
-            pygame.draw.circle(surface, COLOR_YELLOW_AURA, (head_x, head_y), 3)
+            # Lâmina voxel em voo orientada
+            draw_voxel_box(surface, camera, self.wx - 0.06, self.wy - 0.06, self.wz, 0.12, 0.12, 0.12, COLOR_STEEL)
+            draw_voxel_box(surface, camera, self.wx - self.dir_x * 0.12 - 0.04, self.wy - self.dir_y * 0.12 - 0.04, self.wz + 0.02, 0.08, 0.08, 0.08, COLOR_GOLD)
+            # Rastro de energia
+            sx, sy = camera.apply(self.wx, self.wy, self.wz)
+            pygame.draw.circle(surface, COLOR_YELLOW_AURA, (sx, sy), 3)
 
         else:
-            # Cravada diagonalmente no solo
-            pygame.draw.line(surface, COLOR_BLACK, (sx - 2, sy), (sx + 2, sy), 4)
-            # Lâmina fincada
-            pygame.draw.line(surface, COLOR_STEEL, (sx, sy), (sx + 5, sy - 14), 3)
-            # Anel circular da empunhadura da kunai
-            pygame.draw.circle(surface, COLOR_GOLD, (sx + 5, sy - 14), 3, 1)
+            # Cravada no solo em ângulo
+            base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
+            pygame.draw.ellipse(surface, (15, 20, 18), (base_sx - 6, base_sy - 3, 12, 6))
+            # Haste cravada
+            draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.05, 0.02, 0.10, 0.10, 0.16, COLOR_STEEL)
+            # Anel / empunhadura dourada
+            draw_voxel_box(surface, camera, self.wx - 0.04, self.wy - 0.04, 0.18, 0.08, 0.08, 0.08, COLOR_GOLD)
 
 
 class ShurikenProjectile:
@@ -169,19 +165,19 @@ class ShurikenProjectile:
         if not self.is_active:
             return
 
-        sx, sy = camera.apply(self.wx, self.wy, self.wz)
+        from src.isometric.voxel_renderer import draw_voxel_box
+
+        # Núcleo central da shuriken
+        draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.05, self.wz, 0.10, 0.10, 0.05, COLOR_STEEL)
+
+        # 4 pontas afiadas girando
         rad = math.radians(self.rot_angle)
-
-        # Desenhar Shuriken de 4 pontas com rotação
-        radius = 7
-        p1 = (sx + int(math.cos(rad) * radius), sy + int(math.sin(rad) * radius * 0.6))
-        p2 = (sx + int(math.cos(rad + math.pi/2) * radius), sy + int(math.sin(rad + math.pi/2) * radius * 0.6))
-        p3 = (sx + int(math.cos(rad + math.pi) * radius), sy + int(math.sin(rad + math.pi) * radius * 0.6))
-        p4 = (sx + int(math.cos(rad + 3*math.pi/2) * radius), sy + int(math.sin(rad + 3*math.pi/2) * radius * 0.6))
-
-        pygame.draw.line(surface, COLOR_STEEL, p1, p3, 3)
-        pygame.draw.line(surface, COLOR_STEEL, p2, p4, 3)
-        pygame.draw.circle(surface, COLOR_WHITE, (sx, sy), 2)
+        rx = math.cos(rad) * 0.12
+        ry = math.sin(rad) * 0.12
+        draw_voxel_box(surface, camera, self.wx + rx - 0.03, self.wy + ry - 0.03, self.wz, 0.06, 0.06, 0.04, COLOR_WHITE)
+        draw_voxel_box(surface, camera, self.wx - rx - 0.03, self.wy - ry - 0.03, self.wz, 0.06, 0.06, 0.04, COLOR_WHITE)
+        draw_voxel_box(surface, camera, self.wx - ry - 0.03, self.wy + rx - 0.03, self.wz, 0.06, 0.06, 0.04, COLOR_STEEL)
+        draw_voxel_box(surface, camera, self.wx + ry - 0.03, self.wy - rx - 0.03, self.wz, 0.06, 0.06, 0.04, COLOR_STEEL)
 
 
 class TimedBombEntity:
@@ -215,18 +211,20 @@ class TimedBombEntity:
         if not self.is_active:
             return
 
-        sx, sy = camera.apply(self.wx, self.wy, self.wz)
+        from src.isometric.voxel_renderer import draw_voxel_box
 
-        # Sombra no chão
-        pygame.draw.ellipse(surface, (10, 15, 12, 120), (sx - 8, sy - 3, 16, 6))
-        # Esfera preta de ferro
-        pygame.draw.circle(surface, (25, 25, 30), (sx, sy - 5), 7)
-        pygame.draw.circle(surface, (60, 65, 75), (sx - 2, sy - 7), 2)  # Reflexo metálico
-        # Bocal e Pavio aceso
-        pygame.draw.line(surface, (140, 110, 60), (sx, sy - 12), (sx + 3, sy - 16), 2)
-        # Faísca no topo do pavio
+        base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
+        pygame.draw.ellipse(surface, (12, 16, 14), (base_sx - 10, base_sy - 5, 20, 10))
+
+        # Cubo de ferro da bomba
+        draw_voxel_box(surface, camera, self.wx - 0.13, self.wy - 0.13, self.wz, 0.26, 0.26, 0.26, (30, 32, 38))
+        # Aro de reforço metálico
+        draw_voxel_box(surface, camera, self.wx - 0.15, self.wy - 0.15, self.wz + 0.08, 0.30, 0.30, 0.10, (55, 60, 70), outline=False)
+        # Bocal do pavio
+        draw_voxel_box(surface, camera, self.wx - 0.04, self.wy - 0.04, self.wz + 0.26, 0.08, 0.08, 0.08, (140, 110, 60))
+        # Faísca voxel pulsante no pavio
         fuse_color = (255, 160, 30) if int(self.fuse_timer * 15) % 2 == 0 else (255, 230, 80)
-        pygame.draw.circle(surface, fuse_color, (sx + 3, sy - 16), 3)
+        draw_voxel_box(surface, camera, self.wx - 0.03, self.wy - 0.03, self.wz + 0.34, 0.06, 0.06, 0.06, fuse_color)
 
 
 class SmokeCloudEntity:
@@ -241,9 +239,9 @@ class SmokeCloudEntity:
         self.radius = 2.4
         self.is_active = True
 
-        # Partículas internas da fumaça
+        # Partículas internas da fumaça em coordenadas volumétricas de mundo
         self.puffs = [
-            (math.cos(i * 0.7) * 1.2, math.sin(i * 0.7) * 1.2, 18 + (i % 3) * 6)
+            (math.cos(i * 0.78) * 0.9, math.sin(i * 0.78) * 0.9, 0.08 + (i % 3) * 0.12, 0.44 + (i % 2) * 0.12)
             for i in range(8)
         ]
 
@@ -261,20 +259,24 @@ class SmokeCloudEntity:
         if not self.is_active:
             return
 
-        sx, sy = camera.apply(self.wx, self.wy, self.wz)
-        alpha = max(0, min(180, int((1.0 - (self.age / self.duration)) * 180)))
+        from src.isometric.voxel_renderer import draw_voxel_box
 
-        smoke_surf = pygame.Surface((180, 140), pygame.SRCALPHA)
-        scx, scy = 90, 70
+        alpha = max(0, min(160, int((1.0 - (self.age / self.duration)) * 160)))
 
-        # Desenhar múltiplas nuvens volumosas com transparência
-        for ox, oy, r in self.puffs:
-            px = scx + int(ox * 28)
-            py = scy + int(oy * 16)
-            pygame.draw.circle(smoke_surf, (150, 160, 165, alpha), (px, py), r)
-            pygame.draw.circle(smoke_surf, (185, 195, 200, alpha // 2), (px, py), r - 4)
-
-        surface.blit(smoke_surf, (sx - 90, sy - 70))
+        # Nuvem de blocos voxels semitransparentes que se expandem suavemente
+        expansion = 1.0 + (self.age / self.duration) * 0.5
+        for ox, oy, oz, size in self.puffs:
+            bx = self.wx + ox * expansion - size * 0.5
+            by = self.wy + oy * expansion - size * 0.5
+            bz = self.wz + oz
+            draw_voxel_box(
+                surface, camera,
+                bx, by, bz,
+                size, size, size * 0.8,
+                (160, 168, 175),
+                outline=True,
+                alpha=alpha
+            )
 
 
 class KusarigamaChainEntity:
@@ -404,14 +406,13 @@ class KusarigamaChainEntity:
                 link_color = (185, 190, 200) if i % 2 == 0 else (130, 135, 145)
                 pygame.draw.circle(surface, link_color, (lx, ly + wobble), 2)
 
-        # Ponta: Peso de ferro esférico multifacetado (Fundo)
-        pygame.draw.circle(surface, (20, 20, 25), (int(sx2), int(sy2)), 6)
-        pygame.draw.circle(surface, (140, 145, 160), (int(sx2 - 1), int(sy2 - 1)), 4)
-        pygame.draw.circle(surface, (210, 215, 230), (int(sx2 - 2), int(sy2 - 2)), 2)
+        # Ponta: Peso de ferro cúbico facetado em voxel 3D (Fundo)
+        from src.isometric.voxel_renderer import draw_voxel_box
+        draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.08, self.wz - 0.04, 0.16, 0.16, 0.16, (65, 70, 80))
 
         # Brilho místico se estiver puxando o oponente
         if self.state == "HOOKED_PULLING":
-            pygame.draw.circle(surface, (195, 120, 255), (int(sx2), int(sy2)), 8, 1)
+            pygame.draw.circle(surface, (195, 120, 255), (int(sx2), int(sy2)), 10, 2)
 
 
 

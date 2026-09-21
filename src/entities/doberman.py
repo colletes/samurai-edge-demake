@@ -10,6 +10,7 @@ from src.config import (
     COLOR_WHITE, COLOR_GOLD, COLOR_RED_AURA
 )
 from src.isometric.iso_math import world_distance
+from src.entities.voxel_models import render_voxel_doberman
 
 STATE_DOG_FOLLOW = "FOLLOW"
 STATE_DOG_CHARGE = "CHARGE"
@@ -119,70 +120,20 @@ class DobermanDog:
                 self.state = STATE_DOG_FOLLOW
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza o Doberman com estética pixel art e detalhes da raça."""
-        base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
-
-        dog_surf = pygame.Surface((60, 50), pygame.SRCALPHA)
-        cx, cy = 30, 32
-
-        # 1. Sombra no chão
-        pygame.draw.ellipse(dog_surf, (10, 15, 12, 120), (cx - 14, cy - 5, 28, 10))
-
+        """Renderiza o Doberman no autêntico estilo Voxel 3D Isométrico."""
+        # Se estiver nocauteado, renderiza barra de contagem regressiva
         if self.state == STATE_DOG_KNOCKED_OUT:
-            # Pose deitado ferido
-            pygame.draw.ellipse(dog_surf, COLOR_DOBERMAN_BLACK, (cx - 16, cy - 8, 32, 12))
-            pygame.draw.circle(dog_surf, COLOR_DOBERMAN_RUST, (cx + 10, cy - 4), 5)
-            # Barra de recuperação sobre o cão
-            bar_w = 26
+            sx, sy = camera.apply(self.wx, self.wy, 0.6)
+            bar_w = 32
             progress = max(0.0, self.state_timer / self.knockout_duration)
-            pygame.draw.rect(dog_surf, (40, 40, 40, 200), (cx - 13, cy - 22, bar_w, 4))
-            pygame.draw.rect(dog_surf, (255, 60, 60, 220), (cx - 13, cy - 22, int(bar_w * progress), 4))
-            # Estrelinhas de atordoamento
-            pygame.draw.circle(dog_surf, COLOR_GOLD, (cx - 4, cy - 14), 2)
-            pygame.draw.circle(dog_surf, COLOR_GOLD, (cx + 6, cy - 15), 2)
+            pygame.draw.rect(surface, (40, 40, 40, 200), (sx - 16, sy - 15, bar_w, 4))
+            pygame.draw.rect(surface, (255, 60, 60, 220), (sx - 16, sy - 15, int(bar_w * progress), 4))
+            pygame.draw.circle(surface, COLOR_GOLD, (sx - 8, sy - 22), 2)
+            pygame.draw.circle(surface, COLOR_GOLD, (sx + 8, sy - 22), 2)
 
-            surface.blit(dog_surf, (base_sx - 30, base_sy - 32))
-            return
-
-        # 2. Quatro Patas (Animação de corrida ou trote)
-        leg_swing = math.sin(self.run_cycle) * 4.0 if (self.state == STATE_DOG_CHARGE or world_distance(self.wx, self.wy, self.owner.wx, self.owner.wy) > 0.9) else 0.0
-        # Patas dianteiras e traseiras com manchas castanhas nas pontas
-        pygame.draw.line(dog_surf, COLOR_DOBERMAN_BLACK, (cx - 8, cy - 8), (cx - 8 - leg_swing, cy), 3)
-        pygame.draw.circle(dog_surf, COLOR_DOBERMAN_RUST, (int(cx - 8 - leg_swing), cy), 2)
-
-        pygame.draw.line(dog_surf, COLOR_DOBERMAN_BLACK, (cx + 8, cy - 8), (cx + 8 + leg_swing, cy), 3)
-        pygame.draw.circle(dog_surf, COLOR_DOBERMAN_RUST, (int(cx + 8 + leg_swing), cy), 2)
-
-        # 3. Tronco Atlético do Doberman (Preto e Peito Castanho)
-        body_rect = pygame.Rect(cx - 12, cy - 16, 24, 11)
-        pygame.draw.ellipse(dog_surf, COLOR_DOBERMAN_BLACK, body_rect)
-        # Mancha no peito castanha
-        pygame.draw.ellipse(dog_surf, COLOR_DOBERMAN_RUST, (cx + 2, cy - 14, 8, 7))
-
-        # 4. Rabo Curto Pontudo (típico da raça)
-        tail_dir = -1 if self.facing_x >= 0 else 1
-        pygame.draw.line(dog_surf, COLOR_DOBERMAN_BLACK, (cx - 10, cy - 14), (cx - 15, cy - 20), 2)
-
-        # 5. Pescoço, Cabeça e Orelhas Pontudas em Alerta
-        head_x = cx + int(self.facing_x * 12)
-        head_y = cy - 18
-        # Coleira Vermelha
-        pygame.draw.line(dog_surf, COLOR_DOBERMAN_COLLAR, (cx + int(self.facing_x * 4), cy - 12), (head_x, head_y + 4), 3)
-
-        # Cabeça
-        pygame.draw.circle(dog_surf, COLOR_DOBERMAN_BLACK, (head_x, head_y), 6)
-        # Focinho Castanho
-        snout_x = head_x + int(self.facing_x * 6)
-        pygame.draw.line(dog_surf, COLOR_DOBERMAN_RUST, (head_x, head_y), (snout_x, head_y + 1), 4)
-
-        # Orelhas Pontudas em Pé (marca registrada do Doberman)
-        pygame.draw.line(dog_surf, COLOR_DOBERMAN_BLACK, (head_x - 2, head_y - 4), (head_x - 2, head_y - 12), 2)
-        pygame.draw.line(dog_surf, COLOR_DOBERMAN_BLACK, (head_x + 2, head_y - 4), (head_x + 2, head_y - 12), 2)
-
-        # Se em CHARGE: Dentes brancos ferozes à mostra!
-        if self.state == STATE_DOG_CHARGE:
-            pygame.draw.circle(dog_surf, COLOR_WHITE, (snout_x, head_y + 1), 2)
-            # Rastro de velocidade vermelho
-            pygame.draw.line(dog_surf, COLOR_RED_AURA, (cx - 14, cy - 10), (cx - 24, cy - 10), 2)
-
-        surface.blit(dog_surf, (base_sx - 30, base_sy - 32))
+        render_voxel_doberman(
+            surface, camera,
+            self.wx, self.wy, self.wz,
+            self.facing_x, self.facing_y,
+            self.state, self.state_timer, is_alive=True
+        )

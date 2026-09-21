@@ -40,45 +40,65 @@ class Bamboo:
         return dist < 0.75
 
     def render(self, surface: pygame.Surface, camera, time_val: float):
+        from src.isometric.voxel_renderer import draw_voxel_box
+
         # Y-sort usa a base do bambu
         base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
 
+        # Sombra sutil no solo
+        pygame.draw.ellipse(surface, (12, 22, 16), (base_sx - 8, base_sy - 4, 16, 8))
+
         if self.is_cut:
-            # Desenha apenas o toco cortado na base
-            top_sx, top_sy = camera.apply(self.wx, self.wy, self.stump_height)
-            pygame.draw.line(surface, (45, 95, 38), (base_sx, base_sy), (top_sx, top_sy), 6)
-            pygame.draw.line(surface, (75, 145, 60), (base_sx, base_sy), (top_sx, top_sy), 3)
-            # Ponta cortada diagonal
-            pygame.draw.ellipse(surface, (130, 190, 90), (top_sx - 3, top_sy - 2, 7, 4))
+            # Toco cortado em voxel 3D
+            draw_voxel_box(
+                surface, camera,
+                self.wx - 0.08, self.wy - 0.08, 0.0,
+                0.16, 0.16, self.stump_height,
+                COLOR_BAMBOO
+            )
+            # Tampa cortada diagonal em tom claro
+            draw_voxel_box(
+                surface, camera,
+                self.wx - 0.07, self.wy - 0.07, self.stump_height,
+                0.14, 0.14, 0.03,
+                COLOR_BAMBOO_LIGHT
+            )
             return
 
-        # Bambu em pé (Voxel Stalk vertical com anéis e folhagem balançando)
+        # Bambu em pé: coluna vertical de voxels com anéis e nós volumétricos
         wind_sway = math.sin(time_val * 2.0 + self.wind_offset) * 0.08
+        num_segs = 5
+        seg_h = (self.total_height - 0.2) / num_segs
+
+        for i in range(num_segs):
+            frac = i / num_segs
+            sway_x = wind_sway * frac
+            sway_y = wind_sway * frac
+            cur_z = i * seg_h
+
+            # Segmento do colmo (coluna voxel)
+            draw_voxel_box(
+                surface, camera,
+                self.wx - 0.08 + sway_x, self.wy - 0.08 + sway_y, cur_z,
+                0.16, 0.16, seg_h,
+                COLOR_BAMBOO
+            )
+
+            # Anel / nó entre os entrenós
+            if i > 0:
+                draw_voxel_box(
+                    surface, camera,
+                    self.wx - 0.10 + sway_x, self.wy - 0.10 + sway_y, cur_z,
+                    0.20, 0.20, 0.04,
+                    COLOR_BAMBOO_LIGHT
+                )
+
+        # Topo e folhagem em blocos voxels suspensos
         top_wx = self.wx + wind_sway
         top_wy = self.wy + wind_sway
-        top_sx, top_sy = camera.apply(top_wx, top_wy, self.total_height)
+        top_wz = self.total_height
 
-        # Haste principal do bambu (camada de sombra e luz)
-        pygame.draw.line(surface, (42, 90, 36), (base_sx, base_sy), (top_sx, top_sy), 6)
-        pygame.draw.line(surface, COLOR_BAMBOO, (base_sx, base_sy), (top_sx, top_sy), 4)
-        pygame.draw.line(surface, COLOR_BAMBOO_LIGHT, (base_sx, base_sy), (top_sx, top_sy), 2)
-
-        # Anéis/Nós do bambu ao longo do tronco
-        segments = int(self.total_height * 3)
-        for i in range(1, segments):
-            frac = i / segments
-            seg_z = self.total_height * frac
-            seg_wx = self.wx + wind_sway * frac
-            seg_wy = self.wy + wind_sway * frac
-            node_sx, node_sy = camera.apply(seg_wx, seg_wy, seg_z)
-            pygame.draw.circle(surface, COLOR_BAMBOO_LIGHT, (node_sx, node_sy), 3)
-
-        # Folhagem no topo (clusters de folhas pontudas de bambu)
-        leaf_count = 5
-        for j in range(leaf_count):
-            ang = j * (math.pi * 2 / leaf_count) + wind_sway * 3
-            leaf_len = 16
-            leaf_end_x = int(top_sx + math.cos(ang) * leaf_len)
-            leaf_end_y = int(top_sy + math.sin(ang) * leaf_len * 0.6)
-            pygame.draw.line(surface, COLOR_BAMBOO_LEAF, (top_sx, top_sy), (leaf_end_x, leaf_end_y), 3)
-            pygame.draw.circle(surface, (130, 210, 100), (leaf_end_x, leaf_end_y), 2)
+        # Folhas em blocos voxel finos projetados
+        draw_voxel_box(surface, camera, top_wx - 0.22, top_wy - 0.08, top_wz - 0.08, 0.26, 0.16, 0.05, COLOR_BAMBOO_LEAF)
+        draw_voxel_box(surface, camera, top_wx + 0.04, top_wy - 0.20, top_wz - 0.02, 0.16, 0.24, 0.05, COLOR_BAMBOO_LEAF)
+        draw_voxel_box(surface, camera, top_wx - 0.10, top_wy + 0.06, top_wz + 0.06, 0.22, 0.18, 0.05, (125, 205, 95))

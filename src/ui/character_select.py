@@ -212,96 +212,41 @@ class CharacterSelectScreen:
             title_s = font_small.render(char_info["title"], True, (180, 190, 185))
             surface.blit(title_s, (rect.centerx - title_s.get_width() // 2, rect.y + 82))
 
-            # Retrato do Personagem
+            # Retrato Voxel 3D do Personagem
             portrait_center_x = rect.centerx
             portrait_center_y = rect.y + 150
 
-            pygame.draw.circle(surface, (18, 22, 20), (portrait_center_x, portrait_center_y), 40)
-            pygame.draw.circle(surface, char_info["color"], (portrait_center_x, portrait_center_y), 40, 2)
+            pygame.draw.circle(surface, (18, 22, 20), (portrait_center_x, portrait_center_y), 42)
+            pygame.draw.circle(surface, char_info["color"], (portrait_center_x, portrait_center_y), 42, 2)
 
-            # Mini-ilustrações
-            if char_info["id"] == CHAR_KENSHIN:
-                pygame.draw.circle(surface, (210, 85, 45), (portrait_center_x, portrait_center_y - 12), 15)
-                pygame.draw.circle(surface, (245, 215, 190), (portrait_center_x, portrait_center_y - 8), 11)
-                pygame.draw.polygon(surface, (195, 32, 42), [
-                    (portrait_center_x - 16, portrait_center_y + 24),
-                    (portrait_center_x + 16, portrait_center_y + 24),
-                    (portrait_center_x + 10, portrait_center_y),
-                    (portrait_center_x - 10, portrait_center_y)
-                ])
-                pygame.draw.line(surface, COLOR_STEEL, (portrait_center_x - 14, portrait_center_y + 8), (portrait_center_x + 22, portrait_center_y - 8), 3)
+            # Câmera local de pré-visualização isométrica
+            from src.isometric.iso_math import world_to_iso
+            from src.entities.voxel_models import render_voxel_humanoid, render_voxel_doberman
 
-            elif char_info["id"] == CHAR_MUSASHI:
-                pygame.draw.circle(surface, (24, 24, 30), (portrait_center_x, portrait_center_y - 12), 15)
-                pygame.draw.circle(surface, (240, 210, 185), (portrait_center_x, portrait_center_y - 8), 11)
-                pygame.draw.polygon(surface, (28, 56, 138), [
-                    (portrait_center_x - 16, portrait_center_y + 24),
-                    (portrait_center_x + 16, portrait_center_y + 24),
-                    (portrait_center_x + 10, portrait_center_y),
-                    (portrait_center_x - 10, portrait_center_y)
-                ])
-                pygame.draw.line(surface, COLOR_STEEL, (portrait_center_x - 18, portrait_center_y - 8), (portrait_center_x - 6, portrait_center_y + 18), 3)
-                pygame.draw.line(surface, COLOR_STEEL, (portrait_center_x + 18, portrait_center_y - 8), (portrait_center_x + 6, portrait_center_y + 18), 3)
+            class PreviewCamera:
+                def __init__(self, cx, cy):
+                    self.cx = cx
+                    self.cy = cy
+                def apply(self, wx, wy, wz=0.0):
+                    ix, iy = world_to_iso(wx, wy, wz)
+                    return int(self.cx + ix), int(self.cy + iy)
 
-            elif char_info["id"] == CHAR_NINJA:
-                pygame.draw.circle(surface, (240, 205, 30), (portrait_center_x, portrait_center_y - 12), 15)
-                pygame.draw.rect(surface, (26, 26, 30), (portrait_center_x - 9, portrait_center_y - 7, 18, 11), border_radius=3)
-                pygame.draw.polygon(surface, (240, 205, 30), [
-                    (portrait_center_x - 15, portrait_center_y + 24),
-                    (portrait_center_x + 15, portrait_center_y + 24),
-                    (portrait_center_x + 10, portrait_center_y),
-                    (portrait_center_x - 10, portrait_center_y)
-                ])
-                pygame.draw.line(surface, COLOR_STEEL, (portrait_center_x + 6, portrait_center_y + 10), (portrait_center_x + 22, portrait_center_y - 4), 3)
-                pygame.draw.circle(surface, COLOR_GOLD, (portrait_center_x + 6, portrait_center_y + 10), 3, 1)
+            cam = PreviewCamera(portrait_center_x, portrait_center_y + 24)
+            char_id = char_info["id"]
 
-            elif char_info["id"] == CHAR_AMERICAN:
-                pygame.draw.circle(surface, (30, 25, 25), (portrait_center_x - 8, portrait_center_y - 12), 12)
-                pygame.draw.circle(surface, (240, 205, 180), (portrait_center_x - 8, portrait_center_y - 8), 9)
-                pygame.draw.line(surface, COLOR_AMERICAN_BANDANA, (portrait_center_x - 16, portrait_center_y - 10), (portrait_center_x, portrait_center_y - 10), 3)
-                pygame.draw.polygon(surface, COLOR_AMERICAN_NINJA, [
-                    (portrait_center_x - 18, portrait_center_y + 24),
-                    (portrait_center_x + 2, portrait_center_y + 24),
-                    (portrait_center_x, portrait_center_y),
-                    (portrait_center_x - 16, portrait_center_y)
-                ])
-                # Cão
-                dog_x = portrait_center_x + 14
-                dog_y = portrait_center_y + 6
-                pygame.draw.circle(surface, COLOR_DOBERMAN_BLACK, (dog_x, dog_y - 6), 6)
-                pygame.draw.line(surface, COLOR_DOBERMAN_BLACK, (dog_x - 2, dog_y - 10), (dog_x - 2, dog_y - 15), 2)
-                pygame.draw.line(surface, COLOR_DOBERMAN_BLACK, (dog_x + 2, dog_y - 10), (dog_x + 2, dog_y - 15), 2)
-
-            elif char_info["id"] == CHAR_GRAY:
-                # Ninja Kemuri
-                pygame.draw.circle(surface, COLOR_GRAY_NINJA, (portrait_center_x, portrait_center_y - 12), 15)
-                pygame.draw.rect(surface, COLOR_GRAY_DARK, (portrait_center_x - 9, portrait_center_y - 7, 18, 11), border_radius=3)
-                pygame.draw.polygon(surface, COLOR_GRAY_NINJA, [
-                    (portrait_center_x - 15, portrait_center_y + 24),
-                    (portrait_center_x + 15, portrait_center_y + 24),
-                    (portrait_center_x + 10, portrait_center_y),
-                    (portrait_center_x - 10, portrait_center_y)
-                ])
-                # Bomba ao lado
-                pygame.draw.circle(surface, (20, 20, 25), (portrait_center_x + 18, portrait_center_y + 12), 6)
-                pygame.draw.circle(surface, COLOR_BOMB_FUSE, (portrait_center_x + 20, portrait_center_y + 5), 2)
-
-            elif char_info["id"] == CHAR_PURPLE:
-                # Ninja Murasaki (Kusarigama)
-                pygame.draw.circle(surface, COLOR_PURPLE_NINJA, (portrait_center_x, portrait_center_y - 12), 15)
-                pygame.draw.rect(surface, COLOR_PURPLE_DARK, (portrait_center_x - 9, portrait_center_y - 7, 18, 11), border_radius=3)
-                pygame.draw.polygon(surface, COLOR_PURPLE_NINJA, [
-                    (portrait_center_x - 15, portrait_center_y + 24),
-                    (portrait_center_x + 15, portrait_center_y + 24),
-                    (portrait_center_x + 10, portrait_center_y),
-                    (portrait_center_x - 10, portrait_center_y)
-                ])
-                # Foice curta
-                pygame.draw.line(surface, (80, 50, 30), (portrait_center_x + 8, portrait_center_y + 12), (portrait_center_x + 18, portrait_center_y), 3)
-                pygame.draw.line(surface, COLOR_STEEL, (portrait_center_x + 18, portrait_center_y), (portrait_center_x + 22, portrait_center_y - 8), 3)
-                # Corrente pendurada com peso de ferro
-                pygame.draw.line(surface, COLOR_CHAIN, (portrait_center_x - 10, portrait_center_y + 10), (portrait_center_x - 14, portrait_center_y + 18), 2)
-                pygame.draw.circle(surface, (25, 25, 30), (portrait_center_x - 14, portrait_center_y + 20), 4)
+            if char_id == CHAR_KENSHIN:
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="kenshin")
+            elif char_id == CHAR_MUSASHI:
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="musashi")
+            elif char_id == CHAR_NINJA:
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="yellow_ninja", extra_props={"has_kunai": True})
+            elif char_id == CHAR_AMERICAN:
+                render_voxel_humanoid(surface, cam, -0.22, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="american_ninja")
+                render_voxel_doberman(surface, cam, 0.38, -0.10, 0, 1.0, 0.0, "IDLE", 0.0, True)
+            elif char_id == CHAR_GRAY:
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="gray_ninja")
+            elif char_id == CHAR_PURPLE:
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="purple_ninja")
 
             # Atributos
             stats_y = rect.y + 215

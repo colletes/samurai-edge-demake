@@ -13,6 +13,7 @@ from src.entities.samurai import (
     Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD
 )
 from src.entities.projectile import KusarigamaChainEntity
+from src.entities.voxel_models import render_voxel_humanoid
 
 class PurpleNinja(Samurai):
     def __init__(self, wx: float, wy: float):
@@ -125,56 +126,18 @@ class PurpleNinja(Samurai):
                 self.state = STATE_IDLE
 
     def render(self, surface: pygame.Surface, camera):
-        if self.state == STATE_DEAD:
-            sx, sy = camera.apply(self.wx, self.wy, 0.0)
-            pygame.draw.ellipse(surface, (14, 18, 16, 120), (sx - 18, sy - 8, 36, 16))
-            pygame.draw.circle(surface, COLOR_PURPLE_DARK, (sx, sy - 4), 11)
-            pygame.draw.line(surface, COLOR_STEEL, (sx - 12, sy - 6), (sx + 8, sy - 1), 3)
-            return
+        """Renderiza o Ninja Roxo no autêntico estilo Voxel 3D Isométrico."""
+        if self.is_hidden:
+            sx, sy = camera.apply(self.wx, self.wy, 1.4)
+            pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
-        sx, sy = camera.apply(self.wx, self.wy, self.wz)
-
-        # Sombra
-        pygame.draw.ellipse(surface, (14, 18, 16, 140), (sx - 16, sy - 6, 32, 12))
-
-        # Efeito de brilho de Precedência Absoluta durante o ataque de foice
-        if self.state == STATE_ATTACK and self.hitbox_active:
-            for r in range(3):
-                pygame.draw.circle(surface, (195, 120, 255, 60), (int(sx), int(sy - 16)), 26 + r * 6, 1)
-
-        # Corpo / Traje Ninja Roxo
-        pygame.draw.rect(surface, COLOR_PURPLE_DARK, (sx - 10, sy - 28, 20, 24), border_radius=4)
-        pygame.draw.rect(surface, COLOR_PURPLE_NINJA, (sx - 8, sy - 26, 16, 18), border_radius=3)
-
-        # Faixa / Obi no abdômen com elos de corrente pendurados
-        pygame.draw.rect(surface, COLOR_BLACK, (sx - 9, sy - 18, 18, 5))
-        pygame.draw.line(surface, COLOR_CHAIN, (sx - 7, sy - 13), (sx - 2, sy - 8), 2)
-        pygame.draw.line(surface, COLOR_CHAIN, (sx - 2, sy - 8), (sx + 5, sy - 12), 2)
-
-        # Cabeça com capuz e máscara roxa
-        pygame.draw.circle(surface, COLOR_PURPLE_NINJA, (sx, sy - 34), 9)
-        pygame.draw.rect(surface, COLOR_PURPLE_DARK, (sx - 8, sy - 38, 16, 6))
-
-        # Olhos focados brilhantes (Dourado/Branco)
-        eye_ox = int(self.facing_x * 3)
-        eye_oy = int(self.facing_y * 2)
-        pygame.draw.line(surface, COLOR_GOLD, (sx - 4 + eye_ox, sy - 34 + eye_oy), (sx - 1 + eye_ox, sy - 34 + eye_oy), 2)
-        pygame.draw.line(surface, COLOR_GOLD, (sx + 1 + eye_ox, sy - 34 + eye_oy), (sx + 4 + eye_ox, sy - 34 + eye_oy), 2)
-
-        # Arma: Kama (Foice curta)
-        kama_hand_x = sx + int(self.facing_x * 12)
-        kama_hand_y = sy - 20 + int(self.facing_y * 8)
-
-        if self.state == STATE_ATTACK:
-            # Foice golpeando em arco veloz com rastro roxo
-            blade_tip_x = kama_hand_x + int(self.facing_x * 18)
-            blade_tip_y = kama_hand_y + int(self.facing_y * 12) - 4
-            # Cabo de madeira da foice
-            pygame.draw.line(surface, (80, 50, 30), (kama_hand_x, kama_hand_y), (blade_tip_x - int(self.facing_x * 6), blade_tip_y), 3)
-            # Lâmina curvada de aço afiado com fio violeta
-            pygame.draw.line(surface, COLOR_STEEL, (blade_tip_x - int(self.facing_x * 6), blade_tip_y), (blade_tip_x, blade_tip_y - 8), 4)
-            pygame.draw.line(surface, COLOR_PURPLE_AURA, (blade_tip_x, blade_tip_y - 8), (blade_tip_x + 6, blade_tip_y - 2), 2)
-        else:
-            # Foice empunhada em guarda
-            pygame.draw.line(surface, (80, 50, 30), (kama_hand_x, kama_hand_y), (kama_hand_x, kama_hand_y - 12), 3)
-            pygame.draw.line(surface, COLOR_STEEL, (kama_hand_x, kama_hand_y - 12), (kama_hand_x + 8, kama_hand_y - 14), 3)
+        render_voxel_humanoid(
+            surface, camera,
+            self.wx, self.wy, self.wz,
+            self.facing_x, self.facing_y,
+            self.state, self.state_timer, self.is_alive,
+            char_type="purple",
+            walk_timer=self.walk_cycle,
+            alpha=self.alpha,
+            is_moving=self.is_moving
+        )

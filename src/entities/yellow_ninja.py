@@ -13,6 +13,7 @@ from src.entities.samurai import (
     Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD
 )
 from src.entities.projectile import KunaiProjectile
+from src.entities.voxel_models import render_voxel_humanoid
 
 class YellowNinja(Samurai):
     def __init__(self, wx: float, wy: float):
@@ -110,83 +111,30 @@ class YellowNinja(Samurai):
                 self.state = STATE_IDLE
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza o Ninja Amarelo com traje de shinobi e kunai."""
-        base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
-
-        char_surf = pygame.Surface((70, 70), pygame.SRCALPHA)
-        cx, cy = 35, 45
-
-        # 1. Sombra no chão
-        pygame.draw.ellipse(char_surf, (10, 15, 12, 120), (cx - 14, cy - 6, 28, 12))
-
-        if not self.is_alive:
-            pygame.draw.ellipse(char_surf, (*COLOR_YELLOW_NINJA, self.alpha), (cx - 16, cy - 8, 32, 14))
-            pygame.draw.circle(char_surf, (*COLOR_NINJA_MASK, self.alpha), (cx - 14, cy - 4), 6)
-            char_surf.set_alpha(self.alpha)
-            surface.blit(char_surf, (base_sx - 35, base_sy - 45))
-            return
-
-        # 2. Pernas / Calça Shinobi Amarela
-        leg_offset = math.sin(self.walk_cycle) * 4.0 if self.state == STATE_WALK else 0.0
-        pygame.draw.polygon(char_surf, (*COLOR_YELLOW_NINJA, self.alpha), [
-            (cx - 7, cy - 14), (cx + 7, cy - 14),
-            (cx + 5 + leg_offset, cy), (cx - 5 - leg_offset, cy)
-        ])
-        # Faixas pretas nas canelas (Kyahan)
-        pygame.draw.line(char_surf, (*COLOR_NINJA_MASK, self.alpha), (cx - 6, cy - 4), (cx + 6, cy - 4), 2)
-
-        # 3. Tronco (Colete Shinobi Amarelo com cinto preto)
-        chest_y = cy - 25
-        pygame.draw.polygon(char_surf, (*COLOR_YELLOW_NINJA, self.alpha), [
-            (cx - 8, chest_y), (cx + 8, chest_y),
-            (cx + 6, cy - 12), (cx - 6, cy - 12)
-        ])
-        # Cinto de utilidades preto
-        pygame.draw.line(char_surf, (*COLOR_NINJA_MASK, self.alpha), (cx - 6, cy - 13), (cx + 6, cy - 13), 3)
-
-        # 4. Braços e Kunai
-        face_angle = math.atan2(self.facing_y, self.facing_x)
-
-        if self.has_kunai:
-            if self.state == STATE_ATTACK:
-                # Estocada frontal com a kunai esticada!
-                kx = cx + int(math.cos(face_angle) * 20)
-                ky = chest_y + int(math.sin(face_angle) * 12)
-                pygame.draw.line(char_surf, (*COLOR_STEEL, self.alpha), (cx, chest_y), (kx, ky), 3)
-                pygame.draw.circle(char_surf, (*COLOR_GOLD, self.alpha), (kx, ky), 3)
-                # Faísca amarela na ponta
-                pygame.draw.circle(char_surf, (*COLOR_YELLOW_AURA, self.alpha), (kx, ky), 2)
-            else:
-                # Kunai empunhada em posição de combate invertida (estilo ninja)
-                kx = cx + int(math.cos(face_angle) * 10)
-                ky = chest_y + int(math.sin(face_angle) * 8) + 4
-                pygame.draw.line(char_surf, (*COLOR_STEEL, self.alpha), (cx, chest_y), (kx, ky), 3)
-                pygame.draw.circle(char_surf, (*COLOR_GOLD, self.alpha), (kx, ky), 2)
-        else:
-            # Desarmado: mãos abertas em postura defensiva desarmada
-            pygame.draw.circle(char_surf, (240, 200, 160, self.alpha), (cx - 6, chest_y + 4), 3)
-            pygame.draw.circle(char_surf, (240, 200, 160, self.alpha), (cx + 6, chest_y + 4), 3)
-            # Indicador de alerta acima da cabeça (Sem Kunai!)
-            pygame.draw.circle(char_surf, (255, 80, 80, 220), (cx, cy - 42), 3)
-
-        # 5. Cabeça e Capuz Shinobi
-        head_y = cy - 31
-        # Capuz amarelo
-        pygame.draw.circle(char_surf, (*COLOR_YELLOW_NINJA, self.alpha), (cx, head_y), 6)
-        # Máscara facial preta
-        pygame.draw.rect(char_surf, (*COLOR_NINJA_MASK, self.alpha), (cx - 4, head_y - 1, 8, 5), border_radius=2)
-        # Faixa da testa preta com placa de metal
-        pygame.draw.line(char_surf, (*COLOR_NINJA_MASK, self.alpha), (cx - 5, head_y - 4), (cx + 5, head_y - 4), 2)
-        pygame.draw.circle(char_surf, (*COLOR_STEEL, self.alpha), (cx, head_y - 4), 2)
-
-        # Indicador de Stealth se escondido
+        """Renderiza o Ninja Amarelo no autêntico estilo Voxel 3D Isométrico."""
         if self.is_hidden:
-            pygame.draw.circle(char_surf, (120, 220, 100, 200), (cx, cy - 45), 3)
+            sx, sy = camera.apply(self.wx, self.wy, 1.4)
+            pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
         # Barra de Vida (se tomou dano mas ainda está vivo)
         if self.hp < self.max_hp and self.is_alive:
-            pygame.draw.rect(char_surf, (40, 40, 40, 200), (cx - 10, cy - 42, 20, 3))
-            pygame.draw.rect(char_surf, (255, 50, 50, 220), (cx - 10, cy - 42, 10, 3))
+            sx, sy = camera.apply(self.wx, self.wy, 1.35)
+            pygame.draw.rect(surface, (40, 40, 40, 200), (sx - 10, sy, 20, 4))
+            pygame.draw.rect(surface, (255, 50, 50, 220), (sx - 10, sy, 10, 4))
 
-        char_surf.set_alpha(self.alpha)
-        surface.blit(char_surf, (base_sx - 35, base_sy - 45))
+        # Indicador se está desarmado
+        if not self.has_kunai and self.is_alive:
+            sx, sy = camera.apply(self.wx, self.wy, 1.5)
+            pygame.draw.circle(surface, (255, 80, 80), (sx, sy), 3)
+
+        render_voxel_humanoid(
+            surface, camera,
+            self.wx, self.wy, self.wz,
+            self.facing_x, self.facing_y,
+            self.state, self.state_timer, self.is_alive,
+            char_type="ninja",
+            walk_timer=self.walk_cycle,
+            alpha=self.alpha,
+            is_moving=self.is_moving,
+            extra_props={"has_kunai": self.has_kunai}
+        )

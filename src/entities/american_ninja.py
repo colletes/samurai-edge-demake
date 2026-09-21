@@ -13,6 +13,7 @@ from src.entities.samurai import (
 )
 from src.entities.doberman import DobermanDog
 from src.entities.projectile import ShurikenProjectile
+from src.entities.voxel_models import render_voxel_humanoid
 
 class AmericanNinja(Samurai):
     def __init__(self, wx: float, wy: float):
@@ -81,69 +82,18 @@ class AmericanNinja(Samurai):
             self.dog.update(dt, game_map)
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza o American Ninja com colete tático e bandana vermelha."""
-        base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
-
-        char_surf = pygame.Surface((70, 70), pygame.SRCALPHA)
-        cx, cy = 35, 45
-
-        # 1. Sombra no chão
-        pygame.draw.ellipse(char_surf, (10, 15, 12, 120), (cx - 14, cy - 6, 28, 12))
-
-        if not self.is_alive:
-            pygame.draw.ellipse(char_surf, (*COLOR_AMERICAN_NINJA, self.alpha), (cx - 16, cy - 8, 32, 14))
-            pygame.draw.circle(char_surf, (*COLOR_AMERICAN_BANDANA, self.alpha), (cx - 14, cy - 4), 6)
-            char_surf.set_alpha(self.alpha)
-            surface.blit(char_surf, (base_sx - 35, base_sy - 45))
-            return
-
-        # 2. Pernas / Calça Tática Preta
-        leg_offset = math.sin(self.walk_cycle) * 4.0 if self.state == STATE_WALK else 0.0
-        pygame.draw.polygon(char_surf, (*COLOR_AMERICAN_NINJA, self.alpha), [
-            (cx - 7, cy - 14), (cx + 7, cy - 14),
-            (cx + 5 + leg_offset, cy), (cx - 5 - leg_offset, cy)
-        ])
-
-        # 3. Tronco e Colete Tático Militar (Cinza sobre Preto)
-        chest_y = cy - 25
-        pygame.draw.polygon(char_surf, (*COLOR_AMERICAN_NINJA, self.alpha), [
-            (cx - 8, chest_y), (cx + 8, chest_y),
-            (cx + 6, cy - 12), (cx - 6, cy - 12)
-        ])
-        # Colete tático cinza
-        pygame.draw.rect(char_surf, (*COLOR_AMERICAN_VEST, self.alpha), (cx - 6, chest_y + 2, 12, 10), border_radius=2)
-        # Cinto tático com fivela dourada
-        pygame.draw.line(char_surf, (*COLOR_BLACK, self.alpha), (cx - 6, cy - 13), (cx + 6, cy - 13), 3)
-        pygame.draw.rect(char_surf, (*COLOR_GOLD, self.alpha), (cx - 2, cy - 14, 4, 3))
-
-        # 4. Braços e Pose
-        face_angle = math.atan2(self.facing_y, self.facing_x)
-        # Mão apontando ou em posição de saque de shuriken
-        arm_x = cx + int(math.cos(face_angle) * 12)
-        arm_y = chest_y + int(math.sin(face_angle) * 8) + 3
-        pygame.draw.line(char_surf, (*COLOR_AMERICAN_NINJA, self.alpha), (cx, chest_y + 3), (arm_x, arm_y), 3)
-        pygame.draw.circle(char_surf, (240, 205, 180, self.alpha), (arm_x, arm_y), 3)
-
-        # 5. Cabeça e Bandana Vermelha Estilo Anos 80
-        head_y = cy - 31
-        # Rosto
-        pygame.draw.circle(char_surf, (240, 205, 180, self.alpha), (cx, head_y), 5)
-        # Cabelo castanho/preto
-        pygame.draw.circle(char_surf, (30, 25, 25, self.alpha), (cx, head_y - 3), 5)
-        # Bandana Vermelha na testa
-        pygame.draw.line(char_surf, (*COLOR_AMERICAN_BANDANA, self.alpha), (cx - 5, head_y - 2), (cx + 5, head_y - 2), 3)
-        # Pontas da bandana voando para trás
-        tail_bx = cx - int(self.facing_x * 8)
-        tail_by = head_y - 2 - int(self.facing_y * 4)
-        pygame.draw.line(char_surf, (*COLOR_AMERICAN_BANDANA, self.alpha), (cx - 4, head_y - 2), (tail_bx, tail_by), 2)
-
+        """Renderiza o American Ninja no autêntico estilo Voxel 3D Isométrico."""
         if self.is_hidden:
-            pygame.draw.circle(char_surf, (120, 220, 100, 200), (cx, cy - 45), 3)
+            sx, sy = camera.apply(self.wx, self.wy, 1.4)
+            pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
-        # Barra de Vida se ferido
-        if self.hp < self.max_hp and self.is_alive:
-            pygame.draw.rect(char_surf, (40, 40, 40, 200), (cx - 10, cy - 42, 20, 3))
-            pygame.draw.rect(char_surf, (255, 50, 50, 220), (cx - 10, cy - 42, 10, 3))
-
-        char_surf.set_alpha(self.alpha)
-        surface.blit(char_surf, (base_sx - 35, base_sy - 45))
+        render_voxel_humanoid(
+            surface, camera,
+            self.wx, self.wy, self.wz,
+            self.facing_x, self.facing_y,
+            self.state, self.state_timer, self.is_alive,
+            char_type="american",
+            walk_timer=self.walk_cycle,
+            alpha=self.alpha,
+            is_moving=self.is_moving
+        )

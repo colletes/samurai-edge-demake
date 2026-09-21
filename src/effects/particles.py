@@ -38,7 +38,10 @@ class SparkParticle:
         sx, sy = camera.apply(self.wx, self.wy, self.wz)
         alpha_ratio = max(0.0, 1.0 - (self.age / self.lifetime))
         if alpha_ratio > 0:
-            pygame.draw.circle(surface, self.color, (sx, sy), self.size)
+            # Faísca como cubo/quadrado voxel brilhante
+            s = self.size
+            pygame.draw.rect(surface, self.color, (sx - s, sy - s, s * 2, s * 2))
+            pygame.draw.rect(surface, (255, 255, 255), (sx - s // 2, sy - s // 2, max(1, s), max(1, s)))
 
 
 class BloodParticle:
@@ -70,11 +73,14 @@ class BloodParticle:
 
     def render(self, surface: pygame.Surface, camera):
         sx, sy = camera.apply(self.wx, self.wy, self.wz)
-        pygame.draw.circle(surface, COLOR_BLOOD, (sx, sy), self.size)
+        # Sangue em blocos cúbicos de voxel
+        s = self.size
+        pygame.draw.rect(surface, (120, 12, 18), (sx - s, sy - s, s * 2, s * 2))
+        pygame.draw.rect(surface, COLOR_BLOOD, (sx - s + 1, sy - s + 1, s * 2 - 1, s * 2 - 1))
 
 
 class BambooSliceParticle:
-    """A porção superior de um bambu cortado que tomba rodando no ar e cai no chão."""
+    """A porção superior de um bambu cortado que tomba rodando no ar e cai no chão em blocos voxel."""
     def __init__(self, wx: float, wy: float, cut_height: float, total_height: float, slash_dir: tuple[float, float]):
         self.wx = wx
         self.wy = wy
@@ -103,13 +109,17 @@ class BambooSliceParticle:
         return self.age < self.lifetime
 
     def render(self, surface: pygame.Surface, camera):
-        sx, sy = camera.apply(self.wx, self.wy, self.wz)
+        from src.isometric.voxel_renderer import draw_voxel_box
+        from src.config import COLOR_BAMBOO, COLOR_BAMBOO_LIGHT
+
         rad = math.radians(self.rot_angle)
-        pixel_len = int(self.piece_length * 28)
-        end_x = int(sx + math.sin(rad) * pixel_len)
-        end_y = int(sy - math.cos(rad) * pixel_len)
-        pygame.draw.line(surface, (55, 125, 45), (sx, sy), (end_x, end_y), 5)
-        pygame.draw.line(surface, (95, 185, 75), (sx, sy), (end_x, end_y), 2)
+        dx_rot = math.sin(rad) * 0.28
+        dy_rot = math.cos(rad) * 0.28
+
+        # 3 blocos voxel articulados tombando pelo ar
+        draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.08, self.wz, 0.16, 0.16, 0.32, COLOR_BAMBOO)
+        draw_voxel_box(surface, camera, self.wx + dx_rot - 0.08, self.wy + dy_rot - 0.08, self.wz + 0.28, 0.16, 0.16, 0.30, (75, 145, 60))
+        draw_voxel_box(surface, camera, self.wx + dx_rot * 2 - 0.08, self.wy + dy_rot * 2 - 0.08, self.wz + 0.55, 0.16, 0.16, 0.28, COLOR_BAMBOO_LIGHT)
 
 
 class AmbientLeafParticle:
