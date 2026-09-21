@@ -28,13 +28,22 @@ def test_complete_roster():
     pygame.font.init()
     screen = pygame.display.set_mode((1280, 720))
 
-    # 1. Testar Tela de Seleção com 7 Guerreiros
+    # 1. Testar Tela de Seleção com 7 Guerreiros e Grade 2D (UP/DOWN/LEFT/RIGHT)
     select_screen = CharacterSelectScreen()
     assert len(select_screen.characters) == 7
     select_screen.p1_choice_idx = 6  # Hajime Saitou
     p1_id, p2_id, vs_ai = select_screen.get_selected_characters()
     assert p1_id == CHAR_SAITOU
-    print("Teste 1: Tela de Seleção com 7 guerreiros (incluindo Hajime Saitou) OK!")
+
+    # Navegação vertical entre linhas da grade 2D
+    ev_up = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_UP)
+    select_screen.handle_event(ev_up)
+    assert select_screen.p1_choice_idx == 2  # Saitou (idx 6) -> Hanzo (idx 2)
+
+    ev_down = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN)
+    select_screen.handle_event(ev_down)
+    assert select_screen.p1_choice_idx == 6  # Hanzo (idx 2) -> Saitou (idx 6)
+    print("Teste 1: Tela de Seleção com 7 guerreiros e navegação 2D em 2 linhas OK!")
 
     game_map = GameMap()
     camera = Camera(11.0, 11.0)
