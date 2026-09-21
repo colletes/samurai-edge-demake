@@ -105,17 +105,45 @@ COLOR_ARCHER_AURA = (100, 190, 130)       # Aura zen do tiro com arco
 COLOR_BOW_WOOD = (145, 95, 55)            # Madeira curvada do arco Yumi
 COLOR_ROPE = (210, 195, 160)              # Corda de cânhamo trançada
 
-# Identificadores de Personagens
+# Cores da Espadachim Pirata (Anne)
+COLOR_PIRATE_COAT = (165, 30, 45)          # Sobretudo bordô de capitã
+COLOR_PIRATE_HAT = (28, 25, 30)            # Tricórnio preto
+COLOR_PIRATE_SHIRT = (235, 235, 225)       # Camisa branca de folhos
+COLOR_PIRATE_GOLD = (230, 190, 60)         # Fivela dourada e detalhes
+COLOR_PIRATE_AURA = (235, 80, 70)          # Aura de sangue e corte do alfanje
+COLOR_CUTLASS_STEEL = (225, 235, 245)      # Aço largo do alfanje
+
+# Cores da Mosqueteira (Julie)
+COLOR_MUSKETEER_BLUE = (35, 75, 175)       # Casaca azul-real francesa
+COLOR_MUSKETEER_HAT = (30, 32, 40)         # Chapéu de feltro
+COLOR_MUSKETEER_FEATHER = (245, 245, 255)  # Pluma branca ondulante
+COLOR_MUSKETEER_LACE = (250, 250, 245)     # Gola de renda branca
+COLOR_MUSKETEER_AURA = (80, 160, 255)      # Aura de esgrima reluzente
+COLOR_RAPIER_STEEL = (240, 245, 255)       # Aço polido do florete
+
+# Cores Específicas das Kunoichis e Guerreiras
+COLOR_KASUMI_HAIR = (215, 220, 230)        # Trança longa prateada de Kasumi
+COLOR_OKUNI_KIMONO = (195, 35, 75)         # Quimono carmim de sacerdotisa/dançarina
+COLOR_TOMOE_HAKAMA = (175, 25, 35)         # Hakama vermelho cerimonial da arqueira Miko
+
+# Identificadores de Personagens (12 Guerreiros: 6 Mulheres e 6 Homens)
 CHAR_KENSHIN = "kenshin"
 CHAR_MUSASHI = "musashi"
 CHAR_NINJA = "ninja"
+CHAR_HANZO = "ninja"
 CHAR_AMERICAN = "american"
 CHAR_GRAY = "gray"
+CHAR_KASUMI = "gray"
 CHAR_PURPLE = "purple"
+CHAR_MURASAKI = "purple"
 CHAR_SAITOU = "saitou"
 CHAR_RIFLE = "rifleman"
 CHAR_KABUKI = "kabuki"
+CHAR_OKUNI = "kabuki"
 CHAR_ARCHER = "archer"
+CHAR_TOMOE = "archer"
+CHAR_PIRATE = "pirate"
+CHAR_MUSKETEER = "musketeer"
 
 # Mapeamento de Teclas Padrão
 # Jogador 1 (Samurai Vermelho - Kenshin)

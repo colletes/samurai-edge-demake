@@ -16,7 +16,8 @@ import math
 import pygame
 from src.config import (
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY,
-    CHAR_PURPLE, CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER
+    CHAR_PURPLE, CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER,
+    CHAR_PIRATE, CHAR_MUSKETEER
 )
 from src.isometric.camera import Camera
 from src.world.map_data import GameMap
@@ -30,7 +31,10 @@ from src.entities.saitou_samurai import SaitouSamurai
 from src.entities.rifleman import Rifleman
 from src.entities.kabuki import Kabuki
 from src.entities.kyudo_archer import KyudoArcher
+from src.entities.pirate import PirateSwordswoman
+from src.entities.musketeer import Musketeer
 from src.combat.collision import CombatSystem
+from src.effects.cinematic_director import CinematicDirector
 from src.ui.character_select import CharacterSelectScreen
 from main import get_random_arena_spawns, create_fighter
 
@@ -39,9 +43,9 @@ def test_complete_roster():
     pygame.font.init()
     screen = pygame.display.set_mode((1280, 720))
 
-    # 1. Testar Tela de Seleção com 10 Guerreiros e Grade 5x2
+    # 1. Testar Tela de Seleção com 12 Guerreiros e Grade 6x2
     select_screen = CharacterSelectScreen()
-    assert len(select_screen.characters) == 10, f"Esperado 10 lutadores, obtido {len(select_screen.characters)}"
+    assert len(select_screen.characters) == 12, f"Esperado 12 lutadores, obtido {len(select_screen.characters)}"
     
     # Testar seleção de P1 e P2 independentes no modo 2 Jogadores
     select_screen.vs_ai = False
@@ -54,22 +58,28 @@ def test_complete_roster():
     assert select_screen.p1_choice_idx == 1
     assert select_screen.p2_choice_idx == 1  # P2 não foi afetado!
 
-    # P1 move verticalmente (S pula para linha inferior, +5 na grade 5x2)
+    # P1 move verticalmente (S pula para linha inferior, +6 na grade 6x2)
     ev_p1_down = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_s)
     select_screen.handle_event(ev_p1_down)
-    assert select_screen.p1_choice_idx == 6  # Saitou
+    assert select_screen.p1_choice_idx == 7  # Kasumi (Kunoichi)
 
-    # P2 move exclusivamente com Setas (Down pula +5)
+    # P2 move exclusivamente com Setas (Down pula +6)
     ev_p2_down = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN)
     select_screen.handle_event(ev_p2_down)
-    assert select_screen.p2_choice_idx == 6
-    assert select_screen.p1_choice_idx == 6
+    assert select_screen.p2_choice_idx == 7
+    assert select_screen.p1_choice_idx == 7
 
     ev_p2_right = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT)
     select_screen.handle_event(ev_p2_right)
-    assert select_screen.p2_choice_idx == 7  # Rifleman
-    assert select_screen.p1_choice_idx == 6  # P1 continua em Saitou!
-    print("Teste 1: Grade 5x2 com 10 guerreiros e controles P1 (WASD) vs P2 (Setas) independentes OK!")
+    assert select_screen.p2_choice_idx == 8  # Okuni
+    assert select_screen.p1_choice_idx == 7  # P1 continua em Kasumi!
+
+    # Testar se os 12 personagens podem ser criados
+    for c in select_screen.characters:
+        fighter = create_fighter(c["id"], 10.0, 10.0)
+        assert fighter is not None
+        assert fighter.is_alive == True
+    print("Teste 1: Grade 6x2 com 12 guerreiros e controles P1 (WASD) vs P2 (Setas) independentes OK!")
 
     game_map = GameMap()
     camera = Camera(11.0, 11.0)
@@ -281,8 +291,66 @@ def test_complete_roster():
     assert murasaki2.is_alive == True
     print("Teste 10: Precedência Absoluta do Ninja Roxo OK!")
 
+    # 11. Testar Anne (Espadachim Pirata): Cutlass Cleave 180° e Gunpowder in Eyes Blind
+    anne = PirateSwordswoman(wx=10.0, wy=10.0)
+    target_dummy = BlueSamurai(wx=11.0, wy=10.0)
+    anne.trigger_cutlass_cleave(target_dummy.wx, target_dummy.wy)
+    assert anne.state == "ATTACK"
+    assert anne.hitbox_active == True
+    assert anne.hitbox_radius >= 1.30  # Alcance amplo de 180°
+
+    # Testar Pólvora nos Olhos
+    anne.state = "IDLE"
+    initial_wx = anne.wx
+    anne.trigger_gunpowder_blind(target_dummy.wx, target_dummy.wy, opponent=target_dummy, particles=particles)
+    assert anne.state == "RECOVERY"
+    assert anne.wx < initial_wx  # Recuou esquivando
+    assert target_dummy.state == "STUNNED"  # Alvo cegado/atordoado!
+    print("Teste 11: Espadachim Pirata Anne (Cutlass Cleave 180° e Cegar com Pólvora) OK!")
+
+    # 12. Testar Julie (Mosqueteira): Fleche Thrust de Longo Alcance e Cloak Riposte
+    julie = Musketeer(wx=10.0, wy=10.0)
+    target_dummy2 = RedSamurai(wx=11.2, wy=10.0)
+    julie.trigger_fleche_thrust(target_dummy2.wx, target_dummy2.wy)
+    assert julie.state == "ATTACK"
+    assert julie.hitbox_active == True
+    assert julie.hitbox_radius >= 1.25
+
+    # Testar Cloak Riposte
+    julie.state = "IDLE"
+    julie.trigger_cloak_riposte()
+    assert julie.state == "PARRY"
+    assert julie.is_riposte_ready == True
+    print("Teste 12: Mosqueteira Julie (Fleche Thrust e Cloak Riposte) OK!")
+
+    # 13. Testar Diretor Cinematográfico & Violência em Voxel
+    director = CinematicDirector()
+    kenshin_killer = RedSamurai(wx=10.0, wy=10.0)
+    victim = BlueSamurai(wx=10.5, wy=10.0)
+    
+    # Disparar golpe fatal
+    director.trigger_fatal_strike(kenshin_killer, victim, "KENSHIN_SPLIT", (1.0, 0.0))
+    assert director.is_frozen() == True
+    assert director.bw_flash_timer > 0.0
+    assert victim.state == "DYING_FREEZE"
+    assert victim.is_alive == False
+
+    # Avançar além do delay dramático (delayed_death_timer = 0.42s)
+    director.update(0.45, game_map, particles)
+    assert len(director.corpses) == 1
+    corpse = director.corpses[0]
+    assert corpse.death_style == "KENSHIN_SPLIT"
+    assert len(corpse.pieces) >= 2  # Metade superior e inferior separadas
+    assert victim.state == "CORPSE_SLICED"
+
+    # Atualizar física das peças do corpo
+    for _ in range(80):
+        corpse.update(0.016, game_map, particles)
+    assert corpse.top_half.wz <= 0.15 or corpse.top_half.is_grounded == True
+    print("Teste 13: Diretor Cinematográfico (Hitstop Freeze, Kurosawa Flash e Voxel Corpse Slicing) OK!")
+
     print("\n=======================================================")
-    print("TODOS OS 10 TESTES DE SISTEMA PASSARAM COM 100% DE SUCESSO!")
+    print("TODOS OS 13 TESTES DE SISTEMA PASSARAM COM 100% DE SUCESSO!")
     print("=======================================================\n")
     pygame.quit()
 

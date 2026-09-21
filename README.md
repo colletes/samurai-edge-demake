@@ -1,8 +1,27 @@
 # Samurai Edge Demake
 
-Um jogo de duelo isométrico em estilo **3D Voxel Art** tático, inspirado nos clássicos jogos de luta de espadas e demakes retrô com iluminação volumétrica direcional.
+Um jogo de duelo isométrico em estilo **3D Voxel Art** tático, inspirado nos clássicos jogos de luta de espadas e demakes retrô com iluminação volumétrica direcional, violência cinematográfica de filme de samurai e elenco equilibrado.
 
-![Samurai Edge Demake - Seleção Voxel 10 Guerreiros](char_select_10p_preview.png)
+![Samurai Edge Demake - Seleção Voxel 12 Guerreiros](char_select_12p_preview.png)
+
+---
+
+## 🎬 Violência Cinematográfica & Efeitos de Cinema Samurai (Kurosawa Noir)
+
+- **Congelamento Dramático (Hitstop Freeze)**: Ao conectar um golpe letal, a simulação congela momentaneamente no impacto.
+- **Filtro Kurosawa Noir**: Flash cinematográfico com tela desaturada em preto e branco de alto contraste e vinheta escura, preservando exclusivamente as partículas e voxels de sangue vermelho vivo.
+- **Morte Atrasada (Delayed Death)**: A vítima permanece congelada em sua postura final por ~0.42s; após a pausa dramática de suspense, o corpo colapsa e se desfaz em peças volumétricas 3D com um gêiser de sangue contínuo.
+- **Desmembramento e Física de Voxel Personalizados por Golpe**:
+  - **Kenshin**: Corte diagonal estilo *Sanjuro* (tronco superior desliza e cai enquanto o inferior tomba).
+  - **Murasaki & Doberman**: Decapitação limpa (cabeça é ejetada para o alto, rola e quica espalhando sangue).
+  - **Kasumi**: Desintegração explosiva em 26 fragmentos chamuscados e ensanguentados.
+  - **Okuni**: Dissolução cáustica em poça verde ácida em expansão.
+  - **Saitou & Julie**: Perfuração transfixante torácica e tombo estirado para trás.
+  - **Teppo**: *Headshot* explosivo com dispersão de fragmentos ósseos.
+  - **Anne**: Corte transversal horizontal amplo bipartido.
+- **Sangue Persistente no Solo**: Gotas e poças de sangue permanecem manchando os tablados da ponte e a terra da arena até o fim do round.
+
+![Cinematic Violence - Morte Cinematográfica Samurai](cinematic_violence_preview.png)
 
 ---
 
@@ -14,71 +33,81 @@ A cada round, os combatentes iniciam em **posições aleatórias da arena** com 
 
 O jogo suporta **Duelo 1P contra IA inteligente adaptativa** e **Modo 2 Jogadores Local** no mesmo teclado com navegação e confirmação 100% independentes no menu de seleção (`P1: WASD + E/Espaço`, `P2: Setas + U/Enter`).
 
-![Gameplay Preview - Duelo com Indicadores e Novos Lutadores](new_fighters_gameplay_preview.png)
-
 ---
 
-## 🥋 Guerreiros Selecionáveis (10 Combatentes)
+## 🥋 Guerreiros Selecionáveis (12 Combatentes: 6 Mulheres e 6 Homens)
 
-### 1. Kenshin (Retalhador Carmim)
+### 1. Kenshin (Retalhador Carmim) [M]
 - **Estilo**: Iai-jutsu & Shukuchi (Passo Relâmpago 縮地)
 - **Velocidade**: Máxima (5/5)
 - **Ataque Primário [E / U]**: *Iai Flash* - Avanço fulminante com corte instantâneo (1-Hit Kill).
 - **Secundário [R / I]**: *Shukuchi* - Passo de velocidade divina (28.0 tiles/s) deixando pós-imagens translúcidas (*zanzou*) e cortando bambus pelo caminho.
 
-### 2. Musashi (Duas Lâminas)
+### 2. Musashi (Duas Lâminas) [M]
 - **Estilo**: Niten Ichi-ryū
 - **Velocidade**: Cadenciada (2/5)
 - **Ataque Primário [E / U]**: Combo consecutivo de 3 cortes em rápida sucessão.
 - **Secundário [R / I]**: Parry defensivo que apara ataques de espada, projéteis (kunais, balas, flechas) e cães de caça, atordoando o agressor.
 
-### 3. Hanzo (Ninja Amarelo)
+### 3. Hanzo (Ninja Mestre) [M]
 - **Estilo**: Ninjutsu & Kunai
 - **Velocidade**: Máxima (5/5)
 - **Ataque Primário [E / U]**: Estocada rápida de curta distância (requer 2 acertos para vencer).
 - **Secundário [R / I]**: Arremesso fatal de Kunai (1-Hit Kill à distância). Se errar ou colidir com obstáculos, crava no solo e deve ser recuperada a pé.
 
-### 4. Joe & Doberman (American Ninja)
+### 4. Joe & Doberman (American Ninja) [M]
 - **Estilo**: Tático & Cão de Ataque
 - **Velocidade**: Ágil (4/5)
 - **Ataque Primário [E / U]**: Arremesso de Shurikens que não matam, mas aplicam atordoamento tático (Stun).
 - **Secundário [R / I]**: Comanda o Doberman em uma investida mortal (1-Hit Kill). Se o oponente acertar o cão durante o salto, o animal é nocauteado temporariamente.
 
-### 5. Kemuri (Ninja Cinza)
-- **Estilo**: Pólvora & Cortina de Fumaça
-- **Velocidade**: Ágil (4/5)
-- **Ataque Primário [E / U]**: **Bomba em Arco 3D**: Projétil balístico em arco tridimensional (até 2 bombas ativas no mapa). Detona por contato imediato com qualquer lutador ou após queima do pavio (1.5s). Causa explosão fatal em área com **fogo amigo / auto-dano**: Kemuri pode explodir a si mesmo por descuido!
-- **Secundário [R / I]**: Bomba de fumaça instantânea que camufla o ninja com recuo evasivo e reduz a velocidade do oponente em 65% (Slow).
-
-### 6. Murasaki (Ninja Roxo)
-- **Estilo**: Kusarigama & Foice de Precedência
-- **Velocidade**: Ágil (4/5)
-- **Ataque Primário [E / U]**: Corte de foice (*Kama Strike*) com **Precedência Absoluta** sobre qualquer outro ataque (anula e vence contra qualquer golpe adversário simultâneo sem Clash).
-- **Secundário [R / I]**: Puxão de corrente (*Kusarigama Hook*) que agarra o oponente e o puxa rapidamente para perto, enquanto o alvo permanece livre para contra-atacar.
-
-### 7. Hajime Saitou (Líder Shinsengumi)
+### 5. Hajime Saitou (Líder Shinsengumi) [M]
 - **Estilo**: Gatotsu (Estocada de Aceleração Crescente)
 - **Velocidade**: Impulso Progressivo (5/5)
 - **Ataque Primário [E / U]**: **Gatotsu**: Inicia na velocidade base e ganha aceleração contínua até velocidade supersônica (19.0 tiles/s), cortando bambus. Perde manobrabilidade lateral e sofre inércia de frenagem (*Braking State*) se errar (whiff), além de stun ao bater em rochas ou sofrer Parry.
 - **Secundário [R / I]**: **Gatotsu Zeroshiki**: Estocada rápida à queima-roupa desferida do corpo a corpo, sem corrida de impulso.
 
-### 8. Teppo / Tanegashima (Rifleman)
+### 6. Teppo / Tanegashima (Marksman) [M]
 - **Estilo**: Arcabuzeiro Feudal de Mecha
 - **Velocidade**: Cadenciada (3/5)
 - **Ataque Primário [E / U]**: Disparo supersônico fatal de arcabuz (1-Hit Kill). Consome a munição da arma e gera recuo de pólvora.
 - **Secundário [R / I] (Hold)**: **Carregar Pólvora**: Segure a tecla de ação secundária para dosar a pólvora e socar a munição (1.75s). Toque na tecla para executar um salto evasivo tático para trás (*Backstep*) com fumaça sem cancelar a recarga.
 
-### 9. Kabuki (Dançarino do Sopro Venenoso)
-- **Estilo**: Sopro Tóxico & Pirueta Evasiva
+### 7. Murasaki (Kunoichi da Foice) [F]
+- **Estilo**: Kusarigama & Foice de Precedência (Rabo de cavalo longo arroxeado)
+- **Velocidade**: Ágil (4/5)
+- **Ataque Primário [E / U]**: Corte de foice (*Kama Strike*) com **Precedência Absoluta** sobre qualquer outro ataque (anula e vence contra qualquer golpe adversário simultâneo sem Clash).
+- **Secundário [R / I]**: Puxão de corrente (*Kusarigama Hook*) que agarra o oponente e o puxa rapidamente para perto, enquanto o alvo permanece livre para contra-atacar.
+
+### 8. Kasumi (Kunoichi da Névoa) [F]
+- **Estilo**: Pólvora & Cortina de Fumaça (Trança lateral prateada)
+- **Velocidade**: Ágil (4/5)
+- **Ataque Primário [E / U]**: **Bomba em Arco 3D**: Projétil balístico em arco tridimensional (até 2 bombas ativas no mapa). Detona por contato imediato com qualquer lutador ou após queima do pavio (1.5s). Causa explosão fatal em área com **fogo amigo / auto-dano**: Kasumi pode explodir a si mesma por descuido!
+- **Secundário [R / I]**: Bomba de fumaça instantânea que camufla a kunoichi com recuo evasivo e reduz a velocidade do oponente em 65% (Slow).
+
+### 9. Okuni (Mestra Kabuki) [F]
+- **Estilo**: Sopro Tóxico & Pirueta Evasiva (Maquiagem Kumadori e grampos kanzashi dourados)
 - **Velocidade**: Ágil (4/5)
 - **Ataque Primário [E / U]**: **Sopro Venenoso**: Cospe uma nuvem de toxina concentrada. Ao atingir o rival, o oponente recebe um **boost de velocidade (+40%)**, mas entra em uma **contagem regressiva fatal de 10 segundos**!
-- **Secundário [R / I]**: **Pirueta Kabuki**: Após envenenar o oponente, o Kabuki perde a capacidade de atacar e deve sobreviver utilizando piruetas e esquivas acrobáticas multidirecionais enquanto o adversário enfurecido corre contra o tempo.
+- **Secundário [R / I]**: **Pirueta Kabuki**: Após envenenar o oponente, Okuni perde a capacidade de atacar e deve sobreviver utilizando piruetas e esquivas acrobáticas multidirecionais enquanto o adversário enfurecido corre contra o tempo.
 
-### 10. Kyudo (Mestre do Arco Yumi)
-- **Estilo**: Kyudo Tradicional & Flecha de Corda
+### 10. Tomoe (Arqueira Miko) [F]
+- **Estilo**: Kyudo Tradicional & Flecha de Corda (Laço cerimonial e hakama escarlate)
 - **Velocidade**: Ágil (4/5)
 - **Ataque Primário [E / U]**: **Retesamento de Arco Yumi**: Entra em windup preparatório (0.42s) com barra de mira precisa sobre a cabeça; ao concluir, dispara uma flecha mortal de longo alcance (1-Hit Kill).
-- **Secundário [R / I]**: **Flecha de Corda**: Cancela imediatamente o windup do arco e dispara uma flecha com corda guia que se fixa no cenário e puxa o arqueiro velozmente pelo mapa, permitindo uma dinâmica intensa de gato e rato.
+- **Secundário [R / I]**: **Flecha de Corda**: Cancela imediatamente o windup do arco e dispara uma flecha com corda guia que se fixa no cenário e puxa a arqueira velozmente pelo mapa.
+
+### 11. Anne (A Espadachim Pirata) [F]
+- **Estilo**: Bucaneira do Extremo Oriente (Tricórnio de capitã, sobretudo bordô e fivelas douradas)
+- **Velocidade**: Ágil (4/5)
+- **Ataque Primário [E / U]**: **Corte de Alfanje 180° (Cutlass Cleave)**: Golpe horizontal varrendo um semi-círculo completo de 180 graus com 1.35 tiles de raio, punindo rolagens laterais.
+- **Secundário [R / I]**: **Pólvora nos Olhos (Gunpowder Blind)**: Arremessa pólvora abrasiva à queima-roupa no rosto do rival, aplicando atordoamento (Stun 0.85s) enquanto salta com um recuo evasivo.
+
+### 12. Julie (A Mosqueteira Nobre) [F]
+- **Estilo**: Florete Francês & Capa (Casaca azul-real, gola de renda e pluma branca ondulante)
+- **Velocidade**: Rápida (5/5)
+- **Ataque Primário [E / U]**: **Estocada Fleche (Fleche Thrust)**: Lunge linear instantâneo de longo alcance (1.30 tiles) com o florete de aço, com recuperação quase imediata (0.14s).
+- **Secundário [R / I]**: **Capa Riposte & Pederneira**: Entra em guarda defensiva de capa (apara golpes) e dispara um tiro rápido surpresa de pistola flintlock.
 
 ---
 

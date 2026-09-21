@@ -15,11 +15,30 @@ from src.entities.projectile import (
 )
 from src.entities.doberman import STATE_DOG_CHARGE
 
+def _get_death_style_for_attacker(attacker):
+    char_type = getattr(attacker, "char_type", "").lower()
+    state = getattr(attacker, "state", "")
+    if "kenshin" in char_type or "red" in char_type:
+        return "KENSHIN_SPLIT"
+    elif "murasaki" in char_type or "purple" in char_type:
+        return "MURASAKI_DECAP"
+    elif "pirate" in char_type or "anne" in char_type:
+        return "PIRATE_CLEAVE"
+    elif "musketeer" in char_type or "julie" in char_type or "saitou" in char_type or state == "GATOTSU_CHARGE":
+        return "SAITOU_IMPALE"
+    elif "gray" in char_type or "kasumi" in char_type or "kemuri" in char_type:
+        return "KASUMI_EXPLODE"
+    elif "rifle" in char_type or "teppo" in char_type:
+        return "HEADSHOT_EXPLODE"
+    elif "kabuki" in char_type or "okuni" in char_type:
+        return "OKUNI_MELT"
+    return "KENSHIN_SPLIT"
+
 class CombatSystem:
     def __init__(self):
         self.hitstop_timer = 0.0
 
-    def process_combat(self, p1, p2, game_map, particles: list, banners: list, camera, projectiles: list, dt: float = 0.016) -> str | None:
+    def process_combat(self, p1, p2, game_map, particles: list, banners: list, camera, projectiles: list, dt: float = 0.016, cinematic_director = None) -> str | None:
         """
         Processa interações de combate: corpo a corpo, projéteis e ataques de cães.
         Retorna 'P1_WINS', 'P2_WINS' ou None.
@@ -58,6 +77,8 @@ class CombatSystem:
                             self.hitstop_timer = 0.12
                             winner = winner_id
                             proj.is_active = False
+                            if cinematic_director:
+                                cinematic_director.trigger_fatal_strike(proj.owner, target, "KENSHIN_SPLIT", (proj.dir_x, proj.dir_y))
 
             # Se for SHURIKEN (Não mata! Apenas aplica stun!)
             elif isinstance(proj, ShurikenProjectile) and proj.is_active:
@@ -110,16 +131,23 @@ class CombatSystem:
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                         winner = "DRAW"
+                        if cinematic_director:
+                            cinematic_director.trigger_fatal_strike(proj.owner, p1, "KASUMI_EXPLODE", (0, 0))
+                            cinematic_director.trigger_fatal_strike(proj.owner, p2, "KASUMI_EXPLODE", (0, 0))
                     elif p1_in_range:
                         p1.take_hit((0, 0), damage=2)
                         for _ in range(25):
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                         winner = "P2_WINS"
+                        if cinematic_director:
+                            cinematic_director.trigger_fatal_strike(proj.owner, p1, "KASUMI_EXPLODE", (0, 0))
                     elif p2_in_range:
                         p2.take_hit((0, 0), damage=2)
                         for _ in range(25):
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                         winner = "P1_WINS"
+                        if cinematic_director:
+                            cinematic_director.trigger_fatal_strike(proj.owner, p2, "KASUMI_EXPLODE", (0, 0))
 
             # Se for TIRO DE MOSQUETE (MusketBulletProjectile)
             elif isinstance(proj, MusketBulletProjectile) and proj.is_active:
@@ -140,6 +168,8 @@ class CombatSystem:
                                 particles.append(BloodParticle(target.wx, target.wy, 0.6))
                             self.hitstop_timer = 0.14
                             winner = winner_id
+                            if cinematic_director:
+                                cinematic_director.trigger_fatal_strike(proj.owner, target, "HEADSHOT_EXPLODE", (proj.vx, proj.vy))
 
             # Se for NUVEM DE VENENO (PoisonCloudProjectile)
             elif isinstance(proj, PoisonCloudProjectile) and proj.is_active:
@@ -176,6 +206,8 @@ class CombatSystem:
                                 particles.append(BloodParticle(target.wx, target.wy, 0.6))
                             self.hitstop_timer = 0.12
                             winner = winner_id
+                            if cinematic_director:
+                                cinematic_director.trigger_fatal_strike(proj.owner, target, "SAITOU_IMPALE", (proj.vx, proj.vy))
 
             # Se for BOMBA DE FUMAÇA (SmokeCloudEntity)
             elif isinstance(proj, SmokeCloudEntity) and proj.is_active:
@@ -220,6 +252,8 @@ class CombatSystem:
                         particles.append(BloodParticle(fighter.wx, fighter.wy, 0.6))
                     if winner is None:
                         winner = other_id
+                    if cinematic_director:
+                        cinematic_director.trigger_fatal_strike(None, fighter, "OKUNI_MELT", (0, 0))
 
         # -------------------------------------------------------------
         # 2. COMBATE DO CÃO DOBERMAN (SE HOUVER AMERICAN NINJA)
@@ -253,6 +287,8 @@ class CombatSystem:
                         winner = "P1_WINS"
                         dog.state = "FOLLOW"
                         dog.hitbox_active = False
+                        if cinematic_director:
+                            cinematic_director.trigger_fatal_strike(p1, p2, "CLEAN_DECAP", (dog.facing_x, dog.facing_y))
 
         # Cão do Jogador 2 contra Jogador 1
         if hasattr(p2, "dog") and p2.dog and p2.dog.state == STATE_DOG_CHARGE and p1.is_alive and winner is None:
@@ -279,6 +315,8 @@ class CombatSystem:
                         winner = "P2_WINS"
                         dog.state = "FOLLOW"
                         dog.hitbox_active = False
+                        if cinematic_director:
+                            cinematic_director.trigger_fatal_strike(p2, p1, "CLEAN_DECAP", (dog.facing_x, dog.facing_y))
 
         # -------------------------------------------------------------
         # 3. CORTE DE BAMBUS E FAÍSCAS EM ROCHAS
@@ -311,6 +349,8 @@ class CombatSystem:
                     for _ in range(25):
                         particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                     self.hitstop_timer = 0.14
+                    if cinematic_director:
+                        cinematic_director.trigger_fatal_strike(p1, p2, "MURASAKI_DECAP", p1.slash_dir)
                     return "P1_WINS"
 
                 elif p2_priority and not p1_priority:
@@ -322,6 +362,8 @@ class CombatSystem:
                     for _ in range(25):
                         particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                     self.hitstop_timer = 0.14
+                    if cinematic_director:
+                        cinematic_director.trigger_fatal_strike(p2, p1, "MURASAKI_DECAP", p2.slash_dir)
                     return "P2_WINS"
 
                 else:
@@ -362,6 +404,9 @@ class CombatSystem:
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                         self.hitstop_timer = 0.12
                         winner = "P1_WINS"
+                        if cinematic_director:
+                            death_style = _get_death_style_for_attacker(p1)
+                            cinematic_director.trigger_fatal_strike(p1, p2, death_style, p1.slash_dir)
                     elif hit:
                         camera.add_shake(7.0)
                         banners.append(FloatingBanner("KUNAI STAB (1/2)!", p2.wx, p2.wy, wz=1.7, color=(255, 200, 50)))
@@ -394,6 +439,9 @@ class CombatSystem:
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                         self.hitstop_timer = 0.12
                         winner = "P2_WINS"
+                        if cinematic_director:
+                            death_style = _get_death_style_for_attacker(p2)
+                            cinematic_director.trigger_fatal_strike(p2, p1, death_style, p2.slash_dir)
                     elif hit:
                         camera.add_shake(7.0)
                         banners.append(FloatingBanner("KUNAI STAB (1/2)!", p1.wx, p1.wy, wz=1.7, color=(255, 200, 50)))

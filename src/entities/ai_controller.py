@@ -69,6 +69,14 @@ class SamuraiAI:
             elif hasattr(ai_fighter, "trigger_rope_arrow") and projectiles is not None and random.random() < 0.65:
                 ai_fighter.trigger_rope_arrow(opponent.wx, opponent.wy, projectiles)
                 return
+            # Se for Pirata (Anne): pólvora nos olhos para cegar o oponente
+            elif hasattr(ai_fighter, "trigger_gunpowder_blind") and random.random() < 0.60:
+                ai_fighter.trigger_gunpowder_blind(opponent.wx, opponent.wy)
+                return
+            # Se for Mosqueteira (Julie): riposte com a capa para anular o golpe
+            elif hasattr(ai_fighter, "trigger_cloak_riposte") and random.random() < 0.65:
+                ai_fighter.trigger_cloak_riposte()
+                return
 
         # 3. Punição quando o oponente estiver em RECOVERY ou STUNNED
         if opponent.state in (STATE_RECOVERY, "STUNNED"):
@@ -172,6 +180,18 @@ class SamuraiAI:
                     ai_fighter.trigger_bow_draw(opponent.wx, opponent.wy, projectiles)
                     return
 
+            # Pirata (Anne): sopro de pólvora nos olhos a curta/média distância
+            if hasattr(ai_fighter, "trigger_gunpowder_blind"):
+                if 1.8 <= dist <= 3.4 and random.random() < 0.50:
+                    ai_fighter.trigger_gunpowder_blind(opponent.wx, opponent.wy)
+                    return
+
+            # Mosqueteira (Julie): investida longa Fleche
+            if hasattr(ai_fighter, "trigger_fleche_thrust"):
+                if 1.4 <= dist <= 2.8 and random.random() < 0.60:
+                    ai_fighter.trigger_fleche_thrust(opponent.wx, opponent.wy)
+                    return
+
             if dist > 3.2:
                 # Aproximar
                 dx = opponent.wx - ai_fighter.wx
@@ -230,3 +250,7 @@ class SamuraiAI:
                 fighter.trigger_poison_spit(target.wx, target.wy, projectiles)
         elif hasattr(fighter, "trigger_bow_draw"):
             fighter.trigger_bow_draw(target.wx, target.wy, projectiles)
+        elif hasattr(fighter, "trigger_cutlass_cleave"):
+            fighter.trigger_cutlass_cleave(target.wx, target.wy)
+        elif hasattr(fighter, "trigger_fleche_thrust"):
+            fighter.trigger_fleche_thrust(target.wx, target.wy)

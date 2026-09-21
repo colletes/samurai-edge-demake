@@ -23,7 +23,10 @@ from src.config import (
     COLOR_SAITOU_LIGHT_BLUE, COLOR_SAITOU_HAORI_DARK, COLOR_SAITOU_HAKAMA, COLOR_SAITOU_AURA,
     COLOR_RIFLE_COAT, COLOR_RIFLE_HAT, COLOR_RIFLE_AURA, COLOR_RIFLE_WOOD,
     COLOR_KABUKI_WHITE, COLOR_KABUKI_RED, COLOR_KABUKI_HAIR, COLOR_KABUKI_KIMONO, COLOR_KABUKI_AURA, COLOR_POISON_GREEN,
-    COLOR_ARCHER_HAKAMA, COLOR_ARCHER_KIMONO, COLOR_ARCHER_AURA, COLOR_BOW_WOOD, COLOR_ROPE
+    COLOR_ARCHER_HAKAMA, COLOR_ARCHER_KIMONO, COLOR_ARCHER_AURA, COLOR_BOW_WOOD, COLOR_ROPE,
+    COLOR_PIRATE_COAT, COLOR_PIRATE_HAT, COLOR_PIRATE_SHIRT, COLOR_PIRATE_GOLD, COLOR_PIRATE_AURA, COLOR_CUTLASS_STEEL,
+    COLOR_MUSKETEER_BLUE, COLOR_MUSKETEER_HAT, COLOR_MUSKETEER_FEATHER, COLOR_MUSKETEER_LACE, COLOR_MUSKETEER_AURA, COLOR_RAPIER_STEEL,
+    COLOR_KASUMI_HAIR, COLOR_OKUNI_KIMONO, COLOR_TOMOE_HAKAMA
 )
 
 SKIN_COLOR = (245, 210, 180)
@@ -49,21 +52,27 @@ def render_voxel_humanoid(
     if extra_props is None:
         extra_props = {}
 
-    # Normalizar nomes de char_type para aceitar sufixos
+    # Normalizar nomes de char_type para aceitar sufixos e identidades femininas
     char_type = char_type.lower()
     if "yellow" in char_type: char_type = "ninja"
     elif "american" in char_type: char_type = "american"
-    elif "gray" in char_type or "kemuri" in char_type: char_type = "gray"
-    elif "purple" in char_type or "murasaki" in char_type: char_type = "purple"
+    elif "gray" in char_type or "kemuri" in char_type or "kasumi" in char_type: char_type = "kasumi"
+    elif "purple" in char_type or "murasaki" in char_type: char_type = "murasaki"
     elif "kenshin" in char_type or "red" in char_type: char_type = "kenshin"
     elif "musashi" in char_type or "blue" in char_type: char_type = "musashi"
     elif "saitou" in char_type or "saito" in char_type: char_type = "saitou"
     elif "rifle" in char_type or "teppo" in char_type: char_type = "rifleman"
-    elif "kabuki" in char_type: char_type = "kabuki"
-    elif "archer" in char_type or "kyudo" in char_type: char_type = "archer"
+    elif "kabuki" in char_type or "okuni" in char_type: char_type = "okuni"
+    elif "archer" in char_type or "kyudo" in char_type or "tomoe" in char_type: char_type = "tomoe"
+    elif "pirate" in char_type or "anne" in char_type or "sayuri" in char_type: char_type = "pirate"
+    elif "musketeer" in char_type or "julie" in char_type: char_type = "musketeer"
 
-    # Estado de Morte (corpo tombado em blocos no solo)
-    if not is_alive or state == "DEAD":
+    # Se o corpo foi fatiado em peças voxel dinâmicas, não renderiza o corpo padrão
+    if state == "CORPSE_SLICED":
+        return
+
+    # Estado de Morte simples (quando não houver fatiamento ou freeze ativo)
+    if (not is_alive and state != "DYING_FREEZE") or state == "DEAD":
         sx, sy = camera.apply(wx, wy, 0.0)
         pygame.draw.ellipse(surface, (12, 16, 14, 120), (sx - 20, sy - 8, 40, 16))
         # Torso caído
@@ -160,23 +169,38 @@ def render_voxel_humanoid(
         draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.14, head_z + 0.22, 0.32, 0.28, 0.11, COLOR_BLUE_HAIR, outline=True, alpha=alpha)
         draw_voxel_box(surface, camera, base_x - 0.06, base_y - 0.06, head_z + 0.33, 0.12, 0.12, 0.14, COLOR_BLUE_HAIR, outline=True, alpha=alpha)
 
-    elif char_type in ("ninja", "gray", "purple"):
-        # Capuz shinobi completo
-        hood_col = col_torso
-        draw_voxel_box(surface, camera, base_x - 0.17, base_y - 0.15, head_z + 0.16, 0.34, 0.30, 0.16, hood_col, outline=True, alpha=alpha)
-        # Máscara cobrindo boca e nariz
-        draw_voxel_box(surface, camera, base_x - 0.16 + fx * 0.04, base_y - 0.14 + fy * 0.04, head_z, 0.32, 0.28, 0.16, _get_char_mask_color(char_type), outline=True, alpha=alpha)
+    elif char_type == "ninja":
+        # Hanzo: Capuz shinobi amarelo completo e máscara preta
+        draw_voxel_box(surface, camera, base_x - 0.17, base_y - 0.15, head_z + 0.16, 0.34, 0.30, 0.16, COLOR_YELLOW_NINJA, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.16 + fx * 0.04, base_y - 0.14 + fy * 0.04, head_z, 0.32, 0.28, 0.16, COLOR_BLACK, outline=True, alpha=alpha)
+
+    elif char_type == "kasumi":
+        # Kasumi (Kunoichi Cinza da Névoa): Capuz cinza e trança prateada lateral longa sobre o ombro
+        draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.14, head_z + 0.16, 0.32, 0.28, 0.14, COLOR_GRAY_NINJA, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.15 + fx * 0.04, base_y - 0.13 + fy * 0.04, head_z, 0.30, 0.26, 0.14, COLOR_GRAY_DARK, outline=True, alpha=alpha)
+        braid_x = base_x + px * 0.16
+        braid_y = base_y + py * 0.16
+        draw_voxel_box(surface, camera, braid_x - 0.05, braid_y - 0.05, head_z + 0.08, 0.10, 0.10, 0.26, COLOR_KASUMI_HAIR, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, braid_x - 0.04 + fx * 0.04, braid_y - 0.04 + fy * 0.04, head_z - 0.12, 0.08, 0.08, 0.22, COLOR_KASUMI_HAIR, outline=False, alpha=alpha)
+
+    elif char_type == "murasaki":
+        # Murasaki (Kunoichi Roxa): Máscara e rabo de cavalo púrpura longo esvoaçante
+        draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.14, head_z + 0.16, 0.32, 0.28, 0.14, COLOR_PURPLE_NINJA, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.15 + fx * 0.04, base_y - 0.13 + fy * 0.04, head_z, 0.30, 0.26, 0.14, COLOR_PURPLE_DARK, outline=True, alpha=alpha)
+        pony_swing = math.sin(walk_timer * 8.0) * 0.08 if is_moving else 0.0
+        tail_x = base_x - fx * 0.18 + px * pony_swing
+        tail_y = base_y - fy * 0.18 + py * pony_swing
+        draw_voxel_box(surface, camera, tail_x - 0.06, tail_y - 0.06, head_z + 0.12, 0.12, 0.12, 0.32, (185, 95, 235), outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, tail_x - 0.04 - fx * 0.05, tail_y - 0.04 - fy * 0.05, head_z - 0.08, 0.08, 0.08, 0.22, (160, 75, 215), outline=False, alpha=alpha)
 
     elif char_type == "american":
         # Cabelo curto e bandana vermelha icônica
         draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.14, head_z + 0.20, 0.32, 0.28, 0.12, (32, 28, 26), outline=True, alpha=alpha)
-        # Faixa vermelha da bandana
         draw_voxel_box(surface, camera, base_x - 0.17, base_y - 0.15, head_z + 0.16, 0.34, 0.30, 0.08, COLOR_AMERICAN_BANDANA, outline=True, alpha=alpha)
 
     elif char_type == "saitou":
         # Cabelo preto samurai com a franja frontal de Saitou
         draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.14, head_z + 0.20, 0.32, 0.28, 0.12, (25, 25, 30), outline=True, alpha=alpha)
-        # Franja frontal pontuda característica
         draw_voxel_box(surface, camera, base_x - 0.08 + fx * 0.10, base_y - 0.08 + fy * 0.10, head_z + 0.12, 0.16, 0.16, 0.10, (25, 25, 30), outline=False, alpha=alpha)
 
     elif char_type == "rifleman":
@@ -184,19 +208,39 @@ def render_voxel_humanoid(
         draw_voxel_box(surface, camera, base_x - 0.22, base_y - 0.20, head_z + 0.22, 0.44, 0.40, 0.08, COLOR_RIFLE_HAT, outline=True, alpha=alpha)
         draw_voxel_box(surface, camera, base_x - 0.12, base_y - 0.10, head_z + 0.30, 0.24, 0.20, 0.06, COLOR_RIFLE_HAT, outline=True, alpha=alpha)
 
-    elif char_type == "kabuki":
-        # Maquiagem Kumadori branca no rosto e juba leonina Renjishi alaranjada
+    elif char_type == "okuni":
+        # Okuni (Criadora do Kabuki): Maquiagem branca, lábios carmim e coque com espetos dourados Kanzashi
         draw_voxel_box(surface, camera, base_x - 0.15 + fx * 0.05, base_y - 0.13 + fy * 0.05, head_z, 0.30, 0.26, 0.22, COLOR_KABUKI_WHITE, outline=True, alpha=alpha)
-        # Linhas dramáticas vermelhas Kumadori
-        draw_voxel_box(surface, camera, base_x - 0.10 + fx * 0.08, base_y - 0.08 + fy * 0.08, head_z + 0.06, 0.20, 0.16, 0.08, COLOR_KABUKI_RED, outline=False, alpha=alpha)
-        # Juba leonina volumosa Renjishi
-        draw_voxel_box(surface, camera, base_x - 0.20, base_y - 0.18, head_z + 0.16, 0.40, 0.36, 0.20, COLOR_KABUKI_HAIR, outline=True, alpha=alpha)
-        draw_voxel_box(surface, camera, base_x - 0.22 - fx * 0.10, base_y - 0.20 - fy * 0.10, head_z + 0.02, 0.44, 0.40, 0.22, COLOR_KABUKI_HAIR, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.08 + fx * 0.08, base_y - 0.06 + fy * 0.08, head_z + 0.02, 0.16, 0.12, 0.05, COLOR_KABUKI_RED, outline=False, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.14, head_z + 0.18, 0.32, 0.28, 0.14, (24, 24, 28), outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.08, base_y - 0.08, head_z + 0.30, 0.16, 0.16, 0.12, (24, 24, 28), outline=True, alpha=alpha)
+        # Espetos Kanzashi dourados
+        draw_voxel_box(surface, camera, base_x + px * 0.16 - 0.02, base_y + py * 0.16 - 0.02, head_z + 0.32, 0.05, 0.05, 0.22, COLOR_GOLD, outline=False, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - px * 0.16 - 0.02, base_y - py * 0.16 - 0.02, head_z + 0.32, 0.05, 0.05, 0.22, COLOR_GOLD, outline=False, alpha=alpha)
 
-    elif char_type == "archer":
-        # Cabelo samurai preso com faixa branca Hachimaki
-        draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.14, head_z + 0.20, 0.32, 0.28, 0.12, (26, 26, 30), outline=True, alpha=alpha)
+    elif char_type == "tomoe":
+        # Tomoe (Miko Arqueira): Cabelo longo negro e faixa cerimonial branca Hachimaki
+        draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.14, head_z + 0.18, 0.32, 0.28, 0.14, (20, 20, 24), outline=True, alpha=alpha)
         draw_voxel_box(surface, camera, base_x - 0.17, base_y - 0.15, head_z + 0.15, 0.34, 0.30, 0.06, COLOR_WHITE, outline=True, alpha=alpha)
+        hair_x = base_x - fx * 0.14
+        hair_y = base_y - fy * 0.14
+        draw_voxel_box(surface, camera, hair_x - 0.10, hair_y - 0.08, head_z - 0.10, 0.20, 0.16, 0.28, (20, 20, 24), outline=True, alpha=alpha)
+
+    elif char_type == "pirate":
+        # Anne (Espadachim Pirata): Cabelo acobreado e Tricórnio preto com fivela dourada
+        draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.14, head_z + 0.16, 0.32, 0.28, 0.12, (150, 70, 35), outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.24, base_y - 0.22, head_z + 0.22, 0.48, 0.44, 0.08, COLOR_PIRATE_HAT, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.15, base_y - 0.13, head_z + 0.28, 0.30, 0.26, 0.10, COLOR_PIRATE_HAT, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x + fx * 0.15 - 0.04, base_y + fy * 0.15 - 0.04, head_z + 0.24, 0.08, 0.08, 0.08, COLOR_PIRATE_GOLD, outline=False, alpha=alpha)
+
+    elif char_type == "musketeer":
+        # Julie (Mosqueteira): Cabelo loiro e chapéu de feltro com grande pluma branca
+        draw_voxel_box(surface, camera, base_x - 0.15, base_y - 0.13, head_z + 0.16, 0.30, 0.26, 0.12, (220, 190, 95), outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.24, base_y - 0.22, head_z + 0.22, 0.48, 0.44, 0.07, COLOR_MUSKETEER_HAT, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.14, base_y - 0.12, head_z + 0.27, 0.28, 0.24, 0.10, COLOR_MUSKETEER_HAT, outline=True, alpha=alpha)
+        feather_swing = math.sin(walk_timer * 7.0) * 0.06 if is_moving else 0.0
+        draw_voxel_box(surface, camera, base_x + px * 0.12 - 0.05, base_y + py * 0.12 - 0.05, head_z + 0.34, 0.10, 0.10, 0.18, COLOR_MUSKETEER_FEATHER, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x + px * 0.18 - fx * 0.08 - 0.04 + px * feather_swing, base_y + py * 0.18 - fy * 0.08 - 0.04 + py * feather_swing, head_z + 0.46, 0.08, 0.08, 0.12, COLOR_MUSKETEER_FEATHER, outline=False, alpha=alpha)
 
     # -------------------------------------------------------------
     # 4. BRAÇOS E ARMAS EM VOXEL
@@ -351,6 +395,51 @@ def render_voxel_humanoid(
         if extra_props.get("is_drawing", False):
             draw_voxel_box(surface, camera, bx + fx * 0.20 - 0.03, by + fy * 0.20 - 0.03, bz + 0.10, 0.06, 0.06, 0.55, (180, 140, 80), outline=False, alpha=alpha)
 
+    elif char_type in ("pirate", "anne"):
+        # Alfanje Pirata (Cutlass): Lâmina larga e curva com guarda-mão dourado
+        cx = arm_r_x + fx * 0.20
+        cy = arm_r_y + fy * 0.20
+        cz = torso_z + 0.10
+        if state in ("ATTACK", "CUTLASS_CLEAVE"):
+            # Golpe em arco amplo de 180 graus
+            blade_x = base_x + fx * 0.52 + px * 0.15
+            blade_y = base_y + fy * 0.52 + py * 0.15
+            # Guarda em concha dourada
+            draw_voxel_box(surface, camera, cx - 0.06, cy - 0.06, cz - 0.04, 0.12, 0.12, 0.10, COLOR_PIRATE_GOLD, outline=True, alpha=alpha)
+            # Lâmina curvada cortante
+            draw_voxel_box(surface, camera, blade_x - 0.06, blade_y - 0.06, cz + 0.05, 0.12, 0.12, 0.65, COLOR_CUTLASS_STEEL, outline=True, alpha=alpha)
+            # Rastro de corte dourado / pirata
+            draw_voxel_box(surface, camera, blade_x + px * 0.20 - 0.08, blade_y + py * 0.20 - 0.08, cz + 0.10, 0.22, 0.22, 0.35, COLOR_PIRATE_AURA, outline=False, alpha=160)
+        else:
+            # Cutlass embainhado ou empunhado relaxado na mão direita
+            draw_voxel_box(surface, camera, cx - 0.05, cy - 0.05, cz - 0.06, 0.10, 0.10, 0.08, COLOR_PIRATE_GOLD, outline=True, alpha=alpha)
+            draw_voxel_box(surface, camera, cx + fx * 0.08 - 0.04, cy + fy * 0.08 - 0.04, cz - 0.02, 0.08, 0.08, 0.50, COLOR_CUTLASS_STEEL, outline=True, alpha=alpha)
+
+    elif char_type in ("musketeer", "julie"):
+        # Florete de Duelo (Rapier): Lâmina delgada de aço e copo protetor na guarda
+        rx = arm_r_x + fx * 0.22
+        ry = arm_r_y + fy * 0.22
+        rz = torso_z + 0.12
+        if state in ("ATTACK", "FLECHE"):
+            # Estocada Fleche fulminante longa à frente
+            blade_x = base_x + fx * 0.68
+            blade_y = base_y + fy * 0.68
+            # Guarda em copo de prata
+            draw_voxel_box(surface, camera, rx - 0.06, ry - 0.06, rz - 0.04, 0.12, 0.12, 0.10, COLOR_STEEL, outline=True, alpha=alpha)
+            # Lâmina perfurante longa e fina
+            draw_voxel_box(surface, camera, blade_x - 0.03, blade_y - 0.03, rz + 0.04, 0.06, 0.06, 0.85, COLOR_RAPIER_STEEL, outline=True, alpha=alpha)
+            # Rastro de estocada precisa
+            draw_voxel_box(surface, camera, blade_x + fx * 0.25 - 0.04, blade_y + fy * 0.25 - 0.04, rz + 0.05, 0.08, 0.08, 0.30, COLOR_MUSKETEER_AURA, outline=False, alpha=170)
+        elif state == "PARRY":
+            # Postura de Riposte com capa e florete erguido na vertical
+            draw_voxel_box(surface, camera, rx - 0.04, ry - 0.04, rz, 0.08, 0.08, 0.70, COLOR_RAPIER_STEEL, outline=True, alpha=alpha)
+            # Brilho de riposte
+            draw_voxel_box(surface, camera, rx - 0.08, ry - 0.08, rz + 0.20, 0.16, 0.16, 0.25, COLOR_MUSKETEER_AURA, outline=False, alpha=160)
+        else:
+            # Florete em repouso
+            draw_voxel_box(surface, camera, rx - 0.05, ry - 0.05, rz - 0.04, 0.10, 0.10, 0.08, COLOR_STEEL, outline=True, alpha=alpha)
+            draw_voxel_box(surface, camera, rx - 0.03, ry - 0.03, rz + 0.04, 0.06, 0.06, 0.60, COLOR_RAPIER_STEEL, outline=True, alpha=alpha)
+
 
 def render_voxel_doberman(
     surface: pygame.Surface,
@@ -445,57 +534,65 @@ def render_voxel_doberman(
 def _get_char_torso_color(char_type: str):
     if char_type == "kenshin": return COLOR_RED_KIMONO
     if char_type == "musashi": return COLOR_BLUE_KIMONO
-    if char_type == "ninja": return COLOR_YELLOW_NINJA
-    if char_type == "american": return COLOR_AMERICAN_NINJA
-    if char_type == "gray": return COLOR_GRAY_NINJA
-    if char_type == "purple": return COLOR_PURPLE_NINJA
+    if char_type in ("ninja", "hanzo"): return COLOR_YELLOW_NINJA
+    if char_type in ("american", "joe"): return COLOR_AMERICAN_NINJA
+    if char_type in ("gray", "kasumi"): return COLOR_GRAY_NINJA
+    if char_type in ("purple", "murasaki"): return COLOR_PURPLE_NINJA
     if char_type == "saitou": return COLOR_SAITOU_LIGHT_BLUE
     if char_type == "rifleman": return COLOR_RIFLE_COAT
-    if char_type == "kabuki": return COLOR_KABUKI_KIMONO
-    if char_type == "archer": return COLOR_ARCHER_KIMONO
+    if char_type in ("kabuki", "okuni"): return COLOR_OKUNI_KIMONO
+    if char_type in ("archer", "tomoe"): return COLOR_ARCHER_KIMONO
+    if char_type in ("pirate", "anne"): return COLOR_PIRATE_COAT
+    if char_type in ("musketeer", "julie"): return COLOR_MUSKETEER_BLUE
     return (200, 200, 200)
 
 def _get_char_pants_color(char_type: str):
     if char_type == "kenshin": return COLOR_RED_HAKAMA
     if char_type == "musashi": return COLOR_BLUE_HAKAMA
-    if char_type == "ninja": return COLOR_YELLOW_DARK
-    if char_type == "american": return (30, 32, 36)
-    if char_type == "gray": return COLOR_GRAY_DARK
-    if char_type == "purple": return COLOR_PURPLE_DARK
+    if char_type in ("ninja", "hanzo"): return COLOR_YELLOW_DARK
+    if char_type in ("american", "joe"): return (30, 32, 36)
+    if char_type in ("gray", "kasumi"): return COLOR_GRAY_DARK
+    if char_type in ("purple", "murasaki"): return COLOR_PURPLE_DARK
     if char_type == "saitou": return COLOR_SAITOU_HAKAMA
     if char_type == "rifleman": return (45, 42, 38)
-    if char_type == "kabuki": return (45, 20, 32)
-    if char_type == "archer": return COLOR_ARCHER_HAKAMA
+    if char_type in ("kabuki", "okuni"): return (45, 20, 32)
+    if char_type in ("archer", "tomoe"): return COLOR_TOMOE_HAKAMA
+    if char_type in ("pirate", "anne"): return (35, 30, 30)
+    if char_type in ("musketeer", "julie"): return COLOR_WHITE
     return (150, 150, 150)
 
 def _get_char_hair_color(char_type: str):
     if char_type == "kenshin": return COLOR_RED_HAIR
     if char_type == "musashi": return COLOR_BLUE_HAIR
-    if char_type == "ninja": return COLOR_YELLOW_NINJA
-    if char_type == "american": return (32, 28, 26)
-    if char_type == "gray": return COLOR_GRAY_NINJA
-    if char_type == "purple": return COLOR_PURPLE_NINJA
+    if char_type in ("ninja", "hanzo"): return COLOR_YELLOW_NINJA
+    if char_type in ("american", "joe"): return (32, 28, 26)
+    if char_type in ("gray", "kasumi"): return COLOR_KASUMI_HAIR
+    if char_type in ("purple", "murasaki"): return COLOR_PURPLE_NINJA
     if char_type == "saitou": return (25, 25, 30)
     if char_type == "rifleman": return (30, 28, 25)
-    if char_type == "kabuki": return COLOR_KABUKI_HAIR
-    if char_type == "archer": return (25, 25, 30)
+    if char_type in ("kabuki", "okuni"): return COLOR_KABUKI_HAIR
+    if char_type in ("archer", "tomoe"): return (25, 25, 30)
+    if char_type in ("pirate", "anne"): return (42, 28, 20)
+    if char_type in ("musketeer", "julie"): return (80, 50, 30)
     return (50, 50, 50)
 
 def _get_char_belt_color(char_type: str):
     if char_type == "kenshin": return (25, 25, 30)
     if char_type == "musashi": return (20, 22, 28)
-    if char_type == "ninja": return (26, 26, 30)
-    if char_type == "american": return (45, 48, 52)
-    if char_type == "gray": return (35, 38, 42)
-    if char_type == "purple": return (35, 18, 50)
+    if char_type in ("ninja", "hanzo"): return (26, 26, 30)
+    if char_type in ("american", "joe"): return (45, 48, 52)
+    if char_type in ("gray", "kasumi"): return (35, 38, 42)
+    if char_type in ("purple", "murasaki"): return (35, 18, 50)
     if char_type == "saitou": return COLOR_WHITE
     if char_type == "rifleman": return (65, 45, 30)
-    if char_type == "kabuki": return COLOR_GOLD
-    if char_type == "archer": return (60, 55, 48)
+    if char_type in ("kabuki", "okuni"): return COLOR_GOLD
+    if char_type in ("archer", "tomoe"): return (60, 55, 48)
+    if char_type in ("pirate", "anne"): return COLOR_PIRATE_GOLD
+    if char_type in ("musketeer", "julie"): return COLOR_GOLD
     return (20, 20, 20)
 
 def _get_char_mask_color(char_type: str):
-    if char_type == "ninja": return (26, 26, 30)
-    if char_type == "gray": return COLOR_GRAY_DARK
-    if char_type == "purple": return COLOR_PURPLE_DARK
+    if char_type in ("ninja", "hanzo"): return (26, 26, 30)
+    if char_type in ("gray", "kasumi"): return COLOR_GRAY_DARK
+    if char_type in ("purple", "murasaki"): return COLOR_PURPLE_DARK
     return (30, 30, 30)

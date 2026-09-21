@@ -13,7 +13,8 @@ from src.config import (
     COLOR_PURPLE_NINJA, COLOR_PURPLE_DARK, COLOR_PURPLE_AURA, COLOR_CHAIN,
     COLOR_SAITOU_LIGHT_BLUE, CHAR_SAITOU,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
-    CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER
+    CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
+    COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA
 )
 
 from src.isometric.iso_math import world_to_iso
@@ -40,14 +41,14 @@ class CharacterSelectScreen:
             {
                 "id": CHAR_KENSHIN,
                 "name": "KENSHIN",
-                "title": "Retalhador Carmim",
+                "title": "Retalhador",
                 "style": "Iai & Shukuchi",
                 "color": COLOR_RED_AURA,
-                "speed_stars": "[ 5 / 5 ] MAX",
+                "speed_stars": "[5/5] MAX",
                 "damage_desc": "1-Hit Kill Instantâneo",
                 "special_desc": "Shukuchi (Relâmpago)",
-                "keys_p1": "[E] Iai | [R] Shukuchi",
-                "keys_p2": "[U] Iai | [I] Shukuchi",
+                "keys_p1": "[E] Iai | [R] Dash",
+                "keys_p2": "[U] Iai | [I] Dash",
             },
             {
                 "id": CHAR_MUSASHI,
@@ -55,21 +56,21 @@ class CharacterSelectScreen:
                 "title": "Duas Lâminas",
                 "style": "Niten Ichi-ryū",
                 "color": COLOR_BLUE_AURA,
-                "speed_stars": "[ 2 / 5 ] Firme",
+                "speed_stars": "[2/5] Firme",
                 "damage_desc": "Combo 3-Cortes",
                 "special_desc": "Defesa (Parry)",
-                "keys_p1": "[E] 3-Cortes | [R] Parry",
-                "keys_p2": "[U] 3-Cortes | [I] Parry",
+                "keys_p1": "[E] Golpe | [R] Parry",
+                "keys_p2": "[U] Golpe | [I] Parry",
             },
             {
                 "id": CHAR_NINJA,
                 "name": "HANZO",
-                "title": "Ninja Amarelo",
+                "title": "Ninja Mestre",
                 "style": "Ninjutsu & Kunai",
                 "color": COLOR_YELLOW_AURA,
-                "speed_stars": "[ 5 / 5 ] MAX",
+                "speed_stars": "[5/5] MAX",
                 "damage_desc": "Estocada (2 Hits)",
-                "special_desc": "Arremesso Mortal",
+                "special_desc": "Arremesso Kunai",
                 "keys_p1": "[E] Kunai | [R] Lançar",
                 "keys_p2": "[U] Kunai | [I] Lançar",
             },
@@ -79,47 +80,23 @@ class CharacterSelectScreen:
                 "title": "American Ninja",
                 "style": "Tático & Cão",
                 "color": (255, 130, 45),
-                "speed_stars": "[ 4 / 5 ] Ágil",
+                "speed_stars": "[4/5] Ágil",
                 "damage_desc": "Shuriken (Stun)",
                 "special_desc": "Doberman (1-Hit Kill)",
                 "keys_p1": "[E] Shuriken | [R] Cão",
                 "keys_p2": "[U] Shuriken | [I] Cão",
             },
             {
-                "id": CHAR_GRAY,
-                "name": "KEMURI",
-                "title": "Ninja Cinza",
-                "style": "Pólvora & Fumaça",
-                "color": (165, 180, 190),
-                "speed_stars": "[ 4 / 5 ] Ágil",
-                "damage_desc": "Bomba em Arco (Auto-Dano)",
-                "special_desc": "Fumaça (Slow + Fuga)",
-                "keys_p1": "[E] Bomba | [R] Fumaça",
-                "keys_p2": "[U] Bomba | [I] Fumaça",
-            },
-            {
-                "id": CHAR_PURPLE,
-                "name": "MURASAKI",
-                "title": "Ninja Roxo",
-                "style": "Kusarigama",
-                "color": COLOR_PURPLE_AURA,
-                "speed_stars": "[ 4 / 5 ] Ágil",
-                "damage_desc": "Foice de Precedência",
-                "special_desc": "Puxão de Corrente",
-                "keys_p1": "[E] Foice | [R] Puxar",
-                "keys_p2": "[U] Foice | [I] Puxar",
-            },
-            {
                 "id": CHAR_SAITOU,
                 "name": "SAITOU",
-                "title": "Shinsengumi",
-                "style": "Gatotsu",
+                "title": "Lobo de Mibu",
+                "style": "Gatotsu Shinsen",
                 "color": COLOR_SAITOU_LIGHT_BLUE,
-                "speed_stars": "[ 5 / 5 ] Impulso",
-                "damage_desc": "1-Hit Kill Acelerado",
+                "speed_stars": "[5/5] Impulso",
+                "damage_desc": "1-Hit Acelerado",
                 "special_desc": "Zeroshiki (Curto)",
-                "keys_p1": "[E] Gatotsu | [R] Curto",
-                "keys_p2": "[U] Gatotsu | [I] Curto",
+                "keys_p1": "[E] Gatotsu | [R] Zero",
+                "keys_p2": "[U] Gatotsu | [I] Zero",
             },
             {
                 "id": CHAR_RIFLE,
@@ -127,35 +104,83 @@ class CharacterSelectScreen:
                 "title": "Marksman",
                 "style": "Arcabuz Feudal",
                 "color": (225, 170, 100),
-                "speed_stars": "[ 3 / 5 ] Cadência",
-                "damage_desc": "Tiro Fatal (1-Hit Kill)",
-                "special_desc": "Carregar Pólvora (Hold)",
-                "keys_p1": "[E] Tiro | [R] Carregar",
-                "keys_p2": "[U] Tiro | [I] Carregar",
+                "speed_stars": "[3/5] Cadência",
+                "damage_desc": "Tiro Fatal (1-Hit)",
+                "special_desc": "Carregar Pólvora",
+                "keys_p1": "[E] Tiro | [R] Recarga",
+                "keys_p2": "[U] Tiro | [I] Recarga",
+            },
+            {
+                "id": CHAR_PURPLE,
+                "name": "MURASAKI",
+                "title": "Kunoichi Foice",
+                "style": "Kusarigama",
+                "color": COLOR_PURPLE_AURA,
+                "speed_stars": "[4/5] Ágil",
+                "damage_desc": "Precedência Absoluta",
+                "special_desc": "Puxão de Corrente",
+                "keys_p1": "[E] Foice | [R] Puxar",
+                "keys_p2": "[U] Foice | [I] Puxar",
+            },
+            {
+                "id": CHAR_GRAY,
+                "name": "KASUMI",
+                "title": "Kunoichi Névoa",
+                "style": "Pólvora & Fumaça",
+                "color": (165, 180, 190),
+                "speed_stars": "[4/5] Ágil",
+                "damage_desc": "Bomba Arco (Auto-Dano)",
+                "special_desc": "Fumaça (Slow + Fuga)",
+                "keys_p1": "[E] Bomba | [R] Fumaça",
+                "keys_p2": "[U] Bomba | [I] Fumaça",
             },
             {
                 "id": CHAR_KABUKI,
-                "name": "KABUKI",
-                "title": "Dançarino",
+                "name": "OKUNI",
+                "title": "Mestra Kabuki",
                 "style": "Sopro Tóxico",
                 "color": (240, 115, 30),
-                "speed_stars": "[ 4 / 5 ] Ágil",
+                "speed_stars": "[4/5] Ágil",
                 "damage_desc": "Veneno (10s Morte)",
                 "special_desc": "Pirueta Evasiva",
-                "keys_p1": "[E] Sopro | [R] Pirueta",
-                "keys_p2": "[U] Sopro | [I] Pirueta",
+                "keys_p1": "[E] Sopro | [R] Esquiva",
+                "keys_p2": "[U] Sopro | [I] Esquiva",
             },
             {
                 "id": CHAR_ARCHER,
-                "name": "KYUDO",
-                "title": "Arqueiro Zen",
+                "name": "TOMOE",
+                "title": "Arqueira Miko",
                 "style": "Arco Yumi",
                 "color": (110, 195, 135),
-                "speed_stars": "[ 4 / 5 ] Ágil",
+                "speed_stars": "[4/5] Ágil",
                 "damage_desc": "Flecha Letal (Windup)",
-                "special_desc": "Flecha de Corda (Fuga)",
+                "special_desc": "Flecha de Corda",
                 "keys_p1": "[E] Yumi | [R] Corda",
                 "keys_p2": "[U] Yumi | [I] Corda",
+            },
+            {
+                "id": CHAR_PIRATE,
+                "name": "ANNE",
+                "title": "Espadachim",
+                "style": "Alfanje & Pólvora",
+                "color": COLOR_PIRATE_AURA,
+                "speed_stars": "[4/5] Ágil",
+                "damage_desc": "Corte Amplo 180°",
+                "special_desc": "Pólvora nos Olhos",
+                "keys_p1": "[E] Alfanje | [R] Cegar",
+                "keys_p2": "[U] Alfanje | [I] Cegar",
+            },
+            {
+                "id": CHAR_MUSKETEER,
+                "name": "JULIE",
+                "title": "Mosqueteira",
+                "style": "Florete Nobre",
+                "color": COLOR_MUSKETEER_AURA,
+                "speed_stars": "[5/5] Rápida",
+                "damage_desc": "Fleche Longo",
+                "special_desc": "Capa Riposte & Tiro",
+                "keys_p1": "[E] Florete | [R] Riposte",
+                "keys_p2": "[U] Florete | [I] Riposte",
             }
         ]
 
@@ -163,7 +188,7 @@ class CharacterSelectScreen:
 
     def handle_event(self, event: pygame.event.Event) -> bool:
         num_c = len(self.characters)
-        cols = 5
+        cols = 6
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_TAB:
@@ -262,15 +287,21 @@ class CharacterSelectScreen:
         spacing_x = 16
         spacing_y = 14
 
-        total_w = 5 * card_w + 4 * spacing_x
+        # 3. Grade Simétrica 6x2 (6 cards na Linha 1, 6 cards na Linha 2)
+        card_w = 194
+        card_h = 236
+        spacing_x = 12
+        spacing_y = 14
+
+        total_w = 6 * card_w + 5 * spacing_x
         start_x = (SCREEN_WIDTH - total_w) // 2
         start_y = 114
 
         self.card_rects.clear()
 
         for idx, char_info in enumerate(self.characters):
-            row = idx // 5
-            col = idx % 5
+            row = idx // 6
+            col = idx % 6
             cx = start_x + col * (card_w + spacing_x)
             cy = start_y + row * (card_h + spacing_y)
 
@@ -301,28 +332,28 @@ class CharacterSelectScreen:
             pygame.draw.rect(surface, border_color, rect, border_width, border_radius=12)
 
             # Badges P1 / P2 no topo direito
-            badge_y = rect.y + 10
+            badge_y = rect.y + 8
             if is_p1 and is_p2:
-                p1_badge = font_small.render("[ P1 ]", True, COLOR_RED_AURA)
-                p2_label = "[ IA ]" if self.vs_ai else "[ P2 ]"
+                p1_badge = font_small.render("[P1]", True, COLOR_RED_AURA)
+                p2_label = "[IA]" if self.vs_ai else "[P2]"
                 p2_badge = font_small.render(p2_label, True, COLOR_BLUE_AURA)
-                surface.blit(p2_badge, (rect.right - p2_badge.get_width() - 10, badge_y))
-                surface.blit(p1_badge, (rect.right - p2_badge.get_width() - p1_badge.get_width() - 16, badge_y))
+                surface.blit(p2_badge, (rect.right - p2_badge.get_width() - 8, badge_y))
+                surface.blit(p1_badge, (rect.right - p2_badge.get_width() - p1_badge.get_width() - 12, badge_y))
             elif is_p1:
-                p1_badge = font_small.render("[ P1 ]", True, COLOR_RED_AURA)
-                surface.blit(p1_badge, (rect.right - p1_badge.get_width() - 10, badge_y))
+                p1_badge = font_small.render("[P1]", True, COLOR_RED_AURA)
+                surface.blit(p1_badge, (rect.right - p1_badge.get_width() - 8, badge_y))
             elif is_p2:
-                p2_label = "[ IA ]" if self.vs_ai else "[ P2 ]"
+                p2_label = "[IA]" if self.vs_ai else "[P2]"
                 p2_badge = font_small.render(p2_label, True, COLOR_BLUE_AURA)
-                surface.blit(p2_badge, (rect.right - p2_badge.get_width() - 10, badge_y))
+                surface.blit(p2_badge, (rect.right - p2_badge.get_width() - 8, badge_y))
 
             # Retrato Voxel 3D do Personagem (no topo esquerdo da carta)
-            portrait_cx = rect.x + 38
-            portrait_cy = rect.y + 42
-            pygame.draw.circle(surface, (18, 22, 20), (portrait_cx, portrait_cy), 28)
-            pygame.draw.circle(surface, char_info["color"], (portrait_cx, portrait_cy), 28, 2)
+            portrait_cx = rect.x + 28
+            portrait_cy = rect.y + 36
+            pygame.draw.circle(surface, (18, 22, 20), (portrait_cx, portrait_cy), 22)
+            pygame.draw.circle(surface, char_info["color"], (portrait_cx, portrait_cy), 22, 2)
 
-            cam = PreviewCamera(portrait_cx, portrait_cy + 18)
+            cam = PreviewCamera(portrait_cx, portrait_cy + 15)
             char_id = char_info["id"]
 
             if char_id == CHAR_KENSHIN:
@@ -335,51 +366,55 @@ class CharacterSelectScreen:
                 render_voxel_humanoid(surface, cam, -0.20, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="american_ninja")
                 render_voxel_doberman(surface, cam, 0.35, -0.10, 0, 1.0, 0.0, "IDLE", 0.0, True)
             elif char_id == CHAR_GRAY:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="gray_ninja")
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="kasumi")
             elif char_id == CHAR_PURPLE:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="purple_ninja")
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="murasaki")
             elif char_id == CHAR_SAITOU:
                 render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="saitou")
             elif char_id == CHAR_RIFLE:
                 render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="rifleman")
             elif char_id == CHAR_KABUKI:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="kabuki")
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="okuni")
             elif char_id == CHAR_ARCHER:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="archer")
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="tomoe")
+            elif char_id == CHAR_PIRATE:
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="pirate")
+            elif char_id == CHAR_MUSKETEER:
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="musketeer")
 
             # Nome, Título e Estilo ao lado do Retrato
-            text_left = rect.x + 74
+            text_left = rect.x + 55
             name_surf = font_mid.render(char_info["name"], True, char_info["color"])
-            surface.blit(name_surf, (text_left, rect.y + 10))
+            surface.blit(name_surf, (text_left, rect.y + 6))
 
             title_s = font_small.render(char_info["title"], True, (185, 195, 190))
-            surface.blit(title_s, (text_left, rect.y + 32))
+            surface.blit(title_s, (text_left, rect.y + 28))
 
-            style_s = font_small.render(f"Estilo: {char_info['style']}", True, COLOR_WHITE)
-            surface.blit(style_s, (text_left, rect.y + 52))
+            style_s = font_small.render(char_info["style"], True, COLOR_WHITE)
+            surface.blit(style_s, (text_left, rect.y + 46))
 
             # Linha divisória sutil
-            sep_y = rect.y + 78
-            pygame.draw.line(surface, (45, 55, 50), (rect.x + 12, sep_y), (rect.right - 12, sep_y), 1)
+            sep_y = rect.y + 70
+            pygame.draw.line(surface, (45, 55, 50), (rect.x + 8, sep_y), (rect.right - 8, sep_y), 1)
 
             # Atributos e Estatísticas em largura total (sem truncar texto)
-            stats_y = rect.y + 86
+            stats_y = rect.y + 76
             line_vel = font_small.render(f"Vel: {char_info['speed_stars']}", True, COLOR_GOLD)
             line_dmg = font_small.render(f"Dano: {char_info['damage_desc']}", True, (240, 200, 200))
             line_esp = font_small.render(f"Esp: {char_info['special_desc']}", True, (200, 225, 240))
 
-            surface.blit(line_vel, (rect.x + 12, stats_y))
-            surface.blit(line_dmg, (rect.x + 12, stats_y + 20))
-            surface.blit(line_esp, (rect.x + 12, stats_y + 40))
+            surface.blit(line_vel, (rect.x + 8, stats_y))
+            surface.blit(line_dmg, (rect.x + 8, stats_y + 19))
+            surface.blit(line_esp, (rect.x + 8, stats_y + 38))
 
             # Caixa de Comandos / Teclas
-            ctrl_box = pygame.Rect(rect.x + 8, rect.bottom - 48, card_w - 16, 40)
+            ctrl_box = pygame.Rect(rect.x + 6, rect.bottom - 46, card_w - 12, 38)
             pygame.draw.rect(surface, (18, 24, 21), ctrl_box, border_radius=6)
             pygame.draw.rect(surface, (40, 50, 45), ctrl_box, 1, border_radius=6)
             p1_key_label = font_small.render(f"P1: {char_info['keys_p1']}", True, (255, 200, 180))
             p2_key_label = font_small.render(f"P2: {char_info['keys_p2']}", True, (180, 220, 255))
-            surface.blit(p1_key_label, (ctrl_box.x + 6, ctrl_box.y + 4))
-            surface.blit(p2_key_label, (ctrl_box.x + 6, ctrl_box.y + 21))
+            surface.blit(p1_key_label, (ctrl_box.x + 4, ctrl_box.y + 3))
+            surface.blit(p2_key_label, (ctrl_box.x + 4, ctrl_box.y + 19))
 
         # 4. Botão INICIAR DUELO
         start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 64, 320, 44)

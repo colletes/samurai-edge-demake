@@ -11,9 +11,10 @@ from src.config import (
     COLOR_BG, COLOR_WHITE, COLOR_GOLD, COLOR_RED_AURA, COLOR_BLUE_AURA, COLOR_YELLOW_AURA,
     KEY_RESTART, KEY_TOGGLE_AI, KEY_SETTINGS, DEFAULT_CONTROLS,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
-    CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER,
+    CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
     COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA, COLOR_SAITOU_AURA,
-    COLOR_RIFLE_AURA, COLOR_KABUKI_AURA, COLOR_ARCHER_AURA
+    COLOR_RIFLE_AURA, COLOR_KABUKI_AURA, COLOR_ARCHER_AURA,
+    COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA
 )
 from src.isometric.iso_math import input_to_world_direction
 from src.isometric.camera import Camera
@@ -28,9 +29,12 @@ from src.entities.saitou_samurai import SaitouSamurai
 from src.entities.rifleman import Rifleman
 from src.entities.kabuki import Kabuki
 from src.entities.kyudo_archer import KyudoArcher
+from src.entities.pirate import PirateSwordswoman
+from src.entities.musketeer import Musketeer
 from src.entities.ai_controller import SamuraiAI
 from src.combat.collision import CombatSystem
 from src.effects.particles import AmbientLeafParticle
+from src.effects.cinematic_director import CinematicDirector
 from src.ui.settings_menu import SettingsMenu, format_key_name
 from src.ui.character_select import CharacterSelectScreen
 
@@ -60,6 +64,10 @@ def create_fighter(char_id: str, wx: float, wy: float):
         return Kabuki(wx, wy)
     elif char_id == CHAR_ARCHER:
         return KyudoArcher(wx, wy)
+    elif char_id == CHAR_PIRATE:
+        return PirateSwordswoman(wx, wy)
+    elif char_id == CHAR_MUSKETEER:
+        return Musketeer(wx, wy)
     return RedSamurai(wx, wy)
 
 def get_fighter_color(fighter):
@@ -83,6 +91,10 @@ def get_fighter_color(fighter):
         return COLOR_KABUKI_AURA
     elif isinstance(fighter, KyudoArcher):
         return COLOR_ARCHER_AURA
+    elif isinstance(fighter, PirateSwordswoman):
+        return COLOR_PIRATE_AURA
+    elif isinstance(fighter, Musketeer):
+        return COLOR_MUSKETEER_AURA
     return COLOR_WHITE
 
 def get_fighter_action_labels(fighter):
@@ -107,6 +119,10 @@ def get_fighter_action_labels(fighter):
         return "Sopro Veneno", "Esquiva Kabuki"
     elif isinstance(fighter, KyudoArcher):
         return "Puxar Yumi", "Flecha Corda"
+    elif isinstance(fighter, PirateSwordswoman):
+        return "Alfanje 180°", "Pólvora nos Olhos"
+    elif isinstance(fighter, Musketeer):
+        return "Estocada Fleche", "Capa Riposte"
     return "Ataque", "Especial"
 
 def get_random_arena_spawns(game_map, min_distance: float = 7.0) -> tuple[tuple[float, float], tuple[float, float]]:
@@ -174,6 +190,7 @@ def run_game():
     game_map = None
     camera = None
     combat_system = CombatSystem()
+    cinematic_director = CinematicDirector()
     ai = SamuraiAI()
 
     particles = []
@@ -200,6 +217,7 @@ def run_game():
         ambient_leaves = [AmbientLeafParticle(game_map.cols, game_map.rows) for _ in range(45)]
         round_winner = None
         round_start_timer = 2.4
+        cinematic_director.reset_round()
 
     running = True
     while running:
@@ -282,6 +300,10 @@ def run_game():
                             p1.trigger_poison_spit(p2.wx, p2.wy, projectiles, particles)
                         elif isinstance(p1, KyudoArcher):
                             p1.trigger_bow_draw(p2.wx, p2.wy, projectiles)
+                        elif isinstance(p1, PirateSwordswoman):
+                            p1.trigger_cutlass_cleave(p2.wx, p2.wy)
+                        elif isinstance(p1, Musketeer):
+                            p1.trigger_fleche_thrust(p2.wx, p2.wy)
 
                     elif event.key == controls["P1_DASH"]:
                         if isinstance(p1, RedSamurai):
@@ -313,6 +335,10 @@ def run_game():
                             p1.trigger_acrobatic_dodge(dwx, dwy, particles)
                         elif isinstance(p1, KyudoArcher):
                             p1.trigger_rope_arrow(p2.wx, p2.wy, projectiles, particles)
+                        elif isinstance(p1, PirateSwordswoman):
+                            p1.trigger_gunpowder_blind(p2.wx, p2.wy, particles)
+                        elif isinstance(p1, Musketeer):
+                            p1.trigger_cloak_riposte()
 
                 # Comandos Jogador 2 (se não for IA)
                 if not vs_ai_mode and p2.is_alive and round_winner is None:
@@ -337,6 +363,10 @@ def run_game():
                             p2.trigger_poison_spit(p1.wx, p1.wy, projectiles, particles)
                         elif isinstance(p2, KyudoArcher):
                             p2.trigger_bow_draw(p1.wx, p1.wy, projectiles)
+                        elif isinstance(p2, PirateSwordswoman):
+                            p2.trigger_cutlass_cleave(p1.wx, p1.wy)
+                        elif isinstance(p2, Musketeer):
+                            p2.trigger_fleche_thrust(p1.wx, p1.wy)
 
                     elif event.key == controls["P2_PARRY"]:
                         if isinstance(p2, RedSamurai):
@@ -368,6 +398,10 @@ def run_game():
                             p2.trigger_acrobatic_dodge(dwx, dwy, particles)
                         elif isinstance(p2, KyudoArcher):
                             p2.trigger_rope_arrow(p1.wx, p1.wy, projectiles, particles)
+                        elif isinstance(p2, PirateSwordswoman):
+                            p2.trigger_gunpowder_blind(p1.wx, p1.wy, particles)
+                        elif isinstance(p2, Musketeer):
+                            p2.trigger_cloak_riposte()
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
@@ -400,40 +434,48 @@ def run_game():
             else:
                 p2.is_reloading = False
 
-        # Movimento Jogador 1
-        p1_dx = (keys[controls["P1_RIGHT"]] - keys[controls["P1_LEFT"]])
-        p1_dy = (keys[controls["P1_DOWN"]] - keys[controls["P1_UP"]])
-        p1_dwx, p1_dwy = input_to_world_direction(p1_dx, p1_dy)
-        if hasattr(p1, "apply_gatotsu_steering") and p1.state == "GATOTSU_CHARGE":
-            p1.apply_gatotsu_steering(p1_dwx, p1_dwy, dt)
-        else:
-            p1.apply_movement(p1_dwx, p1_dwy, dt, game_map)
+        # Suporte ao congelamento dramático de cinema samurai
+        is_cinematic_freeze = cinematic_director.is_frozen()
 
-        # Movimento Jogador 2 (IA ou Humano)
-        if vs_ai_mode:
-            ai.update(p2, p1, dt, game_map, projectiles)
-        else:
-            p2_dx = (keys[controls["P2_RIGHT"]] - keys[controls["P2_LEFT"]])
-            p2_dy = (keys[controls["P2_DOWN"]] - keys[controls["P2_UP"]])
-            p2_dwx, p2_dwy = input_to_world_direction(p2_dx, p2_dy)
-            if hasattr(p2, "apply_gatotsu_steering") and p2.state == "GATOTSU_CHARGE":
-                p2.apply_gatotsu_steering(p2_dwx, p2_dwy, dt)
+        if not is_cinematic_freeze:
+            # Movimento Jogador 1
+            p1_dx = (keys[controls["P1_RIGHT"]] - keys[controls["P1_LEFT"]])
+            p1_dy = (keys[controls["P1_DOWN"]] - keys[controls["P1_UP"]])
+            p1_dwx, p1_dwy = input_to_world_direction(p1_dx, p1_dy)
+            if hasattr(p1, "apply_gatotsu_steering") and p1.state == "GATOTSU_CHARGE":
+                p1.apply_gatotsu_steering(p1_dwx, p1_dwy, dt)
             else:
-                p2.apply_movement(p2_dwx, p2_dwy, dt, game_map)
+                p1.apply_movement(p1_dwx, p1_dwy, dt, game_map)
+
+            # Movimento Jogador 2 (IA ou Humano)
+            if vs_ai_mode:
+                ai.update(p2, p1, dt, game_map, projectiles)
+            else:
+                p2_dx = (keys[controls["P2_RIGHT"]] - keys[controls["P2_LEFT"]])
+                p2_dy = (keys[controls["P2_DOWN"]] - keys[controls["P2_UP"]])
+                p2_dwx, p2_dwy = input_to_world_direction(p2_dx, p2_dy)
+                if hasattr(p2, "apply_gatotsu_steering") and p2.state == "GATOTSU_CHARGE":
+                    p2.apply_gatotsu_steering(p2_dwx, p2_dwy, dt)
+                else:
+                    p2.apply_movement(p2_dwx, p2_dwy, dt, game_map)
 
         # Atualizações dos combatentes
-        for f in (p1, p2):
-            if isinstance(f, SaitouSamurai):
-                f.update(dt, game_map, particles)
-            elif isinstance(f, (Rifleman, Kabuki)):
-                f.update(dt, game_map, particles)
-            elif isinstance(f, KyudoArcher):
-                f.update(dt, game_map, particles, projectiles)
-            else:
-                f.update(dt, game_map)
+        if not is_cinematic_freeze:
+            for f in (p1, p2):
+                if isinstance(f, SaitouSamurai):
+                    f.update(dt, game_map, particles)
+                elif isinstance(f, (Rifleman, Kabuki, PirateSwordswoman, Musketeer)):
+                    f.update(dt, game_map, particles)
+                elif isinstance(f, KyudoArcher):
+                    f.update(dt, game_map, particles, projectiles)
+                else:
+                    f.update(dt, game_map)
+
+        # Atualizar Diretor Cinematográfico (Temporizadores e Corpos Voxel)
+        cinematic_director.update(dt, game_map, particles)
 
         # Processar Combate & Projéteis
-        winner = combat_system.process_combat(p1, p2, game_map, particles, banners, camera, projectiles, dt)
+        winner = combat_system.process_combat(p1, p2, game_map, particles, banners, camera, projectiles, dt, cinematic_director=cinematic_director)
         if winner and round_winner is None:
             round_winner = winner
             if winner == "P1_WINS":
@@ -476,6 +518,10 @@ def run_game():
         if hasattr(p2, "dog") and p2.dog:
             render_queue.append((p2.dog.wx + p2.dog.wy, 'dog', p2.dog))
 
+        # Adicionar corpos voxel fatiados ao Y-sorting
+        for corpse in cinematic_director.corpses:
+            render_queue.append((corpse.wx + corpse.wy, 'corpse', corpse))
+
         for proj in projectiles:
             render_queue.append((proj.wx + proj.wy, 'projectile', proj))
 
@@ -494,6 +540,8 @@ def run_game():
                 obj.render(screen, camera)
             elif item_type == 'dog':
                 obj.render(screen, camera)
+            elif item_type == 'corpse':
+                obj.render(screen, camera)
             elif item_type == 'projectile':
                 obj.render(screen, camera)
             elif item_type == 'particle':
@@ -504,6 +552,9 @@ def run_game():
 
         for banner in banners:
             banner.render(screen, camera, font_mid)
+
+        # Aplicar filtro Kurosawa Noir (Flash preto e branco de cinema samurai com sangue vívido)
+        cinematic_director.apply_cinematic_filter(screen)
 
         # Marcadores piscantes [ P1 ] e [ P2 ] no início de cada round
         if round_start_timer > 0:
