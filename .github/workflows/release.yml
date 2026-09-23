@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag Name (e.g. v1.0.0)'
+        description: 'Release Tag Name (e.g. v1.2.0)'
         required: false
-        default: 'v1.0.0'
+        default: 'v1.2.0'
 
 permissions:
   contents: write
@@ -35,6 +35,7 @@ jobs:
       - name: Run Automated Game Tests
         run: |
           python test_game.py
+          python tests/test_controllers_and_touch.py
 
   build:
     name: Build (${{ matrix.platform }})

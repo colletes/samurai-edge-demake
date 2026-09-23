@@ -30,8 +30,9 @@ def format_key_name(key_code: int) -> str:
     return key_str.upper()
 
 class SettingsMenu:
-    def __init__(self, controls: dict):
+    def __init__(self, controls: dict, touch_controls=None):
         self.controls = controls
+        self.touch_controls = touch_controls
         self.is_open = False
         self.waiting_for_key_action = None  # Nome da ação sendo remapeada (ex: "P1_ATTACK")
         self.selected_index = 0
@@ -58,6 +59,7 @@ class SettingsMenu:
 
         # Áreas clicáveis na tela (atualizadas durante o render)
         self.button_rects: list[tuple[pygame.Rect, int]] = []
+        self.touch_toggle_rect = pygame.Rect(0, 0, 0, 0)
 
     def open(self):
         self.is_open = True
@@ -71,6 +73,13 @@ class SettingsMenu:
         """Restaura os controles para o padrão de fábrica."""
         for k, v in DEFAULT_CONTROLS.items():
             self.controls[k] = v
+
+    def cycle_touch_mode(self):
+        if self.touch_controls:
+            from src.input.touch_controls import TOUCH_MODE_AUTO, TOUCH_MODE_ALWAYS, TOUCH_MODE_OFF
+            order = [TOUCH_MODE_AUTO, TOUCH_MODE_ALWAYS, TOUCH_MODE_OFF]
+            cur_idx = order.index(self.touch_controls.mode) if self.touch_controls.mode in order else 0
+            self.touch_controls.mode = order[(cur_idx + 1) % len(order)]
 
     def handle_event(self, event: pygame.event.Event) -> bool:
         """
@@ -90,13 +99,55 @@ class SettingsMenu:
                     self.controls[self.waiting_for_key_action] = event.key
                     self.waiting_for_key_action = None
                 return True
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.FINGERDOWN):
                 # Cancelar espera ao clicar fora
                 self.waiting_for_key_action = None
                 return True
             return True
 
-        # Navegação no menu
+        # Suporte a Gamepad no menu de configurações
+        if event.type == pygame.JOYBUTTONDOWN:
+            if event.button in (0, 6): # A / Start confirma ou remapeia
+                action_key, _, _ = self.items[self.selected_index]
+                self.waiting_for_key_action = action_key
+                return True
+            elif event.button == 1: # B fecha o menu
+                self.close()
+                return True
+            elif event.button == 2: # X alterna modo touch
+                self.cycle_touch_mode()
+                return True
+
+        elif event.type == pygame.JOYHATMOTION:
+            _, hy = event.value
+            if hy > 0:
+                self.selected_index = (self.selected_index - 1) % len(self.items)
+            elif hy < 0:
+                self.selected_index = (self.selected_index + 1) % len(self.items)
+
+        # Suporte a Touchscreen
+        elif event.type == pygame.FINGERDOWN:
+            vx = event.x * SCREEN_WIDTH
+            vy = event.y * SCREEN_HEIGHT
+            if self.touch_toggle_rect.collidepoint(vx, vy):
+                self.cycle_touch_mode()
+                return True
+            for rect, idx in self.button_rects:
+                if rect.collidepoint(vx, vy):
+                    self.selected_index = idx
+                    action_key, _, _ = self.items[idx]
+                    self.waiting_for_key_action = action_key
+                    return True
+            close_btn = pygame.Rect(SCREEN_WIDTH // 2 - 130, SCREEN_HEIGHT - 90, 260, 36)
+            if close_btn.collidepoint(vx, vy):
+                self.close()
+                return True
+            reset_btn = pygame.Rect(SCREEN_WIDTH // 2 - 130, SCREEN_HEIGHT - 135, 260, 32)
+            if reset_btn.collidepoint(vx, vy):
+                self.reset_to_defaults()
+                return True
+
+        # Navegação no menu por teclado
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_ESCAPE, pygame.K_c):
                 self.close()
@@ -114,10 +165,15 @@ class SettingsMenu:
             elif event.key == pygame.K_r:
                 self.reset_to_defaults()
                 return True
+            elif event.key == pygame.K_t:
+                self.cycle_touch_mode()
+                return True
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
-            # Verificar se clicou em algum item de controle
+            if self.touch_toggle_rect.collidepoint(mx, my):
+                self.cycle_touch_mode()
+                return True
             for rect, idx in self.button_rects:
                 if rect.collidepoint(mx, my):
                     self.selected_index = idx
@@ -126,13 +182,13 @@ class SettingsMenu:
                     return True
 
             # Botão Fechar / Voltar
-            close_btn = pygame.Rect(SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT - 90, 240, 36)
+            close_btn = pygame.Rect(SCREEN_WIDTH // 2 - 130, SCREEN_HEIGHT - 90, 260, 36)
             if close_btn.collidepoint(mx, my):
                 self.close()
                 return True
 
             # Botão Restaurar Padrões
-            reset_btn = pygame.Rect(SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT - 135, 240, 32)
+            reset_btn = pygame.Rect(SCREEN_WIDTH // 2 - 130, SCREEN_HEIGHT - 135, 260, 32)
             if reset_btn.collidepoint(mx, my):
                 self.reset_to_defaults()
                 return True
@@ -228,17 +284,42 @@ class SettingsMenu:
             val_surf = font_small.render(key_text, True, key_color)
             surface.blit(val_surf, (btn_rect.right - val_surf.get_width() - 12, btn_rect.y + 9))
 
-        # 5. Botões de Ação no Rodapé do Painel
+        # 5. Status de Gamepads e Controles Touch
+        from src.input.controller_manager import get_controller_manager
+        ctrl_mgr = get_controller_manager()
+        badge_p1 = ctrl_mgr.get_badge_text(0) or "Nenhum detectado (Teclado)"
+        badge_p2 = ctrl_mgr.get_badge_text(1) or "Nenhum detectado"
+
+        status_text = f"P1: {badge_p1}   |   P2: {badge_p2}"
+        status_surf = font_small.render(status_text, True, (190, 220, 210))
+        surface.blit(status_surf, (panel_rect.centerx - status_surf.get_width() // 2, panel_y + panel_h - 165))
+
+        # Botão Alternador de Controles Touch
+        touch_mode_str = "AUTOMÁTICO"
+        if self.touch_controls:
+            mode = getattr(self.touch_controls, "mode", "auto")
+            if mode == "always":
+                touch_mode_str = "SEMPRE ATIVO"
+            elif mode == "off":
+                touch_mode_str = "DESATIVADO"
+
+        self.touch_toggle_rect = pygame.Rect(panel_rect.centerx - 175, panel_y + panel_h - 138, 350, 28)
+        pygame.draw.rect(surface, (28, 36, 32), self.touch_toggle_rect, border_radius=6)
+        pygame.draw.rect(surface, COLOR_GOLD, self.touch_toggle_rect, 1, border_radius=6)
+        touch_lbl = font_small.render(f"Controles Touch: [ {touch_mode_str} ] (Clique ou T)", True, COLOR_GOLD)
+        surface.blit(touch_lbl, (self.touch_toggle_rect.centerx - touch_lbl.get_width() // 2, self.touch_toggle_rect.y + 6))
+
+        # 6. Botões de Ação no Rodapé do Painel
         # Botão Restaurar Padrões
-        reset_rect = pygame.Rect(SCREEN_WIDTH // 2 - 130, panel_y + panel_h - 95, 260, 32)
+        reset_rect = pygame.Rect(SCREEN_WIDTH // 2 - 130, panel_y + panel_h - 100, 260, 30)
         pygame.draw.rect(surface, (32, 38, 34), reset_rect, border_radius=6)
         pygame.draw.rect(surface, (70, 85, 75), reset_rect, 1, border_radius=6)
         rst_surf = font_small.render("[R] Restaurar Padrões", True, (220, 210, 160))
-        surface.blit(rst_surf, (reset_rect.centerx - rst_surf.get_width() // 2, reset_rect.y + 7))
+        surface.blit(rst_surf, (reset_rect.centerx - rst_surf.get_width() // 2, reset_rect.y + 6))
 
         # Botão Fechar / Voltar
-        close_rect = pygame.Rect(SCREEN_WIDTH // 2 - 130, panel_y + panel_h - 52, 260, 36)
+        close_rect = pygame.Rect(SCREEN_WIDTH // 2 - 130, panel_y + panel_h - 60, 260, 36)
         pygame.draw.rect(surface, (45, 62, 52), close_rect, border_radius=6)
         pygame.draw.rect(surface, COLOR_GOLD, close_rect, 2, border_radius=6)
-        cls_surf = font_mid.render("VOLTAR AO JOGO (ESC / C)", True, COLOR_GOLD)
+        cls_surf = font_mid.render("VOLTAR AO JOGO (ESC / B)", True, COLOR_GOLD)
         surface.blit(cls_surf, (close_rect.centerx - cls_surf.get_width() // 2, close_rect.y + 8))

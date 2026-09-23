@@ -39,6 +39,7 @@ from src.effects.cinematic_director import CinematicDirector
 from src.ui.settings_menu import SettingsMenu, format_key_name
 from src.ui.character_select import CharacterSelectScreen
 from src.i18n import t
+from src.input import get_controller_manager, TouchControls, DisplayScaler
 
 # Estados Globais do Jogo
 STATE_CHAR_SELECT = "SELECT"
@@ -127,8 +128,11 @@ def get_fighter_action_labels(fighter):
         return "Estocada Fleche", "Capa Riposte"
     return "Ataque", "Especial"
 
-def get_player_aim_target(fighter, controls, prefix: str, distance: float = 4.0) -> tuple[float, float]:
+def get_player_aim_target(fighter, controls, prefix: str, distance: float = 4.0, move_dir: tuple[float, float] | None = None) -> tuple[float, float]:
     """Calcula as coordenadas de mira para o ataque com base na entrada direcional ativa ou na orientação do lutador."""
+    if move_dir and (move_dir[0] != 0 or move_dir[1] != 0):
+        dwx, dwy = input_to_world_direction(move_dir[0], move_dir[1])
+        return fighter.wx + dwx * distance, fighter.wy + dwy * distance
     keys = pygame.key.get_pressed()
     dx = keys[controls[f"{prefix}_RIGHT"]] - keys[controls[f"{prefix}_LEFT"]]
     dy = keys[controls[f"{prefix}_DOWN"]] - keys[controls[f"{prefix}_UP"]]
@@ -136,6 +140,64 @@ def get_player_aim_target(fighter, controls, prefix: str, distance: float = 4.0)
         dwx, dwy = input_to_world_direction(dx, dy)
         return fighter.wx + dwx * distance, fighter.wy + dwy * distance
     return fighter.wx + fighter.facing_x * distance, fighter.wy + fighter.facing_y * distance
+
+def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: list, particles: list):
+    """Executa a ação primária de ataque do lutador em direção às coordenadas de mira."""
+    if isinstance(fighter, RedSamurai):
+        fighter.trigger_iai_attack(aim_x, aim_y)
+    elif isinstance(fighter, BlueSamurai):
+        fighter.trigger_combo_attack(aim_x, aim_y)
+    elif isinstance(fighter, YellowNinja):
+        fighter.trigger_thrust_attack(aim_x, aim_y)
+    elif isinstance(fighter, AmericanNinja):
+        fighter.trigger_shuriken(aim_x, aim_y, projectiles)
+    elif isinstance(fighter, GrayNinja):
+        fighter.trigger_throw_bomb(aim_x, aim_y, projectiles)
+    elif isinstance(fighter, PurpleNinja):
+        fighter.trigger_kama_strike(aim_x, aim_y)
+    elif isinstance(fighter, SaitouSamurai):
+        fighter.trigger_gatotsu_thrust(aim_x, aim_y)
+    elif isinstance(fighter, Rifleman):
+        if fighter.has_ammo:
+            fighter.trigger_shoot(aim_x, aim_y, projectiles, particles)
+        else:
+            fighter.trigger_rifle_butt(aim_x, aim_y, particles)
+    elif isinstance(fighter, Kabuki):
+        fighter.trigger_fan_strike(aim_x, aim_y, particles)
+    elif isinstance(fighter, KyudoArcher):
+        fighter.trigger_bow_draw(aim_x, aim_y, projectiles)
+    elif isinstance(fighter, PirateSwordswoman):
+        fighter.trigger_cutlass_cleave(aim_x, aim_y)
+    elif isinstance(fighter, Musketeer):
+        fighter.trigger_fleche_thrust(aim_x, aim_y)
+
+def execute_fighter_dash(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, opponent=None):
+    """Executa a ação secundária de esquiva/parry/especial do lutador."""
+    if isinstance(fighter, RedSamurai):
+        fighter.trigger_dash(dwx, dwy)
+    elif isinstance(fighter, BlueSamurai):
+        fighter.set_facing(aim_x, aim_y)
+        fighter.trigger_parry()
+    elif isinstance(fighter, YellowNinja):
+        fighter.trigger_throw_attack(aim_x, aim_y, projectiles)
+    elif isinstance(fighter, AmericanNinja):
+        fighter.trigger_dog_attack(aim_x, aim_y)
+    elif isinstance(fighter, GrayNinja):
+        fighter.trigger_smoke_bomb(aim_x, aim_y, projectiles)
+    elif isinstance(fighter, PurpleNinja):
+        fighter.trigger_kusarigama_pull(aim_x, aim_y, projectiles)
+    elif isinstance(fighter, SaitouSamurai):
+        fighter.trigger_zeroshiki(aim_x, aim_y)
+    elif isinstance(fighter, Rifleman):
+        fighter.trigger_evasive_backstep(particles)
+    elif isinstance(fighter, Kabuki):
+        fighter.trigger_kawarimi_decoy(dwx, dwy, decoys, particles)
+    elif isinstance(fighter, KyudoArcher):
+        fighter.trigger_rope_arrow(aim_x, aim_y, projectiles, particles)
+    elif isinstance(fighter, PirateSwordswoman):
+        fighter.trigger_gunpowder_blind(aim_x, aim_y, opponent=opponent, particles=particles)
+    elif isinstance(fighter, Musketeer):
+        fighter.trigger_cloak_riposte()
 
 def get_random_arena_spawns(game_map, min_distance: float = 7.0) -> tuple[tuple[float, float], tuple[float, float]]:
     """
@@ -183,9 +245,14 @@ def run_game():
     font_mid = pygame.font.Font(None, 26)
     font_small = pygame.font.Font(None, 20)
 
+    # Dispositivos de Entrada e Viewport Responsivo
+    ctrl_mgr = get_controller_manager()
+    touch_controls = TouchControls()
+    scaler = DisplayScaler(SCREEN_WIDTH, SCREEN_HEIGHT)
+
     # Menus
     controls = dict(DEFAULT_CONTROLS)
-    settings_menu = SettingsMenu(controls)
+    settings_menu = SettingsMenu(controls, touch_controls=touch_controls)
     char_select_screen = CharacterSelectScreen()
 
     game_state = STATE_CHAR_SELECT
@@ -245,6 +312,7 @@ def run_game():
         # -------------------------------------------------------------
         if game_state == STATE_CHAR_SELECT:
             for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -266,6 +334,7 @@ def run_game():
         # -------------------------------------------------------------
         if settings_menu.is_open:
             for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
                 if event.type == pygame.QUIT:
                     running = False
                 else:
@@ -279,12 +348,41 @@ def run_game():
         # -------------------------------------------------------------
         # DUELO EM ANDAMENTO (GAME LOOP)
         # -------------------------------------------------------------
+        touch_controls.reset_frame_triggers()
+
+        # Determinar direções ativas de movimentação/mira prévia
+        keys = pygame.key.get_pressed()
+        c1_dx, c1_dy = ctrl_mgr.get_movement(0)
+        t_dx, t_dy = touch_controls.get_movement()
+        k1_dx = keys[controls["P1_RIGHT"]] - keys[controls["P1_LEFT"]]
+        k1_dy = keys[controls["P1_DOWN"]] - keys[controls["P1_UP"]]
+
+        if math.hypot(c1_dx, c1_dy) > 0.05:
+            p1_active_dir = (c1_dx, c1_dy)
+        elif math.hypot(t_dx, t_dy) > 0.05:
+            p1_active_dir = (t_dx, t_dy)
+        else:
+            p1_active_dir = (float(k1_dx), float(k1_dy))
+
+        c2_dx, c2_dy = ctrl_mgr.get_movement(1)
+        k2_dx = keys[controls["P2_RIGHT"]] - keys[controls["P2_LEFT"]]
+        k2_dy = keys[controls["P2_DOWN"]] - keys[controls["P2_UP"]]
+        if math.hypot(c2_dx, c2_dy) > 0.05:
+            p2_active_dir = (c2_dx, c2_dy)
+        else:
+            p2_active_dir = (float(k2_dx), float(k2_dy))
+
+        p1_dwx, p1_dwy = input_to_world_direction(p1_active_dir[0], p1_active_dir[1])
+        p2_dwx, p2_dwy = input_to_world_direction(p2_active_dir[0], p2_active_dir[1])
+
         for event in pygame.event.get():
+            ctrl_mgr.handle_event(event)
+            if touch_controls.handle_event(event, scaler):
+                continue
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    # Voltar para a tela de seleção de personagens
                     game_state = STATE_CHAR_SELECT
                 elif event.key == KEY_SETTINGS:
                     settings_menu.open()
@@ -293,150 +391,74 @@ def run_game():
                 elif event.key == KEY_TOGGLE_AI:
                     vs_ai_mode = not vs_ai_mode
 
-                # Comandos Jogador 1 (Mirados direcionalmente)
+                # Comandos Jogador 1 (Teclado)
                 if p1.is_alive and round_winner is None:
                     if event.key == controls["P1_ATTACK"]:
-                        aim_x, aim_y = get_player_aim_target(p1, controls, "P1")
-                        if isinstance(p1, RedSamurai):
-                            p1.trigger_iai_attack(aim_x, aim_y)
-                        elif isinstance(p1, BlueSamurai):
-                            p1.trigger_combo_attack(aim_x, aim_y)
-                        elif isinstance(p1, YellowNinja):
-                            p1.trigger_thrust_attack(aim_x, aim_y)
-                        elif isinstance(p1, AmericanNinja):
-                            p1.trigger_shuriken(aim_x, aim_y, projectiles)
-                        elif isinstance(p1, GrayNinja):
-                            p1.trigger_throw_bomb(aim_x, aim_y, projectiles)
-                        elif isinstance(p1, PurpleNinja):
-                            p1.trigger_kama_strike(aim_x, aim_y)
-                        elif isinstance(p1, SaitouSamurai):
-                            p1.trigger_gatotsu_thrust(aim_x, aim_y)
-                        elif isinstance(p1, Rifleman):
-                            if p1.has_ammo:
-                                p1.trigger_shoot(aim_x, aim_y, projectiles, particles)
-                            else:
-                                p1.trigger_rifle_butt(aim_x, aim_y, particles)
-                        elif isinstance(p1, Kabuki):
-                            p1.trigger_fan_strike(aim_x, aim_y, particles)
-                        elif isinstance(p1, KyudoArcher):
-                            p1.trigger_bow_draw(aim_x, aim_y, projectiles)
-                        elif isinstance(p1, PirateSwordswoman):
-                            p1.trigger_cutlass_cleave(aim_x, aim_y)
-                        elif isinstance(p1, Musketeer):
-                            p1.trigger_fleche_thrust(aim_x, aim_y)
-
+                        aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                        execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
                     elif event.key == controls["P1_DASH"]:
-                        aim_x, aim_y = get_player_aim_target(p1, controls, "P1")
-                        if isinstance(p1, RedSamurai):
-                            keys = pygame.key.get_pressed()
-                            dx = (keys[controls["P1_RIGHT"]] - keys[controls["P1_LEFT"]])
-                            dy = (keys[controls["P1_DOWN"]] - keys[controls["P1_UP"]])
-                            dwx, dwy = input_to_world_direction(dx, dy)
-                            p1.trigger_dash(dwx, dwy)
-                        elif isinstance(p1, BlueSamurai):
-                            p1.set_facing(aim_x, aim_y)
-                            p1.trigger_parry()
-                        elif isinstance(p1, YellowNinja):
-                            p1.trigger_throw_attack(aim_x, aim_y, projectiles)
-                        elif isinstance(p1, AmericanNinja):
-                            p1.trigger_dog_attack(aim_x, aim_y)
-                        elif isinstance(p1, GrayNinja):
-                            p1.trigger_smoke_bomb(aim_x, aim_y, projectiles)
-                        elif isinstance(p1, PurpleNinja):
-                            p1.trigger_kusarigama_pull(aim_x, aim_y, projectiles)
-                        elif isinstance(p1, SaitouSamurai):
-                            p1.trigger_zeroshiki(aim_x, aim_y)
-                        elif isinstance(p1, Rifleman):
-                            p1.trigger_evasive_backstep(particles)
-                        elif isinstance(p1, Kabuki):
-                            keys = pygame.key.get_pressed()
-                            dx = (keys[controls["P1_RIGHT"]] - keys[controls["P1_LEFT"]])
-                            dy = (keys[controls["P1_DOWN"]] - keys[controls["P1_UP"]])
-                            dwx, dwy = input_to_world_direction(dx, dy)
-                            p1.trigger_kawarimi_decoy(dwx, dwy, decoys, particles)
-                        elif isinstance(p1, KyudoArcher):
-                            p1.trigger_rope_arrow(aim_x, aim_y, projectiles, particles)
-                        elif isinstance(p1, PirateSwordswoman):
-                            p1.trigger_gunpowder_blind(aim_x, aim_y, opponent=p2, particles=particles)
-                        elif isinstance(p1, Musketeer):
-                            p1.trigger_cloak_riposte()
+                        aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                        execute_fighter_dash(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, opponent=p2)
 
-                # Comandos Jogador 2 (Mirados direcionalmente se não for IA)
+                # Comandos Jogador 2 (Teclado)
                 if not vs_ai_mode and p2.is_alive and round_winner is None:
                     if event.key == controls["P2_ATTACK"]:
-                        aim_x, aim_y = get_player_aim_target(p2, controls, "P2")
-                        if isinstance(p2, RedSamurai):
-                            p2.trigger_iai_attack(aim_x, aim_y)
-                        elif isinstance(p2, BlueSamurai):
-                            p2.trigger_combo_attack(aim_x, aim_y)
-                        elif isinstance(p2, YellowNinja):
-                            p2.trigger_thrust_attack(aim_x, aim_y)
-                        elif isinstance(p2, AmericanNinja):
-                            p2.trigger_shuriken(aim_x, aim_y, projectiles)
-                        elif isinstance(p2, GrayNinja):
-                            p2.trigger_throw_bomb(aim_x, aim_y, projectiles)
-                        elif isinstance(p2, PurpleNinja):
-                            p2.trigger_kama_strike(aim_x, aim_y)
-                        elif isinstance(p2, SaitouSamurai):
-                            p2.trigger_gatotsu_thrust(aim_x, aim_y)
-                        elif isinstance(p2, Rifleman):
-                            if p2.has_ammo:
-                                p2.trigger_shoot(aim_x, aim_y, projectiles, particles)
-                            else:
-                                p2.trigger_rifle_butt(aim_x, aim_y, particles)
-                        elif isinstance(p2, Kabuki):
-                            p2.trigger_fan_strike(aim_x, aim_y, particles)
-                        elif isinstance(p2, KyudoArcher):
-                            p2.trigger_bow_draw(aim_x, aim_y, projectiles)
-                        elif isinstance(p2, PirateSwordswoman):
-                            p2.trigger_cutlass_cleave(aim_x, aim_y)
-                        elif isinstance(p2, Musketeer):
-                            p2.trigger_fleche_thrust(aim_x, aim_y)
-
+                        aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
+                        execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles)
                     elif event.key == controls["P2_PARRY"]:
-                        aim_x, aim_y = get_player_aim_target(p2, controls, "P2")
-                        if isinstance(p2, RedSamurai):
-                            keys = pygame.key.get_pressed()
-                            dx = (keys[controls["P2_RIGHT"]] - keys[controls["P2_LEFT"]])
-                            dy = (keys[controls["P2_DOWN"]] - keys[controls["P2_UP"]])
-                            dwx, dwy = input_to_world_direction(dx, dy)
-                            p2.trigger_dash(dwx, dwy)
-                        elif isinstance(p2, BlueSamurai):
-                            p2.set_facing(aim_x, aim_y)
-                            p2.trigger_parry()
-                        elif isinstance(p2, YellowNinja):
-                            p2.trigger_throw_attack(aim_x, aim_y, projectiles)
-                        elif isinstance(p2, AmericanNinja):
-                            p2.trigger_dog_attack(aim_x, aim_y)
-                        elif isinstance(p2, GrayNinja):
-                            p2.trigger_smoke_bomb(aim_x, aim_y, projectiles)
-                        elif isinstance(p2, PurpleNinja):
-                            p2.trigger_kusarigama_pull(aim_x, aim_y, projectiles)
-                        elif isinstance(p2, SaitouSamurai):
-                            p2.trigger_zeroshiki(aim_x, aim_y)
-                        elif isinstance(p2, Rifleman):
-                            p2.trigger_evasive_backstep(particles)
-                        elif isinstance(p2, Kabuki):
-                            keys = pygame.key.get_pressed()
-                            dx = (keys[controls["P2_RIGHT"]] - keys[controls["P2_LEFT"]])
-                            dy = (keys[controls["P2_DOWN"]] - keys[controls["P2_UP"]])
-                            dwx, dwy = input_to_world_direction(dx, dy)
-                            p2.trigger_kawarimi_decoy(dwx, dwy, decoys, particles)
-                        elif isinstance(p2, KyudoArcher):
-                            p2.trigger_rope_arrow(aim_x, aim_y, projectiles, particles)
-                        elif isinstance(p2, PirateSwordswoman):
-                            p2.trigger_gunpowder_blind(aim_x, aim_y, opponent=p1, particles=particles)
-                        elif isinstance(p2, Musketeer):
-                            p2.trigger_cloak_riposte()
+                        aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
+                        execute_fighter_dash(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, opponent=p1)
+
+            elif event.type == pygame.JOYBUTTONDOWN:
+                if ctrl_mgr.is_event_action(event, 0, "menu"):
+                    settings_menu.open()
+                elif ctrl_mgr.is_event_action(event, 0, "restart"):
+                    if round_winner is not None:
+                        start_new_match()
+                    else:
+                        game_state = STATE_CHAR_SELECT
+                elif p1.is_alive and round_winner is None:
+                    if ctrl_mgr.is_event_action(event, 0, "attack"):
+                        aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                        execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
+                    elif ctrl_mgr.is_event_action(event, 0, "dash"):
+                        aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                        execute_fighter_dash(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, opponent=p2)
+
+                # Gamepad Jogador 2
+                if not vs_ai_mode and p2.is_alive and round_winner is None:
+                    if ctrl_mgr.is_event_action(event, 1, "attack"):
+                        aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
+                        execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles)
+                    elif ctrl_mgr.is_event_action(event, 1, "dash"):
+                        aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
+                        execute_fighter_dash(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, opponent=p1)
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
-                settings_btn_rect = pygame.Rect(SCREEN_WIDTH - 210, SCREEN_HEIGHT - 44, 180, 28)
-                if settings_btn_rect.collidepoint(mx, my):
-                    settings_menu.open()
-                select_btn_rect = pygame.Rect(25, 20, 160, 32)
-                if select_btn_rect.collidepoint(mx, my):
-                    game_state = STATE_CHAR_SELECT
+                if round_winner is not None:
+                    start_new_match()
+                else:
+                    settings_btn_rect = pygame.Rect(SCREEN_WIDTH - 210, SCREEN_HEIGHT - 44, 180, 28)
+                    if settings_btn_rect.collidepoint(mx, my):
+                        settings_menu.open()
+                    select_btn_rect = pygame.Rect(25, 20, 160, 32)
+                    if select_btn_rect.collidepoint(mx, my):
+                        game_state = STATE_CHAR_SELECT
+
+        # Comandos de Ação Touchscreen
+        if touch_controls.is_menu_requested():
+            settings_menu.open()
+        if touch_controls.is_select_requested():
+            game_state = STATE_CHAR_SELECT
+
+        if p1.is_alive and round_winner is None:
+            if touch_controls.is_attack_just_pressed():
+                aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
+            elif touch_controls.is_dash_just_pressed():
+                aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                execute_fighter_dash(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, opponent=p2)
 
         # Hitstop congelado
         if combat_system.hitstop_timer > 0:
@@ -445,17 +467,18 @@ def run_game():
             continue
 
         game_time += dt
-        keys = pygame.key.get_pressed()
 
         # Suporte ao carregamento contínuo de pólvora do Rifleman (segurando botão de ação secundária)
+        p1_dash_held = keys[controls["P1_DASH"]] or ctrl_mgr.is_action_down(0, "dash") or touch_controls.is_dash_held()
         if isinstance(p1, Rifleman) and p1.is_alive and round_winner is None:
-            if keys[controls["P1_DASH"]]:
+            if p1_dash_held:
                 p1.trigger_reload_hold()
             else:
                 p1.is_reloading = False
 
+        p2_dash_held = keys[controls["P2_PARRY"]] or ctrl_mgr.is_action_down(1, "dash")
         if not vs_ai_mode and isinstance(p2, Rifleman) and p2.is_alive and round_winner is None:
-            if keys[controls["P2_PARRY"]]:
+            if p2_dash_held:
                 p2.trigger_reload_hold()
             else:
                 p2.is_reloading = False
@@ -465,9 +488,6 @@ def run_game():
 
         if not is_cinematic_freeze:
             # Movimento Jogador 1
-            p1_dx = (keys[controls["P1_RIGHT"]] - keys[controls["P1_LEFT"]])
-            p1_dy = (keys[controls["P1_DOWN"]] - keys[controls["P1_UP"]])
-            p1_dwx, p1_dwy = input_to_world_direction(p1_dx, p1_dy)
             if hasattr(p1, "apply_gatotsu_steering") and p1.state == "GATOTSU_CHARGE":
                 p1.apply_gatotsu_steering(p1_dwx, p1_dwy, dt)
             else:
@@ -477,9 +497,6 @@ def run_game():
             if vs_ai_mode:
                 ai.update(p2, p1, dt, game_map, projectiles, powder_pouches, decoys)
             else:
-                p2_dx = (keys[controls["P2_RIGHT"]] - keys[controls["P2_LEFT"]])
-                p2_dy = (keys[controls["P2_DOWN"]] - keys[controls["P2_UP"]])
-                p2_dwx, p2_dwy = input_to_world_direction(p2_dx, p2_dy)
                 if hasattr(p2, "apply_gatotsu_steering") and p2.state == "GATOTSU_CHARGE":
                     p2.apply_gatotsu_steering(p2_dwx, p2_dwy, dt)
                 else:
@@ -508,6 +525,8 @@ def run_game():
         winner = combat_system.process_combat(p1, p2, game_map, particles, banners, camera, projectiles, dt, cinematic_director=cinematic_director, decoys=decoys)
         if winner and round_winner is None:
             round_winner = winner
+            ctrl_mgr.rumble_player(0, 0.7, 1.0, 260)
+            ctrl_mgr.rumble_player(1, 0.7, 1.0, 260)
             if winner == "P1_WINS":
                 score_p1 += 1
             elif winner == "P2_WINS":
@@ -678,7 +697,7 @@ def run_game():
         sel_txt = font_small.render(t("change_warriors"), True, COLOR_GOLD)
         screen.blit(sel_txt, (select_btn.centerx - sel_txt.get_width() // 2, select_btn.y + 7))
 
-        # Guia de Controles no Rodapé
+        # Guia de Controles no Rodapé (Teclado, Gamepad Dinâmico ou Touch)
         footer_rect = pygame.Rect(20, SCREEN_HEIGHT - 48, SCREEN_WIDTH - 40, 36)
         pygame.draw.rect(screen, (16, 20, 18, 200), footer_rect, border_radius=6)
 
@@ -690,11 +709,34 @@ def run_game():
         p1_a1, p1_a2 = get_fighter_action_labels(p1)
         p2_a1, p2_a2 = get_fighter_action_labels(p2)
 
-        c1 = font_small.render(f"P1 ({p1_name}): W/A/S/D | {k_atk} = {p1_a1} | {k_sec} = {p1_a2}", True, (245, 205, 205))
-        c2 = font_small.render(f"P2 ({p2_name}): {t('arrows_label')} | {m_atk} = {p2_a1} | {m_sec} = {p2_a2}", True, (205, 225, 245))
+        # Prompts contextuais para P1
+        if ctrl_mgr.has_controller(0):
+            badge1 = ctrl_mgr.get_badge_text(0)
+            ctrl1 = ctrl_mgr.get_controller_for_player(0)
+            btn_atk1 = ctrl1.get_button_glyph("attack") if ctrl1 else "A"
+            btn_sec1 = ctrl1.get_button_glyph("dash") if ctrl1 else "B"
+            c1 = font_small.render(f"{badge1} P1: Stick | [{btn_atk1}] = {p1_a1} | [{btn_sec1}] = {p1_a2}", True, (245, 205, 205))
+        elif touch_controls.is_visible:
+            c1 = font_small.render(f"[TOUCH] P1 ({p1_name}): Joy = Mover | [ATK] = {p1_a1} | [DASH] = {p1_a2}", True, (245, 205, 205))
+        else:
+            c1 = font_small.render(f"P1 ({p1_name}): W/A/S/D | {k_atk} = {p1_a1} | {k_sec} = {p1_a2}", True, (245, 205, 205))
+
+        # Prompts contextuais para P2
+        if not vs_ai_mode and ctrl_mgr.has_controller(1):
+            badge2 = ctrl_mgr.get_badge_text(1)
+            ctrl2 = ctrl_mgr.get_controller_for_player(1)
+            btn_atk2 = ctrl2.get_button_glyph("attack") if ctrl2 else "A"
+            btn_sec2 = ctrl2.get_button_glyph("dash") if ctrl2 else "B"
+            c2 = font_small.render(f"{badge2} P2: Stick | [{btn_atk2}] = {p2_a1} | [{btn_sec2}] = {p2_a2}", True, (205, 225, 245))
+        else:
+            c2 = font_small.render(f"P2 ({p2_name}): {t('arrows_label')} | {m_atk} = {p2_a1} | {m_sec} = {p2_a2}", True, (205, 225, 245))
 
         screen.blit(c1, (30, SCREEN_HEIGHT - 40))
         screen.blit(c2, (SCREEN_WIDTH // 2 - c2.get_width() // 2 - 30, SCREEN_HEIGHT - 40))
+
+        # Renderizar Controles Virtuais Touchscreen (se ativos/visíveis)
+        touch_controls.set_action_labels(p1_a1, p1_a2)
+        touch_controls.render(screen, font_mid, font_small)
 
         settings_btn_rect = pygame.Rect(SCREEN_WIDTH - 210, SCREEN_HEIGHT - 44, 180, 28)
         pygame.draw.rect(screen, (40, 52, 45), settings_btn_rect, border_radius=4)

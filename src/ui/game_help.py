@@ -17,6 +17,7 @@ from src.config import (
 from src.isometric.iso_math import world_to_iso
 from src.entities.voxel_models import render_voxel_humanoid, render_voxel_doberman
 from src.i18n import t, get_lang, set_lang, toggle_lang, LANG_PT, LANG_EN
+from src.ui.portraits import get_portrait
 
 class HelpPreviewCam:
     def __init__(self, cx, cy):
@@ -33,8 +34,8 @@ FIGHTERS_GUIDE_DATA = [
         "color": COLOR_RED_AURA,
         "char_type": "kenshin",
         "pt": {
-            "name": "KENSHIN",
-            "title": "O Retalhador Lendário",
+            "name": "KENSHI",
+            "title": "A Espadachim Lendária",
             "style": "Hiten Mitsurugi-ryū (Iaijutsu)",
             "vel": "[5/5] Velocidade Máxima",
             "dano": "1-Hit Kill Instantâneo (Saque Veloz)",
@@ -42,7 +43,7 @@ FIGHTERS_GUIDE_DATA = [
             "keys_p1": "[E] Iai Flash (Ataque)",
             "keys_p2": "[R] Shukuchi Dash (Especial)",
             "conceito": (
-                "Inspirado nos mestres de Battojutsu do Bakumatsu. Kenshin é um duelista purista "
+                "Inspirada nos mestres de Battojutsu do Bakumatsu. Kenshi é uma duelista purista "
                 "que aposta tudo na velocidade suprema do saque da espada diretamente da bainha. "
                 "Seu combate é baseado na antecipação fulminante e na leitura precisa do adversário."
             ),
@@ -56,14 +57,14 @@ FIGHTERS_GUIDE_DATA = [
                 "• Corte bambus do cenário durante o ataque para criar clareiras de emboscada."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Kenshin: Imediatamente após o Iai Flash, Kenshin entra na animação de Noto "
-                "(embainhar a lâmina), ficando 100% indefeso por uma fração de segundo. Se ele errar (whiff), "
-                "ataque imediatamente! Mantenha obstáculos como rochas entre você e ele para impedir o Iai direto."
+                "• Como vencer Kenshi: Imediatamente após o Iai Flash, Kenshi entra na animação de Noto "
+                "(embainhar a lâmina), ficando 100% indefesa por uma fração de segundo. Se ela errar (whiff), "
+                "ataque imediatamente! Mantenha obstáculos como rochas entre você e ela para impedir o Iai direto."
             )
         },
         "en": {
-            "name": "KENSHIN",
-            "title": "The Legendary Battousai",
+            "name": "KENSHI",
+            "title": "The Legendary Swordswoman",
             "style": "Hiten Mitsurugi-ryū (Iaijutsu)",
             "vel": "[5/5] Maximum Speed",
             "dano": "Instant 1-Hit Kill (Flash Draw)",
@@ -1098,20 +1099,25 @@ class GameHelpModal:
         portrait_cx = detail_rect.x + 56
         portrait_cy = detail_y + 66
 
-        # Moldura circular
+        # Moldura circular e Retrato de Busto HD-2D do guerreiro
         pygame.draw.circle(surface, (16, 22, 19), (portrait_cx, portrait_cy), 44)
         pygame.draw.circle(surface, cur_fighter["color"], (portrait_cx, portrait_cy), 44, 3)
 
-        # Render Voxel do guerreiro
-        cam = HelpPreviewCam(portrait_cx, portrait_cy + 20)
-        c_type = cur_fighter["char_type"]
-        if c_type == "american_ninja":
-            render_voxel_humanoid(surface, cam, -0.20, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type=c_type)
-            render_voxel_doberman(surface, cam, 0.35, -0.10, 0, 1.0, 0.0, "IDLE", 0.0, True)
-        elif c_type == "yellow_ninja":
-            render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type=c_type, extra_props={"has_kunai": True})
+        p_size = (84, 84)
+        p_surf = get_portrait(cur_fighter["id"], size=p_size, circular=True)
+        if p_surf is not None:
+            surface.blit(p_surf, (portrait_cx - p_size[0] // 2, portrait_cy - p_size[1] // 2))
         else:
-            render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type=c_type)
+            # Fallback para o render Voxel do guerreiro
+            cam = HelpPreviewCam(portrait_cx, portrait_cy + 20)
+            c_type = cur_fighter["char_type"]
+            if c_type == "american_ninja":
+                render_voxel_humanoid(surface, cam, -0.20, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type=c_type)
+                render_voxel_doberman(surface, cam, 0.35, -0.10, 0, 1.0, 0.0, "IDLE", 0.0, True)
+            elif c_type == "yellow_ninja":
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type=c_type, extra_props={"has_kunai": True})
+            else:
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type=c_type)
 
         # Nome, Título e Estilo
         n_surf = font_mid.render(cur_data["name"], True, cur_fighter["color"])

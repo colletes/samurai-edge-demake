@@ -127,22 +127,66 @@ O jogo suporta **Duelo 1P contra IA inteligente adaptativa** e **Modo 2 Jogadore
 
 | Ação | Jogador 1 (P1) | Jogador 2 (P2) |
 | :--- | :--- | :--- |
-| **Movimento** | `W, A, S, D` | `Setas Direcionais` |
-| **Ataque Primário** | `E` | `U` |
-| **Ação Secundária** | `R` | `I` |
+| **Movimento** | `W, A, S, D` ou `Analógico / D-Pad` | `Setas Direcionais` ou `Analógico / D-Pad` |
+| **Ataque Primário** | `E` ou `Botão A / ✕ / 1` | `U` ou `Botão A / ✕ / 1` |
+| **Ação Secundária** | `R` ou `Botão B / ○ / 2` | `I` ou `Botão B / ○ / 2` |
 
-- **Troca de Modo (1P vs IA / 2 Jogadores)**: `TAB` na tela de seleção.
-- **Configurações de Controles**: Pressione `C` a qualquer momento para remapear teclas livremente.
-- **Reiniciar Partida**: `Espaço`
-- **Mudar Personagens / Voltar ao Menu**: `ESC`
+- **Troca de Modo (1P vs IA / 2 Jogadores)**: `TAB` ou `Botão B/○` na tela de seleção.
+- **Configurações de Controles**: Pressione `C` ou `Start / Options` a qualquer momento para abrir as configurações.
+- **Reiniciar Partida**: `Espaço` ou `Back / Touchpad` no controle.
+- **Mudar Personagens / Voltar ao Menu**: `ESC` ou toque no botão de topo.
 
 ---
 
-## ⚙️ Instalação e Execução
+## 📱 Controles Touchscreen & Multi-Touch
+
+O jogo inclui controles virtuais táteis na tela:
+- **Joystick Analógico Virtual** no polegar esquerdo (com suporte a posicionamento dinâmico e zona morta calibrada).
+- **Botões Táteis de Ataque e Especial** no polegar direito com multi-touch nativo (`FINGERDOWN`, `FINGERMOTION`, `FINGERUP`), permitindo movimentar e desferir golpes simultaneamente.
+- **Toque Contínuo (Hold)**: Permite recargas seguradas (como o Teppo Rifleman).
+- **Display Scaler Responsivo**: Renderização canônica 1280x720 adaptável a qualquer aspecto de smartphone (16:9, 19.5:9, 20:9 e tablets).
+
+---
+
+## 🎮 Suporte a Gamepads (Controles)
+
+Reconhecimento automático de hardware via `pygame-ce` e SDL:
+- **Xbox**: Xbox 360, Xbox One, Xbox Series X/S (Glifos: `A`, `B`, `X`, `Y`).
+- **PlayStation**: PS4 DualShock 4 e PS5 DualSense (Glifos: `✕`, `○`, `▢`, `△`).
+- **Genéricos**: DirectInput, controles USB e arcade sticks (Glifos: `1`, `2`, `3`, `4`).
+- **Suporte a 2 Controles**: Jogue com 2 gamepads simultâneos para duelos locais multiplayer.
+- **Feedback Háptico**: Vibração (Rumble) em acertos críticos e finalizações.
+
+---
+
+## 📦 Deploy Mobile (Android & iOS)
+
+### Android (APK / AAB)
+Configuração pronta via **Buildozer** (`buildozer.spec`):
+```bash
+# Compilar APK Debug
+./deploy/android/build_apk.sh
+
+# Ou via Docker (sem necessidade de instalar SDK/NDK localmente)
+./deploy/android/build_apk.sh --docker
+```
+Veja o guia completo em [`deploy/android/README.md`](file:///Users/thiagocarvalho/Documents/Sample%20Game/deploy/android/README.md).
+
+### iOS (iPhone / iPad & Xcode)
+Estrutura pronta para compilação nativa com sua **Apple Developer Account**:
+```bash
+# Gerar o projeto nativo do Xcode
+./deploy/ios/setup_ios_project.sh
+```
+Abra `build/samuraiedge-ios/samuraiedge-ios.xcodeproj` no Xcode, selecione seu Team de desenvolvimento e instale no aparelho ou submeta para o TestFlight. Veja o guia em [`deploy/ios/README.md`](file:///Users/thiagocarvalho/Documents/Sample%20Game/deploy/ios/README.md).
+
+---
+
+## ⚙️ Instalação e Execução no Desktop
 
 ### Pré-requisitos
 - Python 3.10+
-- `pygame-ce`
+- `pygame-ce>=2.5.0`
 
 ```bash
 # Criar ambiente virtual
@@ -150,7 +194,7 @@ python3 -m venv venv
 source venv/bin/activate
 
 # Instalar dependências
-pip install pygame-ce
+pip install -r requirements.txt
 
 # Executar o jogo
 python3 main.py
@@ -158,5 +202,19 @@ python3 main.py
 
 ### Executar Testes Automatizados
 ```bash
+# Testes do Sistema do Jogo
 python3 test_game.py
+
+# Testes de Controles, Touchscreen e Scaler
+python3 tests/test_controllers_and_touch.py
 ```
+
+---
+
+## 📄 Licença de Software
+
+Este projeto é regido por uma licença proprietária de uso pessoal (*Source-Available / Personal Non-Commercial Use*).
+- Permissão concedida para download e execução pessoal e não comercial.
+- Todos os direitos de comercialização, publicação e exploração comercial são reservados exclusivamente a **Thiago Carvalho**.
+- Proibido o uso, cópia ou incorporação do código-fonte em outros softwares sem autorização expressa e por escrito do autor.
+Consulte o arquivo [`LICENSE`](file:///Users/thiagocarvalho/Documents/Sample%20Game/LICENSE) para os termos completos.

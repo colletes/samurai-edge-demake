@@ -21,6 +21,7 @@ from src.isometric.iso_math import world_to_iso
 from src.entities.voxel_models import render_voxel_humanoid, render_voxel_doberman
 from src.ui.game_help import GameHelpModal
 from src.i18n import t, get_lang, toggle_lang, LANG_PT, LANG_EN
+from src.ui.portraits import get_portrait
 
 class PreviewCamera:
     def __init__(self, cx, cy):
@@ -49,8 +50,8 @@ class CharacterSelectScreen:
         self.characters = [
             {
                 "id": CHAR_KENSHIN,
-                "name": "KENSHIN",
-                "title": "Retalhador",
+                "name": "KENSHI",
+                "title": "Retalhadora",
                 "style": "Iai & Shukuchi",
                 "color": COLOR_RED_AURA,
                 "speed_stars": "[5/5] MAX",
@@ -204,7 +205,75 @@ class CharacterSelectScreen:
         num_c = len(self.characters)
         cols = 6
 
-        if event.type == pygame.KEYDOWN:
+        # Processamento de Gamepad / Joystick na Tela de Seleção
+        if event.type == pygame.JOYBUTTONDOWN:
+            # Botão A / ✕ / Start inicia o duelo
+            if event.button in (0, 6):
+                return True
+            # Botão B / ○ cancela ou alterna IA / 2P
+            elif event.button == 1:
+                self.vs_ai = not self.vs_ai
+                return False
+            # Botão X / ▢ abre modal de estratégia
+            elif event.button == 2:
+                self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=self.p1_choice_idx)
+                return False
+
+        elif event.type == pygame.JOYHATMOTION:
+            hx, hy = event.value
+            if hx < 0:
+                self.p1_choice_idx = (self.p1_choice_idx - 1) % num_c
+            elif hx > 0:
+                self.p1_choice_idx = (self.p1_choice_idx + 1) % num_c
+            if hy > 0:
+                self.p1_choice_idx = (self.p1_choice_idx - cols) % num_c
+            elif hy < 0:
+                self.p1_choice_idx = (self.p1_choice_idx + cols) % num_c
+
+        elif event.type == pygame.JOYAXISMOTION:
+            # Suporte ao analógico esquerdo com debounce simples
+            if event.axis == 0 and abs(event.value) > 0.65:
+                if not getattr(self, "_axis_x_held", False):
+                    step = 1 if event.value > 0 else -1
+                    self.p1_choice_idx = (self.p1_choice_idx + step) % num_c
+                    self._axis_x_held = True
+            elif event.axis == 0 and abs(event.value) < 0.3:
+                self._axis_x_held = False
+
+            if event.axis == 1 and abs(event.value) > 0.65:
+                if not getattr(self, "_axis_y_held", False):
+                    step = cols if event.value > 0 else -cols
+                    self.p1_choice_idx = (self.p1_choice_idx + step) % num_c
+                    self._axis_y_held = True
+            elif event.axis == 1 and abs(event.value) < 0.3:
+                self._axis_y_held = False
+
+        # Suporte a toque nativo touchscreen
+        elif event.type == pygame.FINGERDOWN:
+            vx = event.x * SCREEN_WIDTH
+            vy = event.y * SCREEN_HEIGHT
+            # Simular clique esquerdo para touchscreen
+            if self.lang_btn_rect.collidepoint(vx, vy):
+                toggle_lang()
+                return False
+            if self.help_btn_rect.collidepoint(vx, vy):
+                self.help_modal.open(GameHelpModal.TAB_RULES)
+                return False
+            for idx, irect in enumerate(self.info_btn_rects):
+                if irect.collidepoint(vx, vy):
+                    self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=idx)
+                    return False
+            for idx, rect in enumerate(self.card_rects):
+                if rect.collidepoint(vx, vy):
+                    self.p1_choice_idx = idx
+            start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 64, 320, 44)
+            if start_btn.collidepoint(vx, vy):
+                return True
+            ai_btn = pygame.Rect(SCREEN_WIDTH // 2 - 140, 66, 280, 32)
+            if ai_btn.collidepoint(vx, vy):
+                self.vs_ai = not self.vs_ai
+
+        elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_TAB:
                 self.vs_ai = not self.vs_ai
                 return False
@@ -407,51 +476,60 @@ class CharacterSelectScreen:
                 surface.blit(p2_badge, (rect.right - p2_badge.get_width() - 8, badge_y))
 
 
-            # Retrato Voxel 3D do Personagem (no topo esquerdo da carta)
-            portrait_cx = rect.x + 28
-            portrait_cy = rect.y + 36
-            pygame.draw.circle(surface, (18, 22, 20), (portrait_cx, portrait_cy), 22)
-            pygame.draw.circle(surface, char_info["color"], (portrait_cx, portrait_cy), 22, 2)
-
-            cam = PreviewCamera(portrait_cx, portrait_cy + 15)
+            # Retrato de Busto HD-2D do Personagem (no topo esquerdo da carta)
             char_id = char_info["id"]
+            portrait_size = (54, 54)
+            portrait_x = rect.x + 8
+            portrait_y = rect.y + 10
+            portrait_cx = portrait_x + portrait_size[0] // 2
+            portrait_cy = portrait_y + portrait_size[1] // 2
 
-            if char_id == CHAR_KENSHIN:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="kenshin")
-            elif char_id == CHAR_MUSASHI:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="musashi")
-            elif char_id == CHAR_NINJA:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="yellow_ninja", extra_props={"has_kunai": True})
-            elif char_id == CHAR_AMERICAN:
-                render_voxel_humanoid(surface, cam, -0.20, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="american_ninja")
-                render_voxel_doberman(surface, cam, 0.35, -0.10, 0, 1.0, 0.0, "IDLE", 0.0, True)
-            elif char_id == CHAR_GRAY:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="kasumi")
-            elif char_id == CHAR_PURPLE:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="murasaki")
-            elif char_id == CHAR_SAITOU:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="saitou")
-            elif char_id == CHAR_RIFLE:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="rifleman")
-            elif char_id == CHAR_KABUKI:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="okuni")
-            elif char_id == CHAR_ARCHER:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="tomoe")
-            elif char_id == CHAR_PIRATE:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="pirate")
-            elif char_id == CHAR_MUSKETEER:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="musketeer")
+            # Fundo escuro circular e anel de contorno da cor do combatente ou seleção
+            ring_color = border_color if (is_p1 or is_p2) else char_info["color"]
+            pygame.draw.circle(surface, (16, 22, 19), (portrait_cx, portrait_cy), 27)
+            pygame.draw.circle(surface, ring_color, (portrait_cx, portrait_cy), 27, 2)
+
+            portrait_surf = get_portrait(char_id, size=portrait_size, circular=True)
+            if portrait_surf is not None:
+                surface.blit(portrait_surf, (portrait_x, portrait_y))
+            else:
+                cam = PreviewCamera(portrait_cx, portrait_cy + 15)
+                if char_id == CHAR_KENSHIN:
+                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="kenshin")
+                elif char_id == CHAR_MUSASHI:
+                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="musashi")
+                elif char_id == CHAR_NINJA:
+                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="yellow_ninja", extra_props={"has_kunai": True})
+                elif char_id == CHAR_AMERICAN:
+                    render_voxel_humanoid(surface, cam, -0.20, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="american_ninja")
+                    render_voxel_doberman(surface, cam, 0.35, -0.10, 0, 1.0, 0.0, "IDLE", 0.0, True)
+                elif char_id == CHAR_GRAY:
+                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="kasumi")
+                elif char_id == CHAR_PURPLE:
+                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="murasaki")
+                elif char_id == CHAR_SAITOU:
+                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="saitou")
+                elif char_id == CHAR_RIFLE:
+                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="rifleman")
+                elif char_id == CHAR_KABUKI:
+                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="okuni")
+                elif char_id == CHAR_ARCHER:
+                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="tomoe")
+                elif char_id == CHAR_PIRATE:
+                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="pirate")
+                elif char_id == CHAR_MUSKETEER:
+                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="musketeer")
 
             # Nome, Título e Estilo ao lado do Retrato
-            text_left = rect.x + 55
+            text_left = rect.x + 68
             name_surf = font_mid.render(char_info["name"], True, char_info["color"])
-            surface.blit(name_surf, (text_left, rect.y + 6))
+            surface.blit(name_surf, (text_left, rect.y + 8))
 
             title_s = font_small.render(char_info["title"], True, (185, 195, 190))
-            surface.blit(title_s, (text_left, rect.y + 28))
+            surface.blit(title_s, (text_left, rect.y + 30))
 
             style_s = font_small.render(char_info["style"], True, COLOR_WHITE)
-            surface.blit(style_s, (text_left, rect.y + 46))
+            surface.blit(style_s, (text_left, rect.y + 48))
 
             # Linha divisória sutil
             sep_y = rect.y + 70
@@ -485,8 +563,18 @@ class CharacterSelectScreen:
             q_surf = font_mid.render("?", True, COLOR_GOLD)
             surface.blit(q_surf, (info_btn.centerx - q_surf.get_width() // 2, info_btn.centery - q_surf.get_height() // 2))
 
-        # Guia de Navegação e Controles
+        # Guia de Navegação e Controles (Teclado, Gamepad e Touch)
+        from src.input.controller_manager import get_controller_manager
+        ctrl_mgr = get_controller_manager()
+        badge = ctrl_mgr.get_badge_text(0)
+
         guide_text = t("guide_nav")
+        if badge:
+            ctrl = ctrl_mgr.get_controller_for_player(0)
+            btn_start = ctrl.get_button_glyph("confirm") if ctrl else "A"
+            btn_ai = ctrl.get_button_glyph("cancel") if ctrl else "B"
+            guide_text += f" | {badge}: D-Pad = Mover | [{btn_start}] = Iniciar | [{btn_ai}] = IA"
+
         guide_surf = font_small.render(guide_text, True, (210, 225, 220))
         surface.blit(guide_surf, (SCREEN_WIDTH // 2 - guide_surf.get_width() // 2, SCREEN_HEIGHT - 94))
 

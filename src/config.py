@@ -182,3 +182,9 @@ DEFAULT_CONTROLS = {
     "P2_PARRY": KEY_P2_PARRY,
 }
 
+# Configurações de Controles Touch e Gamepad
+TOUCH_MODE_AUTO = "auto"
+TOUCH_MODE_ALWAYS = "always"
+TOUCH_MODE_OFF = "off"
+DEFAULT_TOUCH_MODE = TOUCH_MODE_AUTO
+
