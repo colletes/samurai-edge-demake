@@ -555,10 +555,69 @@ def test_complete_roster():
     assert get_lang() != curr
     cs_screen.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_l))
     assert get_lang() == curr
-    print("Teste 17: Localização i18n Bilíngue Boardbots, Rolagem Vertical Anti-Overflow e Filtros de Seção OK!")
+    # 18. Testar Pipeline de Sprites HD-2D (Kenshi e Murasaki)
+    from src.isometric.hd2d_renderer import HD2DSpriteRenderer
+    assert HD2DSpriteRenderer.has_sprite("kenshin") is True
+    assert HD2DSpriteRenderer.has_sprite("murasaki") is True
+    assert HD2DSpriteRenderer.has_sprite("musashi") is False  # Outros combatentes mantêm fallback Voxel
+
+    # Testar carregamento de frames e canais RGBA para ambas as direções
+    for c_key in ("kenshi", "murasaki"):
+        for f_name in (
+            "front_idle", "front_attack", "front_walk_0", "front_walk_1", "front_walk_2", "front_walk_3",
+            "back_idle", "back_attack", "back_walk_0", "back_walk_1", "back_walk_2", "back_walk_3",
+            "idle", "attack", "recovery", "stunned", "dead"
+        ):
+            frame = HD2DSpriteRenderer.load_frame(c_key, f_name)
+            assert frame is not None, f"Frame {f_name} de {c_key} não foi carregado!"
+            assert frame.get_width() > 0 and frame.get_height() > 0
+
+    # Testar renderização de Kenshi em batalha (IDLE, ATTACK e SHUKUCHI Zanzou)
+    kenshi = RedSamurai(wx=10.0, wy=11.0)
+    kenshi.render(screen, camera)
+
+    kenshi.state = "ATTACK"
+    kenshi.render(screen, camera)
+
+    kenshi.trigger_dash(1.0, 0.0)
+    kenshi.render(screen, camera)
+
+    # Testar renderização de Murasaki (IDLE, ATTACK e STUNNED) com flip horizontal
+    murasaki = PurpleNinja(wx=12.0, wy=11.0)
+    murasaki.facing_x = -1.0 # Encarando à esquerda (deve espelhar)
+    murasaki.render(screen, camera)
+
+    murasaki.state = "ATTACK"
+    murasaki.render(screen, camera)
+
+    murasaki.state = "STUNNED"
+    murasaki.render(screen, camera)
+
+    # Testar renderização nos 4 Quadrantes Isométricos para ambos os guerreiros
+    for q_name, (fx, fy) in [
+        ("SE (Frente-Dir)", (1.0, 0.0)),
+        ("SW (Frente-Esq)", (0.0, 1.0)),
+        ("NE (Costas-Dir)", (0.0, -1.0)),
+        ("NW (Costas-Esq)", (-1.0, 0.0)),
+    ]:
+        kenshi.facing_x, kenshi.facing_y = fx, fy
+        murasaki.facing_x, murasaki.facing_y = fx, fy
+        # Modo caminhada com frames alternados
+        for cycle in (0.0, 0.15, 0.30, 0.45):
+            kenshi.walk_cycle = cycle
+            kenshi.is_moving = True
+            murasaki.walk_cycle = cycle
+            murasaki.is_moving = True
+            kenshi.render(screen, camera)
+            murasaki.render(screen, camera)
+
+    # Testar exibição da badge HD-2D na CharacterSelectScreen
+    cs_screen.render(screen, pygame.font.Font(None, 36), font_test, pygame.font.Font(None, 16))
+
+    print("Teste 18: Renderização e Animação de Sprites HD-2D para Kenshi e Murasaki (4 Direções, Walk Cycle 4-Frames, Ancoragem e Fallback) OK!")
 
     print("\n=======================================================")
-    print("TODOS OS 17 TESTES DE SISTEMA PASSARAM COM 100% DE SUCESSO!")
+    print("TODOS OS 18 TESTES DE SISTEMA PASSARAM COM 100% DE SUCESSO!")
     print("=======================================================\n")
     pygame.quit()
 

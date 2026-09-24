@@ -188,3 +188,8 @@ TOUCH_MODE_ALWAYS = "always"
 TOUCH_MODE_OFF = "off"
 DEFAULT_TOUCH_MODE = TOUCH_MODE_AUTO
 
+# Configurações do Modo Visual HD-2D (Sprites 2.5D com Billboards e Sombras)
+ENABLE_HD2D_SPRITES = True
+HD2D_SPRITE_TARGET_HEIGHT = 76
+HD2D_SHADOW_COLOR = (10, 14, 12, 130)
+

@@ -525,6 +525,14 @@ class CharacterSelectScreen:
             name_surf = font_mid.render(char_info["name"], True, char_info["color"])
             surface.blit(name_surf, (text_left, rect.y + 8))
 
+            from src.isometric.hd2d_renderer import HD2DSpriteRenderer
+            if HD2DSpriteRenderer.has_sprite(char_id):
+                hd_badge = font_small.render("HD-2D", True, (120, 230, 255))
+                badge_bg = pygame.Rect(text_left + name_surf.get_width() + 6, rect.y + 11, hd_badge.get_width() + 6, 15)
+                pygame.draw.rect(surface, (20, 45, 55), badge_bg, border_radius=3)
+                pygame.draw.rect(surface, (80, 190, 220), badge_bg, 1, border_radius=3)
+                surface.blit(hd_badge, (badge_bg.x + 3, badge_bg.y + 1))
+
             title_s = font_small.render(char_info["title"], True, (185, 195, 190))
             surface.blit(title_s, (text_left, rect.y + 30))
 

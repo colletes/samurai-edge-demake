@@ -14,6 +14,7 @@ from src.entities.samurai import (
 )
 from src.entities.projectile import KusarigamaChainEntity
 from src.entities.voxel_models import render_voxel_humanoid
+from src.isometric.hd2d_renderer import HD2DSpriteRenderer
 
 class PurpleNinja(Samurai):
     def __init__(self, wx: float, wy: float):
@@ -127,18 +128,22 @@ class PurpleNinja(Samurai):
                 self.state = STATE_IDLE
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza o Ninja Roxo no autêntico estilo Voxel 3D Isométrico."""
+        """Renderiza Murasaki em Sprite HD-2D ou no estilo Voxel 3D fallback."""
         if self.is_hidden:
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
-        render_voxel_humanoid(
-            surface, camera,
-            self.wx, self.wy, self.wz,
-            self.facing_x, self.facing_y,
-            self.state, self.state_timer, self.is_alive,
-            char_type="purple",
-            walk_timer=self.walk_cycle,
-            alpha=self.alpha,
-            is_moving=self.is_moving
+        hd2d_rendered = HD2DSpriteRenderer.render_fighter(
+            surface, camera, self, "murasaki", alpha=self.alpha
         )
+        if not hd2d_rendered:
+            render_voxel_humanoid(
+                surface, camera,
+                self.wx, self.wy, self.wz,
+                self.facing_x, self.facing_y,
+                self.state, self.state_timer, self.is_alive,
+                char_type="purple",
+                walk_timer=self.walk_cycle,
+                alpha=self.alpha,
+                is_moving=self.is_moving
+            )

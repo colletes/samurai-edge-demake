@@ -15,6 +15,7 @@ from src.entities.samurai import (
 )
 from src.entities.voxel_models import render_voxel_humanoid
 from src.isometric.iso_math import world_to_iso
+from src.isometric.hd2d_renderer import HD2DSpriteRenderer
 
 class RedSamurai(Samurai):
     def __init__(self, wx: float, wy: float):
@@ -234,27 +235,42 @@ class RedSamurai(Samurai):
         if hasattr(self, "zanzou_ghosts"):
             for g in self.zanzou_ghosts:
                 if g["alpha"] > 20:
-                    render_voxel_humanoid(
-                        surface, camera,
-                        g["wx"], g["wy"], self.wz,
-                        g["facing_x"], g["facing_y"],
-                        "IDLE", 0.0, True,
-                        char_type="kenshin",
-                        alpha=g["alpha"]
-                    )
+                    if HD2DSpriteRenderer.has_sprite("kenshin"):
+                        HD2DSpriteRenderer.render_fighter(
+                            surface, camera, self, "kenshin",
+                            alpha=g["alpha"],
+                            custom_wx=g["wx"], custom_wy=g["wy"],
+                            custom_state="IDLE",
+                            custom_facing_x=g["facing_x"],
+                            custom_facing_y=g.get("facing_y", self.facing_y)
+                        )
+                    else:
+                        render_voxel_humanoid(
+                            surface, camera,
+                            g["wx"], g["wy"], self.wz,
+                            g["facing_x"], g["facing_y"],
+                            "IDLE", 0.0, True,
+                            char_type="kenshin",
+                            alpha=g["alpha"]
+                        )
 
         # Indicador de stealth (camuflagem no bambuzal)
         if self.is_hidden:
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
-        render_voxel_humanoid(
-            surface, camera,
-            self.wx, self.wy, self.wz,
-            self.facing_x, self.facing_y,
-            self.state, self.state_timer, self.is_alive,
-            char_type="kenshin",
-            walk_timer=self.walk_cycle,
-            alpha=self.alpha,
-            is_moving=self.is_moving
+        # Renderização do combatente: HD-2D ou Voxel 3D fallback
+        hd2d_rendered = HD2DSpriteRenderer.render_fighter(
+            surface, camera, self, "kenshin", alpha=self.alpha
         )
+        if not hd2d_rendered:
+            render_voxel_humanoid(
+                surface, camera,
+                self.wx, self.wy, self.wz,
+                self.facing_x, self.facing_y,
+                self.state, self.state_timer, self.is_alive,
+                char_type="kenshin",
+                walk_timer=self.walk_cycle,
+                alpha=self.alpha,
+                is_moving=self.is_moving
+            )
