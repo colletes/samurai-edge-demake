@@ -94,15 +94,15 @@ class VoxelCorpse:
             dx, dy = 1.0, 0.0
 
         if self.death_style == "KENSHIN_SPLIT":
-            # 1. Kenshin: Tronco superior escorrega diagonalmente e tomba
-            # Metade Inferior (Pernas + cintura)
+            # 1. Kenshi Split: Tronco superior escorrega diagonalmente e tomba
+            # Metade Inferior (Pernas articuladas + cintura)
             self.bottom_half = VoxelCorpsePiece(
-                self.wx, self.wy, 0.0, 0.44, 0.32, 0.45, self.col_pants,
+                self.wx, self.wy, 0.0, 0.30, 0.22, 0.52, self.col_pants,
                 vx=0.0, vy=0.0, vz=0.0, piece_type="bottom"
             )
             # Metade Superior (Tronco superior + cabeça cortados em ângulo)
             self.top_half = VoxelCorpsePiece(
-                self.wx, self.wy, 0.48, 0.42, 0.30, 0.45, self.col_torso,
+                self.wx, self.wy, 0.52, 0.28, 0.20, 0.50, self.col_torso,
                 vx=dx * 2.8, vy=dy * 2.8, vz=1.8, rot_speed=90.0, piece_type="top"
             )
             self.pieces.extend([self.bottom_half, self.top_half])
@@ -110,11 +110,11 @@ class VoxelCorpse:
         elif self.death_style in ("MURASAKI_DECAP", "CLEAN_DECAP"):
             # 2. Murasaki: Decapitação limpa com a cabeça saltando no ar e rolando
             self.headless_body = VoxelCorpsePiece(
-                self.wx, self.wy, 0.0, 0.42, 0.32, 0.70, self.col_torso,
+                self.wx, self.wy, 0.0, 0.28, 0.22, 0.85, self.col_torso,
                 vx=0.0, vy=0.0, vz=0.0, piece_type="body"
             )
             self.severed_head = VoxelCorpsePiece(
-                self.wx, self.wy, 0.75, 0.24, 0.24, 0.22, self.col_hair,
+                self.wx, self.wy, 0.90, 0.16, 0.16, 0.16, self.col_hair,
                 vx=dx * 2.2 + random.uniform(-0.5, 0.5), vy=dy * 2.2 + random.uniform(-0.5, 0.5),
                 vz=3.8, rot_speed=320.0, piece_type="head"
             )

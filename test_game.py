@@ -152,11 +152,12 @@ def test_complete_roster():
     assert bomb_suicide.is_alive == False, "Segunda explosão deve abater Kasumi!"
     print("Teste 3: Kasumi Bomba em Arco 3D (Limite de 2, Auto-Dano com 50% Blast Armor) OK!")
 
-    # 4. Testar Rifleman (Teppo): Início Descarregado, Coleta de Pólvora no Chão, Coronhada e Salto Evasivo
+    # 4. Testar Rifleman (Teppo): Início Carregado, Coleta de Pólvora no Chão, Coronhada e Salto Evasivo
     projectiles.clear()
     rifleman = Rifleman(wx=6.0, wy=11.0)
     samurai_target = BlueSamurai(wx=11.0, wy=11.0)
-    assert rifleman.has_ammo == False, "Teppo deve começar descarregado!"
+    assert rifleman.has_ammo == True, "Teppo deve começar municiado!"
+    rifleman.has_ammo = False
 
     # Criação de um PowderPouch na posição do Teppo
     pouch = PowderPouch(wx=6.0, wy=11.0)
@@ -242,21 +243,15 @@ def test_complete_roster():
     assert attacker.state == "STUNNED", "Atacante que golpear o manequim deve sofrer Whiff Stun!"
     print("Teste 5: Okuni (Leques de Aço Tessen-jutsu & Finta Teatral Kawarimi com Whiff Stun) OK!")
 
-    # 6. Testar Kyudo Archer: Windup Bow Draw fatal e Cancelamento com Flecha de Corda
+    # 6. Testar Kyudo Archer: Disparo Imediato sem Windup e Flecha de Corda sem Cooldown
     projectiles.clear()
     archer = KyudoArcher(wx=6.0, wy=11.0)
     archer_target = RedSamurai(wx=12.0, wy=11.0)
 
-    # Disparo regular: entra em windup de retesamento
+    # Disparo imediato (mira manual sem windup)
     archer.trigger_bow_draw(archer_target.wx, archer_target.wy, projectiles)
-    assert archer.state == "BOW_DRAW"
-    assert archer.draw_timer > 0.0
-
-    # Atualizar tempo até disparo da flecha mortal
-    for _ in range(30):
-        archer.update(0.016, game_map, projectiles=projectiles)
-    assert archer.state != "BOW_DRAW"
-    assert len(projectiles) == 1  # Flecha Yumi disparada!
+    assert len(projectiles) == 1  # Flecha Yumi disparada imediatamente!
+    assert archer.draw_duration == 0.0
     arrow = projectiles[0]
     arrow.wx = archer_target.wx
     arrow.wy = archer_target.wy
@@ -264,17 +259,15 @@ def test_complete_roster():
     assert winner == "P1_WINS"
     assert archer_target.is_alive == False
 
-    # Testar cancelamento de windup com Flecha de Corda
+    # Testar Flecha de Corda sem cooldown
     projectiles.clear()
     archer2 = KyudoArcher(wx=5.0, wy=5.0)
-    archer2.trigger_bow_draw(10.0, 5.0, projectiles)
-    assert archer2.state == "BOW_DRAW"
+    assert archer2.rope_cooldown == 0.0
     archer2.trigger_rope_arrow(12.0, 5.0, projectiles)
-    assert archer2.state != "BOW_DRAW"  # Windup cancelado!
     assert len(projectiles) == 1
     rope = projectiles[0]
     assert rope.is_active == True
-    print("Teste 6: Kyudo Archer (Windup Yumi 1-Hit Kill e Cancelamento com Flecha de Corda) OK!")
+    print("Teste 6: Kyudo Archer (Disparo Yumi Imediato e Flecha de Corda sem Cooldown) OK!")
 
     # 7. Testar Spawns Aleatórios com Distância Mínima >= 7.0 tiles
     for _ in range(25):
@@ -339,10 +332,10 @@ def test_complete_roster():
     initial_wx = anne.wx
     anne.trigger_gunpowder_blind(target_dummy.wx, target_dummy.wy, opponent=target_dummy, particles=particles)
     assert anne.state == "RECOVERY"
-    assert anne.wx < initial_wx  # Recuou esquivando
+    assert anne.wx > initial_wx  # Avançou agressivamente fechando a distância
     assert target_dummy.state == "STUNNED"  # Alvo cegado/atordoado!
     assert target_dummy.slow_timer > 0.0    # Desacelerado pela pólvora!
-    print("Teste 11: Espadachim Pirata Anne (Cutlass Cleave 180° e Cegar com Pólvora) OK!")
+    print("Teste 11: Espadachim Pirata Anne (Cutlass Cleave 180° e Avanço com Pólvora) OK!")
 
     # 12. Testar Julie (Mosqueteira): Fleche Thrust de Longo Alcance e Cloak Riposte
     julie = Musketeer(wx=10.0, wy=10.0)
@@ -385,15 +378,25 @@ def test_complete_roster():
     assert corpse.top_half.wz <= 0.15 or corpse.top_half.is_grounded == True
     print("Teste 13: Diretor Cinematográfico (Hitstop Freeze, Kurosawa Flash e Voxel Corpse Slicing) OK!")
 
-    # 14. Testar Seleção Direta de IA, Kunai Snipe e Teppo Melee Render
-    # A. Seleção da IA diretamente com Setas no modo vs_ai
+    # 14. Testar Seleção Sequencial P1 -> IA no modo vs_ai
+    # A. No modo vs_ai, P2 (setas) fica desativado. P1 escolhe P1 primeiro e depois a IA.
     cs_test = CharacterSelectScreen()
     assert cs_test.vs_ai == True
-    cs_test.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_d))
-    assert cs_test.p1_choice_idx == 1  # Musashi
+    assert cs_test.selection_step == "P1"
+    # P2 tenta mover com setas, mas não deve alterar nada
     cs_test.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN))
-    assert cs_test.p2_choice_idx == 7  # Kasumi (IA) selecionada diretamente!
-    assert cs_test.p1_choice_idx == 1  # P1 inalterado!
+    assert cs_test.p2_choice_idx == 1  # Permanece inalterado
+
+    # P1 move com D (Musashi) e confirma escolha do P1
+    cs_test.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_d))
+    assert cs_test.p1_choice_idx == 1
+    cs_test.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE))
+    assert cs_test.selection_step == "AI"
+
+    # Agora P1 navega para a IA (ex: S para baixo na grade: 1 + 6 = 7 Kasumi)
+    cs_test.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_s))
+    assert cs_test.p2_choice_idx == 7  # Kasumi (IA) selecionada pelo P1!
+    assert cs_test.p1_choice_idx == 1  # P1 permanece intacto!
 
     # B. Render de coronhada de Teppo sem UnboundLocalError
     teppo_melee = Rifleman(wx=10.0, wy=10.0)
@@ -557,8 +560,142 @@ def test_complete_roster():
     assert get_lang() == curr
     print("Teste 17: Localização i18n Bilíngue Boardbots, Rolagem Vertical Anti-Overflow e Filtros de Seção OK!")
 
+    # 18. Testar Tela de Título Sumi-E & Seletor de Modos
+    from src.ui.title_screen import SumieTitleScreen, MODE_ARCADE, MODE_VERSUS, MODE_OPTIONS
+    title_screen = SumieTitleScreen()
+    assert title_screen.selected_mode == MODE_VERSUS  # Versus é o padrão
+
+    # Navegar para Arcade (Cima / W)
+    title_screen.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_UP))
+    assert title_screen.selected_mode == MODE_ARCADE
+    # Tentar confirmar Arcade -> Deve bloquear e retornar None, ativando notice_timer
+    res_arcade = title_screen.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+    assert res_arcade is None
+    assert title_screen.notice_timer > 0.0
+
+    # Navegar para Versus e confirmar
+    title_screen.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN))
+    assert title_screen.selected_mode == MODE_VERSUS
+    res_vs = title_screen.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+    assert res_vs == "VERSUS"
+
+    # Navegar para Options e confirmar
+    title_screen.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN))
+    assert title_screen.selected_mode == MODE_OPTIONS
+    res_opt = title_screen.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+    assert res_opt == "OPTIONS"
+
+    # Atualizar e renderizar Title Screen sem erros
+    title_screen.update(0.016)
+    title_screen.render(screen, pygame.font.Font(None, 48), font_test, pygame.font.Font(None, 20))
+    print("Teste 18: Tela de Título Sumi-E (Seletor Arcade/Versus/Options, Partículas de Cinzas e Bloqueios) OK!")
+
+    # 19. Testar Tela de Seleção de Arena
+    from src.ui.arena_select import ArenaSelectScreen
+    from src.config import ARENA_BAMBOO, ARENA_KYOTO, ARENA_RANDOM
+    arena_sel = ArenaSelectScreen()
+    assert arena_sel.selected_idx == 1  # Kyoto selecionado inicialmente
+    assert arena_sel.get_resolved_arena_id() == ARENA_KYOTO
+
+    # Navegar para a esquerda -> Floresta de Bambu
+    arena_sel.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LEFT))
+    assert arena_sel.selected_idx == 0
+    assert arena_sel.get_resolved_arena_id() == ARENA_BAMBOO
+
+    # Navegar para a direita duas vezes -> Aleatório
+    arena_sel.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT))
+    arena_sel.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT))
+    assert arena_sel.selected_idx == 2
+    rand_res = arena_sel.get_resolved_arena_id()
+    assert rand_res in (ARENA_BAMBOO, ARENA_KYOTO)
+
+    # Testar tecla ESC voltando
+    esc_res = arena_sel.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE))
+    assert esc_res == "BACK"
+
+    # Atualizar e renderizar Arena Select Screen
+    arena_sel.update(0.016)
+    arena_sel.render(screen, pygame.font.Font(None, 48), font_test, pygame.font.Font(None, 20))
+    print("Teste 19: Tela de Seleção de Arena (Cards, Prévias Gráficas, Resolução Random e Navegação) OK!")
+
+    # 20. Testar Arena Kyoto Bakumatsu (Voxel 3D, Carruagens Assassinas e Escombros Flamejantes)
+    from src.world.kyoto_map import KyotoMap, RunawayCarriage, FallingDebris
+    from main import get_kyoto_arena_spawns
+
+    kyoto = KyotoMap()
+    assert kyoto.cols == 22 and kyoto.rows == 22
+    assert len(kyoto.buildings) > 0  # Fachadas machiya geradas
+
+    # Testar spawns seguros na avenida central
+    sp1, sp2 = get_kyoto_arena_spawns(kyoto, min_distance=7.0)
+    assert math.hypot(sp1[0] - sp2[0], sp1[1] - sp2[1]) >= 7.0
+    assert kyoto.is_water(sp1[0], sp1[1]) is False
+
+    # Testar colisão fatal da Carruagem Desgovernada Voxel
+    cinematic_director = CinematicDirector()
+    dummy_p1 = RedSamurai(wx=10.0, wy=10.0)
+    dummy_p2 = BlueSamurai(wx=18.0, wy=18.0)
+    carriage = RunawayCarriage(start_pos=(8.0, 10.0), end_pos=(20.0, 10.0), speed=14.0)
+    carriage.warning_timer = 0.0  # Ativa imediatamente
+    c_particles = []
+    c_banners = []
+
+    # Verificar atropelamento letal do P1
+    hit_carriage = carriage.check_fighter_hit(dummy_p1, c_particles, c_banners, camera, cinematic_director)
+    assert hit_carriage is True
+    assert dummy_p1.is_alive is False
+    assert len(c_banners) > 0
+
+    # Testar queda e impacto letal dos Escombros Flamejantes
+    debris = FallingDebris(target_x=18.0, target_y=18.0)
+    debris.timer = debris.warning_duration + 0.1  # Avança fase de telegrafia
+    debris.wz = 0.1  # Quase tocando o chão
+    d_particles = []
+    d_banners = []
+
+    # Atualizar escombro para tocar o solo em cima de dummy_p2
+    debris.update(0.05, camera, d_particles, [dummy_p1, dummy_p2], d_banners, cinematic_director)
+    assert debris.has_impacted is True
+    assert dummy_p2.is_alive is False
+    assert len(d_banners) > 0
+
+    # Testar renderização de terreno e objetos da Arena Kyoto
+    kyoto.render_terrain(screen, camera, 1.0)
+    for b in kyoto.buildings:
+        b.render(screen, camera, 1.0)
+    carriage.render(screen, camera)
+    debris.render(screen, camera)
+
+    print("Teste 20: Arena Kyoto Bakumatsu (Avenida Espaçosa, Mobilidade Total, Carruagens Letais e Escombros Voxel) OK!")
+
+    # 21. Testar Nome Kenshi, Pólvora Condicional e Portraits Conceituais de Arena
+    kenshi_fighter = RedSamurai(wx=5.0, wy=5.0)
+    assert kenshi_fighter.name == "Kenshi", f"Nome do lutador deve ser Kenshi, obtido: {kenshi_fighter.name}"
+    
+    from src.config import DEFAULT_CONTROLS
+    from src.ui.settings_menu import SettingsMenu
+    settings_menu = SettingsMenu(DEFAULT_CONTROLS)
+    kenshi_labels = [label for key, label, col in settings_menu.items if "Kenshi" in label]
+    assert len(kenshi_labels) >= 6, f"Esperado ao menos 6 itens remapeáveis de Kenshi, encontrados: {len(kenshi_labels)}"
+    kenshin_labels = [label for key, label, col in settings_menu.items if "Kenshin" in label]
+    assert len(kenshin_labels) == 0, f"Nenhuma string deve conter 'Kenshin' no SettingsMenu! Encontradas: {kenshin_labels}"
+
+    # Pólvora condicional: SEM teppo = lista vazia
+    pouches_no_teppo = PowderPouch.create_arena_pouches(game_map, [kenshi_fighter, dummy_p2], total_pouches=3)
+    assert len(pouches_no_teppo) == 0, "Sem combatente de arma de fogo, não deve gerar saquinhos de pólvora!"
+
+    # Pólvora condicional: COM teppo = 3 saquinhos
+    pouches_with_teppo = PowderPouch.create_arena_pouches(game_map, [kenshi_fighter, rifleman], total_pouches=3)
+    assert len(pouches_with_teppo) == 3, "Com Teppo presente, deve gerar a quantidade correta de pólvora!"
+
+    # Portraits Conceituais da Seleção de Arena
+    assert arena_sel.preview_surfs.get(ARENA_BAMBOO) is not None, "Portrait da Floresta de Bambu deve estar carregado!"
+    assert arena_sel.preview_surfs.get(ARENA_KYOTO) is not None, "Portrait de Kyoto Bakumatsu deve estar carregado!"
+    assert arena_sel.preview_surfs.get(ARENA_RANDOM) is not None, "Portrait da Arena Aleatória deve estar carregado!"
+    print("Teste 21: Ajustes de Nome Kenshi, Pólvora Condicional e Portraits Conceituais de Arena OK!")
+
     print("\n=======================================================")
-    print("TODOS OS 17 TESTES DE SISTEMA PASSARAM COM 100% DE SUCESSO!")
+    print("TODOS OS 21 TESTES DE SISTEMA PASSARAM COM 100% DE SUCESSO!")
     print("=======================================================\n")
     pygame.quit()
 

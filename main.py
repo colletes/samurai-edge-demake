@@ -1,6 +1,6 @@
 """
 Ponto de entrada principal: Duelo de Samurais Isométrico 2.5D.
-Suporte à Seleção de Personagens: Kenshin (Vermelho), Musashi (Azul) e Ninja Hanzo (Amarelo).
+Suporte à Seleção de Personagens: Kenshi (Vermelho), Musashi (Azul) e Ninja Hanzo (Amarelo).
 """
 import sys
 import math
@@ -14,11 +14,13 @@ from src.config import (
     CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
     COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA, COLOR_SAITOU_AURA,
     COLOR_RIFLE_AURA, COLOR_KABUKI_AURA, COLOR_ARCHER_AURA,
-    COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA
+    COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA,
+    ARENA_BAMBOO, ARENA_KYOTO, ARENA_RANDOM, COLOR_KYOTO_BG
 )
 from src.isometric.iso_math import input_to_world_direction
 from src.isometric.camera import Camera
 from src.world.map_data import GameMap
+from src.world.kyoto_map import KyotoMap
 from src.entities.red_samurai import RedSamurai
 from src.entities.blue_samurai import BlueSamurai
 from src.entities.yellow_ninja import YellowNinja
@@ -38,11 +40,15 @@ from src.effects.particles import AmbientLeafParticle
 from src.effects.cinematic_director import CinematicDirector
 from src.ui.settings_menu import SettingsMenu, format_key_name
 from src.ui.character_select import CharacterSelectScreen
+from src.ui.title_screen import SumieTitleScreen
+from src.ui.arena_select import ArenaSelectScreen
 from src.i18n import t
 from src.input import get_controller_manager, TouchControls, DisplayScaler
 
 # Estados Globais do Jogo
+STATE_TITLE = "TITLE"
 STATE_CHAR_SELECT = "SELECT"
+STATE_ARENA_SELECT = "ARENA_SELECT"
 STATE_DUEL_PLAYING = "PLAYING"
 
 def create_fighter(char_id: str, wx: float, wy: float):
@@ -234,6 +240,22 @@ def get_random_arena_spawns(game_map, min_distance: float = 7.0) -> tuple[tuple[
     # Fallback garantido: extremidades norte e sul da ponte de madeira (distância = 8.0 tiles)
     return (10.5, 7.0), (10.5, 15.0)
 
+def get_kyoto_arena_spawns(game_map, min_distance: float = 7.0) -> tuple[tuple[float, float], tuple[float, float]]:
+    """
+    Gera duas posições de spawn equilibradas na rua estreita diagonal de Kyoto (wx entre 9.5 e 11.5)
+    com distância mínima garantida (>= min_distance).
+    """
+    for _ in range(150):
+        wx1 = round(random.uniform(9.5, 11.5), 1)
+        wy1 = round(random.uniform(4.0, game_map.rows - 4.0), 1)
+
+        for _ in range(30):
+            wx2 = round(random.uniform(9.5, 11.5), 1)
+            wy2 = round(random.uniform(4.0, game_map.rows - 4.0), 1)
+            if math.hypot(wx1 - wx2, wy1 - wy2) >= min_distance:
+                return (wx1, wy1), (wx2, wy2)
+    return (10.5, 6.0), (10.5, 15.0)
+
 def run_game():
     pygame.init()
     pygame.font.init()
@@ -250,12 +272,15 @@ def run_game():
     touch_controls = TouchControls()
     scaler = DisplayScaler(SCREEN_WIDTH, SCREEN_HEIGHT)
 
-    # Menus
+    # Menus e Telas
     controls = dict(DEFAULT_CONTROLS)
     settings_menu = SettingsMenu(controls, touch_controls=touch_controls)
+    title_screen = SumieTitleScreen()
     char_select_screen = CharacterSelectScreen()
+    arena_select_screen = ArenaSelectScreen()
 
-    game_state = STATE_CHAR_SELECT
+    game_state = STATE_TITLE
+    selected_arena_id = ARENA_KYOTO
 
     # Dados da Partida
     p1_char_id = CHAR_KENSHIN
@@ -285,8 +310,13 @@ def run_game():
 
     def start_new_match():
         nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, round_winner, round_start_timer, powder_pouches, decoys
-        game_map = GameMap()
-        (p1_wx, p1_wy), (p2_wx, p2_wy) = get_random_arena_spawns(game_map, min_distance=7.0)
+        if selected_arena_id == ARENA_KYOTO:
+            game_map = KyotoMap()
+            (p1_wx, p1_wy), (p2_wx, p2_wy) = get_kyoto_arena_spawns(game_map, min_distance=7.0)
+        else:
+            game_map = GameMap()
+            (p1_wx, p1_wy), (p2_wx, p2_wy) = get_random_arena_spawns(game_map, min_distance=7.0)
+
         p1 = create_fighter(p1_char_id, wx=p1_wx, wy=p1_wy)
         p2 = create_fighter(p2_char_id, wx=p2_wx, wy=p2_wy)
         p1.set_facing(p2.wx, p2.wy)
@@ -308,6 +338,43 @@ def run_game():
         dt = min(dt, 0.05)
 
         # -------------------------------------------------------------
+        # TELA DE TÍTULO SUMI-E & SELETOR DE MODOS
+        # -------------------------------------------------------------
+        if game_state == STATE_TITLE:
+            if settings_menu.is_open:
+                for event in pygame.event.get():
+                    ctrl_mgr.handle_event(event)
+                    if event.type == pygame.QUIT:
+                        running = False
+                    else:
+                        settings_menu.handle_event(event)
+                settings_menu.update(dt)
+                title_screen.render(screen, font_large, font_mid, font_small)
+                settings_menu.render(screen, font_large, font_mid, font_small)
+                pygame.display.flip()
+                continue
+
+            for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    running = False
+                else:
+                    action = title_screen.handle_event(event)
+                    if action == "VERSUS":
+                        game_state = STATE_CHAR_SELECT
+                    elif action == "OPTIONS":
+                        settings_menu.open()
+                    elif action == "QUIT":
+                        running = False
+
+            title_screen.update(dt)
+            title_screen.render(screen, font_large, font_mid, font_small)
+            pygame.display.flip()
+            continue
+
+        # -------------------------------------------------------------
         # TELA DE SELEÇÃO DE PERSONAGENS
         # -------------------------------------------------------------
         if game_state == STATE_CHAR_SELECT:
@@ -316,16 +383,39 @@ def run_game():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    running = False
+                    game_state = STATE_TITLE
                 else:
                     start_match = char_select_screen.handle_event(event)
-                    if start_match:
+                    if start_match == "BACK":
+                        game_state = STATE_TITLE
+                    elif start_match:
                         p1_char_id, p2_char_id, vs_ai_mode = char_select_screen.get_selected_characters()
-                        start_new_match()
-                        game_state = STATE_DUEL_PLAYING
+                        game_state = STATE_ARENA_SELECT
 
             char_select_screen.update(dt)
             char_select_screen.render(screen, font_large, font_mid, font_small)
+            pygame.display.flip()
+            continue
+
+        # -------------------------------------------------------------
+        # TELA DE SELEÇÃO DE ARENA
+        # -------------------------------------------------------------
+        if game_state == STATE_ARENA_SELECT:
+            for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
+                if event.type == pygame.QUIT:
+                    running = False
+                else:
+                    arena_choice = arena_select_screen.handle_event(event)
+                    if arena_choice == "BACK":
+                        game_state = STATE_CHAR_SELECT
+                    elif arena_choice in (ARENA_BAMBOO, ARENA_KYOTO):
+                        selected_arena_id = arena_choice
+                        start_new_match()
+                        game_state = STATE_DUEL_PLAYING
+
+            arena_select_screen.update(dt)
+            arena_select_screen.render(screen, font_large, font_mid, font_small)
             pygame.display.flip()
             continue
 
@@ -383,7 +473,7 @@ def run_game():
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    game_state = STATE_CHAR_SELECT
+                    game_state = STATE_ARENA_SELECT
                 elif event.key == KEY_SETTINGS:
                     settings_menu.open()
                 elif event.key == KEY_RESTART:
@@ -410,13 +500,13 @@ def run_game():
                         execute_fighter_dash(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, opponent=p1)
 
             elif event.type == pygame.JOYBUTTONDOWN:
-                if ctrl_mgr.is_event_action(event, 0, "menu"):
+                if ctrl_mgr.is_event_menu_pause(event, 0) or ctrl_mgr.is_event_action(event, 0, "menu"):
                     settings_menu.open()
                 elif ctrl_mgr.is_event_action(event, 0, "restart"):
                     if round_winner is not None:
                         start_new_match()
                     else:
-                        game_state = STATE_CHAR_SELECT
+                        game_state = STATE_ARENA_SELECT
                 elif p1.is_alive and round_winner is None:
                     if ctrl_mgr.is_event_action(event, 0, "attack"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
@@ -427,7 +517,9 @@ def run_game():
 
                 # Gamepad Jogador 2
                 if not vs_ai_mode and p2.is_alive and round_winner is None:
-                    if ctrl_mgr.is_event_action(event, 1, "attack"):
+                    if ctrl_mgr.is_event_menu_pause(event, 1) or ctrl_mgr.is_event_action(event, 1, "menu"):
+                        settings_menu.open()
+                    elif ctrl_mgr.is_event_action(event, 1, "attack"):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
                         execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles)
                     elif ctrl_mgr.is_event_action(event, 1, "dash"):
@@ -444,13 +536,13 @@ def run_game():
                         settings_menu.open()
                     select_btn_rect = pygame.Rect(25, 20, 160, 32)
                     if select_btn_rect.collidepoint(mx, my):
-                        game_state = STATE_CHAR_SELECT
+                        game_state = STATE_ARENA_SELECT
 
         # Comandos de Ação Touchscreen
         if touch_controls.is_menu_requested():
             settings_menu.open()
         if touch_controls.is_select_requested():
-            game_state = STATE_CHAR_SELECT
+            game_state = STATE_ARENA_SELECT
 
         if p1.is_alive and round_winner is None:
             if touch_controls.is_attack_just_pressed():
@@ -504,6 +596,23 @@ def run_game():
 
         # Atualizações dos combatentes e coletáveis
         if not is_cinematic_freeze:
+            # Atualização de perigos da Arena de Kyoto (Carruagens e Escombros)
+            if isinstance(game_map, KyotoMap):
+                game_map.update(dt, [p1, p2], camera, particles, banners, cinematic_director)
+                if round_winner is None:
+                    if not p1.is_alive and p2.is_alive:
+                        round_winner = "P2_WINS"
+                        score_p2 += 1
+                        ctrl_mgr.rumble_player(0, 0.7, 1.0, 260)
+                        ctrl_mgr.rumble_player(1, 0.7, 1.0, 260)
+                    elif not p2.is_alive and p1.is_alive:
+                        round_winner = "P1_WINS"
+                        score_p1 += 1
+                        ctrl_mgr.rumble_player(0, 0.7, 1.0, 260)
+                        ctrl_mgr.rumble_player(1, 0.7, 1.0, 260)
+                    elif not p1.is_alive and not p2.is_alive:
+                        round_winner = "DRAW"
+
             for pouch in powder_pouches:
                 pouch.update(dt, game_map, particles)
             for f in (p1, p2):
@@ -545,7 +654,8 @@ def run_game():
         # -------------------------------------------------------------
         # RENDERIZAÇÃO COM Y-SORTING
         # -------------------------------------------------------------
-        screen.fill(COLOR_BG)
+        bg_col = COLOR_KYOTO_BG if isinstance(game_map, KyotoMap) else COLOR_BG
+        screen.fill(bg_col)
         game_map.render_terrain(screen, camera, game_time)
 
         render_queue = []
@@ -557,6 +667,22 @@ def run_game():
             render_queue.append((game_map.well.wx + game_map.well.wy, 'well', game_map.well))
         for tree in game_map.trees:
             render_queue.append((tree.wx + tree.wy, 'tree', tree))
+
+        # Adicionar elementos exclusivos da Arena de Kyoto
+        if hasattr(game_map, 'buildings'):
+            for b in game_map.buildings:
+                render_queue.append((b.wx + b.wy + b.depth * 0.5, 'building', b))
+        if hasattr(game_map, 'lanterns'):
+            for l in game_map.lanterns:
+                render_queue.append((l.wx + l.wy, 'lantern', l))
+        if hasattr(game_map, 'carriages'):
+            for c in game_map.carriages:
+                if c.is_active and c.warning_timer <= 0:
+                    render_queue.append((c.wx + c.wy, 'carriage', c))
+        if hasattr(game_map, 'falling_debris'):
+            for d in game_map.falling_debris:
+                if d.is_active:
+                    render_queue.append((d.target_x + d.target_y, 'debris', d))
 
         render_queue.append((p1.wx + p1.wy, 'fighter', p1))
         render_queue.append((p2.wx + p2.wy, 'fighter', p2))
@@ -593,6 +719,14 @@ def run_game():
                 obj.render(screen, camera, game_time)
             elif item_type in ('rock', 'well', 'tree'):
                 obj.render(screen, camera)
+            elif item_type == 'building':
+                obj.render(screen, camera, game_time)
+            elif item_type == 'lantern':
+                obj.render(screen, camera, game_time)
+            elif item_type == 'carriage':
+                obj.render(screen, camera)
+            elif item_type == 'debris':
+                obj.render(screen, camera)
             elif item_type == 'fighter':
                 obj.render(screen, camera)
             elif item_type == 'dog':
@@ -601,7 +735,6 @@ def run_game():
                 obj.render(screen, camera)
             elif item_type == 'pouch':
                 obj.render(screen, camera, font_small)
-
             elif item_type == 'decoy':
                 obj.render(screen, camera)
             elif item_type == 'projectile':
@@ -713,9 +846,10 @@ def run_game():
         if ctrl_mgr.has_controller(0):
             badge1 = ctrl_mgr.get_badge_text(0)
             ctrl1 = ctrl_mgr.get_controller_for_player(0)
-            btn_atk1 = ctrl1.get_button_glyph("attack") if ctrl1 else "A"
-            btn_sec1 = ctrl1.get_button_glyph("dash") if ctrl1 else "B"
-            c1 = font_small.render(f"{badge1} P1: Stick | [{btn_atk1}] = {p1_a1} | [{btn_sec1}] = {p1_a2}", True, (245, 205, 205))
+            btn_atk1 = ctrl1.get_button_glyph("attack") if ctrl1 else "▢"
+            btn_sec1 = ctrl1.get_button_glyph("dash") if ctrl1 else "✕"
+            btn_menu1 = ctrl1.get_button_glyph("menu") if ctrl1 else "Options"
+            c1 = font_small.render(f"{badge1} P1: Stick | [{btn_atk1}] = {p1_a1} | [{btn_sec1}] = {p1_a2} | [{btn_menu1}] = Menu", True, (245, 205, 205))
         elif touch_controls.is_visible:
             c1 = font_small.render(f"[TOUCH] P1 ({p1_name}): Joy = Mover | [ATK] = {p1_a1} | [DASH] = {p1_a2}", True, (245, 205, 205))
         else:
@@ -725,9 +859,10 @@ def run_game():
         if not vs_ai_mode and ctrl_mgr.has_controller(1):
             badge2 = ctrl_mgr.get_badge_text(1)
             ctrl2 = ctrl_mgr.get_controller_for_player(1)
-            btn_atk2 = ctrl2.get_button_glyph("attack") if ctrl2 else "A"
-            btn_sec2 = ctrl2.get_button_glyph("dash") if ctrl2 else "B"
-            c2 = font_small.render(f"{badge2} P2: Stick | [{btn_atk2}] = {p2_a1} | [{btn_sec2}] = {p2_a2}", True, (205, 225, 245))
+            btn_atk2 = ctrl2.get_button_glyph("attack") if ctrl2 else "▢"
+            btn_sec2 = ctrl2.get_button_glyph("dash") if ctrl2 else "✕"
+            btn_menu2 = ctrl2.get_button_glyph("menu") if ctrl2 else "Options"
+            c2 = font_small.render(f"{badge2} P2: Stick | [{btn_atk2}] = {p2_a1} | [{btn_sec2}] = {p2_a2} | [{btn_menu2}] = Menu", True, (205, 225, 245))
         else:
             c2 = font_small.render(f"P2 ({p2_name}): {t('arrows_label')} | {m_atk} = {p2_a1} | {m_sec} = {p2_a2}", True, (205, 225, 245))
 

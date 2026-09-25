@@ -22,3 +22,6 @@ dist/
 # Mobile build artifacts
 .buildozer/
 bin/
+
+# Scratch & temporary scripts
+scratch/

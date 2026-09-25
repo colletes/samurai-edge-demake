@@ -37,16 +37,17 @@ class SettingsMenu:
         self.waiting_for_key_action = None  # Nome da ação sendo remapeada (ex: "P1_ATTACK")
         self.selected_index = 0
         self.blink_timer = 0.0
+        self._axis_y_held = False
 
         # Definição dos itens remapeáveis
         self.items = [
-            # Jogador 1 (Kenshin)
-            ("P1_UP", "Kenshin Mover Cima", "red"),
-            ("P1_DOWN", "Kenshin Mover Baixo", "red"),
-            ("P1_LEFT", "Kenshin Mover Esquerda", "red"),
-            ("P1_RIGHT", "Kenshin Mover Direita", "red"),
-            ("P1_ATTACK", "Kenshin Iai Flash Slash", "red"),
-            ("P1_DASH", "Kenshin Dash / Esquiva", "red"),
+            # Jogador 1 (Kenshi)
+            ("P1_UP", "Kenshi Mover Cima", "red"),
+            ("P1_DOWN", "Kenshi Mover Baixo", "red"),
+            ("P1_LEFT", "Kenshi Mover Esquerda", "red"),
+            ("P1_RIGHT", "Kenshi Mover Direita", "red"),
+            ("P1_ATTACK", "Kenshi Iai Flash Slash", "red"),
+            ("P1_DASH", "Kenshi Dash / Esquiva", "red"),
 
             # Jogador 2 (Musashi)
             ("P2_UP", "Musashi Mover Cima", "blue"),
@@ -89,7 +90,10 @@ class SettingsMenu:
         if not self.is_open:
             return False
 
-        # Se estiver esperando uma nova tecla para remapear
+        from src.input.controller_manager import get_controller_manager
+        ctrl_mgr = get_controller_manager()
+
+        # Se estiver esperando uma nova tecla/botão para remapear
         if self.waiting_for_key_action is not None:
             if event.type == pygame.KEYDOWN:
                 # Cancelar remapeamento se for ESC
@@ -99,6 +103,13 @@ class SettingsMenu:
                     self.controls[self.waiting_for_key_action] = event.key
                     self.waiting_for_key_action = None
                 return True
+            elif event.type == pygame.JOYBUTTONDOWN:
+                # Remapear ação no controle correspondente (P1 ou P2)
+                act_name = "attack" if "ATTACK" in self.waiting_for_key_action else ("dash" if ("DASH" in self.waiting_for_key_action or "PARRY" in self.waiting_for_key_action) else "attack")
+                p_idx = 1 if "P2" in self.waiting_for_key_action else 0
+                ctrl_mgr.remap_action(p_idx, act_name, event.button)
+                self.waiting_for_key_action = None
+                return True
             elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.FINGERDOWN):
                 # Cancelar espera ao clicar fora
                 self.waiting_for_key_action = None
@@ -107,14 +118,14 @@ class SettingsMenu:
 
         # Suporte a Gamepad no menu de configurações
         if event.type == pygame.JOYBUTTONDOWN:
-            if event.button in (0, 6): # A / Start confirma ou remapeia
+            if ctrl_mgr.is_event_menu_confirm(event) or event.button in (0, 1):
                 action_key, _, _ = self.items[self.selected_index]
                 self.waiting_for_key_action = action_key
                 return True
-            elif event.button == 1: # B fecha o menu
+            elif ctrl_mgr.is_event_menu_cancel(event) or ctrl_mgr.is_event_menu_pause(event) or event.button in (2, 6, 9):
                 self.close()
                 return True
-            elif event.button == 2: # X alterna modo touch
+            elif event.button in (3, 4):
                 self.cycle_touch_mode()
                 return True
 
@@ -124,6 +135,17 @@ class SettingsMenu:
                 self.selected_index = (self.selected_index - 1) % len(self.items)
             elif hy < 0:
                 self.selected_index = (self.selected_index + 1) % len(self.items)
+
+        elif event.type == pygame.JOYAXISMOTION:
+            if event.axis == 1:
+                if event.value > 0.65 and not self._axis_y_held:
+                    self.selected_index = (self.selected_index + 1) % len(self.items)
+                    self._axis_y_held = True
+                elif event.value < -0.65 and not self._axis_y_held:
+                    self.selected_index = (self.selected_index - 1) % len(self.items)
+                    self._axis_y_held = True
+                elif abs(event.value) < 0.25:
+                    self._axis_y_held = False
 
         # Suporte a Touchscreen
         elif event.type == pygame.FINGERDOWN:
@@ -321,5 +343,5 @@ class SettingsMenu:
         close_rect = pygame.Rect(SCREEN_WIDTH // 2 - 130, panel_y + panel_h - 60, 260, 36)
         pygame.draw.rect(surface, (45, 62, 52), close_rect, border_radius=6)
         pygame.draw.rect(surface, COLOR_GOLD, close_rect, 2, border_radius=6)
-        cls_surf = font_mid.render("VOLTAR AO JOGO (ESC / B)", True, COLOR_GOLD)
+        cls_surf = font_mid.render("VOLTAR AO JOGO (ESC / ○ / Options)", True, COLOR_GOLD)
         surface.blit(cls_surf, (close_rect.centerx - cls_surf.get_width() // 2, close_rect.y + 8))

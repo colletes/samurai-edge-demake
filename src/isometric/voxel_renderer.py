@@ -138,3 +138,117 @@ def draw_voxel_model(surface: pygame.Surface, camera, base_wx: float, base_wy: f
             dx, dy, dz,
             color, outline, alpha
         )
+
+
+def draw_oriented_voxel_box(
+    surface: pygame.Surface,
+    camera,
+    ox: float, oy: float, oz: float,
+    dir_x: float, dir_y: float, dir_z: float,
+    length: float, width: float, height: float,
+    color: tuple,
+    up_x: float = 0.0, up_y: float = 0.0, up_z: float = 1.0,
+    outline: bool = True,
+    alpha: int = 255
+):
+    """
+    Desenha um paralelepípedo de voxel 3D orientado no espaço ao longo de (dir_x, dir_y, dir_z).
+    Permite lâminas diagonais, membros flexionados em qualquer ângulo 3D com iluminação correta
+    e back-face culling para máxima performance.
+    """
+    # Normalizar vetor forward (direção do comprimento)
+    f_len = math.hypot(dir_x, dir_y, dir_z)
+    if f_len < 0.0001:
+        dir_x, dir_y, dir_z = 1.0, 0.0, 0.0
+    else:
+        dir_x /= f_len; dir_y /= f_len; dir_z /= f_len
+
+    # Vetor Up ortogonalizado (Gram-Schmidt)
+    dot = up_x * dir_x + up_y * dir_y + up_z * dir_z
+    ux = up_x - dot * dir_x
+    uy = up_y - dot * dir_y
+    uz = up_z - dot * dir_z
+    u_len = math.hypot(ux, uy, uz)
+    if u_len < 0.0001:
+        ux, uy, uz = (0.0, 1.0, 0.0) if abs(dir_z) > 0.9 else (0.0, 0.0, 1.0)
+        dot = ux * dir_x + uy * dir_y + uz * dir_z
+        ux -= dot * dir_x; uy -= dot * dir_y; uz -= dot * dir_z
+        u_len = math.hypot(ux, uy, uz)
+    ux /= u_len; uy /= u_len; uz /= u_len
+
+    # Vetor Right (Dir x Up)
+    rx = dir_y * uz - dir_z * uy
+    ry = dir_z * ux - dir_x * uz
+    rz = dir_x * uy - dir_y * ux
+
+    hw = width * 0.5
+    hh = height * 0.5
+
+    # 8 vértices no espaço 3D (do início ao fim ao longo do vetor dir)
+    verts = []
+    for k in (0.0, length):
+        for j in (-hh, hh):
+            for i in (-hw, hw):
+                vx = ox + dir_x * k + rx * i + ux * j
+                vy = oy + dir_y * k + ry * i + uy * j
+                vz = oz + dir_z * k + rz * i + uz * j
+                verts.append((vx, vy, vz))
+
+    # Projeção dos 8 vértices para tela
+    screen_pts = [camera.apply(v[0], v[1], v[2]) for v in verts]
+
+    # As 6 faces definidas pelos índices com orientação de enrolamento
+    faces = [
+        ([4, 5, 7, 6], (dir_x, dir_y, dir_z)),
+        ([1, 0, 2, 3], (-dir_x, -dir_y, -dir_z)),
+        ([2, 3, 7, 6], (ux, uy, uz)),
+        ([0, 1, 5, 4], (-ux, -uy, -uz)),
+        ([1, 3, 7, 5], (rx, ry, rz)),
+        ([0, 2, 6, 4], (-rx, -ry, -rz))
+    ]
+
+    top_shade, left_shade, right_shade, outline_shade = get_voxel_shades(color)
+
+    # Iluminação direcional (Sol superior esquerdo)
+    sun_x, sun_y, sun_z = 0.2, -0.4, 0.9
+    s_norm = math.hypot(sun_x, sun_y, sun_z)
+    sun_x /= s_norm; sun_y /= s_norm; sun_z /= s_norm
+
+    for idxs, normal in faces:
+        p0 = screen_pts[idxs[0]]
+        p1 = screen_pts[idxs[1]]
+        p2 = screen_pts[idxs[2]]
+        p3 = screen_pts[idxs[3]]
+
+        # Back-face culling na tela 2D
+        cross_2d = (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0])
+        if cross_2d <= 0:
+            continue
+
+        ndotl = normal[0] * sun_x + normal[1] * sun_y + normal[2] * sun_z
+        if ndotl > 0.45:
+            face_color = top_shade
+        elif ndotl > -0.15:
+            face_color = left_shade
+        else:
+            face_color = right_shade
+
+        poly = [p0, p1, p2, p3]
+        if alpha < 255:
+            min_x = min(p[0] for p in poly)
+            max_x = max(p[0] for p in poly)
+            min_y = min(p[1] for p in poly)
+            max_y = max(p[1] for p in poly)
+            bw = max(2, max_x - min_x + 2)
+            bh = max(2, max_y - min_y + 2)
+            f_surf = pygame.Surface((bw, bh), pygame.SRCALPHA)
+            loc_poly = [(p[0] - min_x, p[1] - min_y) for p in poly]
+            pygame.draw.polygon(f_surf, (*face_color, alpha), loc_poly)
+            if outline:
+                pygame.draw.polygon(f_surf, (*outline_shade, alpha), loc_poly, 1)
+            surface.blit(f_surf, (min_x, min_y))
+        else:
+            pygame.draw.polygon(surface, face_color, poly)
+            if outline:
+                pygame.draw.polygon(surface, outline_shade, poly, 1)
+

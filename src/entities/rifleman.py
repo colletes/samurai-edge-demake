@@ -25,8 +25,8 @@ class Rifleman(Samurai):
         self.speed = 4.3  # Velocidade ágil para caçar pólvora na arena
 
         # Mecânica de Munição e Pólvora
-        self.has_ammo = False          # Inicia DESCARREGADO (requer coletar chifre de pólvora na arena)
-        self.cocking_timer = 0.0       # Breve engatilhamento ao coletar (0.3s)
+        self.has_ammo = True           # Inicia CARREGADO com munição
+        self.cocking_timer = 0.0
         self.reload_time = 0.0
         self.is_reloading = False
         self.reload_progress = 0.0

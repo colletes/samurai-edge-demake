@@ -30,15 +30,19 @@ class PurpleNinja(Samurai):
         self.chain_cooldown = 2.0
         self.chain_timer = 0.0
 
-        # Timers da animação de ataque
-        self.windup_time = 0.07
+        # Timers da animação de ataque (windup reduzido para 0.04s para resposta fulminante)
+        self.windup_time = 0.04
         self.active_time = 0.14
         self.recovery_time = 0.28
 
+        # Giro Protetor de Corrente (deflete projéteis)
+        self.chain_spin_timer = 0.0
+        self.is_spinning_chain = False
+
     def trigger_kama_strike(self, target_wx: float, target_wy: float):
         """
-        Ataque Primário: Golpe rápido de foice de alcance bem curto (0.7m),
-        mas com PRECEDÊNCIA ABSOLUTA sobre qualquer outro ataque.
+        Ataque Primário: Golpe rápido de foice de alcance ampliado (1.15m),
+        com PRECEDÊNCIA ABSOLUTA sobre qualquer outro ataque.
         """
         if not self.can_move() or self.kama_timer > 0:
             return
@@ -53,15 +57,15 @@ class PurpleNinja(Samurai):
         self.vx = self.facing_x * 4.5
         self.vy = self.facing_y * 4.5
 
-        # Hitbox curta calibrada
+        # Hitbox calibrada para 1.15m de alcance
         self.hitbox_active = False
-        self.hitbox_center = (self.wx + self.facing_x * 0.70, self.wy + self.facing_y * 0.70)
-        self.hitbox_radius = 0.90  # Alcance ampliado para 0.90 para consistência tática
+        self.hitbox_center = (self.wx + self.facing_x * 0.80, self.wy + self.facing_y * 0.80)
+        self.hitbox_radius = 1.15
 
     def trigger_kusarigama_pull(self, target_wx: float, target_wy: float, projectiles: list):
         """
-        Ataque Secundário / Especial: Arremessa a corrente com peso de ferro para engatar
-        e puxar o adversário para perto. O adversário permanece livre para agir/atacar.
+        Ataque Secundário / Especial: Gira o peso da corrente criando um vórtice protetor
+        que repele projéteis e arremessa o gancho para puxar o adversário.
         """
         if not self.can_move() or self.chain_timer > 0:
             return
@@ -70,6 +74,10 @@ class PurpleNinja(Samurai):
         self.chain_timer = self.chain_cooldown
         self.state = STATE_RECOVERY
         self.state_timer = 0.18
+
+        # Ativa o giro protetor de corrente por 0.40s
+        self.chain_spin_timer = 0.40
+        self.is_spinning_chain = True
 
         # Spawn da corrente saindo das mãos
         chain = KusarigamaChainEntity(
@@ -86,9 +94,16 @@ class PurpleNinja(Samurai):
         if not self.is_alive:
             self.hitbox_active = False
             self.is_priority_strike = False
+            self.is_spinning_chain = False
             return
 
         self.update_stealth(game_map)
+
+        if self.chain_spin_timer > 0:
+            self.chain_spin_timer -= dt
+            self.is_spinning_chain = (self.chain_spin_timer > 0)
+        else:
+            self.is_spinning_chain = False
 
         if self.kama_timer > 0:
             self.kama_timer -= dt
@@ -97,14 +112,14 @@ class PurpleNinja(Samurai):
 
         if self.state == STATE_ATTACK:
             self.state_timer += dt
-            # Fase 1: Windup curto
+            # Fase 1: Windup ultra-curto (0.04s)
             if self.state_timer < self.windup_time:
                 self.hitbox_active = False
-            # Fase 2: Lâmina ativa com precedência
+            # Fase 2: Lâmina ativa com precedência absoluta (1.15m de alcance)
             elif self.state_timer < (self.windup_time + self.active_time):
                 self.hitbox_active = True
                 self.is_priority_strike = True
-                self.hitbox_center = (self.wx + self.facing_x * 0.65, self.wy + self.facing_y * 0.65)
+                self.hitbox_center = (self.wx + self.facing_x * 0.80, self.wy + self.facing_y * 0.80)
             # Fase 3: Recovery
             elif self.state_timer < (self.windup_time + self.active_time + self.recovery_time):
                 self.hitbox_active = False
@@ -122,15 +137,22 @@ class PurpleNinja(Samurai):
         elif self.state == STATE_STUNNED:
             self.hitbox_active = False
             self.is_priority_strike = False
+            self.is_spinning_chain = False
             self.state_timer -= dt
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza o Ninja Roxo no autêntico estilo Voxel 3D Isométrico."""
+        """Renderiza o Ninja Roxo no autêntico estilo Voxel 3D Isométrico com vórtice de corrente."""
         if self.is_hidden:
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
+
+        if self.is_spinning_chain and self.is_alive:
+            # Efeito visual do giro protetor de corrente
+            sx, sy = camera.apply(self.wx, self.wy, 0.4)
+            pygame.draw.circle(surface, COLOR_CHAIN, (sx, sy), 22, 2)
+            pygame.draw.circle(surface, COLOR_PURPLE_AURA, (sx, sy), 16, 1)
 
         render_voxel_humanoid(
             surface, camera,

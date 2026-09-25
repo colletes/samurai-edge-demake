@@ -72,9 +72,9 @@ FIGHTERS_GUIDE_DATA = [
             "keys_p1": "[E] Iai Flash (Attack)",
             "keys_p2": "[R] Shukuchi Dash (Special)",
             "conceito": (
-                "Inspired by Bakumatsu Battojutsu masters. Kenshin is a purist duelist betting everything "
-                "on supreme quick-draw speed straight from the scabbard. His style relies on lightning "
-                "anticipation and flawless spatial reading of his opponent."
+                "Inspired by Bakumatsu Battojutsu masters. Kenshi is a purist duelist betting everything "
+                "on supreme quick-draw speed straight from the scabbard. Her style relies on lightning "
+                "anticipation and flawless spatial reading of her opponent."
             ),
             "habilidades": (
                 "• Iai Flash [E]: Lightning forward draw. Instant 1-Hit Kill that even cuts bamboo stalks.\n"
@@ -86,9 +86,9 @@ FIGHTERS_GUIDE_DATA = [
                 "• Cut bamboo groves during your charge to clear ambush routes and open angles."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Kenshin: Immediately after Iai Flash, Kenshin enters the Noto (resheathing) "
-                "recovery, leaving him 100% defenseless for a split second. If he whiffs, strike instantly! "
-                "Keep solid obstacles like rocks between you and his direct charge line."
+                "• How to defeat Kenshi: Immediately after Iai Flash, Kenshi enters the Noto (resheathing) "
+                "recovery, leaving her 100% defenseless for a split second. If she whiffs, strike instantly! "
+                "Keep solid obstacles like rocks between you and her direct charge line."
             )
         }
     },

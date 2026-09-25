@@ -462,7 +462,7 @@ class MusketBulletProjectile:
         self.dir_x = dir_x
         self.dir_y = dir_y
         self.owner = owner
-        speed = 24.0
+        speed = 18.5  # Velocidade calibrada (era 24.0) para permitir reação e esquiva tática
         self.vx = dir_x * speed
         self.vy = dir_y * speed
         self.is_active = True

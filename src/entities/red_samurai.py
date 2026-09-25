@@ -1,5 +1,5 @@
 """
-Samurai Vermelho (Kenshin): Mestre do Iai-jutsu.
+Samurai Vermelho (Kenshi): Mestre do Iai-jutsu.
 Ataque relâmpago de saque instantâneo com avanço veloz,
 mas com alto tempo de recuperação (recovery) após o golpe.
 """
@@ -18,7 +18,7 @@ from src.isometric.iso_math import world_to_iso
 
 class RedSamurai(Samurai):
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, name="Kenshin")
+        super().__init__(wx, wy, name="Kenshi")
         self.char_type = "kenshin"
         self.speed = 5.4  # Agilidade máxima do retalhador
 

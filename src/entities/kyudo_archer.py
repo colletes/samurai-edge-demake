@@ -27,45 +27,53 @@ class KyudoArcher(Samurai):
         self.char_type = "tomoe"
         self.speed = 4.2
 
-        # Mecânica de Disparo com Yumi
-        self.draw_duration = 0.42     # Windup para puxar a corda do arco
+        # Mecânica de Disparo com Yumi (Mira Manual - Sem Windup)
+        self.draw_duration = 0.0
         self.draw_timer = 0.0
         self.target_aim_x = 0.0
         self.target_aim_y = 0.0
 
-        # Cooldown da Flecha de Corda
-        self.rope_cooldown = 2.4
+        # Cooldown da Flecha de Corda (Removido: 0.0s)
+        self.rope_cooldown = 0.0
         self.rope_timer = 0.0
 
     def can_act(self) -> bool:
         return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD)
 
-    def trigger_bow_draw(self, target_wx: float, target_wy: float, projectiles: list = None):
-        """Ataque Primário: Inicia o retesamento do arco (windup)."""
+    def trigger_bow_draw(self, target_wx: float, target_wy: float, projectiles: list = None, particles: list = None):
+        """Ataque Primário: Disparo imediato da flecha Yumi sem windup (mira manual)."""
         if not self.can_act():
             return
 
         self.set_facing(target_wx, target_wy)
         self.target_aim_x = target_wx
         self.target_aim_y = target_wy
-        self.state = STATE_BOW_DRAW
-        self.draw_timer = self.draw_duration
-        if projectiles is not None:
-            self.projectiles_ref = projectiles
+        self.state = STATE_RECOVERY
+        self.state_timer = 0.20
+
+        proj_list = projectiles if projectiles is not None else getattr(self, "projectiles_ref", None)
+        if proj_list is not None:
+            bx = self.wx + self.facing_x * 0.65
+            by = self.wy + self.facing_y * 0.65
+            arrow = KyudoArrowProjectile(bx, by, wz=0.55, dir_x=self.facing_x, dir_y=self.facing_y, owner=self)
+            proj_list.append(arrow)
+
+        if particles is not None:
+            for _ in range(8):
+                particles.append(SparkParticle(self.wx + self.facing_x * 0.6, self.wy + self.facing_y * 0.6, 0.4))
 
     def trigger_rope_arrow(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None):
         """
         Ação Secundária: Flecha de Corda (Rope Arrow).
-        Cancela o arco imediatamente se estiver em windup e se desloca até o ponto cravado.
+        Sem cooldown: dispara corda e se desloca velozmente.
         """
-        if not self.is_alive or self.rope_timer > 0:
+        if not self.is_alive:
             return
 
-        # Cancela windup do arco
         self.set_facing(target_wx, target_wy)
-        self.rope_timer = self.rope_cooldown
+        self.rope_timer = 0.0
         self.state = STATE_RECOVERY
-        self.state_timer = 0.15
+        self.state_timer = 0.12
 
         bx = self.wx + self.facing_x * 0.5
         by = self.wy + self.facing_y * 0.5

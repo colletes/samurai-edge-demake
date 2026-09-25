@@ -12,7 +12,7 @@ from src.isometric.iso_math import world_to_iso
 
 class SparkParticle:
     """Faíscas geradas quando uma espada atinge pedras ou em choque de lâminas (clash/parry)."""
-    def __init__(self, wx: float, wy: float, wz: float = 0.5):
+    def __init__(self, wx: float, wy: float, wz: float = 0.5, color: tuple | None = None):
         self.wx = wx
         self.wy = wy
         self.wz = wz
@@ -23,7 +23,7 @@ class SparkParticle:
         self.vz = random.uniform(2.0, 5.5)
         self.lifetime = random.uniform(0.25, 0.45)
         self.age = 0.0
-        self.color = random.choice([COLOR_GOLD, COLOR_WHITE, (255, 240, 150), (255, 140, 40)])
+        self.color = color if color is not None else random.choice([COLOR_GOLD, COLOR_WHITE, (255, 240, 150), (255, 140, 40)])
         self.size = random.choice([2, 3])
 
     def update(self, dt: float) -> bool:

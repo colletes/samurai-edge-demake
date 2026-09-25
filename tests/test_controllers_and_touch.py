@@ -26,6 +26,8 @@ from src.input.controller_manager import (
     ACTION_ATTACK,
     ACTION_DASH,
     ACTION_MENU,
+    ACTION_CONFIRM,
+    ACTION_CANCEL,
     ControllerManager,
     ControllerDevice
 )
@@ -104,8 +106,10 @@ def test_controller_glyphs():
 
     dev_xbox = ControllerDevice(MockJoystick())
     assert dev_xbox.controller_type == CONTROLLER_TYPE_XBOX
-    assert dev_xbox.get_button_glyph(ACTION_ATTACK) == "A"
-    assert dev_xbox.get_button_glyph(ACTION_DASH) == "B"
+    assert dev_xbox.get_button_glyph(ACTION_ATTACK) == "X"
+    assert dev_xbox.get_button_glyph(ACTION_DASH) == "A"
+    assert dev_xbox.get_button_glyph(ACTION_CONFIRM) == "A"
+    assert dev_xbox.get_button_glyph(ACTION_CANCEL) == "B"
 
     # DualSense
     class MockPS5Joystick:
@@ -115,21 +119,20 @@ def test_controller_glyphs():
 
     dev_ps5 = ControllerDevice(MockPS5Joystick())
     assert dev_ps5.controller_type == CONTROLLER_TYPE_DUALSENSE
-    assert dev_ps5.get_button_glyph(ACTION_ATTACK) == "✕"
-    assert dev_ps5.get_button_glyph(ACTION_DASH) == "○"
+    assert dev_ps5.get_button_glyph(ACTION_ATTACK) == "▢"
+    assert dev_ps5.get_button_glyph(ACTION_DASH) == "✕"
+    assert dev_ps5.get_button_glyph(ACTION_CONFIRM) == "✕"
+    assert dev_ps5.get_button_glyph(ACTION_CANCEL) == "○"
+    assert dev_ps5.get_button_glyph(ACTION_MENU) == "Options"
 
-    # Genérico
-    class MockGenericJoystick:
-        def get_instance_id(self): return 3
-        def get_name(self): return "Generic USB Gamepad"
-        def get_guid(self): return "12345"
+    # Verificação de Ações Pressionadas para PS5 (Raw e SDL GameController)
+    assert dev_ps5.is_action_pressed(0, ACTION_ATTACK) # Quadrado
+    assert dev_ps5.is_action_pressed(1, ACTION_DASH)   # ✕
+    assert dev_ps5.is_action_pressed(1, ACTION_CONFIRM)
+    assert dev_ps5.is_action_pressed(2, ACTION_CANCEL)  # ○
+    assert dev_ps5.is_action_pressed(9, ACTION_MENU)    # Options
 
-    dev_gen = ControllerDevice(MockGenericJoystick())
-    assert dev_gen.controller_type == CONTROLLER_TYPE_GENERIC
-    assert dev_gen.get_button_glyph(ACTION_ATTACK) == "1"
-    assert dev_gen.get_button_glyph(ACTION_DASH) == "2"
-
-    print("Teste 2: Mapeamento de Glifos Visuais contextuais (A/B vs ✕/○ vs 1/2) OK!")
+    print("Teste 2: Mapeamento de Glifos Visuais contextuais e ações padronizadas OK!")
 
 def test_virtual_joystick():
     joy = VirtualJoystick(base_x=160, base_y=570, radius=80, knob_radius=36)
@@ -258,14 +261,23 @@ def test_combat_execution_helpers():
     execute_fighter_dash(kenshin2, aim_x, aim_y, 1.0, 0.0, projectiles, particles, decoys)
     assert kenshin2.state == "SHUKUCHI"
 
-    # Teste de Recarga contínua do Rifleman
+    # Teste do Rifleman iniciando carregado
     teppo = Rifleman(10.0, 10.0)
+    assert teppo.has_ammo is True
     teppo.has_ammo = False
     teppo.powder_level = 0.0
     teppo.trigger_reload_hold()
     assert teppo.is_reloading
 
-    print("Teste 7: Execução unificada de ataques, dash e mira direcional integrada OK!")
+    # Teste de Tomoe (disparo instantâneo sem windup e corda sem cooldown)
+    from src.entities.kyudo_archer import KyudoArcher
+    tomoe = KyudoArcher(10.0, 10.0)
+    assert tomoe.draw_duration == 0.0
+    assert tomoe.rope_cooldown == 0.0
+    tomoe.trigger_bow_draw(15.0, 10.0, projectiles)
+    assert len(projectiles) > 0 # Flecha disparada imediatamente
+
+    print("Teste 7: Execução unificada de ataques, dash, mira manual e ajustes Tomoe/Teppo OK!")
 
 def run_all_tests():
     pygame.init()

@@ -188,3 +188,25 @@ TOUCH_MODE_ALWAYS = "always"
 TOUCH_MODE_OFF = "off"
 DEFAULT_TOUCH_MODE = TOUCH_MODE_AUTO
 
+# Constantes de Arenas
+ARENA_BAMBOO = "bamboo"
+ARENA_KYOTO = "kyoto"
+ARENA_RANDOM = "random"
+
+# Cores da Arena Kyoto Bakumatsu (Noite de Guerra Civil)
+COLOR_KYOTO_BG = (18, 12, 14)               # Noite em brasas
+COLOR_KYOTO_STONE = (64, 62, 66)            # Ladrilhos de pedra da rua
+COLOR_KYOTO_STONE_LIGHT = (82, 80, 85)      # Destaque de lajes
+COLOR_KYOTO_STONE_DARK = (44, 42, 46)       # Junta de pedras
+COLOR_KYOTO_CURB = (50, 48, 52)             # Meio-fio da calçada
+COLOR_KYOTO_PAVEMENT = (48, 44, 46)         # Calçada de pedra
+COLOR_KYOTO_WOOD_BURNT = (30, 24, 22)       # Madeira carbonizada de machiya
+COLOR_KYOTO_WOOD_DARK = (52, 38, 28)        # Madeira escura machiya
+COLOR_KYOTO_ROOF_TILE = (40, 42, 46)        # Telhas pretas kawara
+COLOR_KYOTO_FIRE_CORE = (255, 235, 120)     # Núcleo da chama
+COLOR_KYOTO_FIRE_MID = (255, 130, 30)       # Corpo do fogo
+COLOR_KYOTO_FIRE_EDGE = (210, 40, 20)       # Borda avermelhada do fogo
+COLOR_KYOTO_EMBER = (255, 80, 20)           # Brasas incandescentes
+COLOR_KYOTO_CARRIAGE_WOOD = (58, 38, 26)    # Madeira da carruagem
+COLOR_KYOTO_CARRIAGE_GOLD = (200, 150, 45)  # Detalhes dourados carruagem
+COLOR_KYOTO_HORSE_DARK = (36, 26, 22)       # Cavalo negro/marrom

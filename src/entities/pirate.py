@@ -19,7 +19,7 @@ class PirateSwordswoman(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Anne")
         self.char_type = "pirate"
-        self.speed = 4.3
+        self.speed = 4.9  # Velocidade ágil e agressiva de bucaneira (era 4.3)
 
         # Mecânica do Alfanje (Corte Amplo em Meia-Lua)
         self.cleave_cooldown = 0.40
@@ -64,9 +64,9 @@ class PirateSwordswoman(Samurai):
         cloud_x = self.wx + self.facing_x * 0.9
         cloud_y = self.wy + self.facing_y * 0.9
 
-        # Recuo ágil da pirata
-        self.wx -= self.facing_x * 0.5
-        self.wy -= self.facing_y * 0.5
+        # Avanço frontal agressivo da pirata em direção ao alvo cego
+        self.wx += self.facing_x * 0.60
+        self.wy += self.facing_y * 0.60
 
         # Se o oponente estiver perto, fica atordoado e lento pela pólvora abrasiva nos olhos!
         if opponent is not None:

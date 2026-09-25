@@ -28,8 +28,12 @@ class YellowNinja(Samurai):
         self.thrust_step = 0.0
 
     def trigger_thrust_attack(self, target_wx: float, target_wy: float):
-        """Ataque Melee Padrão: Estocada rápida com a kunai (causa 1 de dano)."""
-        if not self.can_move() or not self.has_kunai:
+        """
+        Ataque Melee Padrão: Estocada rápida com Tanto / Kunai.
+        Mesmo se a Kunai foi arremessada, Hanzo empunha sua adaga Tanto reserva
+        para combate corpo a corpo letal.
+        """
+        if not self.can_move():
             return
 
         self.set_facing(target_wx, target_wy)

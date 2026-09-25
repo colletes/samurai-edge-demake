@@ -7,7 +7,7 @@ from src.isometric.iso_math import world_distance
 from src.effects.particles import (
     SparkParticle, BloodParticle, FloatingBanner
 )
-from src.entities.samurai import STATE_PARRY
+from src.entities.samurai import STATE_PARRY, STATE_RECOVERY, STATE_STUNNED
 from src.entities.projectile import (
     KunaiProjectile, ShurikenProjectile, TimedBombEntity, SmokeCloudEntity,
     KusarigamaChainEntity, MusketBulletProjectile, PoisonCloudProjectile,
@@ -48,21 +48,51 @@ class CombatSystem:
         # -------------------------------------------------------------
         # 1. ATUALIZAR E PROCESSAR PROJÉTEIS (KUNAI, SHURIKEN, BALAS, FLECHAS, ETC.)
         # -------------------------------------------------------------
-        # Deflexão de Projéteis pela Lâmina do Kenshin (Iai Flash ou Shukuchi)
-        for k_fighter in (p1, p2):
-            if getattr(k_fighter, "char_type", "") == "kenshin" and k_fighter.is_alive:
-                if k_fighter.hitbox_active or k_fighter.state in ("ATTACK", "SHUKUCHI"):
-                    kx = k_fighter.hitbox_center[0] if k_fighter.hitbox_active else k_fighter.wx
-                    ky = k_fighter.hitbox_center[1] if k_fighter.hitbox_active else k_fighter.wy
-                    kr = k_fighter.hitbox_radius if k_fighter.hitbox_active else 1.25
-                    for proj in projectiles:
-                        if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != k_fighter:
-                            if world_distance(kx, ky, proj.wx, proj.wy) < (kr + 0.45):
-                                proj.is_active = False
-                                for _ in range(12):
-                                    particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
-                                banners.append(FloatingBanner("SLASH DEFLECTION!", proj.wx, proj.wy, wz=1.7, color=(255, 230, 80)))
-                                camera.add_shake(5.0)
+        # Deflexão de Projéteis por Lâminas e Habilidades Ativas
+        # -------------------------------------------------------------
+        for def_fighter in (p1, p2):
+            if not def_fighter.is_alive:
+                continue
+            char_t = getattr(def_fighter, "char_type", "")
+
+            # 1. Kenshin: Iai Flash ou Shukuchi Dash
+            if char_t == "kenshin" and (def_fighter.hitbox_active or def_fighter.state in ("ATTACK", "SHUKUCHI")):
+                kx = def_fighter.hitbox_center[0] if def_fighter.hitbox_active else def_fighter.wx
+                ky = def_fighter.hitbox_center[1] if def_fighter.hitbox_active else def_fighter.wy
+                kr = def_fighter.hitbox_radius if def_fighter.hitbox_active else 1.25
+                for proj in projectiles:
+                    if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter:
+                        if world_distance(kx, ky, proj.wx, proj.wy) < (kr + 0.45):
+                            proj.is_active = False
+                            for _ in range(12):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
+                            banners.append(FloatingBanner("SLASH DEFLECTION!", proj.wx, proj.wy, wz=1.7, color=(255, 230, 80)))
+                            camera.add_shake(5.0)
+
+            # 2. Murasaki: Giro Protetor de Corrente da Kusarigama
+            elif getattr(def_fighter, "is_spinning_chain", False):
+                mx, my = def_fighter.wx, def_fighter.wy
+                for proj in projectiles:
+                    if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter:
+                        if world_distance(mx, my, proj.wx, proj.wy) < 1.65:
+                            proj.is_active = False
+                            for _ in range(12):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
+                            banners.append(FloatingBanner("CHAIN DEFLECTION!", proj.wx, proj.wy, wz=1.7, color=(220, 140, 255)))
+                            camera.add_shake(5.0)
+
+            # 3. Anne: Corte em Meia-Lua do Alfanje (Cutlass Cleave Deflection)
+            elif char_t == "pirate" and def_fighter.hitbox_active:
+                cx, cy = def_fighter.hitbox_center
+                cr = def_fighter.hitbox_radius
+                for proj in projectiles:
+                    if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter:
+                        if world_distance(cx, cy, proj.wx, proj.wy) < (cr + 0.45):
+                            proj.is_active = False
+                            for _ in range(12):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
+                            banners.append(FloatingBanner("CUTLASS DEFLECTION!", proj.wx, proj.wy, wz=1.7, color=(255, 215, 80)))
+                            camera.add_shake(5.0)
 
         active_projectiles = []
         for proj in projectiles:
@@ -460,12 +490,31 @@ class CombatSystem:
                         if cinematic_director:
                             cinematic_director.trigger_fatal_strike(p1, p2, "HEADSHOT_EXPLODE", p1.slash_dir)
                 else:
-                    damage = 1 if hasattr(p1, "has_kunai") else 2
+                    is_ninja = (getattr(p1, "char_type", "") == "ninja" or hasattr(p1, "has_kunai"))
+                    kill_label = None
+                    if is_ninja:
+                        # 1-Hit Kill em Contra-Ataque (adversário em recovery/stunned) ou Costas (backstab)
+                        dot_facing = p1.facing_x * p2.facing_x + p1.facing_y * p2.facing_y
+                        is_backstab = (dot_facing > 0.20)
+                        is_punish = (p2.state in (STATE_RECOVERY, STATE_STUNNED))
+                        if is_backstab or is_punish:
+                            damage = 2
+                            kill_label = "BACKSTAB - 1 HIT KILL!" if is_backstab else "PUNISH - 1 HIT KILL!"
+                        else:
+                            damage = 1
+                    else:
+                        damage = 2
+
                     hit, dead = p2.take_hit(p1.slash_dir, damage=damage)
                     if dead:
                         camera.add_shake(14.0)
-                        kill_msg = "GATOTSU - 1 HIT KILL!" if p1.state == "GATOTSU_CHARGE" else "FATAL STRIKE!"
-                        banners.append(FloatingBanner(kill_msg, p2.wx, p2.wy, wz=1.8, color=(120, 210, 255) if p1.state == "GATOTSU_CHARGE" else (255, 60, 60)))
+                        if kill_label:
+                            kill_msg = kill_label
+                        elif p1.state == "GATOTSU_CHARGE":
+                            kill_msg = "GATOTSU - 1 HIT KILL!"
+                        else:
+                            kill_msg = "FATAL STRIKE!"
+                        banners.append(FloatingBanner(kill_msg, p2.wx, p2.wy, wz=1.8, color=(255, 220, 50) if kill_label else ((120, 210, 255) if p1.state == "GATOTSU_CHARGE" else (255, 60, 60))))
                         for _ in range(25):
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                         self.hitstop_timer = 0.12
@@ -475,7 +524,7 @@ class CombatSystem:
                             cinematic_director.trigger_fatal_strike(p1, p2, death_style, p1.slash_dir)
                     elif hit:
                         camera.add_shake(7.0)
-                        banners.append(FloatingBanner("KUNAI STAB (1/2)!", p2.wx, p2.wy, wz=1.7, color=(255, 200, 50)))
+                        banners.append(FloatingBanner("TANTO STAB (1/2)!", p2.wx, p2.wy, wz=1.7, color=(255, 200, 50)))
                         for _ in range(12):
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
 
@@ -518,12 +567,30 @@ class CombatSystem:
                         if cinematic_director:
                             cinematic_director.trigger_fatal_strike(p2, p1, "HEADSHOT_EXPLODE", p2.slash_dir)
                 else:
-                    damage = 1 if hasattr(p2, "has_kunai") else 2
+                    is_ninja = (getattr(p2, "char_type", "") == "ninja" or hasattr(p2, "has_kunai"))
+                    kill_label = None
+                    if is_ninja:
+                        dot_facing = p2.facing_x * p1.facing_x + p2.facing_y * p1.facing_y
+                        is_backstab = (dot_facing > 0.20)
+                        is_punish = (p1.state in (STATE_RECOVERY, STATE_STUNNED))
+                        if is_backstab or is_punish:
+                            damage = 2
+                            kill_label = "BACKSTAB - 1 HIT KILL!" if is_backstab else "PUNISH - 1 HIT KILL!"
+                        else:
+                            damage = 1
+                    else:
+                        damage = 2
+
                     hit, dead = p1.take_hit(p2.slash_dir, damage=damage)
                     if dead:
                         camera.add_shake(14.0)
-                        kill_msg = "GATOTSU - 1 HIT KILL!" if p2.state == "GATOTSU_CHARGE" else "FATAL STRIKE!"
-                        banners.append(FloatingBanner(kill_msg, p1.wx, p1.wy, wz=1.8, color=(120, 210, 255) if p2.state == "GATOTSU_CHARGE" else (70, 150, 255)))
+                        if kill_label:
+                            kill_msg = kill_label
+                        elif p2.state == "GATOTSU_CHARGE":
+                            kill_msg = "GATOTSU - 1 HIT KILL!"
+                        else:
+                            kill_msg = "FATAL STRIKE!"
+                        banners.append(FloatingBanner(kill_msg, p1.wx, p1.wy, wz=1.8, color=(255, 220, 50) if kill_label else ((120, 210, 255) if p2.state == "GATOTSU_CHARGE" else (70, 150, 255))))
                         for _ in range(25):
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                         self.hitstop_timer = 0.12
@@ -533,7 +600,7 @@ class CombatSystem:
                             cinematic_director.trigger_fatal_strike(p2, p1, death_style, p2.slash_dir)
                     elif hit:
                         camera.add_shake(7.0)
-                        banners.append(FloatingBanner("KUNAI STAB (1/2)!", p1.wx, p1.wy, wz=1.7, color=(255, 200, 50)))
+                        banners.append(FloatingBanner("TANTO STAB (1/2)!", p1.wx, p1.wy, wz=1.7, color=(255, 200, 50)))
                         for _ in range(12):
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
 

@@ -1,129 +1,129 @@
 {
   "total_battles": 1584,
-  "sim_time": 8.32,
+  "sim_time": 7.61,
   "standings": [
     {
       "id": "kenshin",
       "name": "Kenshin",
-      "wins": 145,
-      "losses": 118,
-      "draws": 1,
+      "wins": 129,
+      "losses": 133,
+      "draws": 2,
       "total_matches": 264,
-      "winrate": 54.92
+      "winrate": 48.86
     },
     {
       "id": "musashi",
       "name": "Musashi",
-      "wins": 128,
-      "losses": 134,
+      "wins": 109,
+      "losses": 153,
       "draws": 2,
       "total_matches": 264,
-      "winrate": 48.48
+      "winrate": 41.29
     },
     {
       "id": "ninja",
       "name": "Hanzo",
-      "wins": 109,
-      "losses": 154,
+      "wins": 100,
+      "losses": 163,
       "draws": 1,
       "total_matches": 264,
-      "winrate": 41.29
+      "winrate": 37.88
     },
     {
       "id": "american",
       "name": "Joe",
-      "wins": 109,
-      "losses": 155,
+      "wins": 108,
+      "losses": 156,
       "draws": 0,
       "total_matches": 264,
-      "winrate": 41.29
+      "winrate": 40.91
     },
     {
       "id": "saitou",
       "name": "Saitou",
-      "wins": 165,
-      "losses": 97,
-      "draws": 2,
+      "wins": 145,
+      "losses": 119,
+      "draws": 0,
       "total_matches": 264,
-      "winrate": 62.5
+      "winrate": 54.92
     },
     {
       "id": "rifleman",
       "name": "Teppo",
-      "wins": 146,
-      "losses": 117,
-      "draws": 1,
+      "wins": 174,
+      "losses": 90,
+      "draws": 0,
       "total_matches": 264,
-      "winrate": 55.3
+      "winrate": 65.91
     },
     {
       "id": "purple",
       "name": "Murasaki",
-      "wins": 96,
-      "losses": 168,
+      "wins": 91,
+      "losses": 173,
       "draws": 0,
       "total_matches": 264,
-      "winrate": 36.36
+      "winrate": 34.47
     },
     {
       "id": "gray",
       "name": "Kasumi",
-      "wins": 148,
-      "losses": 115,
-      "draws": 1,
-      "total_matches": 264,
-      "winrate": 56.06
-    },
-    {
-      "id": "kabuki",
-      "name": "Okuni",
-      "wins": 130,
-      "losses": 134,
-      "draws": 0,
-      "total_matches": 264,
-      "winrate": 49.24
-    },
-    {
-      "id": "archer",
-      "name": "Tomoe",
       "wins": 116,
-      "losses": 148,
-      "draws": 0,
+      "losses": 147,
+      "draws": 1,
       "total_matches": 264,
       "winrate": 43.94
     },
     {
-      "id": "pirate",
-      "name": "Anne",
-      "wins": 106,
-      "losses": 158,
+      "id": "kabuki",
+      "name": "Okuni",
+      "wins": 132,
+      "losses": 132,
       "draws": 0,
       "total_matches": 264,
-      "winrate": 40.15
+      "winrate": 50.0
+    },
+    {
+      "id": "archer",
+      "name": "Tomoe",
+      "wins": 161,
+      "losses": 103,
+      "draws": 0,
+      "total_matches": 264,
+      "winrate": 60.98
+    },
+    {
+      "id": "pirate",
+      "name": "Anne",
+      "wins": 154,
+      "losses": 110,
+      "draws": 0,
+      "total_matches": 264,
+      "winrate": 58.33
     },
     {
       "id": "musketeer",
       "name": "Julie",
-      "wins": 182,
-      "losses": 82,
+      "wins": 162,
+      "losses": 102,
       "draws": 0,
       "total_matches": 264,
-      "winrate": 68.94
+      "winrate": 61.36
     }
   ],
   "merge_sorted_roster": [
-    "musketeer",
-    "rifleman",
-    "saitou",
-    "kabuki",
-    "archer",
-    "gray",
-    "pirate",
-    "musashi",
     "kenshin",
-    "ninja",
+    "rifleman",
+    "archer",
+    "pirate",
+    "saitou",
+    "musketeer",
+    "kabuki",
+    "musashi",
     "american",
-    "purple"
+    "ninja",
+    "purple",
+    "gray"
   ],
   "matchups": {
     "kenshin_vs_musashi": {
@@ -131,88 +131,88 @@
       "c2": "musashi",
       "c1_name": "Kenshin",
       "c2_name": "Musashi",
-      "wins_c1": 10,
-      "wins_c2": 14,
-      "draws": 0,
+      "wins_c1": 12,
+      "wins_c2": 11,
+      "draws": 1,
       "total_battles": 24,
-      "avg_time": 4.61
+      "avg_time": 5.24
     },
     "kenshin_vs_ninja": {
       "c1": "kenshin",
       "c2": "ninja",
       "c1_name": "Kenshin",
       "c2_name": "Hanzo",
-      "wins_c1": 20,
-      "wins_c2": 4,
+      "wins_c1": 11,
+      "wins_c2": 13,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 2.9
+      "avg_time": 2.2
     },
     "kenshin_vs_american": {
       "c1": "kenshin",
       "c2": "american",
       "c1_name": "Kenshin",
       "c2_name": "Joe",
-      "wins_c1": 20,
-      "wins_c2": 4,
+      "wins_c1": 19,
+      "wins_c2": 5,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 2.0
+      "avg_time": 2.04
     },
     "kenshin_vs_saitou": {
       "c1": "kenshin",
       "c2": "saitou",
       "c1_name": "Kenshin",
       "c2_name": "Saitou",
-      "wins_c1": 3,
+      "wins_c1": 4,
       "wins_c2": 20,
-      "draws": 1,
+      "draws": 0,
       "total_battles": 24,
-      "avg_time": 3.15
+      "avg_time": 1.86
     },
     "kenshin_vs_rifleman": {
       "c1": "kenshin",
       "c2": "rifleman",
       "c1_name": "Kenshin",
       "c2_name": "Teppo",
-      "wins_c1": 14,
-      "wins_c2": 10,
+      "wins_c1": 18,
+      "wins_c2": 6,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.95
+      "avg_time": 2.09
     },
     "kenshin_vs_purple": {
       "c1": "kenshin",
       "c2": "purple",
       "c1_name": "Kenshin",
       "c2_name": "Murasaki",
-      "wins_c1": 21,
-      "wins_c2": 3,
+      "wins_c1": 19,
+      "wins_c2": 5,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.89
+      "avg_time": 1.83
     },
     "kenshin_vs_gray": {
       "c1": "kenshin",
       "c2": "gray",
       "c1_name": "Kenshin",
       "c2_name": "Kasumi",
-      "wins_c1": 22,
-      "wins_c2": 2,
-      "draws": 0,
+      "wins_c1": 20,
+      "wins_c2": 3,
+      "draws": 1,
       "total_battles": 24,
-      "avg_time": 3.14
+      "avg_time": 3.01
     },
     "kenshin_vs_kabuki": {
       "c1": "kenshin",
       "c2": "kabuki",
       "c1_name": "Kenshin",
       "c2_name": "Okuni",
-      "wins_c1": 5,
-      "wins_c2": 19,
+      "wins_c1": 4,
+      "wins_c2": 20,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 2.35
+      "avg_time": 2.61
     },
     "kenshin_vs_archer": {
       "c1": "kenshin",
@@ -223,26 +223,26 @@
       "wins_c2": 6,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 2.1
+      "avg_time": 2.06
     },
     "kenshin_vs_pirate": {
       "c1": "kenshin",
       "c2": "pirate",
       "c1_name": "Kenshin",
       "c2_name": "Anne",
-      "wins_c1": 7,
-      "wins_c2": 17,
+      "wins_c1": 3,
+      "wins_c2": 21,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.87
+      "avg_time": 1.41
     },
     "kenshin_vs_musketeer": {
       "c1": "kenshin",
       "c2": "musketeer",
       "c1_name": "Kenshin",
       "c2_name": "Julie",
-      "wins_c1": 5,
-      "wins_c2": 19,
+      "wins_c1": 1,
+      "wins_c2": 23,
       "draws": 0,
       "total_battles": 24,
       "avg_time": 1.72
@@ -253,219 +253,219 @@
       "c1_name": "Musashi",
       "c2_name": "Hanzo",
       "wins_c1": 22,
-      "wins_c2": 2,
-      "draws": 0,
+      "wins_c2": 1,
+      "draws": 1,
       "total_battles": 24,
-      "avg_time": 3.25
+      "avg_time": 4.28
     },
     "musashi_vs_american": {
       "c1": "musashi",
       "c2": "american",
       "c1_name": "Musashi",
       "c2_name": "Joe",
-      "wins_c1": 19,
-      "wins_c2": 5,
+      "wins_c1": 18,
+      "wins_c2": 6,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 2.69
+      "avg_time": 2.53
     },
     "musashi_vs_saitou": {
       "c1": "musashi",
       "c2": "saitou",
       "c1_name": "Musashi",
       "c2_name": "Saitou",
-      "wins_c1": 2,
-      "wins_c2": 22,
+      "wins_c1": 1,
+      "wins_c2": 23,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.74
+      "avg_time": 1.45
     },
     "musashi_vs_rifleman": {
       "c1": "musashi",
       "c2": "rifleman",
       "c1_name": "Musashi",
       "c2_name": "Teppo",
-      "wins_c1": 11,
-      "wins_c2": 12,
-      "draws": 1,
+      "wins_c1": 10,
+      "wins_c2": 14,
+      "draws": 0,
       "total_battles": 24,
-      "avg_time": 9.47
+      "avg_time": 10.79
     },
     "musashi_vs_purple": {
       "c1": "musashi",
       "c2": "purple",
       "c1_name": "Musashi",
       "c2_name": "Murasaki",
-      "wins_c1": 23,
-      "wins_c2": 1,
+      "wins_c1": 24,
+      "wins_c2": 0,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 6.08
+      "avg_time": 5.38
     },
     "musashi_vs_gray": {
       "c1": "musashi",
       "c2": "gray",
       "c1_name": "Musashi",
       "c2_name": "Kasumi",
-      "wins_c1": 1,
-      "wins_c2": 22,
-      "draws": 1,
+      "wins_c1": 0,
+      "wins_c2": 24,
+      "draws": 0,
       "total_battles": 24,
-      "avg_time": 2.06
+      "avg_time": 2.0
     },
     "musashi_vs_kabuki": {
       "c1": "musashi",
       "c2": "kabuki",
       "c1_name": "Musashi",
       "c2_name": "Okuni",
-      "wins_c1": 10,
-      "wins_c2": 14,
+      "wins_c1": 8,
+      "wins_c2": 16,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 4.8
+      "avg_time": 3.66
     },
     "musashi_vs_archer": {
       "c1": "musashi",
       "c2": "archer",
       "c1_name": "Musashi",
       "c2_name": "Tomoe",
-      "wins_c1": 8,
-      "wins_c2": 16,
+      "wins_c1": 4,
+      "wins_c2": 20,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 9.83
+      "avg_time": 7.08
     },
     "musashi_vs_pirate": {
       "c1": "musashi",
       "c2": "pirate",
       "c1_name": "Musashi",
       "c2_name": "Anne",
-      "wins_c1": 9,
-      "wins_c2": 15,
+      "wins_c1": 3,
+      "wins_c2": 21,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 2.94
+      "avg_time": 2.05
     },
     "musashi_vs_musketeer": {
       "c1": "musashi",
       "c2": "musketeer",
       "c1_name": "Musashi",
       "c2_name": "Julie",
-      "wins_c1": 9,
-      "wins_c2": 15,
+      "wins_c1": 8,
+      "wins_c2": 16,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.94
+      "avg_time": 2.21
     },
     "ninja_vs_american": {
       "c1": "ninja",
       "c2": "american",
       "c1_name": "Hanzo",
       "c2_name": "Joe",
-      "wins_c1": 16,
-      "wins_c2": 8,
+      "wins_c1": 12,
+      "wins_c2": 12,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.23
+      "avg_time": 1.14
     },
     "ninja_vs_saitou": {
       "c1": "ninja",
       "c2": "saitou",
       "c1_name": "Hanzo",
       "c2_name": "Saitou",
-      "wins_c1": 11,
-      "wins_c2": 12,
-      "draws": 1,
+      "wins_c1": 10,
+      "wins_c2": 14,
+      "draws": 0,
       "total_battles": 24,
-      "avg_time": 2.62
+      "avg_time": 1.37
     },
     "ninja_vs_rifleman": {
       "c1": "ninja",
       "c2": "rifleman",
       "c1_name": "Hanzo",
       "c2_name": "Teppo",
-      "wins_c1": 9,
-      "wins_c2": 15,
+      "wins_c1": 8,
+      "wins_c2": 16,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.65
+      "avg_time": 1.11
     },
     "ninja_vs_purple": {
       "c1": "ninja",
       "c2": "purple",
       "c1_name": "Hanzo",
       "c2_name": "Murasaki",
-      "wins_c1": 17,
-      "wins_c2": 7,
+      "wins_c1": 12,
+      "wins_c2": 12,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.32
+      "avg_time": 1.29
     },
     "ninja_vs_gray": {
       "c1": "ninja",
       "c2": "gray",
       "c1_name": "Hanzo",
       "c2_name": "Kasumi",
-      "wins_c1": 8,
-      "wins_c2": 16,
+      "wins_c1": 14,
+      "wins_c2": 10,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.23
+      "avg_time": 1.13
     },
     "ninja_vs_kabuki": {
       "c1": "ninja",
       "c2": "kabuki",
       "c1_name": "Hanzo",
       "c2_name": "Okuni",
-      "wins_c1": 5,
-      "wins_c2": 19,
+      "wins_c1": 8,
+      "wins_c2": 16,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 3.1
+      "avg_time": 2.97
     },
     "ninja_vs_archer": {
       "c1": "ninja",
       "c2": "archer",
       "c1_name": "Hanzo",
       "c2_name": "Tomoe",
-      "wins_c1": 13,
-      "wins_c2": 11,
+      "wins_c1": 5,
+      "wins_c2": 19,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.34
+      "avg_time": 1.06
     },
     "ninja_vs_pirate": {
       "c1": "ninja",
       "c2": "pirate",
       "c1_name": "Hanzo",
       "c2_name": "Anne",
-      "wins_c1": 17,
-      "wins_c2": 7,
+      "wins_c1": 12,
+      "wins_c2": 12,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.25
+      "avg_time": 1.33
     },
     "ninja_vs_musketeer": {
       "c1": "ninja",
       "c2": "musketeer",
       "c1_name": "Hanzo",
       "c2_name": "Julie",
-      "wins_c1": 7,
-      "wins_c2": 17,
+      "wins_c1": 5,
+      "wins_c2": 19,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.74
+      "avg_time": 1.51
     },
     "american_vs_saitou": {
       "c1": "american",
       "c2": "saitou",
       "c1_name": "Joe",
       "c2_name": "Saitou",
-      "wins_c1": 12,
-      "wins_c2": 12,
+      "wins_c1": 10,
+      "wins_c2": 14,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.39
+      "avg_time": 1.11
     },
     "american_vs_rifleman": {
       "c1": "american",
@@ -476,7 +476,7 @@
       "wins_c2": 18,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.77
+      "avg_time": 1.16
     },
     "american_vs_purple": {
       "c1": "american",
@@ -487,18 +487,18 @@
       "wins_c2": 10,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.37
+      "avg_time": 1.15
     },
     "american_vs_gray": {
       "c1": "american",
       "c2": "gray",
       "c1_name": "Joe",
       "c2_name": "Kasumi",
-      "wins_c1": 12,
-      "wins_c2": 12,
+      "wins_c1": 16,
+      "wins_c2": 8,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.45
+      "avg_time": 1.48
     },
     "american_vs_kabuki": {
       "c1": "american",
@@ -509,271 +509,271 @@
       "wins_c2": 10,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.85
+      "avg_time": 2.25
     },
     "american_vs_archer": {
       "c1": "american",
       "c2": "archer",
       "c1_name": "Joe",
       "c2_name": "Tomoe",
-      "wins_c1": 17,
-      "wins_c2": 7,
+      "wins_c1": 11,
+      "wins_c2": 13,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.46
+      "avg_time": 1.23
     },
     "american_vs_pirate": {
       "c1": "american",
       "c2": "pirate",
       "c1_name": "Joe",
       "c2_name": "Anne",
-      "wins_c1": 15,
-      "wins_c2": 9,
+      "wins_c1": 9,
+      "wins_c2": 15,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.79
+      "avg_time": 1.25
     },
     "american_vs_musketeer": {
       "c1": "american",
       "c2": "musketeer",
       "c1_name": "Joe",
       "c2_name": "Julie",
-      "wins_c1": 2,
-      "wins_c2": 22,
+      "wins_c1": 5,
+      "wins_c2": 19,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.55
+      "avg_time": 1.45
     },
     "saitou_vs_rifleman": {
       "c1": "saitou",
       "c2": "rifleman",
       "c1_name": "Saitou",
       "c2_name": "Teppo",
-      "wins_c1": 11,
-      "wins_c2": 13,
+      "wins_c1": 5,
+      "wins_c2": 19,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.53
+      "avg_time": 1.04
     },
     "saitou_vs_purple": {
       "c1": "saitou",
       "c2": "purple",
       "c1_name": "Saitou",
       "c2_name": "Murasaki",
-      "wins_c1": 14,
-      "wins_c2": 10,
+      "wins_c1": 8,
+      "wins_c2": 16,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.25
+      "avg_time": 1.35
     },
     "saitou_vs_gray": {
       "c1": "saitou",
       "c2": "gray",
       "c1_name": "Saitou",
       "c2_name": "Kasumi",
-      "wins_c1": 7,
-      "wins_c2": 17,
+      "wins_c1": 13,
+      "wins_c2": 11,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.36
+      "avg_time": 1.29
     },
     "saitou_vs_kabuki": {
       "c1": "saitou",
       "c2": "kabuki",
       "c1_name": "Saitou",
       "c2_name": "Okuni",
-      "wins_c1": 19,
-      "wins_c2": 5,
+      "wins_c1": 17,
+      "wins_c2": 7,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.53
+      "avg_time": 1.52
     },
     "saitou_vs_archer": {
       "c1": "saitou",
       "c2": "archer",
       "c1_name": "Saitou",
       "c2_name": "Tomoe",
-      "wins_c1": 13,
-      "wins_c2": 11,
+      "wins_c1": 5,
+      "wins_c2": 19,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.19
+      "avg_time": 0.98
     },
     "saitou_vs_pirate": {
       "c1": "saitou",
       "c2": "pirate",
       "c1_name": "Saitou",
       "c2_name": "Anne",
-      "wins_c1": 17,
-      "wins_c2": 7,
+      "wins_c1": 10,
+      "wins_c2": 14,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.33
+      "avg_time": 1.18
     },
     "saitou_vs_musketeer": {
       "c1": "saitou",
       "c2": "musketeer",
       "c1_name": "Saitou",
       "c2_name": "Julie",
-      "wins_c1": 18,
-      "wins_c2": 6,
+      "wins_c1": 16,
+      "wins_c2": 8,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.26
+      "avg_time": 1.41
     },
     "rifleman_vs_purple": {
       "c1": "rifleman",
       "c2": "purple",
       "c1_name": "Teppo",
       "c2_name": "Murasaki",
-      "wins_c1": 13,
-      "wins_c2": 11,
+      "wins_c1": 22,
+      "wins_c2": 2,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.76
+      "avg_time": 1.26
     },
     "rifleman_vs_gray": {
       "c1": "rifleman",
       "c2": "gray",
       "c1_name": "Teppo",
       "c2_name": "Kasumi",
-      "wins_c1": 14,
-      "wins_c2": 10,
+      "wins_c1": 20,
+      "wins_c2": 4,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.54
+      "avg_time": 1.19
     },
     "rifleman_vs_kabuki": {
       "c1": "rifleman",
       "c2": "kabuki",
       "c1_name": "Teppo",
       "c2_name": "Okuni",
-      "wins_c1": 14,
-      "wins_c2": 10,
+      "wins_c1": 15,
+      "wins_c2": 9,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 3.86
+      "avg_time": 4.27
     },
     "rifleman_vs_archer": {
       "c1": "rifleman",
       "c2": "archer",
       "c1_name": "Teppo",
       "c2_name": "Tomoe",
-      "wins_c1": 16,
-      "wins_c2": 8,
+      "wins_c1": 14,
+      "wins_c2": 10,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.67
+      "avg_time": 0.97
     },
     "rifleman_vs_pirate": {
       "c1": "rifleman",
       "c2": "pirate",
       "c1_name": "Teppo",
       "c2_name": "Anne",
-      "wins_c1": 17,
-      "wins_c2": 7,
+      "wins_c1": 20,
+      "wins_c2": 4,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.81
+      "avg_time": 1.08
     },
     "rifleman_vs_musketeer": {
       "c1": "rifleman",
       "c2": "musketeer",
       "c1_name": "Teppo",
       "c2_name": "Julie",
-      "wins_c1": 4,
-      "wins_c2": 20,
+      "wins_c1": 10,
+      "wins_c2": 14,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 2.47
+      "avg_time": 2.18
     },
     "purple_vs_gray": {
       "c1": "purple",
       "c2": "gray",
       "c1_name": "Murasaki",
       "c2_name": "Kasumi",
-      "wins_c1": 12,
-      "wins_c2": 12,
+      "wins_c1": 15,
+      "wins_c2": 9,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.68
+      "avg_time": 1.43
     },
     "purple_vs_kabuki": {
       "c1": "purple",
       "c2": "kabuki",
       "c1_name": "Murasaki",
       "c2_name": "Okuni",
-      "wins_c1": 11,
-      "wins_c2": 13,
+      "wins_c1": 9,
+      "wins_c2": 15,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 3.09
+      "avg_time": 2.61
     },
     "purple_vs_archer": {
       "c1": "purple",
       "c2": "archer",
       "c1_name": "Murasaki",
       "c2_name": "Tomoe",
-      "wins_c1": 15,
-      "wins_c2": 9,
+      "wins_c1": 9,
+      "wins_c2": 15,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.28
+      "avg_time": 1.16
     },
     "purple_vs_pirate": {
       "c1": "purple",
       "c2": "pirate",
       "c1_name": "Murasaki",
       "c2_name": "Anne",
-      "wins_c1": 12,
-      "wins_c2": 12,
+      "wins_c1": 8,
+      "wins_c2": 16,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.74
+      "avg_time": 1.31
     },
     "purple_vs_musketeer": {
       "c1": "purple",
       "c2": "musketeer",
       "c1_name": "Murasaki",
       "c2_name": "Julie",
-      "wins_c1": 4,
-      "wins_c2": 20,
+      "wins_c1": 5,
+      "wins_c2": 19,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.87
+      "avg_time": 1.91
     },
     "gray_vs_kabuki": {
       "c1": "gray",
       "c2": "kabuki",
       "c1_name": "Kasumi",
       "c2_name": "Okuni",
-      "wins_c1": 11,
-      "wins_c2": 13,
+      "wins_c1": 12,
+      "wins_c2": 12,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 2.07
+      "avg_time": 2.41
     },
     "gray_vs_archer": {
       "c1": "gray",
       "c2": "archer",
       "c1_name": "Kasumi",
       "c2_name": "Tomoe",
-      "wins_c1": 11,
-      "wins_c2": 13,
+      "wins_c1": 8,
+      "wins_c2": 16,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.48
+      "avg_time": 0.93
     },
     "gray_vs_pirate": {
       "c1": "gray",
       "c2": "pirate",
       "c1_name": "Kasumi",
       "c2_name": "Anne",
-      "wins_c1": 21,
-      "wins_c2": 3,
+      "wins_c1": 13,
+      "wins_c2": 11,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.33
+      "avg_time": 1.24
     },
     "gray_vs_musketeer": {
       "c1": "gray",
@@ -784,18 +784,18 @@
       "wins_c2": 10,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.36
+      "avg_time": 1.33
     },
     "kabuki_vs_archer": {
       "c1": "kabuki",
       "c2": "archer",
       "c1_name": "Okuni",
       "c2_name": "Tomoe",
-      "wins_c1": 12,
-      "wins_c2": 12,
+      "wins_c1": 9,
+      "wins_c2": 15,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 3.46
+      "avg_time": 2.86
     },
     "kabuki_vs_pirate": {
       "c1": "kabuki",
@@ -806,51 +806,51 @@
       "wins_c2": 13,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 3.33
+      "avg_time": 1.7
     },
     "kabuki_vs_musketeer": {
       "c1": "kabuki",
       "c2": "musketeer",
       "c1_name": "Okuni",
       "c2_name": "Julie",
-      "wins_c1": 4,
-      "wins_c2": 20,
+      "wins_c1": 7,
+      "wins_c2": 17,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.58
+      "avg_time": 2.01
     },
     "archer_vs_pirate": {
       "c1": "archer",
       "c2": "pirate",
       "c1_name": "Tomoe",
       "c2_name": "Anne",
-      "wins_c1": 18,
-      "wins_c2": 6,
+      "wins_c1": 15,
+      "wins_c2": 9,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.81
+      "avg_time": 1.26
     },
     "archer_vs_musketeer": {
       "c1": "archer",
       "c2": "musketeer",
       "c1_name": "Tomoe",
       "c2_name": "Julie",
-      "wins_c1": 5,
-      "wins_c2": 19,
+      "wins_c1": 13,
+      "wins_c2": 11,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.99
+      "avg_time": 1.55
     },
     "pirate_vs_musketeer": {
       "c1": "pirate",
       "c2": "musketeer",
       "c1_name": "Anne",
       "c2_name": "Julie",
-      "wins_c1": 10,
-      "wins_c2": 14,
+      "wins_c1": 18,
+      "wins_c2": 6,
       "draws": 0,
       "total_battles": 24,
-      "avg_time": 1.79
+      "avg_time": 1.27
     }
   }
 }
