@@ -668,7 +668,10 @@ def run_game():
         for tree in game_map.trees:
             render_queue.append((tree.wx + tree.wy, 'tree', tree))
 
-        # Adicionar elementos exclusivos da Arena de Kyoto
+        # Adicionar elementos de cenário exclusivos (Torii, Lanternas, Construções de Kyoto)
+        if hasattr(game_map, 'torii_gates'):
+            for tg in game_map.torii_gates:
+                render_queue.append((tg.wx + tg.wy, 'torii', tg))
         if hasattr(game_map, 'buildings'):
             for b in game_map.buildings:
                 render_queue.append((b.wx + b.wy + b.depth * 0.5, 'building', b))
@@ -717,7 +720,7 @@ def run_game():
         for _, item_type, obj in render_queue:
             if item_type == 'bamboo':
                 obj.render(screen, camera, game_time)
-            elif item_type in ('rock', 'well', 'tree'):
+            elif item_type in ('rock', 'well', 'tree', 'torii'):
                 obj.render(screen, camera)
             elif item_type == 'building':
                 obj.render(screen, camera, game_time)
@@ -744,6 +747,16 @@ def run_game():
 
         for leaf in ambient_leaves:
             leaf.render(screen, camera)
+
+        # Vaga-lumes bioluminescentes sobre o lago zen
+        if hasattr(game_map, 'fireflies'):
+            for fx, fy, fz in game_map.fireflies:
+                w_fx = fx + math.sin(game_time * 2.0 + fy) * 0.12
+                w_fy = fy + math.cos(game_time * 1.8 + fx) * 0.12
+                w_fz = fz + math.sin(game_time * 2.5 + fx * 2.0) * 0.08
+                fsx, fsy = camera.apply(w_fx, w_fy, w_fz)
+                pygame.draw.circle(screen, (180, 255, 80), (fsx, fsy), 3)
+                pygame.draw.circle(screen, (220, 255, 160), (fsx, fsy), 6, 1)
 
         for banner in banners:
             banner.render(screen, camera, font_mid)

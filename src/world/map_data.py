@@ -1,6 +1,6 @@
 """
-Definição do mapa isométrico, tiles de terreno (Grama, Terra, Lago, Ponte)
-e posicionamento de bambus, pedras, poço e árvores.
+Definição do mapa isométrico, tiles de terreno (Grama, Terra com lajes Tobi-ishi, Lago Zen com reflexo, Ponte Arqueada Taiko-bashi)
+e posicionamento de bambus, pedras, lavatório ritual Tsukubai, portal Torii, lanternas Ishi-doro e árvores de sakura.
 """
 import math
 import random
@@ -8,11 +8,13 @@ import pygame
 from src.config import (
     MAP_COLS, MAP_ROWS, HALF_TILE_W, HALF_TILE_H,
     COLOR_GRASS, COLOR_GRASS_LIGHT, COLOR_EARTH,
-    COLOR_WATER, COLOR_WATER_HIGHLIGHT, COLOR_BRIDGE, COLOR_BRIDGE_DARK
+    COLOR_WATER, COLOR_WATER_HIGHLIGHT, COLOR_BRIDGE, COLOR_BRIDGE_DARK,
+    COLOR_GOLD
 )
 from src.world.bamboo import Bamboo
-from src.world.obstacles import Rock, Well, AncientTree
+from src.world.obstacles import Rock, Well, AncientTree, Tsukubai, ToriiGate, StoneLantern
 from src.isometric.iso_math import world_to_iso
+from src.isometric.voxel_renderer import draw_voxel_box
 
 # Constantes de Tile de Terreno
 TILE_GRASS = 0
@@ -31,79 +33,125 @@ class GameMap:
         self.rocks: list[Rock] = []
         self.well: Well | None = None
         self.trees: list[AncientTree] = []
+        self.torii_gates: list[ToriiGate] = []
+        self.lanterns: list[StoneLantern] = []
+        self.fireflies: list[tuple[float, float, float]] = []
 
         self._build_terrain()
         self._populate_scenery()
 
     def _build_terrain(self):
-        """Constrói o traçado do caminho, o lago sereno e a ponte de madeira."""
-        # 1. Caminho de terra central (cruzando a arena)
-        for x in range(self.cols):
-            for y in range(self.rows):
-                if abs(x - y) <= 2:
-                    self.tiles[x][y] = TILE_EARTH
-
-        # 2. Laguinho orgânico (elipse inclinada)
+        """Constrói o traçado do caminho cerimonial conectado à ponte, o lago zen e a ponte Taiko-bashi."""
         lake_center_x = 11.0
         lake_center_y = 11.0
+
+        # 1. Laguinho zen orgânico (elipse inclinada)
         for x in range(self.cols):
             for y in range(self.rows):
-                # Distância elíptica
-                dx = x - lake_center_x
-                dy = y - lake_center_y
-                dist = math.hypot(dx * 1.1, dy * 0.9)
+                dx = (x - lake_center_x) * 1.12
+                dy = (y - lake_center_y) * 0.90
+                dist = math.hypot(dx, dy)
                 if dist < 4.2:
                     self.tiles[x][y] = TILE_WATER
 
-        # 3. Ponte de madeira cruzando o laguinho (ligando as duas margens)
-        for y in range(int(lake_center_y - 4), int(lake_center_y + 5)):
+        # 2. Ponte de madeira Taiko-bashi cruzando o lago (x=10 e x=11 de y=7 a y=15)
+        for y in range(7, 16):
             if 0 <= y < self.rows:
-                # Ponte com 2 tiles de largura
                 self.tiles[10][y] = TILE_BRIDGE
                 self.tiles[11][y] = TILE_BRIDGE
 
-    def _populate_scenery(self):
-        """Posiciona bambus, pedras, o poço e árvores de sakura."""
-        # 1. Poço de Pedra Tradicional (no canto do caminho)
-        self.well = Well(wx=6.5, wy=6.5)
+        # 3. Estrada de terra batida e lajes conectada DIRETAMENTE às duas pontas da ponte
+        # Entrada Norte (de y=0 até y=7 em x=10, 11) passando pelo Torii
+        for y in range(0, 8):
+            self.tiles[10][y] = TILE_EARTH
+            self.tiles[11][y] = TILE_EARTH
+            if y in (6, 7):
+                self.tiles[9][y] = TILE_EARTH
+                self.tiles[12][y] = TILE_EARTH
 
-        # 2. Rochas sólidas estratégicas para bloqueio
+        # Entrada Sul (de y=15 até y=21 em x=10, 11)
+        for y in range(15, 22):
+            self.tiles[10][y] = TILE_EARTH
+            self.tiles[11][y] = TILE_EARTH
+            if y in (15, 16):
+                self.tiles[9][y] = TILE_EARTH
+                self.tiles[12][y] = TILE_EARTH
+
+        # Caminho secundário contornando o lago até o lavatório Tsukubai (wx=6.5, wy=6.5)
+        for x in range(6, 11):
+            for y in range(6, 8):
+                if self.tiles[x][y] not in (TILE_WATER, TILE_BRIDGE):
+                    self.tiles[x][y] = TILE_EARTH
+        for y in range(6, 10):
+            self.tiles[6][y] = TILE_EARTH
+            self.tiles[7][y] = TILE_EARTH
+
+    def _populate_scenery(self):
+        """Posiciona bambus densos, pedras, lavatório Tsukubai, portal Torii, lanternas e árvores de sakura."""
+        # 1. Lavatório Ritual Tradicional Tsukubai (substitui o poço genérico preservando a colisão)
+        self.well = Tsukubai(wx=6.5, wy=6.5)
+
+        # 2. Rochas sólidas táticas para bloqueio
         self.rocks.append(Rock(wx=6.0, wy=14.5, radius=0.7, height=0.9))
         self.rocks.append(Rock(wx=15.5, wy=7.0, radius=0.6, height=0.8))
         self.rocks.append(Rock(wx=16.0, wy=15.0, radius=0.75, height=1.0))
         self.rocks.append(Rock(wx=3.5, wy=10.0, radius=0.55, height=0.75))
 
-        # 3. Árvores Ancestrais de Sakura
+        # 3. Árvores Ancestrais de Sakura (modelo majestoso)
         self.trees.append(AncientTree(wx=4.0, wy=4.0))
         self.trees.append(AncientTree(wx=17.5, wy=17.5))
 
-        # 4. Floresta de Bambus Cortáveis
-        # Criar aglomerados densos para permitir emboscadas e cobertura
-        bamboo_rng = random.Random(42) # Semente fixa para mapa consistente e belo
+        # 4. Portal Torii xintoísta sobre a estrada de acesso norte
+        self.torii_gates.append(ToriiGate(wx=10.5, wy=5.0))
+
+        # 5. Lanternas de pedra Ishi-doro iluminando as cabeceiras da ponte e caminhos
+        self.lanterns.append(StoneLantern(wx=8.8, wy=6.2))   # Cabeceira Norte Oeste
+        self.lanterns.append(StoneLantern(wx=12.2, wy=6.2))  # Cabeceira Norte Leste
+        self.lanterns.append(StoneLantern(wx=8.8, wy=15.8))  # Cabeceira Sul Oeste
+        self.lanterns.append(StoneLantern(wx=12.2, wy=15.8)) # Cabeceira Sul Leste
+        self.lanterns.append(StoneLantern(wx=5.8, wy=7.8))   # Próximo ao Tsukubai
+
+        # 6. Vaga-lumes bioluminescentes (Hotaru)
+        self.fireflies = [
+            (10.2, 11.8, 0.7), (11.8, 12.5, 0.5), (8.5, 10.2, 0.3),
+            (12.5, 9.5, 0.6), (7.8, 7.8, 0.8), (11.0, 6.2, 0.9), (6.2, 6.8, 0.6)
+        ]
+
+        # 7. Floresta Densa de Bambus Cortáveis (200+ bambus gerados)
+        bamboo_rng = random.Random(42) # Semente fixa para mapa consistente e harmonioso
         for x in range(self.cols):
             for y in range(self.rows):
-                # Não colocar bambu na água, na ponte ou no meio exato do caminho
+                # Não colocar bambu na água, na ponte ou na estrada
                 tile = self.tiles[x][y]
-                if tile in (TILE_WATER, TILE_BRIDGE):
+                if tile in (TILE_WATER, TILE_BRIDGE, TILE_EARTH):
                     continue
 
                 # Evitar sobrepor obstáculos rígidos
-                too_close_obstacle = False
+                too_close = False
                 for r in self.rocks:
-                    if math.hypot(x - r.wx, y - r.wy) < 1.2:
-                        too_close_obstacle = True
+                    if math.hypot(x - r.wx, y - r.wy) < 1.3:
+                        too_close = True
                         break
                 if self.well and math.hypot(x - self.well.wx, y - self.well.wy) < 1.4:
-                    too_close_obstacle = True
+                    too_close = True
                 for t in self.trees:
-                    if math.hypot(x - t.wx, y - t.wy) < 1.5:
-                        too_close_obstacle = True
-                if too_close_obstacle:
+                    if math.hypot(x - t.wx, y - t.wy) < 2.6:
+                        too_close = True
+                        break
+                for tg in self.torii_gates:
+                    if math.hypot(x - tg.wx, y - tg.wy) < 1.6:
+                        too_close = True
+                        break
+                for l in self.lanterns:
+                    if math.hypot(x - l.wx, y - l.wy) < 0.8:
+                        too_close = True
+                        break
+                if too_close:
                     continue
 
-                # Probabilidade alta nas laterais, moderada perto do caminho
+                # Densidade alta nas laterais, moderada nas clareiras internas
                 dist_to_center = math.hypot(x - 11, y - 11)
-                chance = 0.65 if dist_to_center > 5.5 else 0.15
+                chance = 0.72 if dist_to_center > 5.0 else 0.25
 
                 if bamboo_rng.random() < chance:
                     offset_x = bamboo_rng.uniform(-0.35, 0.35)
@@ -126,8 +174,8 @@ class GameMap:
         return False
 
     def render_terrain(self, surface: pygame.Surface, camera, time_val: float):
-        """Renderiza os tiles de chão com profundidade voxel 3D (Grama, Terra, Lago rebaixado e Ponte elevada)."""
-        from src.isometric.voxel_renderer import draw_voxel_box
+        """Renderiza os tiles de chão com profundidade voxel 3D (Grama, Lajes Tobi-ishi, Lago Zen e Ponte Taiko-bashi)."""
+        bridge_drawn = False
 
         for x in range(self.cols):
             for y in range(self.rows):
@@ -140,7 +188,7 @@ class GameMap:
                 p_left = camera.apply(x, y + 1, 0.0)
                 quad = [p_top, p_right, p_bottom, p_left]
 
-                # Pular se estiver fora da tela para otimização
+                # Culling se estiver fora da tela
                 if p_bottom[1] < -60 or p_top[1] > surface.get_height() + 60 or \
                    p_right[0] < -60 or p_left[0] > surface.get_width() + 60:
                     continue
@@ -153,9 +201,12 @@ class GameMap:
                 elif tile == TILE_EARTH:
                     pygame.draw.polygon(surface, COLOR_EARTH, quad)
                     pygame.draw.polygon(surface, (44, 34, 22), quad, 1)
+                    # Lajes de cantaria Tobi-ishi cravadas no caminho
+                    if (x + y) % 2 == 0:
+                        draw_voxel_box(surface, camera, x + 0.15, y + 0.15, 0.0, 0.70, 0.70, 0.04, (88, 92, 95), outline=True)
 
                 elif tile == TILE_WATER:
-                    # Margem rebaixada do lago (depressão voxel a z = -0.15)
+                    # Margem rebaixada do lago zen (depressão voxel a z = -0.15)
                     w_top = camera.apply(x, y, -0.15)
                     w_right = camera.apply(x + 1, y, -0.15)
                     w_bottom = camera.apply(x + 1, y + 1, -0.15)
@@ -163,59 +214,73 @@ class GameMap:
                     w_quad = [w_top, w_right, w_bottom, w_left]
 
                     # Barrancos de terra verticais para vizinhos que não são água
-                    # Face norte (y - 1)
                     if y > 0 and self.tiles[x][y - 1] not in (TILE_WATER, TILE_BRIDGE):
                         bank_n = [p_top, p_right, w_right, w_top]
                         pygame.draw.polygon(surface, (36, 26, 18), bank_n)
                         pygame.draw.polygon(surface, (22, 16, 12), bank_n, 1)
 
-                    # Face oeste (x - 1)
                     if x > 0 and self.tiles[x - 1][y] not in (TILE_WATER, TILE_BRIDGE):
                         bank_w = [p_left, p_top, w_top, w_left]
                         pygame.draw.polygon(surface, (46, 32, 22), bank_w)
                         pygame.draw.polygon(surface, (28, 20, 14), bank_w, 1)
 
-                    # Superfície da água em z = -0.15 com ondulações
+                    # Superfície da água com ondulações
                     wave = math.sin(time_val * 3.0 + x * 0.9 + y * 0.9)
                     wave_c = COLOR_WATER_HIGHLIGHT if wave > 0.45 else COLOR_WATER
                     pygame.draw.polygon(surface, wave_c, w_quad)
-                    pygame.draw.polygon(surface, (22, 55, 75), w_quad, 1)
+                    pygame.draw.polygon(surface, (14, 48, 72), w_quad, 1)
 
-                    # Pequenos blocos de reflexo d'água
-                    if (x * 7 + y * 13) % 5 == 0:
-                        ref_sx, ref_sy = camera.apply(x + 0.4, y + 0.4, -0.14)
-                        pygame.draw.rect(surface, (60, 150, 195), (ref_sx - 3, ref_sy - 1, 6, 3))
+                    # Reflexo sutil da lua no espelho d'água
+                    if (x == 11 and y in (11, 12)) or (x == 10 and y == 12):
+                        ref_sx, ref_sy = camera.apply(x + 0.5, y + 0.5, -0.14)
+                        pygame.draw.circle(surface, (120, 205, 240, 180), (ref_sx, ref_sy), 8)
 
-                elif tile == TILE_BRIDGE:
-                    # 1. Sombra da ponte na água abaixo
-                    w_top = camera.apply(x, y, -0.15)
-                    w_right = camera.apply(x + 1, y, -0.15)
-                    w_bottom = camera.apply(x + 1, y + 1, -0.15)
-                    w_left = camera.apply(x, y + 1, -0.15)
-                    pygame.draw.polygon(surface, (14, 26, 34), [w_top, w_right, w_bottom, w_left])
+                elif tile == TILE_BRIDGE and not bridge_drawn:
+                    # Desenhar a ponte Taiko-bashi em Voxel 3D arqueada por completo uma única vez
+                    self._draw_taiko_bashi_bridge(surface, camera, time_val)
+                    bridge_drawn = True
 
-                    # 2. Pilares de sustentação de madeira entrando na água
-                    if y % 2 == 0:
-                        draw_voxel_box(surface, camera, x + 0.1, y + 0.1, -0.15, 0.12, 0.12, 0.27, COLOR_BRIDGE_DARK, outline=False)
-                        draw_voxel_box(surface, camera, x + 0.78, y + 0.1, -0.15, 0.12, 0.12, 0.27, COLOR_BRIDGE_DARK, outline=False)
+    def _draw_taiko_bashi_bridge(self, surface: pygame.Surface, camera, time_val: float):
+        """Renderiza a ponte tradicional arqueada japonesa Taiko-bashi em Voxel 3D."""
+        bridge_y_start = 7
+        bridge_y_end = 16
+        total_len = bridge_y_end - bridge_y_start
 
-                    # 3. Pranchas de madeira da ponte (bloco voxel elevado z = 0.12, dz = 0.08)
-                    draw_voxel_box(surface, camera, x, y, 0.12, 1.0, 1.0, 0.08, COLOR_BRIDGE)
+        for y_idx in range(bridge_y_start, bridge_y_end):
+            prog = (y_idx - bridge_y_start + 0.5) / total_len
+            arch_z = 0.10 + math.sin(prog * math.pi) * 0.38
 
-                    # Ranhuras das tábuas da ponte
-                    for py_sub in (0.33, 0.66):
-                        p_l = camera.apply(x, y + py_sub, 0.20)
-                        p_r = camera.apply(x + 1.0, y + py_sub, 0.20)
-                        pygame.draw.line(surface, COLOR_BRIDGE_DARK, p_l, p_r, 1)
+            # Sombra da seção no leito do lago
+            sh_top = camera.apply(10.0, y_idx, -0.15)
+            sh_right = camera.apply(12.0, y_idx, -0.15)
+            sh_bot = camera.apply(12.0, y_idx + 1.0, -0.15)
+            sh_left = camera.apply(10.0, y_idx + 1.0, -0.15)
+            pygame.draw.polygon(surface, (12, 22, 28), [sh_top, sh_right, sh_bot, sh_left])
 
-                    # 4. Guardas e postes de proteção da ponte
-                    if x == 10:
-                        # Guarda-corpo do lado oeste
-                        draw_voxel_box(surface, camera, 10.02, y + 0.1, 0.20, 0.10, 0.10, 0.35, COLOR_BRIDGE_DARK)
-                        draw_voxel_box(surface, camera, 10.02, y + 0.8, 0.20, 0.10, 0.10, 0.35, COLOR_BRIDGE_DARK)
-                        draw_voxel_box(surface, camera, 10.02, y, 0.50, 0.08, 1.0, 0.08, COLOR_BRIDGE)
-                    elif x == 11:
-                        # Guarda-corpo do lado leste
-                        draw_voxel_box(surface, camera, 11.88, y + 0.1, 0.20, 0.10, 0.10, 0.35, COLOR_BRIDGE_DARK)
-                        draw_voxel_box(surface, camera, 11.88, y + 0.8, 0.20, 0.10, 0.10, 0.35, COLOR_BRIDGE_DARK)
-                        draw_voxel_box(surface, camera, 11.90, y, 0.50, 0.08, 1.0, 0.08, COLOR_BRIDGE)
+            # Pilares de sustentação descendo até a água a cada 2 tiles
+            if (y_idx - bridge_y_start) % 2 == 1:
+                draw_voxel_box(surface, camera, 9.92, y_idx + 0.4, -0.15, 0.15, 0.15, arch_z + 0.15, COLOR_BRIDGE_DARK, outline=True)
+                draw_voxel_box(surface, camera, 11.93, y_idx + 0.4, -0.15, 0.15, 0.15, arch_z + 0.15, COLOR_BRIDGE_DARK, outline=True)
+                # Viga transversal sob a ponte
+                draw_voxel_box(surface, camera, 9.95, y_idx + 0.4, arch_z - 0.08, 2.10, 0.14, 0.08, (52, 32, 20), outline=True)
+
+            # Tabuleiro da ponte (Deck de tábuas de cedro em 3 degraus por tile)
+            for step_i in range(3):
+                sy = y_idx + step_i * (1.0 / 3.0)
+                s_prog = (sy - bridge_y_start) / total_len
+                sz = 0.10 + math.sin(s_prog * math.pi) * 0.38
+                draw_voxel_box(surface, camera, 10.0, sy, sz, 2.0, 0.31, 0.08, COLOR_BRIDGE, outline=True)
+
+            # Corrimão Oeste (x = 10)
+            draw_voxel_box(surface, camera, 9.94, y_idx + 0.1, arch_z + 0.08, 0.12, 0.12, 0.32, COLOR_BRIDGE_DARK, outline=True)
+            draw_voxel_box(surface, camera, 9.94, y_idx + 0.8, arch_z + 0.08, 0.12, 0.12, 0.32, COLOR_BRIDGE_DARK, outline=True)
+            draw_voxel_box(surface, camera, 9.95, y_idx, arch_z + 0.38, 0.10, 1.0, 0.07, (120, 68, 42), outline=True)
+            if y_idx in (bridge_y_start, bridge_y_end - 1):
+                draw_voxel_box(surface, camera, 9.92, y_idx + 0.1, arch_z + 0.40, 0.16, 0.16, 0.12, COLOR_GOLD, outline=False)
+
+            # Corrimão Leste (x = 11)
+            draw_voxel_box(surface, camera, 11.94, y_idx + 0.1, arch_z + 0.08, 0.12, 0.12, 0.32, COLOR_BRIDGE_DARK, outline=True)
+            draw_voxel_box(surface, camera, 11.94, y_idx + 0.8, arch_z + 0.08, 0.12, 0.12, 0.32, COLOR_BRIDGE_DARK, outline=True)
+            draw_voxel_box(surface, camera, 11.95, y_idx, arch_z + 0.38, 0.10, 1.0, 0.07, (120, 68, 42), outline=True)
+            if y_idx in (bridge_y_start, bridge_y_end - 1):
+                draw_voxel_box(surface, camera, 11.92, y_idx + 0.1, arch_z + 0.40, 0.16, 0.16, 0.12, COLOR_GOLD, outline=False)
