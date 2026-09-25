@@ -1,6 +1,8 @@
 """
 Configurações globais e constantes para o Duelo de Samurais Isométrico.
 """
+import os
+import sys
 import pygame
 
 # Resolução da Janela
@@ -210,3 +212,61 @@ COLOR_KYOTO_EMBER = (255, 80, 20)           # Brasas incandescentes
 COLOR_KYOTO_CARRIAGE_WOOD = (58, 38, 26)    # Madeira da carruagem
 COLOR_KYOTO_CARRIAGE_GOLD = (200, 150, 45)  # Detalhes dourados carruagem
 COLOR_KYOTO_HORSE_DARK = (36, 26, 22)       # Cavalo negro/marrom
+
+def get_asset_path(relative_path: str) -> str:
+    """
+    Retorna o caminho absoluto do asset de forma infalível:
+    1. PyInstaller sys._MEIPASS (onefile ou onedir bundle)
+    2. macOS .app bundle (Contents/Resources e Contents/MacOS)
+    3. Diretório do executável congelado (dist/SamuraiEdge e dist/SamuraiEdge/_internal)
+    4. Raiz do projeto de desenvolvimento
+    5. Diretório de trabalho atual (CWD)
+    """
+    clean_rel = relative_path.replace("\\", "/").strip("/")
+    rel_variants = [clean_rel]
+    if clean_rel.startswith("assets/"):
+        rel_variants.append(clean_rel[len("assets/"):])
+
+    candidates = []
+
+    # 1. sys._MEIPASS (onde o PyInstaller coloca a.datas)
+    if hasattr(sys, '_MEIPASS'):
+        for var in rel_variants:
+            candidates.append(os.path.join(sys._MEIPASS, var))
+            candidates.append(os.path.join(sys._MEIPASS, "assets", var))
+
+    # 2. Executável congelado (PyInstaller)
+    if getattr(sys, 'frozen', False):
+        exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+        for var in rel_variants:
+            candidates.append(os.path.join(exe_dir, var))
+            candidates.append(os.path.join(exe_dir, "assets", var))
+            candidates.append(os.path.join(exe_dir, "_internal", var))
+            candidates.append(os.path.join(exe_dir, "_internal", "assets", var))
+
+        # Estrutura do pacote macOS .app
+        if "Contents/MacOS" in exe_dir or "Contents/MacOS" in exe_dir.replace("\\", "/"):
+            contents_dir = os.path.dirname(exe_dir)
+            for var in rel_variants:
+                candidates.append(os.path.join(contents_dir, "Resources", var))
+                candidates.append(os.path.join(contents_dir, "Resources", "assets", var))
+                candidates.append(os.path.join(contents_dir, "Resources", "_internal", var))
+                candidates.append(os.path.join(contents_dir, "MacOS", var))
+                candidates.append(os.path.join(contents_dir, "MacOS", "assets", var))
+
+    # 3. Raiz do repositório/desenvolvimento
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    for var in rel_variants:
+        candidates.append(os.path.join(root_dir, var))
+        candidates.append(os.path.join(root_dir, "assets", var))
+
+    # 4. Diretório de trabalho atual (CWD)
+    for var in rel_variants:
+        candidates.append(os.path.abspath(var))
+
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+
+    # Fallback padrão
+    return os.path.join(root_dir, clean_rel)

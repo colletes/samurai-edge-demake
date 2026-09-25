@@ -3,6 +3,31 @@ Ponto de entrada principal: Duelo de Samurais Isométrico 2.5D.
 Suporte à Seleção de Personagens: Kenshi (Vermelho), Musashi (Azul) e Ninja Hanzo (Amarelo).
 """
 import sys
+import os
+
+# Ajuste automático de CWD para executáveis empacotados (PyInstaller)
+if getattr(sys, 'frozen', False):
+    exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+    search_dirs = [
+        getattr(sys, '_MEIPASS', None),
+        exe_dir,
+        os.path.join(exe_dir, "_internal"),
+    ]
+    if "Contents/MacOS" in exe_dir or "Contents/MacOS" in exe_dir.replace("\\", "/"):
+        contents_dir = os.path.dirname(exe_dir)
+        search_dirs.extend([
+            os.path.join(contents_dir, "Resources"),
+            os.path.join(contents_dir, "Resources", "_internal"),
+            os.path.join(contents_dir, "MacOS"),
+        ])
+    for s_dir in search_dirs:
+        if s_dir and os.path.exists(os.path.join(s_dir, "assets")):
+            try:
+                os.chdir(s_dir)
+                break
+            except Exception:
+                pass
+
 import math
 import random
 import pygame

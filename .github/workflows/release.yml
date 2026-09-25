@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag Name (e.g. v1.3.1)'
+        description: 'Release Tag Name (e.g. v1.3.2)'
         required: false
-        default: 'v1.3.1'
+        default: 'v1.3.2'
 
 permissions:
   contents: write
@@ -83,6 +83,10 @@ jobs:
       - name: Package Release (macOS)
         if: runner.os == 'macOS'
         run: |
+          mkdir -p dist/SamuraiEdge.app/Contents/Resources/assets
+          mkdir -p dist/SamuraiEdge.app/Contents/MacOS/assets
+          cp -R assets/* dist/SamuraiEdge.app/Contents/Resources/assets/
+          cp -R assets/* dist/SamuraiEdge.app/Contents/MacOS/assets/
           xattr -cr dist/SamuraiEdge.app || true
           codesign -s - --force --deep dist/SamuraiEdge.app || true
           ditto -c -k --keepParent dist/SamuraiEdge.app ${{ matrix.artifact_name }}
@@ -90,11 +94,23 @@ jobs:
       - name: Package Release (Linux)
         if: runner.os == 'Linux'
         run: |
+          mkdir -p dist/SamuraiEdge/assets
+          cp -R assets/* dist/SamuraiEdge/assets/
+          if [ -d "dist/SamuraiEdge/_internal" ]; then
+            mkdir -p dist/SamuraiEdge/_internal/assets
+            cp -R assets/* dist/SamuraiEdge/_internal/assets/
+          fi
           tar -czvf ${{ matrix.artifact_name }} -C dist SamuraiEdge
 
       - name: Package Release (Windows)
         if: runner.os == 'Windows'
         run: |
+          New-Item -ItemType Directory -Force -Path "dist\SamuraiEdge\assets"
+          Copy-Item -Recurse -Force assets\* dist\SamuraiEdge\assets\
+          if (Test-Path "dist\SamuraiEdge\_internal") {
+            New-Item -ItemType Directory -Force -Path "dist\SamuraiEdge\_internal\assets"
+            Copy-Item -Recurse -Force assets\* dist\SamuraiEdge\_internal\assets\
+          }
           Compress-Archive -Path dist\SamuraiEdge -DestinationPath ${{ matrix.artifact_name }}
 
       - name: Upload Build Artifact

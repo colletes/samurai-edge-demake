@@ -25,7 +25,7 @@ source.exclude_exts = spec,pyc,pyo,dmg,tar,gz
 source.exclude_dirs = tests,bin,build,dist,.git,.pyinstaller,.github,__pycache__,venv,deploy
 
 # (str) Application versioning (method 1)
-version = 1.3.1
+version = 1.3.2
 
 # (list) Application requirements
 # pygame-ce runs on python3 and SDL2

@@ -19,7 +19,7 @@ from src.config import (
     COLOR_SAITOU_LIGHT_BLUE, CHAR_SAITOU,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
     CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
-    COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA
+    COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA, get_asset_path
 )
 
 from src.isometric.iso_math import world_to_iso
@@ -190,7 +190,7 @@ class CharacterSelectScreen:
 
         # Carregar imagem conceitual Sumi-E do título com vinheta escurecida
         self.bg_surf = None
-        bg_path = os.path.join("assets", "concepts", "sumie_title_logo_concept.jpg")
+        bg_path = get_asset_path("assets/concepts/sumie_title_logo_concept.jpg")
         if os.path.exists(bg_path):
             try:
                 try:

@@ -151,10 +151,46 @@ def test_tomoe_obstacle_lock():
     print("  -> Detecção e fixação em rocha/obstáculo OK!")
 
 
+def test_asset_resolution_and_fallbacks():
+    print("Iniciando teste de resolução de assets e fallbacks (PyInstaller / CWD)...")
+    from src.config import get_asset_path
+    from src.ui.fonts import get_title_font, get_text_font
+    from src.ui.portraits import get_portrait
+    from src.ui.title_screen import SumieTitleScreen
+    from src.ui.character_select import CharacterSelectScreen
+    from src.ui.arena_select import ArenaSelectScreen
+
+    # 1. Resolução de caminhos em assets/
+    for rel in [
+        "assets/fonts/Shojumaru-Regular.ttf",
+        "assets/fonts/ZenAntique-Regular.ttf",
+        "assets/concepts/sumie_title_logo_concept.jpg",
+        "assets/portraits/kenshi_bust_circle.png",
+        "assets/concepts/bamboo_forest_concept.jpg"
+    ]:
+        p = get_asset_path(rel)
+        assert os.path.exists(p), f"Asset {rel} não foi encontrado pelo resolvedor: {p}"
+
+    # 2. Carregamento correto das fontes e artes
+    assert get_title_font(24) is not None
+    assert get_text_font(14) is not None
+    assert get_portrait("kenshi") is not None
+    ts = SumieTitleScreen()
+    assert ts.bg_surf is not None, "Title screen deve carregar o fundo sumi-e"
+    cs = CharacterSelectScreen()
+    assert cs.bg_surf is not None, "Character select screen deve carregar o fundo sumi-e"
+    ar = ArenaSelectScreen()
+    for k, v in ar.preview_surfs.items():
+        assert v is not None, f"Preview da arena {k} deve ser carregado com sucesso"
+
+    print("  -> Resolução de assets com CWD independente OK!")
+
+
 if __name__ == "__main__":
     test_tomoe_hold_and_release()
     test_tomoe_boundary_clamping()
     test_tomoe_obstacle_lock()
+    test_asset_resolution_and_fallbacks()
     print("\n=======================================================")
-    print("TODOS OS TESTES DE TOMOE HOLD & RELEASE PASSARAM COM 100%!")
+    print("TODOS OS TESTES DE TOMOE E ASSETS PASSARAM COM 100%!")
     print("=======================================================\n")

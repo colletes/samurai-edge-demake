@@ -12,7 +12,8 @@ from src.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_GOLD, COLOR_WHITE, COLOR_BG,
     ARENA_BAMBOO, ARENA_KYOTO, ARENA_RANDOM,
     COLOR_BAMBOO, COLOR_WATER, COLOR_BRIDGE,
-    COLOR_KYOTO_STONE, COLOR_KYOTO_FIRE_MID, COLOR_KYOTO_CARRIAGE_WOOD
+    COLOR_KYOTO_STONE, COLOR_KYOTO_FIRE_MID, COLOR_KYOTO_CARRIAGE_WOOD,
+    get_asset_path
 )
 from src.i18n import t
 
@@ -26,9 +27,9 @@ class ArenaSelectScreen:
         self.preview_surfs = {}
         target_size = (328, 160)
         preview_files = {
-            ARENA_BAMBOO: os.path.join("assets", "concepts", "bamboo_forest_concept.jpg"),
-            ARENA_KYOTO: os.path.join("assets", "concepts", "kyoto_bakumatsu_concept.jpg"),
-            ARENA_RANDOM: os.path.join("assets", "concepts", "random_arena_concept.jpg"),
+            ARENA_BAMBOO: get_asset_path("assets/concepts/bamboo_forest_concept.jpg"),
+            ARENA_KYOTO: get_asset_path("assets/concepts/kyoto_bakumatsu_concept.jpg"),
+            ARENA_RANDOM: get_asset_path("assets/concepts/random_arena_concept.jpg"),
         }
         for arena_id, path in preview_files.items():
             if os.path.exists(path):

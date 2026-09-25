@@ -9,6 +9,7 @@ a = Analysis(
     pathex=['.'],
     binaries=[],
     datas=[
+        ('assets', 'assets'),
         ('assets/portraits', 'assets/portraits'),
         ('assets/fonts', 'assets/fonts'),
         ('assets/concepts', 'assets/concepts'),
@@ -114,8 +115,8 @@ if sys.platform == 'darwin':
         info_plist={
             'CFBundleName': 'Samurai Edge Demake',
             'CFBundleDisplayName': 'Samurai Edge Demake',
-            'CFBundleVersion': '1.3.1',
-            'CFBundleShortVersionString': '1.3.1',
+            'CFBundleVersion': '1.3.2',
+            'CFBundleShortVersionString': '1.3.2',
             'NSHighResolutionCapable': 'True',
             'LSMinimumSystemVersion': '10.13.0',
         },

@@ -4,6 +4,7 @@ Carrega as artes de assets/portraits/ com redimensionamento suave e cache autom√
 """
 import os
 import pygame
+from src.config import get_asset_path
 
 # Mapeamento universal de identificadores para o prefixo do arquivo em assets/portraits/
 PORTRAIT_MAP = {
@@ -51,13 +52,7 @@ def get_portrait(char_id: str, size: tuple[int, int] = (58, 58), circular: bool 
     suffix = "_bust_circle.png" if circular else "_bust.png"
     filename = f"{prefix}{suffix}"
 
-    # Busca em assets/portraits/
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    path = os.path.join(base_dir, "assets", "portraits", filename)
-
-    if not os.path.exists(path):
-        # Tenta fallback para o diret√≥rio local relativo
-        path = os.path.join("assets", "portraits", filename)
+    path = get_asset_path(f"assets/portraits/{filename}")
 
     if not os.path.exists(path):
         return None

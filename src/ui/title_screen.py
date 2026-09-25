@@ -11,7 +11,7 @@ import math
 import random
 import pygame
 from src.config import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_GOLD, COLOR_WHITE, COLOR_BG
+    SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_GOLD, COLOR_WHITE, COLOR_BG, get_asset_path
 )
 from src.i18n import t
 
@@ -28,7 +28,7 @@ class SumieTitleScreen:
 
         # Carregar imagem conceitual Sumi-E se disponível
         self.bg_surf = None
-        bg_path = os.path.join("assets", "concepts", "sumie_title_logo_concept.jpg")
+        bg_path = get_asset_path("assets/concepts/sumie_title_logo_concept.jpg")
         if os.path.exists(bg_path):
             try:
                 try:
