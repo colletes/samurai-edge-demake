@@ -424,8 +424,8 @@ class KyotoMap:
         self.carriages: list[RunawayCarriage] = []
         self.falling_debris: list[FallingDebris] = []
 
-        self.carriage_timer = 4.5
-        self.debris_timer = 3.0
+        self.carriage_timer = 2.5
+        self.debris_timer = 1.2
 
         self._build_terrain()
         self._populate_buildings()
@@ -474,21 +474,45 @@ class KyotoMap:
         return False
 
     def update(self, dt: float, fighters: list, camera, particles: list, banners: list, cinematic_director=None):
-        # 1. Carruagens em disparada pela via estreita
+        # 1. Carruagens em disparada pela via (frequência elevada com chance de cruzamento duplo)
         self.carriage_timer -= dt
         if self.carriage_timer <= 0:
-            if random.random() < 0.5:
-                start_p = (10.5, -4.0)
-                end_p = (10.5, float(self.rows + 4))
-            else:
-                start_p = (10.5, float(self.rows + 4))
-                end_p = (10.5, -4.0)
+            # 40% de chance de duas carruagens simultâneas passando em sentidos opostos
+            is_double = random.random() < 0.40
 
-            carriage = RunawayCarriage(start_p, end_p, speed=14.0)
-            self.carriages.append(carriage)
-            banners.append(FloatingBanner("PERIGO: CARRUAGEM!", 10.5, 11.0, wz=2.5, color=(255, 190, 40), duration=2.2))
-            camera.add_shake(4.0)
-            self.carriage_timer = random.uniform(8.0, 12.0)
+            if is_double:
+                lane1_x = 9.8
+                lane2_x = 11.2
+                if random.random() < 0.5:
+                    # Lane 1 desce (Norte -> Sul), Lane 2 sobe (Sul -> Norte)
+                    c1 = RunawayCarriage((lane1_x, -4.0), (lane1_x, float(self.rows + 4)), speed=14.0)
+                    c2 = RunawayCarriage((lane2_x, float(self.rows + 4)), (lane2_x, -4.0), speed=14.0)
+                else:
+                    # Lane 1 sobe (Sul -> Norte), Lane 2 desce (Norte -> Sul)
+                    c1 = RunawayCarriage((lane1_x, float(self.rows + 4)), (lane1_x, -4.0), speed=14.0)
+                    c2 = RunawayCarriage((lane2_x, -4.0), (lane2_x, float(self.rows + 4)), speed=14.0)
+
+                self.carriages.append(c1)
+                self.carriages.append(c2)
+                banners.append(FloatingBanner("PERIGO DUPLO: CARRUAGENS CRUZADAS!", 10.5, 11.0, wz=2.5, color=(255, 60, 40), duration=2.5))
+                camera.add_shake(7.0)
+            else:
+                # Carruagem única passando em uma das faixas da avenida
+                lane_x = random.choice([9.8, 10.5, 11.2])
+                if random.random() < 0.5:
+                    start_p = (lane_x, -4.0)
+                    end_p = (lane_x, float(self.rows + 4))
+                else:
+                    start_p = (lane_x, float(self.rows + 4))
+                    end_p = (lane_x, -4.0)
+
+                carriage = RunawayCarriage(start_p, end_p, speed=14.0)
+                self.carriages.append(carriage)
+                banners.append(FloatingBanner("PERIGO: CARRUAGEM!", lane_x, 11.0, wz=2.5, color=(255, 190, 40), duration=2.2))
+                camera.add_shake(4.0)
+
+            # Nova frequência de carruagens: a cada 4.0 a 6.5s (anteriormente 8.0 a 12.0s)
+            self.carriage_timer = random.uniform(4.0, 6.5)
 
         for carriage in self.carriages:
             carriage.update(dt, camera, particles)
@@ -498,14 +522,20 @@ class KyotoMap:
 
         self.carriages = [c for c in self.carriages if c.is_active]
 
-        # 2. Escombros incandescentes caindo nas calçadas
+        # 2. Escombros incandescentes caindo com maior frequência e possibilidade de queda dupla
         self.debris_timer -= dt
         if self.debris_timer <= 0:
-            # Cai nas calçadas estreitas (wx = 7.5 a 8.5 ou 13.5 a 14.5)
-            target_x = 7.8 if random.random() < 0.5 else 14.0
-            target_y = random.uniform(2.5, float(self.rows - 2.5))
-            self.falling_debris.append(FallingDebris(target_x, target_y))
-            self.debris_timer = random.uniform(3.0, 5.5)
+            debris_count = 2 if random.random() < 0.35 else 1
+            for _ in range(debris_count):
+                if random.random() < 0.5:
+                    target_x = random.uniform(7.4, 8.6)
+                else:
+                    target_x = random.uniform(12.4, 14.2)
+                target_y = random.uniform(2.0, float(self.rows - 2.0))
+                self.falling_debris.append(FallingDebris(target_x, target_y))
+
+            # Nova frequência de escombros: a cada 1.2 a 2.4s (anteriormente 3.0 a 5.5s)
+            self.debris_timer = random.uniform(1.2, 2.4)
 
         for debris in self.falling_debris:
             debris.update(dt, camera, particles, fighters, banners, cinematic_director)

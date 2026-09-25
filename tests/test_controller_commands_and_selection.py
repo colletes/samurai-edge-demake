@@ -45,25 +45,25 @@ def test_ps5_controller_mappings():
     assert dev.get_button_glyph(ACTION_CANCEL) == "○"
     assert dev.get_button_glyph(ACTION_MENU) == "Options"
 
-    # Mapeamentos brutos (Raw indices do DualSense no macOS)
-    # Botão 0: Quadrado (Ação Principal)
-    assert dev.is_action_pressed(0, ACTION_ATTACK) is True
-    # Botão 1: ✕ (Ação Secundária & Confirmação de Menus)
-    assert dev.is_action_pressed(1, ACTION_DASH) is True
-    assert dev.is_action_pressed(1, ACTION_CONFIRM) is True
-    # Botão 2: ○ (Volta nos Menus)
-    assert dev.is_action_pressed(2, ACTION_CANCEL) is True
-    # Botão 9: Options (Pausa & Menu)
-    assert dev.is_action_pressed(9, ACTION_MENU) is True
-
-    # Suporte também aos índices normalizados do SDL GameController
-    assert dev.is_action_pressed(2, ACTION_ATTACK) is True # SDL Controller X (Left face)
-    assert dev.is_action_pressed(0, ACTION_DASH) is True   # SDL Controller A (Bottom face)
+    # Mapeamentos padrão SDL GameController para DualSense no macOS:
+    # Botão 2: ▢ Quadrado (Ação Principal de Ataque)
+    assert dev.is_action_pressed(2, ACTION_ATTACK) is True
+    # Botão 10: R1 (Ação Principal de Ataque alternativa)
+    assert dev.is_action_pressed(10, ACTION_ATTACK) is True
+    # Botão 0: ✕ Cruz (Ação Secundária & Confirmação de Menus)
+    assert dev.is_action_pressed(0, ACTION_DASH) is True
     assert dev.is_action_pressed(0, ACTION_CONFIRM) is True
-    assert dev.is_action_pressed(1, ACTION_CANCEL) is True # SDL Controller B (Right face)
-    assert dev.is_action_pressed(6, ACTION_MENU) is True   # SDL Controller Start
+    # Botão 1: ○ Círculo (Volta nos Menus)
+    assert dev.is_action_pressed(1, ACTION_CANCEL) is True
+    # Botão 6: Options (Pausa & Menu)
+    assert dev.is_action_pressed(6, ACTION_MENU) is True
 
-    print("Teste PS5: Mapeamento de botões raw e normalizados para DualSense OK!")
+    # Garantir que L1 (9) e D-Pad (13) NUNCA acionem Menu ou Restart
+    assert dev.is_action_pressed(9, ACTION_MENU) is False
+    assert dev.is_action_pressed(13, "restart") is False
+    assert dev.is_action_pressed(2, ACTION_CANCEL) is False # Quadrado NÃO é cancelar!
+
+    print("Teste PS5: Mapeamento de botões correto para DualSense (Quadrado=Ataque, Cruz=Dash, Círculo=Volta) OK!")
 
 
 def test_char_select_sequential_vs_ai_flow():
@@ -183,14 +183,31 @@ def test_murasaki_hanzo_anne_buffs():
     combat.process_combat(murasaki, dummy_p2, game_map, [], [], camera, projs, 0.016)
     assert kunai_in.is_active is False, "Corrente em giro deve defletir projétil!"
 
-    # 3. Hanzo: Tanto reserva após arremesso e 1-Hit Kill em Backstab / Punish
+    # 3. Hanzo: Pulo Parabólico e Tanto bloqueado se tiver Kunai
     hanzo = YellowNinja(10.0, 10.0)
-    projs = []
-    hanzo.trigger_throw_attack(15.0, 10.0, projs)
-    assert hanzo.has_kunai is False, "Kunai foi arremessada!"
-    hanzo.state = "IDLE"
+    assert hanzo.has_kunai is True
+    # Tanto não dispara enquanto tiver a kunai!
     hanzo.trigger_thrust_attack(11.0, 10.0)
-    assert hanzo.state == "ATTACK", "Hanzo deve poder atacar corpo a corpo com a Tanto mesmo sem a kunai!"
+    assert hanzo.state == "IDLE", "Tanto deve estar bloqueado enquanto Hanzo tiver a Kunai!"
+
+    # Salto parabólico evasivo
+    hanzo.trigger_jump(12.0, 10.0)
+    assert hanzo.state == "JUMP", "Ação secundária deve iniciar pulo parabólico!"
+    hanzo.update(0.24, game_map)
+    assert hanzo.wz > 0.5, "Durante o pulo parabólico Hanzo deve estar alto no ar (wz > 0.5)!"
+
+    # Arremesso de kunai em pleno ar
+    projs = []
+    hanzo.trigger_midair_throw(15.0, 10.0, projs)
+    assert hanzo.has_kunai is False, "Kunai foi arremessada no ar!"
+    assert len(projs) == 1
+
+    # Após aterrissar e sem kunai, o ataque da Tanto é liberado!
+    hanzo.update(0.30, game_map)
+    assert hanzo.state == "IDLE"
+    assert hanzo.wz == 0.0
+    hanzo.trigger_thrust_attack(11.0, 10.0)
+    assert hanzo.state == "ATTACK", "Com Hanzo desarmado/sem kunai, a Tanto é liberada!"
 
     # Backstab fatal: Hanzo golpeia pelas costas (ambos olhando para a direita)
     enemy = RedSamurai(10.7, 10.0)

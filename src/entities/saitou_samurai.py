@@ -29,22 +29,22 @@ class SaitouSamurai(Samurai):
         # -------------------------------------------------------------
         # Parâmetros do Gatotsu (Estocada com Aceleração e Inércia)
         # -------------------------------------------------------------
-        self.initial_charge_speed = 4.8  # Começa na velocidade normal
+        self.initial_charge_speed = 4.6  # Começa na velocidade normal de deslocamento
         self.charge_speed = self.initial_charge_speed
-        self.max_charge_speed = 15.5      # Calibrado: velocidade alta com reação viável
-        self.charge_accel = 18.0          # Taxa de ganho de velocidade (tiles/s²)
+        self.max_charge_speed = 13.0      # Calibrado: veloz e incisivo sem perder controle
+        self.charge_accel = 11.0          # Taxa de ganho progressivo de velocidade (tiles/s²)
 
         self.charge_dir_x = 1.0
         self.charge_dir_y = 0.0
         self.gatotsu_timer = 0.0
-        self.gatotsu_max_duration = 0.90  # Alcance longo pelo mapa/ponte
+        self.gatotsu_max_duration = 0.80  # Alcance calibrado pelo mapa/ponte
 
         # Perda de manobrabilidade (esterçamento rígido: 1.1 rad/s)
         self.turn_rate = 1.15
 
         # Inércia e frenagem demorada
         self.brake_speed = 0.0
-        self.brake_duration = 0.45
+        self.brake_duration = 0.35
         self.slide_particle_timer = 0.0
 
         # Rastro de velocidade do Gatotsu
@@ -198,18 +198,32 @@ class SaitouSamurai(Samurai):
                 if col:
                     hit_hard_obstacle = True
 
+            if hasattr(game_map, 'trees'):
+                for t in game_map.trees:
+                    col, _, _ = t.check_collision(new_x, new_y, self.radius)
+                    if col:
+                        hit_hard_obstacle = True
+                        break
+
             if hit_hard_obstacle:
-                # Ricochete violento contra pedra: atordoa Saitou!
+                # Ricochete violento contra pedra ou árvore: atordoa Saitou!
                 self.state = STATE_STUNNED
-                self.state_timer = 0.70
+                self.state_timer = 0.60
                 self.hitbox_active = False
                 if particles is not None:
                     for _ in range(8):
                         particles.append(SparkParticle(self.wx, self.wy, 0.5))
                 return
 
-            self.wx = new_x
-            self.wy = new_y
+            # Limites intransponíveis do mapa (impede sair da arena)
+            min_x, max_x = 1.0, game_map.cols - 1.0
+            min_y, max_y = 1.0, game_map.rows - 1.0
+            clamped_x = max(min_x, min(max_x, new_x))
+            clamped_y = max(min_y, min(max_y, new_y))
+            hit_border = (clamped_x != new_x or clamped_y != new_y)
+
+            self.wx = clamped_x
+            self.wy = clamped_y
             self.hitbox_center = (
                 self.wx + self.charge_dir_x * 0.95,
                 self.wy + self.charge_dir_y * 0.95
@@ -220,8 +234,16 @@ class SaitouSamurai(Samurai):
             if len(self.trail_points) > 12:
                 self.trail_points.pop(0)
 
-            # Transição para Frenagem Demorada (Braking / Inércia) ao fim do fôlego
-            if self.gatotsu_timer >= self.gatotsu_max_duration:
+            # Transição para Frenagem: colisão com a borda da arena ou fim da duração máxima
+            if hit_border:
+                self.state = STATE_BRAKING
+                self.hitbox_active = False
+                self.brake_speed = 0.0
+                self.state_timer = 0.25
+                if particles is not None:
+                    for _ in range(5):
+                        particles.append(SparkParticle(self.wx, self.wy, 0.3))
+            elif self.gatotsu_timer >= self.gatotsu_max_duration:
                 self.state = STATE_BRAKING
                 self.hitbox_active = False
                 self.brake_speed = self.charge_speed
@@ -233,13 +255,19 @@ class SaitouSamurai(Samurai):
         elif self.state == STATE_BRAKING:
             self.state_timer -= dt
             # Desaceleração por atrito
-            self.brake_speed = max(0.0, self.brake_speed - 36.0 * dt)
+            self.brake_speed = max(0.0, self.brake_speed - 40.0 * dt)
 
             step = self.brake_speed * dt
             new_x = self.wx + self.charge_dir_x * step
             new_y = self.wy + self.charge_dir_y * step
 
-            # Checar limites contra pedras ao deslizar
+            # Limites intransponíveis do mapa durante a frenagem
+            min_x, max_x = 1.0, game_map.cols - 1.0
+            min_y, max_y = 1.0, game_map.rows - 1.0
+            new_x = max(min_x, min(max_x, new_x))
+            new_y = max(min_y, min(max_y, new_y))
+
+            # Checar limites contra obstáculos rígidos ao deslizar
             can_slide = True
             for r in game_map.rocks:
                 col, _, _ = r.check_collision(new_x, new_y, self.radius)
@@ -247,10 +275,16 @@ class SaitouSamurai(Samurai):
             if can_slide and game_map.well:
                 col, _, _ = game_map.well.check_collision(new_x, new_y, self.radius)
                 if col: can_slide = False
+            if can_slide and hasattr(game_map, 'trees'):
+                for t in game_map.trees:
+                    col, _, _ = t.check_collision(new_x, new_y, self.radius)
+                    if col: can_slide = False; break
 
             if can_slide:
                 self.wx = new_x
                 self.wy = new_y
+            else:
+                self.brake_speed = 0.0
 
             # Faíscas de atrito dos calçados derrapando
             self.slide_particle_timer += dt

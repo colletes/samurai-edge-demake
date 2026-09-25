@@ -5,7 +5,9 @@ Oferece suporte sequencial de seleção para 1P vs IA (P1 escolhe seu lutador ->
 bloqueio de teclado P2 no modo IA, suporte a 2 controles no modo 2P,
 navegação até o botão de alternar modo e comandos padronizados de confirmação e volta.
 """
+import os
 import math
+import random
 import pygame
 from src.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_GOLD, COLOR_WHITE, COLOR_RED_AURA,
@@ -25,6 +27,132 @@ from src.entities.voxel_models import render_voxel_humanoid, render_voxel_doberm
 from src.ui.game_help import GameHelpModal
 from src.i18n import t, get_lang, toggle_lang, LANG_PT, LANG_EN
 from src.ui.portraits import get_portrait
+from src.ui.fonts import get_title_font, get_text_font
+
+# Paleta Sumi-E inspirada no conceito artístico do título
+COLOR_SUMI_INK = (18, 18, 20)
+COLOR_SUMI_CHARCOAL = (32, 32, 36)
+COLOR_WASH_PAPER = (42, 40, 38)
+COLOR_PARCHMENT_LIGHT = (218, 210, 195)
+COLOR_HANKO_RED = (205, 42, 35)
+COLOR_HANKO_BLUE = (35, 95, 175)
+COLOR_HANKO_GOLD = (212, 175, 55)
+COLOR_LACQUER_DARK = (24, 20, 22)
+
+
+def draw_hanko_stamp(surface, font, text: str, x: int, y: int, size: int = 34, color = COLOR_HANKO_RED, border_w: int = 2):
+    """Desenha um selo tradicional japonês (Hanko / Inkan) com borda dupla e aspecto entalhado."""
+    rect = pygame.Rect(x, y, size, size)
+    s_bg = pygame.Surface((size, size), pygame.SRCALPHA)
+    s_bg.fill((color[0], color[1], color[2], 55))
+    surface.blit(s_bg, (x, y))
+
+    pygame.draw.rect(surface, color, rect, border_w)
+    inner_rect = pygame.Rect(x + 3, y + 3, size - 6, size - 6)
+    pygame.draw.rect(surface, color, inner_rect, 1)
+
+    if text:
+        s_txt = font.render(text, True, color)
+        surface.blit(s_txt, (rect.centerx - s_txt.get_width() // 2, rect.centery - s_txt.get_height() // 2))
+
+
+def draw_kanban_arrow(surface, x: int, y: int, size: int, color, direction: str = "right"):
+    """Desenha setas indicadoras nítidas e estilizadas sem depender de fontes de sistema."""
+    half = size // 2
+    if direction == "right":
+        pts = [(x, y - half), (x + size, y), (x, y + half)]
+    elif direction == "left":
+        pts = [(x + size, y - half), (x, y), (x + size, y + half)]
+    elif direction == "up":
+        pts = [(x - half, y + size), (x, y), (x + half, y + size)]
+    elif direction == "down":
+        pts = [(x - half, y), (x, y + size), (x + half, y)]
+    pygame.draw.polygon(surface, color, pts)
+
+
+def draw_brush_divider(surface, x1: int, y: int, x2: int, color = (90, 85, 80)):
+    """Desenha uma linha divisória orgânica como se feita por pincel de caligrafia."""
+    length = max(1, x2 - x1)
+    for x in range(x1, x2, 2):
+        t = (x - x1) / length
+        thickness = 1 + int(2.5 * math.sin(t * math.pi))
+        pygame.draw.line(surface, color, (x, y - thickness // 2), (x, y + thickness // 2))
+
+
+def draw_sumie_card(surface, rect: pygame.Rect, is_p1: bool, is_p2: bool, vs_ai: bool, sel_step: str, anim_time: float):
+    """Desenha a moldura de um card de guerreiro no estilo pergaminho e nanquim Sumi-E."""
+    card_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+    card_surf.fill((22, 20, 22, 245))
+    surface.blit(card_surf, rect.topleft)
+
+    pulse = 0.5 + 0.5 * math.sin(anim_time * 6.0)
+    if is_p1 and is_p2:
+        border_col = (int(255 * pulse + 180 * (1 - pulse)), int(215 * pulse + 140 * (1 - pulse)), 50)
+        border_w = 3
+    elif is_p1:
+        border_col = (int(240 * pulse + 180 * (1 - pulse)), 45, 45)
+        border_w = 3 if (not vs_ai or sel_step == "P1") else 2
+    elif is_p2:
+        border_col = (45, int(150 * pulse + 100 * (1 - pulse)), int(240 * pulse + 180 * (1 - pulse)))
+        border_w = 3 if (not vs_ai or sel_step == "AI") else 2
+    else:
+        border_col = (65, 60, 56)
+        border_w = 1
+
+    pygame.draw.rect(surface, border_col, rect, border_w, border_radius=6)
+    corner_sz = 8
+    c_col = (border_col[0] // 2, border_col[1] // 2, border_col[2] // 2)
+    for ox, oy in [(rect.x, rect.y), (rect.right - corner_sz, rect.y),
+                   (rect.x, rect.bottom - corner_sz), (rect.right - corner_sz, rect.bottom - corner_sz)]:
+        pygame.draw.rect(surface, c_col, (ox, oy, corner_sz, corner_sz), 1)
+
+
+def draw_enso_circle(surface, cx: int, cy: int, radius: int, color, anim_time: float):
+    """Desenha o círculo Ensō (símbolo zen de caligrafia em nanquim) ao redor do retrato."""
+    pygame.draw.circle(surface, (14, 14, 16), (cx, cy), radius)
+    num_points = 28
+    points = []
+    for i in range(num_points):
+        angle = (i / num_points) * math.pi * 2
+        r_offset = math.sin(angle * 3.0 + 1.2) * 1.5
+        px = cx + int((radius + r_offset) * math.cos(angle))
+        py = cy + int((radius + r_offset) * math.sin(angle))
+        points.append((px, py))
+    pygame.draw.polygon(surface, color, points, 2)
+    pygame.draw.circle(surface, color, (cx + radius - 2, cy - 4), 2)
+
+
+def draw_kanban_menu_button(surface, font, text: str, sub: str, rect: pygame.Rect, is_selected: bool, is_enabled: bool, anim_time: float):
+    """Desenha um botão de menu no formato tradicional de tabuleta de madeira laqueada (Kanban)."""
+    if not is_enabled:
+        bg_col = (20, 20, 22)
+        border_col = (65, 60, 60)
+        txt_col = (115, 110, 110)
+    elif is_selected:
+        pulse = 0.5 + 0.5 * math.sin(anim_time * 6.0)
+        bg_col = (52, 42, 24)
+        border_col = (int(255 * pulse + 190 * (1 - pulse)), int(210 * pulse + 140 * (1 - pulse)), 50)
+        txt_col = COLOR_GOLD
+    else:
+        bg_col = (30, 28, 28)
+        border_col = (85, 78, 70)
+        txt_col = (210, 205, 200)
+
+    pygame.draw.rect(surface, bg_col, rect, border_radius=4)
+    pygame.draw.rect(surface, border_col, rect, 2 if is_selected else 1, border_radius=4)
+    pygame.draw.line(surface, border_col, (rect.x + 8, rect.y), (rect.x + 8, rect.bottom), 1)
+    pygame.draw.line(surface, border_col, (rect.right - 8, rect.y), (rect.right - 8, rect.bottom), 1)
+
+    if is_selected and is_enabled:
+        draw_kanban_arrow(surface, rect.x + 14, rect.centery, 8, border_col, "right")
+
+    text_x = rect.x + 28 if (is_selected and is_enabled) else rect.x + 14
+    s_txt = font.render(text, True, txt_col)
+    surface.blit(s_txt, (text_x, rect.centery - s_txt.get_height() // 2))
+
+    if sub:
+        s_sub = font.render(sub, True, (160, 150, 140) if is_enabled else (100, 95, 95))
+        surface.blit(s_sub, (rect.right - s_sub.get_width() - 14, rect.centery - s_sub.get_height() // 2))
 
 
 class PreviewCamera:
@@ -53,10 +181,40 @@ class CharacterSelectScreen:
 
         # Modal de Ajuda Completa do Jogo e Guia dos 12 Guerreiros
         self.help_modal = GameHelpModal()
-        self.help_btn_rect = pygame.Rect(0, 0, 0, 0)
-        self.lang_btn_rect = pygame.Rect(0, 0, 0, 0)
+        self.help_btn_rect = pygame.Rect(SCREEN_WIDTH - 250, 14, 226, 32)
+        self.lang_btn_rect = pygame.Rect(SCREEN_WIDTH - 365, 14, 96, 32)
+        self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 190, 52, 380, 32)
+        self.start_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 210, SCREEN_HEIGHT - 64, 420, 44)
+        self.card_rects: list[pygame.Rect] = []
         self.info_btn_rects: list[pygame.Rect] = []
 
+        # Carregar imagem conceitual Sumi-E do título com vinheta escurecida
+        self.bg_surf = None
+        bg_path = os.path.join("assets", "concepts", "sumie_title_logo_concept.jpg")
+        if os.path.exists(bg_path):
+            try:
+                try:
+                    raw_img = pygame.image.load(bg_path).convert()
+                except Exception:
+                    raw_img = pygame.image.load(bg_path)
+                self.bg_surf = pygame.transform.smoothscale(raw_img, (SCREEN_WIDTH, SCREEN_HEIGHT))
+                vignette = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+                vignette.fill((14, 14, 18, 195))  # 75% escurecido para legibilidade
+                self.bg_surf.blit(vignette, (0, 0))
+            except Exception:
+                self.bg_surf = None
+
+        # Partículas de tinta / cinzas atmosféricas em suspensão
+        self.particles = []
+        for _ in range(35):
+            self.particles.append({
+                "x": random.uniform(0, SCREEN_WIDTH),
+                "y": random.uniform(0, SCREEN_HEIGHT),
+                "speed_x": random.uniform(-0.5, 0.5),
+                "speed_y": random.uniform(-0.8, -0.2),
+                "size": random.uniform(1.5, 3.5),
+                "alpha": random.randint(60, 180)
+            })
         self.characters = [
             {
                 "id": CHAR_KENSHIN,
@@ -74,7 +232,7 @@ class CharacterSelectScreen:
                 "id": CHAR_MUSASHI,
                 "name": "MUSASHI",
                 "title": "Duas Lâminas",
-                "style": "Niten Ichi-ryū",
+                "style": "Niten Ichi-ryu",
                 "color": COLOR_BLUE_AURA,
                 "speed_stars": "[2/5] Firme",
                 "damage_desc": "Combo 3-Cortes",
@@ -89,10 +247,10 @@ class CharacterSelectScreen:
                 "style": "Ninjutsu & Kunai",
                 "color": COLOR_YELLOW_AURA,
                 "speed_stars": "[5/5] MAX",
-                "damage_desc": "Estocada (2 Hits)",
-                "special_desc": "Arremesso Kunai",
-                "keys_p1": "[E] Kunai | [R] Lançar",
-                "keys_p2": "[U] Kunai | [I] Lançar",
+                "damage_desc": "Tanto / Kunai Aérea",
+                "special_desc": "Salto Parabólico",
+                "keys_p1": "[E] Tanto/Kunai | [R] Salto",
+                "keys_p2": "[U] Tanto/Kunai | [I] Salto",
             },
             {
                 "id": CHAR_AMERICAN,
@@ -149,7 +307,7 @@ class CharacterSelectScreen:
                 "style": "Pólvora & Fumaça",
                 "color": (165, 180, 190),
                 "speed_stars": "[4/5] Ágil",
-                "damage_desc": "Bomba Arco (Auto-Dano)",
+                "damage_desc": "Bomba Arco (Auto)",
                 "special_desc": "Fumaça (Slow + Fuga)",
                 "keys_p1": "[E] Bomba | [R] Fumaça",
                 "keys_p2": "[U] Bomba | [I] Fumaça",
@@ -173,8 +331,8 @@ class CharacterSelectScreen:
                 "style": "Arco Yumi",
                 "color": (110, 195, 135),
                 "speed_stars": "[4/5] Ágil",
-                "damage_desc": "Flecha Letal (Disparo Rápido)",
-                "special_desc": "Flecha de Corda (Sem Cooldown)",
+                "damage_desc": "Flecha Letal (1-Hit)",
+                "special_desc": "Flecha de Corda",
                 "keys_p1": "[E] Yumi | [R] Corda",
                 "keys_p2": "[U] Yumi | [I] Corda",
             },
@@ -205,6 +363,13 @@ class CharacterSelectScreen:
         ]
 
         self.card_rects: list[pygame.Rect] = []
+
+    def reset(self):
+        """Reinicia o fluxo de seleção para o início (P1)."""
+        self.selection_step = "P1"
+        self.p1_ready = False
+        self.p2_ready = False
+        self.focus_zone = "GRID"
 
     def handle_event(self, event: pygame.event.Event) -> str | bool:
         """
@@ -321,17 +486,34 @@ class CharacterSelectScreen:
             target_player = "P2" if (is_p2 and not self.vs_ai) else "P1"
             player_idx = 1 if is_p2 else 0
 
-            if ctrl_mgr.is_event_menu_confirm(event, player_idx) or event.button in (0, 1, 7):
+            # D-Pad botões virtuais (11=Up, 12=Down, 13=Left, 14=Right)
+            from src.input.controller_manager import get_dpad_motion_from_event
+            d_dir = get_dpad_motion_from_event(event)
+            if d_dir:
+                move_cursor(target_player, d_dir[0], d_dir[1])
+                return False
+
+            # Confirmação: Apenas Botão 0 (✕ Cruz / A)
+            if ctrl_mgr.is_event_menu_confirm(event, player_idx) or event.button == 0:
                 res = handle_confirm(target_player)
                 if res:
                     return res
                 return False
-            elif ctrl_mgr.is_event_menu_cancel(event, player_idx) or event.button in (2, 1):
+            # Cancelar / Voltar: Apenas Botão 1 (○ Círculo / B)
+            elif ctrl_mgr.is_event_menu_cancel(event, player_idx) or event.button == 1:
                 res = handle_cancel(target_player)
                 if res:
                     return res
                 return False
-            elif event.button in (2, 3):
+            # Alternar modo 1P vs IA / 2P Versus: Botão 2 (▢ Quadrado / X)
+            elif event.button == 2:
+                self.vs_ai = not self.vs_ai
+                self.selection_step = "P1"
+                self.p1_ready = False
+                self.p2_ready = False
+                return False
+            # Abrir Guia / Ajuda: Botão 3 (△ Triângulo / Y)
+            elif event.button == 3:
                 active_idx = self.p1_choice_idx if (not self.vs_ai or self.selection_step == "P1") else self.p2_choice_idx
                 self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=active_idx)
                 return False
@@ -343,11 +525,10 @@ class CharacterSelectScreen:
                 return False
 
             target_player = "P2" if (is_p2 and not self.vs_ai) else "P1"
-            hx, hy = event.value
-            dx = 1 if hx > 0 else (-1 if hx < 0 else 0)
-            dy = -1 if hy > 0 else (1 if hy < 0 else 0)
-            if dx != 0 or dy != 0:
-                move_cursor(target_player, dx, dy)
+            from src.input.controller_manager import get_dpad_motion_from_event
+            d_dir = get_dpad_motion_from_event(event)
+            if d_dir:
+                move_cursor(target_player, d_dir[0], d_dir[1])
 
         elif event.type == pygame.JOYAXISMOTION:
             ctrl2 = ctrl_mgr.get_controller_for_player(1)
@@ -467,8 +648,7 @@ class CharacterSelectScreen:
                 if irect.collidepoint(vx, vy):
                     self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=idx)
                     return False
-            ai_btn = pygame.Rect(SCREEN_WIDTH // 2 - 140, 52, 280, 28)
-            if ai_btn.collidepoint(vx, vy):
+            if self.mode_btn_rect.collidepoint(vx, vy):
                 self.vs_ai = not self.vs_ai
                 self.selection_step = "P1"
                 self.p1_ready = False
@@ -483,8 +663,7 @@ class CharacterSelectScreen:
                             self.p2_choice_idx = idx
                     else:
                         self.p1_choice_idx = idx
-            start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 64, 320, 44)
-            if start_btn.collidepoint(vx, vy):
+            if self.start_btn_rect.collidepoint(vx, vy):
                 res = handle_confirm("P1")
                 if res:
                     return res
@@ -503,8 +682,7 @@ class CharacterSelectScreen:
                     if irect.collidepoint(mx, my):
                         self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=idx)
                         return False
-                ai_btn = pygame.Rect(SCREEN_WIDTH // 2 - 140, 52, 280, 28)
-                if ai_btn.collidepoint(mx, my):
+                if self.mode_btn_rect.collidepoint(mx, my):
                     self.vs_ai = not self.vs_ai
                     self.selection_step = "P1"
                     self.p1_ready = False
@@ -519,8 +697,7 @@ class CharacterSelectScreen:
                                 self.p2_choice_idx = idx
                         else:
                             self.p1_choice_idx = idx
-                start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 64, 320, 44)
-                if start_btn.collidepoint(mx, my):
+                if self.start_btn_rect.collidepoint(mx, my):
                     res = handle_confirm("P1")
                     if res:
                         return res
@@ -535,6 +712,12 @@ class CharacterSelectScreen:
     def update(self, dt: float):
         self.anim_timer += dt
         self.help_modal.update(dt)
+        for p in self.particles:
+            p["x"] += p["speed_x"] + 0.3 * math.sin(self.anim_timer + p["y"] * 0.05)
+            p["y"] += p["speed_y"]
+            if p["y"] < -10:
+                p["y"] = SCREEN_HEIGHT + 10
+                p["x"] = random.uniform(0, SCREEN_WIDTH)
 
     def get_selected_characters(self) -> tuple[str, str, bool]:
         p1_char = self.characters[self.p1_choice_idx]["id"]
@@ -542,80 +725,89 @@ class CharacterSelectScreen:
         return p1_char, p2_char, self.vs_ai
 
     def render(self, surface: pygame.Surface, font_large: pygame.font.Font, font_mid: pygame.font.Font, font_small: pygame.font.Font):
-        surface.fill(COLOR_BG)
+        # 1. Carregar tipografia oriental autêntica
+        font_oriental_title = get_title_font(28)
+        font_oriental_name = get_title_font(17)
+        font_oriental_action = get_title_font(19)
+        font_zen_mid = get_text_font(18)
+        font_zen_small = get_text_font(14)
+        font_zen_tiny = get_text_font(12)
+        font_zen_stamp = get_text_font(13)
 
-        # 1. Título
-        title_surf = font_large.render(t("select_title"), True, COLOR_GOLD)
-        surface.blit(title_surf, (SCREEN_WIDTH // 2 - title_surf.get_width() // 2, 14))
+        # 2. Fundo Sumi-E com Vinheta e Partículas Atmosféricas
+        if self.bg_surf:
+            surface.blit(self.bg_surf, (0, 0))
+        else:
+            surface.fill(COLOR_BG)
 
-        # Botão Seletor Flutuante de Idioma [ PT | EN ]
+        for p in self.particles:
+            pygame.draw.circle(surface, (175, 170, 165), (int(p["x"]), int(p["y"])), int(p["size"]))
+
+        # 3. TOPO: Título Sumi-E com Selo Imperial e Divisória de Nanquim
+        header_y = 12
+        draw_hanko_stamp(surface, font_zen_stamp, "SE", 36, header_y + 2, size=34, color=COLOR_HANKO_RED)
+
+        title_text = t("select_title")
+        s_shadow = font_oriental_title.render(title_text, True, (8, 8, 10))
+        s_title = font_oriental_title.render(title_text, True, COLOR_GOLD)
+        surface.blit(s_shadow, (82, header_y + 8))
+        surface.blit(s_title, (80, header_y + 6))
+
+        draw_brush_divider(surface, 82, header_y + 42, 680, color=(140, 115, 65))
+
+        # Botão Seletor Flutuante de Idioma [ PT | EN ] (Hanko / Kanban)
         lang = get_lang()
-        self.lang_btn_rect = pygame.Rect(SCREEN_WIDTH - 365, 14, 100, 34)
-        pygame.draw.rect(surface, (30, 40, 35), self.lang_btn_rect, border_radius=6)
-        pygame.draw.rect(surface, COLOR_GOLD, self.lang_btn_rect, 1, border_radius=6)
+        self.lang_btn_rect = pygame.Rect(SCREEN_WIDTH - 365, header_y + 4, 96, 32)
+        r_pt = pygame.Rect(self.lang_btn_rect.x, self.lang_btn_rect.y, 46, 32)
+        r_en = pygame.Rect(self.lang_btn_rect.x + 50, self.lang_btn_rect.y, 46, 32)
 
-        pt_col = COLOR_GOLD if lang == LANG_PT else (140, 155, 148)
-        en_col = COLOR_GOLD if lang == LANG_EN else (140, 155, 148)
-        pt_bg = (48, 64, 54) if lang == LANG_PT else (25, 34, 29)
-        en_bg = (48, 64, 54) if lang == LANG_EN else (25, 34, 29)
-
-        r_pt = pygame.Rect(self.lang_btn_rect.x + 3, self.lang_btn_rect.y + 3, 44, 28)
-        r_en = pygame.Rect(self.lang_btn_rect.x + 53, self.lang_btn_rect.y + 3, 44, 28)
+        pt_bg = (52, 42, 24) if lang == LANG_PT else (24, 22, 24)
+        pt_border = COLOR_GOLD if lang == LANG_PT else (75, 70, 68)
+        pt_text_col = COLOR_GOLD if lang == LANG_PT else (145, 140, 135)
         pygame.draw.rect(surface, pt_bg, r_pt, border_radius=4)
-        pygame.draw.rect(surface, en_bg, r_en, border_radius=4)
+        pygame.draw.rect(surface, pt_border, r_pt, 2 if lang == LANG_PT else 1, border_radius=4)
+        t_pt = font_zen_small.render("PT", True, pt_text_col)
+        surface.blit(t_pt, (r_pt.centerx - t_pt.get_width() // 2, r_pt.centery - t_pt.get_height() // 2))
 
-        s_pt = font_small.render("PT", True, pt_col)
-        s_en = font_small.render("EN", True, en_col)
-        surface.blit(s_pt, (r_pt.centerx - s_pt.get_width() // 2, r_pt.centery - s_pt.get_height() // 2))
-        surface.blit(s_en, (r_en.centerx - s_en.get_width() // 2, r_en.centery - s_en.get_height() // 2))
+        en_bg = (52, 42, 24) if lang == LANG_EN else (24, 22, 24)
+        en_border = COLOR_GOLD if lang == LANG_EN else (75, 70, 68)
+        en_text_col = COLOR_GOLD if lang == LANG_EN else (145, 140, 135)
+        pygame.draw.rect(surface, en_bg, r_en, border_radius=4)
+        pygame.draw.rect(surface, en_border, r_en, 2 if lang == LANG_EN else 1, border_radius=4)
+        t_en = font_zen_small.render("EN", True, en_text_col)
+        surface.blit(t_en, (r_en.centerx - t_en.get_width() // 2, r_en.centery - t_en.get_height() // 2))
 
         # Botão Superior Guia do Jogo & Ajuda
-        self.help_btn_rect = pygame.Rect(SCREEN_WIDTH - 250, 14, 226, 34)
-        pygame.draw.rect(surface, (28, 38, 33), self.help_btn_rect, border_radius=6)
-        pygame.draw.rect(surface, COLOR_GOLD, self.help_btn_rect, 1, border_radius=6)
-        h_txt = font_small.render(t("btn_help"), True, COLOR_GOLD)
-        surface.blit(h_txt, (self.help_btn_rect.centerx - h_txt.get_width() // 2, self.help_btn_rect.centery - h_txt.get_height() // 2))
+        self.help_btn_rect = pygame.Rect(SCREEN_WIDTH - 250, header_y + 4, 226, 32)
+        help_label = "GUIA DO JOGO" if lang == LANG_PT else "GAME GUIDE"
+        draw_kanban_menu_button(surface, font_zen_small, help_label, "[ H / ? ]", self.help_btn_rect, False, True, self.anim_timer)
 
-        # 2. Botão Modo de Jogo (Navegável via Direcional Cima/Baixo)
-        ai_btn = pygame.Rect(SCREEN_WIDTH // 2 - 140, 52, 280, 28)
+        # 4. Botão Modo de Jogo (Kanban laqueado com encaixes de ferro)
         is_mode_focused = (self.focus_zone == "MODE_BTN")
-        mode_btn_bg = (45, 60, 50) if is_mode_focused else (30, 40, 35)
-        pygame.draw.rect(surface, mode_btn_bg, ai_btn, border_radius=6)
-        border_col = (255, 230, 120) if is_mode_focused else COLOR_GOLD
-        border_w = 2 if is_mode_focused else 1
-        pygame.draw.rect(surface, border_col, ai_btn, border_w, border_radius=6)
+        self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 190, 52, 380, 32)
+        mode_text = ("MODO: 1P vs IA (TREINO)" if self.vs_ai else "MODO: 1P vs 2P (VERSUS)")
+        draw_kanban_menu_button(surface, font_zen_small, mode_text, "[ CIMA / BAIXO ]", self.mode_btn_rect, is_mode_focused, True, self.anim_timer)
 
-        mode_text = ("1P vs IA (Treino / Duelo)" if self.vs_ai else "1P vs 2P (Versus Local)")
-        if is_mode_focused:
-            mode_text = f"► {mode_text} ◄"
-        mode_surf = font_small.render(mode_text, True, border_col)
-        surface.blit(mode_surf, (ai_btn.centerx - mode_surf.get_width() // 2, ai_btn.y + 6))
-
-        # Banner Indicador de Etapa / Instrução
-        pulse = (math.sin(self.anim_timer * 5.0) + 1.0) * 0.5
+        # 5. Banner Indicador de Etapa / Instrução
+        step_y = 90
         if self.vs_ai:
             if self.selection_step == "P1":
                 step_title = "PASSO 1: ESCOLHA SEU GUERREIRO (P1)"
-                step_color = COLOR_RED_AURA
-                sub_step = "[ ✕ / Espaço ] Confirmar P1  |  [ ○ / ESC ] Voltar ao Menu  |  [ ↑ ] Alternar Modo"
+                step_color = COLOR_HANKO_RED
+                draw_brush_divider(surface, SCREEN_WIDTH // 2 - 280, step_y + 14, SCREEN_WIDTH // 2 + 280, color=(160, 50, 45))
             else:
                 step_title = "PASSO 2: ESCOLHA SEU OPONENTE (IA)"
-                step_color = COLOR_BLUE_AURA
-                sub_step = "[ ✕ / Espaço ] Confirmar e Iniciar Duelo  |  [ ○ / ESC ] Voltar ao P1"
+                step_color = COLOR_HANKO_BLUE
+                draw_brush_divider(surface, SCREEN_WIDTH // 2 - 280, step_y + 14, SCREEN_WIDTH // 2 + 280, color=(45, 100, 180))
         else:
             step_title = "MODO 2 JOGADORES (VERSUS LOCAL)"
             step_color = COLOR_GOLD
-            p1_st = "PRONTO!" if self.p1_ready else "ESCOLHENDO"
-            p2_st = "PRONTO!" if self.p2_ready else "ESCOLHENDO"
-            sub_step = f"P1: {p1_st}  |  P2: {p2_st}  |  [ ✕ / Espaço ] Confirmar  |  [ ○ / ESC ] Voltar"
+            draw_brush_divider(surface, SCREEN_WIDTH // 2 - 280, step_y + 14, SCREEN_WIDTH // 2 + 280, color=(160, 130, 50))
 
-        banner_surf = font_mid.render(step_title, True, step_color)
-        surface.blit(banner_surf, (SCREEN_WIDTH // 2 - banner_surf.get_width() // 2, 84))
+        step_s = font_zen_mid.render(step_title, True, step_color)
+        surface.blit(step_s, (SCREEN_WIDTH // 2 - step_s.get_width() // 2, step_y))
 
-        sub_surf = font_small.render(sub_step, True, (200, 215, 210))
-        surface.blit(sub_surf, (SCREEN_WIDTH // 2 - sub_surf.get_width() // 2, 104))
-
-        # 3. Grade Simétrica 6x2 (6 cards na Linha 1, 6 cards na Linha 2)
+        # 6. Grade Simétrica 6x2 (6 cards na Linha 1, 6 cards na Linha 2)
         card_w = 194
         card_h = 232
         spacing_x = 12
@@ -640,75 +832,29 @@ class CharacterSelectScreen:
             is_p1 = (self.p1_choice_idx == idx)
             is_p2 = (self.p2_choice_idx == idx)
 
-            bg_color = (25, 32, 28)
-            border_color = (60, 75, 68)
-            border_width = 1
+            draw_sumie_card(surface, rect, is_p1, is_p2, self.vs_ai, self.selection_step, self.anim_timer)
 
-            if self.vs_ai:
-                if is_p1 and is_p2:
-                    border_color = COLOR_GOLD
-                    border_width = 3
-                    bg_color = (35, 42, 38)
-                elif is_p1:
-                    border_color = COLOR_RED_AURA
-                    border_width = 3 if self.selection_step == "P1" else 2
-                    bg_color = (40, 30, 32)
-                elif is_p2:
-                    border_color = COLOR_BLUE_AURA
-                    border_width = 3 if self.selection_step == "AI" else 2
-                    bg_color = (30, 35, 45)
-            else:
-                if is_p1 and is_p2:
-                    border_color = COLOR_GOLD
-                    border_width = 3
-                    bg_color = (35, 42, 38)
-                elif is_p1:
-                    border_color = COLOR_RED_AURA
-                    border_width = 3
-                    bg_color = (40, 30, 32)
-                elif is_p2:
-                    border_color = COLOR_BLUE_AURA
-                    border_width = 3
-                    bg_color = (30, 35, 45)
-
-            pygame.draw.rect(surface, bg_color, rect, border_radius=12)
-            pygame.draw.rect(surface, border_color, rect, border_width, border_radius=12)
-
-            # Badges P1 / IA no topo direito do card
-            badge_y = rect.y + 8
+            # Badges Hanko P1 / IA no topo direito
             if is_p1 and is_p2:
-                p1_label = "P1"
                 p2_label = "IA" if self.vs_ai else "P2"
-                p1_badge = font_small.render(p1_label, True, COLOR_RED_AURA)
-                p2_badge = font_small.render(p2_label, True, COLOR_BLUE_AURA)
-                surface.blit(p2_badge, (rect.right - p2_badge.get_width() - 8, badge_y))
-                surface.blit(p1_badge, (rect.right - p2_badge.get_width() - p1_badge.get_width() - 12, badge_y))
+                draw_hanko_stamp(surface, font_zen_stamp, p2_label, rect.right - 30, rect.y + 6, size=24, color=COLOR_HANKO_BLUE, border_w=1)
+                draw_hanko_stamp(surface, font_zen_stamp, "P1", rect.right - 58, rect.y + 6, size=24, color=COLOR_HANKO_RED, border_w=1)
             elif is_p1:
-                p1_label = "P1"
-                if self.vs_ai and self.selection_step == "AI":
-                    p1_label = "P1 ✓"
-                p1_badge = font_small.render(p1_label, True, COLOR_RED_AURA)
-                surface.blit(p1_badge, (rect.right - p1_badge.get_width() - 8, badge_y))
+                draw_hanko_stamp(surface, font_zen_stamp, "P1", rect.right - 30, rect.y + 6, size=24, color=COLOR_HANKO_RED, border_w=1)
             elif is_p2:
-                p2_label = "IA (Alvo)" if self.vs_ai else "P2"
-                p2_badge = font_small.render(p2_label, True, COLOR_BLUE_AURA)
-                surface.blit(p2_badge, (rect.right - p2_badge.get_width() - 8, badge_y))
+                p2_label = "IA" if self.vs_ai else "P2"
+                draw_hanko_stamp(surface, font_zen_stamp, p2_label, rect.right - 30, rect.y + 6, size=24, color=COLOR_HANKO_BLUE, border_w=1)
 
-            # Retrato de Busto HD-2D do Personagem (no topo esquerdo da carta)
+            # Retrato Circular com Anel Ensō
             char_id = char_info["id"]
-            portrait_size = (54, 54)
-            portrait_x = rect.x + 8
-            portrait_y = rect.y + 10
-            portrait_cx = portrait_x + portrait_size[0] // 2
-            portrait_cy = portrait_y + portrait_size[1] // 2
+            portrait_cx = rect.x + 36
+            portrait_cy = rect.y + 36
+            ring_color = COLOR_HANKO_RED if is_p1 else (COLOR_HANKO_BLUE if is_p2 else char_info["color"])
+            draw_enso_circle(surface, portrait_cx, portrait_cy, 26, ring_color, self.anim_timer)
 
-            ring_color = border_color if (is_p1 or is_p2) else char_info["color"]
-            pygame.draw.circle(surface, (16, 22, 19), (portrait_cx, portrait_cy), 27)
-            pygame.draw.circle(surface, ring_color, (portrait_cx, portrait_cy), 27, 2)
-
-            portrait_surf = get_portrait(char_id, size=portrait_size, circular=True)
+            portrait_surf = get_portrait(char_id, size=(50, 50), circular=True)
             if portrait_surf is not None:
-                surface.blit(portrait_surf, (portrait_x, portrait_y))
+                surface.blit(portrait_surf, (portrait_cx - 25, portrait_cy - 25))
             else:
                 cam = PreviewCamera(portrait_cx, portrait_cy + 15)
                 if char_id == CHAR_KENSHIN:
@@ -739,73 +885,84 @@ class CharacterSelectScreen:
 
             # Nome, Título e Estilo ao lado do Retrato
             text_left = rect.x + 68
-            name_surf = font_mid.render(char_info["name"], True, char_info["color"])
+            name_surf = font_oriental_name.render(char_info["name"], True, char_info["color"])
             surface.blit(name_surf, (text_left, rect.y + 8))
 
-            title_s = font_small.render(char_info["title"], True, (185, 195, 190))
+            title_s = font_zen_small.render(char_info["title"], True, (185, 180, 175))
             surface.blit(title_s, (text_left, rect.y + 30))
 
-            style_s = font_small.render(char_info["style"], True, COLOR_WHITE)
-            surface.blit(style_s, (text_left, rect.y + 48))
+            style_s = font_zen_tiny.render(char_info["style"], True, (220, 215, 210))
+            surface.blit(style_s, (text_left, rect.y + 49))
 
-            # Linha divisória
-            sep_y = rect.y + 70
-            pygame.draw.line(surface, (45, 55, 50), (rect.x + 8, sep_y), (rect.right - 8, sep_y), 1)
+            # Pincelada divisória
+            draw_brush_divider(surface, rect.x + 8, rect.y + 70, rect.right - 8, color=(75, 70, 65))
 
             # Atributos e Estatísticas
             stats_y = rect.y + 76
-            line_vel = font_small.render(f"Vel: {char_info['speed_stars']}", True, COLOR_GOLD)
-            line_dmg = font_small.render(f"Dano: {char_info['damage_desc']}", True, (240, 200, 200))
-            line_esp = font_small.render(f"Esp: {char_info['special_desc']}", True, (200, 225, 240))
+            line_vel = font_zen_tiny.render(f"Vel: {char_info['speed_stars']}", True, COLOR_GOLD)
+            line_dmg = font_zen_tiny.render(f"Dano: {char_info['damage_desc']}", True, (240, 205, 195))
+            line_esp = font_zen_tiny.render(f"Esp: {char_info['special_desc']}", True, (200, 220, 240))
 
             surface.blit(line_vel, (rect.x + 8, stats_y))
-            surface.blit(line_dmg, (rect.x + 8, stats_y + 19))
-            surface.blit(line_esp, (rect.x + 8, stats_y + 38))
+            surface.blit(line_dmg, (rect.x + 8, stats_y + 18))
+            surface.blit(line_esp, (rect.x + 8, stats_y + 36))
 
-            # Caixa de Comandos / Teclas
-            ctrl_w = card_w - 40
-            ctrl_box = pygame.Rect(rect.x + 6, rect.bottom - 46, ctrl_w, 38)
-            pygame.draw.rect(surface, (18, 24, 21), ctrl_box, border_radius=6)
-            pygame.draw.rect(surface, (40, 50, 45), ctrl_box, 1, border_radius=6)
-            p1_key_label = font_small.render(f"P1: {char_info['keys_p1']}", True, (255, 200, 180))
-            p2_key_label = font_small.render(f"P2: {char_info['keys_p2']}", True, (180, 220, 255))
+            # Caixa de Comandos / Teclas em Laca Negra
+            ctrl_box = pygame.Rect(rect.x + 6, rect.bottom - 46, card_w - 38, 38)
+            pygame.draw.rect(surface, COLOR_LACQUER_DARK, ctrl_box, border_radius=4)
+            pygame.draw.rect(surface, (55, 50, 48), ctrl_box, 1, border_radius=4)
+            p1_key_label = font_zen_tiny.render(f"P1: {char_info['keys_p1']}", True, (255, 200, 180))
+            p2_key_label = font_zen_tiny.render(f"P2: {char_info['keys_p2']}", True, (180, 220, 255))
             surface.blit(p1_key_label, (ctrl_box.x + 4, ctrl_box.y + 3))
             surface.blit(p2_key_label, (ctrl_box.x + 4, ctrl_box.y + 19))
 
-            # Botão [ ? ] para abrir estratégia individual deste guerreiro
-            info_btn = pygame.Rect(rect.right - 30, rect.bottom - 46, 24, 38)
+            # Botão [ ? ] como Selo Hanko pequeno
+            info_btn = pygame.Rect(rect.right - 28, rect.bottom - 46, 22, 38)
             self.info_btn_rects.append(info_btn)
-            pygame.draw.rect(surface, (26, 36, 31), info_btn, border_radius=6)
-            pygame.draw.rect(surface, COLOR_GOLD, info_btn, 1, border_radius=6)
-            q_surf = font_mid.render("?", True, COLOR_GOLD)
-            surface.blit(q_surf, (info_btn.centerx - q_surf.get_width() // 2, info_btn.centery - q_surf.get_height() // 2))
+            draw_hanko_stamp(surface, font_zen_mid, "?", info_btn.x, info_btn.y + 7, size=24, color=COLOR_GOLD, border_w=1)
 
-        # Guia de Navegação e Controles (Teclado, Gamepad e Touch)
-        from src.input.controller_manager import get_controller_manager
-        ctrl_mgr = get_controller_manager()
-        badge = ctrl_mgr.get_badge_text(0)
+        # 7. Botão Grande de Ação em Laca Escarlate
+        start_w = 420
+        self.start_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - start_w // 2, SCREEN_HEIGHT - 64, start_w, 44)
+        pulse = 0.5 + 0.5 * math.sin(self.anim_timer * 4.0)
+        btn_bg = (140 + int(pulse * 25), 28 + int(pulse * 10), 24)
+        pygame.draw.rect(surface, btn_bg, self.start_btn_rect, border_radius=6)
+        pygame.draw.rect(surface, COLOR_GOLD, self.start_btn_rect, 2, border_radius=6)
 
-        guide_text = t("guide_nav")
-        if badge:
-            ctrl = ctrl_mgr.get_controller_for_player(0)
-            btn_ok = ctrl.get_button_glyph("confirm") if ctrl else "✕"
-            btn_back = ctrl.get_button_glyph("cancel") if ctrl else "○"
-            guide_text = f"{badge}: Analógico/D-Pad = Navegar | [{btn_ok}] = Confirma | [{btn_back}] = Volta | [Options] = Menu"
-
-        guide_surf = font_small.render(guide_text, True, (210, 225, 220))
-        surface.blit(guide_surf, (SCREEN_WIDTH // 2 - guide_surf.get_width() // 2, SCREEN_HEIGHT - 94))
-
-        # 4. Botão INICIAR DUELO
-        start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 64, 320, 44)
-        pulse = (math.sin(self.anim_timer * 4.0) + 1.0) * 0.5
-        btn_bg = (50 + int(pulse * 15), 75 + int(pulse * 20), 60 + int(pulse * 15))
-        pygame.draw.rect(surface, btn_bg, start_btn, border_radius=8)
-        pygame.draw.rect(surface, COLOR_GOLD, start_btn, 2, border_radius=8)
+        # Selo Hanko KEN no botão
+        draw_hanko_stamp(surface, font_zen_stamp, "KEN", self.start_btn_rect.x + 12, self.start_btn_rect.y + 6, size=32, color=COLOR_GOLD, border_w=1)
 
         st_label = "INICIAR DUELO" if (not self.vs_ai or self.selection_step == "AI") else "CONFIRMAR P1"
-        st_text = font_mid.render(st_label, True, COLOR_GOLD)
-        surface.blit(st_text, (start_btn.centerx - st_text.get_width() // 2, start_btn.y + 11))
+        s_title_sh = font_oriental_action.render(st_label, True, (20, 10, 10))
+        s_title_tx = font_oriental_action.render(st_label, True, COLOR_GOLD)
+        s_hint_tx = font_zen_small.render("[ ENTER / ESPAÇO ]", True, (245, 225, 185))
 
-        # 5. Renderizar Modal de Ajuda se aberto (sobreposto a toda a tela)
+        total_content_w = s_title_tx.get_width() + 14 + s_hint_tx.get_width()
+        content_x = self.start_btn_rect.x + 48 + (self.start_btn_rect.width - 48 - total_content_w) // 2
+
+        surface.blit(s_title_sh, (content_x + 1, self.start_btn_rect.centery - s_title_tx.get_height() // 2 + 1))
+        surface.blit(s_title_tx, (content_x, self.start_btn_rect.centery - s_title_tx.get_height() // 2))
+
+        hint_x = content_x + s_title_tx.get_width() + 14
+        surface.blit(s_hint_tx, (hint_x, self.start_btn_rect.centery - s_hint_tx.get_height() // 2))
+
+        # 8. Rodapé com Instruções de Controle em Zen Antique
+        from src.input.controller_manager import get_controller_manager
+        ctrl_mgr = get_controller_manager()
+        ctrl = ctrl_mgr.get_controller_for_player(0) if ctrl_mgr else None
+        badge = ctrl_mgr.get_badge_text(0) if ctrl_mgr else ""
+
+        guide_text = t("guide_nav")
+        if badge and ctrl:
+            btn_ok = ctrl.get_button_glyph("confirm")
+            btn_back = ctrl.get_button_glyph("cancel")
+            btn_mode = ctrl.get_button_glyph("attack")
+            btn_guide = ctrl.get_button_glyph("special")
+            guide_text = f"{badge}: D-Pad/Analógico = Navegar | [{btn_ok}] = Confirma | [{btn_back}] = Volta | [{btn_mode}] = Alternar Modo | [{btn_guide}] = Guia"
+
+        guide_surf = font_zen_small.render(guide_text, True, (185, 180, 175))
+        surface.blit(guide_surf, (SCREEN_WIDTH // 2 - guide_surf.get_width() // 2, SCREEN_HEIGHT - 18))
+
+        # 9. Modal de Ajuda se aberto (sobreposto)
         if self.help_modal.is_open:
             self.help_modal.render(surface, font_large, font_mid, font_small)

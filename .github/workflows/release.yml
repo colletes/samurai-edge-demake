@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag Name (e.g. v1.2.0)'
+        description: 'Release Tag Name (e.g. v1.3.0)'
         required: false
-        default: 'v1.2.0'
+        default: 'v1.3.0'
 
 permissions:
   contents: write
@@ -103,9 +103,33 @@ jobs:
           path: ${{ matrix.artifact_name }}
           if-no-files-found: error
 
+  build-android:
+    name: Build (Android APK)
+    needs: test
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build with Buildozer Action
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          workdir: .
+          buildozer_version: stable
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        if: steps.buildozer.outputs.filename != ''
+        with:
+          name: android-build
+          path: ${{ steps.buildozer.outputs.filename }}
+
   publish:
     name: Publish GitHub Release
-    needs: build
+    needs: [build, build-android]
+    if: always() && needs.test.result == 'success' && needs.build.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code

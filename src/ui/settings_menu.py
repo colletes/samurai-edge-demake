@@ -38,24 +38,25 @@ class SettingsMenu:
         self.selected_index = 0
         self.blink_timer = 0.0
         self._axis_y_held = False
+        self._axis_x_held = False
 
         # Definição dos itens remapeáveis
         self.items = [
-            # Jogador 1 (Kenshi)
-            ("P1_UP", "Kenshi Mover Cima", "red"),
-            ("P1_DOWN", "Kenshi Mover Baixo", "red"),
-            ("P1_LEFT", "Kenshi Mover Esquerda", "red"),
-            ("P1_RIGHT", "Kenshi Mover Direita", "red"),
-            ("P1_ATTACK", "Kenshi Iai Flash Slash", "red"),
-            ("P1_DASH", "Kenshi Dash / Esquiva", "red"),
+            # Jogador 1 (Player 1)
+            ("P1_UP", "Mover Cima", "red"),
+            ("P1_DOWN", "Mover Baixo", "red"),
+            ("P1_LEFT", "Mover Esquerda", "red"),
+            ("P1_RIGHT", "Mover Direita", "red"),
+            ("P1_ATTACK", "Ataque Principal", "red"),
+            ("P1_DASH", "Ação Secundária (Dash)", "red"),
 
-            # Jogador 2 (Musashi)
-            ("P2_UP", "Musashi Mover Cima", "blue"),
-            ("P2_DOWN", "Musashi Mover Baixo", "blue"),
-            ("P2_LEFT", "Musashi Mover Esquerda", "blue"),
-            ("P2_RIGHT", "Musashi Mover Direita", "blue"),
-            ("P2_ATTACK", "Musashi Combo 3-Cortes", "blue"),
-            ("P2_PARRY", "Musashi Defesa / Parry", "blue"),
+            # Jogador 2 (Player 2)
+            ("P2_UP", "Mover Cima", "blue"),
+            ("P2_DOWN", "Mover Baixo", "blue"),
+            ("P2_LEFT", "Mover Esquerda", "blue"),
+            ("P2_RIGHT", "Mover Direita", "blue"),
+            ("P2_ATTACK", "Ataque Principal", "blue"),
+            ("P2_PARRY", "Ação Secundária (Defesa)", "blue"),
         ]
 
         # Áreas clicáveis na tela (atualizadas durante o render)
@@ -74,6 +75,12 @@ class SettingsMenu:
         """Restaura os controles para o padrão de fábrica."""
         for k, v in DEFAULT_CONTROLS.items():
             self.controls[k] = v
+        from src.input.controller_manager import get_controller_manager
+        ctrl_mgr = get_controller_manager()
+        for p_idx in (0, 1):
+            ctrl = ctrl_mgr.get_controller_for_player(p_idx)
+            if ctrl:
+                ctrl.custom_mappings.clear()
 
     def cycle_touch_mode(self):
         if self.touch_controls:
@@ -90,7 +97,7 @@ class SettingsMenu:
         if not self.is_open:
             return False
 
-        from src.input.controller_manager import get_controller_manager
+        from src.input.controller_manager import get_controller_manager, get_dpad_motion_from_event
         ctrl_mgr = get_controller_manager()
 
         # Se estiver esperando uma nova tecla/botão para remapear
@@ -104,10 +111,15 @@ class SettingsMenu:
                     self.waiting_for_key_action = None
                 return True
             elif event.type == pygame.JOYBUTTONDOWN:
+                # Se for Círculo (botão 1), cancelar espera sem alterar
+                if event.button == 1:
+                    self.waiting_for_key_action = None
+                    return True
                 # Remapear ação no controle correspondente (P1 ou P2)
-                act_name = "attack" if "ATTACK" in self.waiting_for_key_action else ("dash" if ("DASH" in self.waiting_for_key_action or "PARRY" in self.waiting_for_key_action) else "attack")
+                act_name = "attack" if "ATTACK" in self.waiting_for_key_action else ("dash" if ("DASH" in self.waiting_for_key_action or "PARRY" in self.waiting_for_key_action) else None)
                 p_idx = 1 if "P2" in self.waiting_for_key_action else 0
-                ctrl_mgr.remap_action(p_idx, act_name, event.button)
+                if act_name:
+                    ctrl_mgr.remap_action(p_idx, act_name, event.button)
                 self.waiting_for_key_action = None
                 return True
             elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.FINGERDOWN):
@@ -118,23 +130,39 @@ class SettingsMenu:
 
         # Suporte a Gamepad no menu de configurações
         if event.type == pygame.JOYBUTTONDOWN:
-            if ctrl_mgr.is_event_menu_confirm(event) or event.button in (0, 1):
+            # D-Pad botões virtuais (11=Up, 12=Down, 13=Left, 14=Right)
+            d_dir = get_dpad_motion_from_event(event)
+            if d_dir:
+                dx, dy = d_dir
+                if dy != 0:
+                    self.selected_index = (self.selected_index + dy) % len(self.items)
+                elif dx != 0:
+                    # Alternar entre coluna da esquerda (P1) e da direita (P2)
+                    self.selected_index = (self.selected_index + 6) % len(self.items)
+                return True
+
+            if ctrl_mgr.is_event_menu_confirm(event) or event.button == 0:
                 action_key, _, _ = self.items[self.selected_index]
                 self.waiting_for_key_action = action_key
                 return True
-            elif ctrl_mgr.is_event_menu_cancel(event) or ctrl_mgr.is_event_menu_pause(event) or event.button in (2, 6, 9):
+            elif ctrl_mgr.is_event_menu_cancel(event) or ctrl_mgr.is_event_menu_pause(event) or event.button in (1, 6):
                 self.close()
                 return True
-            elif event.button in (3, 4):
+            elif event.button == 4:
+                self.reset_to_defaults()
+                return True
+            elif event.button == 3:
                 self.cycle_touch_mode()
                 return True
 
         elif event.type == pygame.JOYHATMOTION:
-            _, hy = event.value
-            if hy > 0:
-                self.selected_index = (self.selected_index - 1) % len(self.items)
-            elif hy < 0:
-                self.selected_index = (self.selected_index + 1) % len(self.items)
+            d_dir = get_dpad_motion_from_event(event)
+            if d_dir:
+                dx, dy = d_dir
+                if dy != 0:
+                    self.selected_index = (self.selected_index + dy) % len(self.items)
+                elif dx != 0:
+                    self.selected_index = (self.selected_index + 6) % len(self.items)
 
         elif event.type == pygame.JOYAXISMOTION:
             if event.axis == 1:
@@ -146,6 +174,15 @@ class SettingsMenu:
                     self._axis_y_held = True
                 elif abs(event.value) < 0.25:
                     self._axis_y_held = False
+            elif event.axis == 0:
+                if event.value > 0.65 and not self._axis_x_held:
+                    self.selected_index = (self.selected_index + 6) % len(self.items)
+                    self._axis_x_held = True
+                elif event.value < -0.65 and not self._axis_x_held:
+                    self.selected_index = (self.selected_index + 6) % len(self.items)
+                    self._axis_x_held = True
+                elif abs(event.value) < 0.25:
+                    self._axis_x_held = False
 
         # Suporte a Touchscreen
         elif event.type == pygame.FINGERDOWN:
@@ -255,12 +292,15 @@ class SettingsMenu:
         row_h = 44
 
         # Cabeçalhos das Colunas
-        h1 = font_mid.render("KENSHIN (VERMELHO)", True, COLOR_RED_AURA)
-        h2 = font_mid.render("MUSASHI (AZUL)", True, COLOR_BLUE_AURA)
+        h1 = font_mid.render("PLAYER 1 (VERMELHO)", True, COLOR_RED_AURA)
+        h2 = font_mid.render("PLAYER 2 (AZUL)", True, COLOR_BLUE_AURA)
         surface.blit(h1, (col_left_x + 10, start_y - 28))
         surface.blit(h2, (col_right_x + 10, start_y - 28))
 
         self.button_rects.clear()
+
+        from src.input.controller_manager import get_controller_manager
+        ctrl_mgr = get_controller_manager()
 
         for idx, (action_key, label, faction) in enumerate(self.items):
             is_red = (faction == "red")
@@ -276,7 +316,7 @@ class SettingsMenu:
 
             # Fundo do Botão
             if is_waiting:
-                # Efeito piscante dourado quando está aguardando nova tecla
+                # Efeito piscante dourado quando está aguardando nova tecla/botão
                 bg_color = (70, 60, 20) if (int(self.blink_timer * 4) % 2 == 0) else (45, 40, 15)
                 border_color = COLOR_GOLD
             elif is_selected:
@@ -294,13 +334,25 @@ class SettingsMenu:
             action_surf = font_small.render(label, True, txt_color)
             surface.blit(action_surf, (btn_rect.x + 12, btn_rect.y + 9))
 
-            # Tecla Atual
+            # Tecla e Botão Atual
             if is_waiting:
-                key_text = "<PRESSIONE UMA TECLA>"
+                key_text = "<PRESSIONE TECLA OU BOTÃO>"
                 key_color = COLOR_GOLD
             else:
                 key_code = self.controls.get(action_key, pygame.K_UNKNOWN)
-                key_text = f"[ {format_key_name(key_code)} ]"
+                key_str = format_key_name(key_code)
+
+                p_idx = 0 if is_red else 1
+                ctrl = ctrl_mgr.get_controller_for_player(p_idx)
+                act_suffix = "attack" if "ATTACK" in action_key else ("dash" if ("DASH" in action_key or "PARRY" in action_key) else None)
+
+                if act_suffix and ctrl:
+                    btn_name = ctrl.get_mapped_button_name(act_suffix)
+                    key_text = f"[{key_str}]  [🎮 {btn_name}]"
+                elif ctrl:
+                    key_text = f"[{key_str}]  [🎮 D-Pad]"
+                else:
+                    key_text = f"[ {key_str} ]"
                 key_color = (255, 215, 120) if is_selected else (200, 210, 205)
 
             val_surf = font_small.render(key_text, True, key_color)

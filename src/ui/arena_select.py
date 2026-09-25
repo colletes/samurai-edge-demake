@@ -100,17 +100,26 @@ class ArenaSelectScreen:
                 return "BACK"
 
         elif event.type == pygame.JOYBUTTONDOWN:
-            if ctrl_mgr.is_event_menu_confirm(event) or event.button in (0, 1, 7):
+            from src.input.controller_manager import get_dpad_motion_from_event
+            d_dir = get_dpad_motion_from_event(event)
+            if d_dir:
+                dx, _ = d_dir
+                if dx != 0:
+                    self.selected_idx = (self.selected_idx + dx) % len(self.arenas)
+                return None
+
+            if ctrl_mgr.is_event_menu_confirm(event) or event.button == 0:
                 return self.get_resolved_arena_id()
-            elif ctrl_mgr.is_event_menu_cancel(event) or event.button in (1, 2, 6):
+            elif ctrl_mgr.is_event_menu_cancel(event) or event.button == 1:
                 return "BACK"
 
         elif event.type == pygame.JOYHATMOTION:
-            hx, _ = event.value
-            if hx < 0:
-                self.selected_idx = (self.selected_idx - 1) % len(self.arenas)
-            elif hx > 0:
-                self.selected_idx = (self.selected_idx + 1) % len(self.arenas)
+            from src.input.controller_manager import get_dpad_motion_from_event
+            d_dir = get_dpad_motion_from_event(event)
+            if d_dir:
+                dx, _ = d_dir
+                if dx != 0:
+                    self.selected_idx = (self.selected_idx + dx) % len(self.arenas)
 
         elif event.type == pygame.JOYAXISMOTION:
             if event.axis == 0:
@@ -153,14 +162,22 @@ class ArenaSelectScreen:
         self.anim_time += dt
 
     def render(self, surface: pygame.Surface, font_large, font_mid, font_small):
+        from src.ui.fonts import get_title_font, get_text_font
+        font_oriental_title = get_title_font(28)
+        font_oriental_name = get_title_font(18)
+        font_oriental_btn = get_title_font(17)
+        font_zen_sub = get_text_font(14)
+        font_zen_body = get_text_font(13)
+        font_zen_tip = get_text_font(14)
+
         surface.fill(COLOR_BG)
 
         # 1. Título Superior
-        header_surf = font_large.render("SELEÇÃO DE ARENA", True, COLOR_GOLD)
-        surface.blit(header_surf, (SCREEN_WIDTH // 2 - header_surf.get_width() // 2, 28))
+        header_surf = font_oriental_title.render("SELEÇÃO DE ARENA", True, COLOR_GOLD)
+        surface.blit(header_surf, (SCREEN_WIDTH // 2 - header_surf.get_width() // 2, 24))
 
-        sub_surf = font_small.render("Escolha o campo de honra para o duelo mortal", True, (170, 180, 175))
-        surface.blit(sub_surf, (SCREEN_WIDTH // 2 - sub_surf.get_width() // 2, 70))
+        sub_surf = font_zen_sub.render("Escolha o campo de honra para o duelo mortal", True, (175, 180, 175))
+        surface.blit(sub_surf, (SCREEN_WIDTH // 2 - sub_surf.get_width() // 2, 68))
 
         # 2. Renderização dos 3 Cards
         card_w = 360
@@ -200,50 +217,54 @@ class ArenaSelectScreen:
             pygame.draw.rect(surface, (14, 16, 15), preview_rect, border_radius=6)
             self._render_arena_mini_preview(surface, arena["id"], preview_rect)
 
-            # Título e Kanji
-            name_s = font_mid.render(arena["name"], True, COLOR_WHITE if not is_sel else COLOR_GOLD)
+            # Badge da Tag flutuante sobre a foto no canto superior direito
+            tag_s = font_zen_sub.render(arena["tag"], True, arena["theme_color"])
+            tag_bg = pygame.Rect(preview_rect.right - tag_s.get_width() - 16, preview_rect.top + 8, tag_s.get_width() + 10, 22)
+            pygame.draw.rect(surface, (16, 18, 18), tag_bg, border_radius=4)
+            pygame.draw.rect(surface, arena["theme_color"], tag_bg, 1, border_radius=4)
+            surface.blit(tag_s, (tag_bg.centerx - tag_s.get_width() // 2, tag_bg.centery - tag_s.get_height() // 2))
+
+            # Título da Arena
+            name_s = font_oriental_name.render(arena["name"], True, COLOR_WHITE if not is_sel else COLOR_GOLD)
             surface.blit(name_s, (draw_rect.x + 18, preview_rect.bottom + 14))
 
-            tag_s = font_small.render(arena["tag"], True, arena["theme_color"])
-            surface.blit(tag_s, (draw_rect.right - tag_s.get_width() - 18, preview_rect.bottom + 17))
-
-            sub_s = font_small.render(arena["subtitle"], True, (180, 190, 185))
-            surface.blit(sub_s, (draw_rect.x + 18, preview_rect.bottom + 40))
+            sub_s = font_zen_body.render(arena["subtitle"], True, (180, 190, 185))
+            surface.blit(sub_s, (draw_rect.x + 18, preview_rect.bottom + 42))
 
             # Linha divisória
             pygame.draw.line(surface, (50, 60, 55), (draw_rect.x + 18, preview_rect.bottom + 65), (draw_rect.right - 18, preview_rect.bottom + 65), 1)
 
             # Nível de Perigo
-            hz_label = font_small.render("Perigo:", True, (160, 160, 165))
-            hz_val = font_small.render(arena["hazard_level"], True, arena["hazard_color"])
+            hz_label = font_zen_body.render("Perigo:", True, (160, 160, 165))
+            hz_val = font_zen_body.render(arena["hazard_level"], True, arena["hazard_color"])
             surface.blit(hz_label, (draw_rect.x + 18, preview_rect.bottom + 76))
             surface.blit(hz_val, (draw_rect.x + 75, preview_rect.bottom + 76))
 
             # Recursos e Táticas
-            ft_label = font_small.render("Cenário:", True, COLOR_GOLD)
+            ft_label = font_zen_body.render("Cenário:", True, COLOR_GOLD)
             surface.blit(ft_label, (draw_rect.x + 18, preview_rect.bottom + 106))
-            self._draw_multiline_text(surface, arena["features"], draw_rect.x + 18, preview_rect.bottom + 128, card_w - 36, font_small, (200, 205, 200))
+            self._draw_multiline_text(surface, arena["features"], draw_rect.x + 18, preview_rect.bottom + 128, card_w - 36, font_zen_body, (200, 205, 200))
 
-            tc_label = font_small.render("Dica Tática:", True, (130, 210, 240))
+            tc_label = font_zen_body.render("Dica Tática:", True, (130, 210, 240))
             surface.blit(tc_label, (draw_rect.x + 18, preview_rect.bottom + 185))
-            self._draw_multiline_text(surface, arena["tactics"], draw_rect.x + 18, preview_rect.bottom + 207, card_w - 36, font_small, (175, 185, 180))
+            self._draw_multiline_text(surface, arena["tactics"], draw_rect.x + 18, preview_rect.bottom + 207, card_w - 36, font_zen_body, (175, 185, 180))
 
             # Badge [ SELECIONADO ]
             if is_sel:
-                badge_surf = font_small.render("◄ SELECIONADO ►", True, COLOR_GOLD)
+                badge_surf = font_zen_sub.render("◄ SELECIONADO ►", True, COLOR_GOLD)
                 badge_bg = pygame.Rect(draw_rect.centerx - badge_surf.get_width() // 2 - 10, draw_rect.bottom - 32, badge_surf.get_width() + 20, 22)
                 pygame.draw.rect(surface, (20, 24, 22), badge_bg, border_radius=4)
                 pygame.draw.rect(surface, COLOR_GOLD, badge_bg, 1, border_radius=4)
                 surface.blit(badge_surf, (badge_bg.centerx - badge_surf.get_width() // 2, badge_bg.centery - badge_surf.get_height() // 2))
 
         # 3. Rodapé de Confirmação
-        start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT - 65, 300, 42)
+        start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 65, 320, 42)
         pygame.draw.rect(surface, (30, 45, 35), start_btn, border_radius=8)
         pygame.draw.rect(surface, COLOR_GOLD, start_btn, 2, border_radius=8)
-        btn_text = font_mid.render("INICIAR BATALHA [ENTER]", True, COLOR_GOLD)
+        btn_text = font_oriental_btn.render("INICIAR BATALHA [ENTER]", True, COLOR_GOLD)
         surface.blit(btn_text, (start_btn.centerx - btn_text.get_width() // 2, start_btn.centery - btn_text.get_height() // 2))
 
-        tip_s = font_small.render("[A/D ou Setas] Mudar Arena  |  [ESC] Voltar aos Personagens", True, (150, 155, 150))
+        tip_s = font_zen_tip.render("[A/D ou Setas] Mudar Arena  |  [ESC] Voltar aos Personagens", True, (160, 165, 160))
         surface.blit(tip_s, (SCREEN_WIDTH // 2 - tip_s.get_width() // 2, SCREEN_HEIGHT - 16))
 
     def _render_arena_mini_preview(self, surface: pygame.Surface, arena_id: str, rect: pygame.Rect):

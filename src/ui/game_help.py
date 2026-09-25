@@ -160,26 +160,27 @@ FIGHTERS_GUIDE_DATA = [
             "title": "Ninja Mestre de Iga",
             "style": "Iga Ninjutsu & Kunai",
             "vel": "[5/5] Extrema Agilidade",
-            "dano": "Estocada Dupla (2 Golpes)",
-            "especial": "Arremesso de Kunai (Stun)",
-            "keys_p1": "[E] Estocada Ninja (Ataque)",
-            "keys_p2": "[R] Lançar Kunai (Especial)",
+            "dano": "Estocada Tanto (Desarmado) / Kunai Aérea",
+            "especial": "Salto Parabólico Evasivo (Arremesso Aéreo)",
+            "keys_p1": "[E] Tanto (Sem Kunai) / Salto Kunai",
+            "keys_p2": "[R] Salto Parabólico Evasivo",
             "conceito": (
-                "Shinobi lendário das sombras feudais. Especializado em ferramentas silenciosas, esquiva "
-                "acrobática e controle de combate à meia distância através do arremesso veloz de Kunais de ferro."
+                "Shinobi lendário das sombras feudais. Especializado em acrobacias aéreas, esquiva "
+                "por salto parabólico sobre golpes rasteiros e arremesso aéreo de Kunai. "
+                "Seu ataque corpo a corpo com a Tanto fica disponível apenas quando estiver desarmado (sem kunai)."
             ),
             "habilidades": (
-                "• Estocada Ninja [E]: Dois cortes perfurantes rápidos em avanço.\n"
-                "• Lançar Kunai [R]: Dispara uma adaga afiada em alta velocidade que atordoa (stun) o oponente."
+                "• Salto Parabólico [R]: Salto alto evasivo que passa por cima de cortes baixos. Permite arremessar a Kunai no ar.\n"
+                "• Estocada Tanto [E]: Golpe corpo a corpo rápido com a Tanto (disponível apenas quando a Kunai foi lançada)."
             ),
             "estrategia_ofensiva": (
-                "• Inicie o combate arremessando a Kunai à distância. Ao acertar, o rival ficará congelado pelo stun!\n"
-                "• Durante o stun, avance imediatamente com a Estocada Dupla para finalizar sem tomar contra-ataque.\n"
-                "• Use sua alta velocidade para fugir e esperar o tempo de recarga da Kunai."
+                "• Use o Salto Parabólico para saltar sobre estocadas e disparar a Kunai do ar com ângulo superior.\n"
+                "• Se errar ou a Kunai for bloqueada, aproxime-se para lutar com a adaga Tanto ou recupere a Kunai do solo.\n"
+                "• Sua mobilidade aérea desorienta adversários de golpes lineares como Kenshi e Saitou."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Hanzo: A Kunai se move em linha reta. Ande perpendicularmente ou use bambus e rochas "
-                "como escudo. Em combate corpo a corpo direto, espadas de longo alcance superam suas adagas."
+                "• Como vencer Hanzo: Acompanhe o arco de queda do Salto Parabólico. No momento em que Hanzo aterrissa, "
+                "há uma fração de segundo de vulnerabilidade antes de poder se mover ou saltar novamente."
             )
         },
         "en": {
@@ -187,26 +188,27 @@ FIGHTERS_GUIDE_DATA = [
             "title": "Iga Master Shinobi",
             "style": "Iga Ninjutsu & Kunai",
             "vel": "[5/5] Extreme Agility",
-            "dano": "Double Thrust (2 Hits)",
-            "especial": "Kunai Throw (Stun)",
-            "keys_p1": "[E] Ninja Thrust (Attack)",
-            "keys_p2": "[R] Throw Kunai (Special)",
+            "dano": "Tanto Thrust (Unarmed) / Midair Kunai",
+            "especial": "Parabolic Evasive Jump (Air Throw)",
+            "keys_p1": "[E] Tanto (No Kunai) / Jump Throw",
+            "keys_p2": "[R] Parabolic Evasive Jump",
             "conceito": (
-                "Legendary shinobi of feudal shadows. Master of agile evasion, silent tools, and mid-range "
-                "battlefield control via lethal iron Kunais."
+                "Legendary shinobi of feudal shadows. Master of acrobatic leaps, parabolic jumps "
+                "vaulting over ground slashes, and deadly mid-air Kunai throws. "
+                "His close-quarters Tanto dagger thrust is only active when unarmed (after throwing the kunai)."
             ),
             "habilidades": (
-                "• Ninja Thrust [E]: Rapid two-hit piercing thrust in a swift forward step.\n"
-                "• Throw Kunai [R]: Throws a high-speed iron dagger that stuns the target on impact."
+                "• Parabolic Jump [R]: High evasive jump leaping over low strikes. Allows mid-air Kunai throw.\n"
+                "• Tanto Thrust [E]: Swift close-range dagger thrust (only available while kunai is deployed)."
             ),
             "estrategia_ofensiva": (
-                "• Open the engagement by throwing your Kunai from mid-range. Once it hits, the target is stunned!\n"
-                "• Dash in immediately during their stun to execute the two-hit thrust with zero risk.\n"
-                "• Use your 5/5 speed to kite and await Kunai cooldown."
+                "• Use Parabolic Jump to clear incoming slashes and fling your Kunai downwards from above.\n"
+                "• Once unarmed, engage directly with rapid Tanto strikes or retrieve your Kunai from the terrain.\n"
+                "• Your superior vertical evasion counters linear dash attackers like Kenshi and Saitou."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Hanzo: Kunais travel in straight lines. Move perpendicular or use bamboo/rocks "
-                "as shields. In direct melee trades, longer blades easily out-reach his short daggers."
+                "• How to defeat Hanzo: Anticipate the landing arc of his parabolic jump. As he lands on the ground, "
+                "there is a brief window of recovery before he can leap again."
             )
         }
     },
@@ -780,6 +782,8 @@ class GameHelpModal:
         self.sub_sec_btn_rects = []
         self.prev_fighter_btn = pygame.Rect(0, 0, 0, 0)
         self.next_fighter_btn = pygame.Rect(0, 0, 0, 0)
+        self._axis_x_held = False
+        self._axis_y_held = False
 
     def open(self, tab: int = TAB_RULES, fighter_idx: int = 0):
         self.is_open = True
@@ -805,7 +809,79 @@ class GameHelpModal:
         if not self.is_open:
             return False
 
-        if event.type == pygame.KEYDOWN:
+        # --- 1. SUPORTE A GAMEPAD NO GUIA / AJUDA ---
+        if event.type == pygame.JOYBUTTONDOWN:
+            from src.input.controller_manager import get_dpad_motion_from_event
+            # Fechar modal: Círculo (1) ou Options (6)
+            if event.button in (1, 6):
+                self.close()
+                return True
+            # Alternar idioma: Triângulo (3) ou Quadrado (2)
+            elif event.button in (2, 3):
+                toggle_lang()
+                self.scroll_y = 0.0
+                return True
+            # Alternar abas: L1 (9) ou R1 (10)
+            elif event.button == 9:
+                self.current_tab = (self.current_tab - 1) % 3
+                self.scroll_y = 0.0
+                return True
+            elif event.button == 10:
+                self.current_tab = (self.current_tab + 1) % 3
+                self.scroll_y = 0.0
+                return True
+
+            # D-Pad botões virtuais (11=Up, 12=Down, 13=Left, 14=Right)
+            d_dir = get_dpad_motion_from_event(event)
+            if d_dir:
+                dx, dy = d_dir
+                if dy < 0:
+                    self.scroll_y = max(0.0, self.scroll_y - 48.0)
+                    return True
+                elif dy > 0:
+                    self.scroll_y = min(self.max_scroll, self.scroll_y + 48.0)
+                    return True
+                if self.current_tab == self.TAB_FIGHTERS and dx != 0:
+                    self.selected_fighter_idx = (self.selected_fighter_idx + dx) % len(FIGHTERS_GUIDE_DATA)
+                    self.scroll_y = 0.0
+                    return True
+
+        elif event.type == pygame.JOYHATMOTION:
+            from src.input.controller_manager import get_dpad_motion_from_event
+            d_dir = get_dpad_motion_from_event(event)
+            if d_dir:
+                dx, dy = d_dir
+                if dy < 0:
+                    self.scroll_y = max(0.0, self.scroll_y - 48.0)
+                    return True
+                elif dy > 0:
+                    self.scroll_y = min(self.max_scroll, self.scroll_y + 48.0)
+                    return True
+                if self.current_tab == self.TAB_FIGHTERS and dx != 0:
+                    self.selected_fighter_idx = (self.selected_fighter_idx + dx) % len(FIGHTERS_GUIDE_DATA)
+                    self.scroll_y = 0.0
+                    return True
+
+        elif event.type == pygame.JOYAXISMOTION:
+            if event.axis == 1:
+                if event.value > 0.65:
+                    self.scroll_y = min(self.max_scroll, self.scroll_y + 36.0)
+                elif event.value < -0.65:
+                    self.scroll_y = max(0.0, self.scroll_y - 36.0)
+            elif event.axis == 0 and self.current_tab == self.TAB_FIGHTERS:
+                if event.value > 0.65 and not self._axis_x_held:
+                    self.selected_fighter_idx = (self.selected_fighter_idx + 1) % len(FIGHTERS_GUIDE_DATA)
+                    self.scroll_y = 0.0
+                    self._axis_x_held = True
+                elif event.value < -0.65 and not self._axis_x_held:
+                    self.selected_fighter_idx = (self.selected_fighter_idx - 1) % len(FIGHTERS_GUIDE_DATA)
+                    self.scroll_y = 0.0
+                    self._axis_x_held = True
+                elif abs(event.value) < 0.25:
+                    self._axis_x_held = False
+
+        # --- 2. TECLADO ---
+        elif event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_ESCAPE, pygame.K_h):
                 self.close()
                 return True

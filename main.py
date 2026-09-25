@@ -113,7 +113,9 @@ def get_fighter_action_labels(fighter):
     elif isinstance(fighter, BlueSamurai):
         return "3-Cortes", "Parry"
     elif isinstance(fighter, YellowNinja):
-        return "Estocada", "Arremessar Kunai"
+        if getattr(fighter, "has_kunai", True):
+            return "Arremesso Kunai", "Salto Parabólico"
+        return "Estocada Tanto", "Salto Parabólico"
     elif isinstance(fighter, AmericanNinja):
         return "Shuriken", "Cão Dash"
     elif isinstance(fighter, GrayNinja):
@@ -154,7 +156,13 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
     elif isinstance(fighter, BlueSamurai):
         fighter.trigger_combo_attack(aim_x, aim_y)
     elif isinstance(fighter, YellowNinja):
-        fighter.trigger_thrust_attack(aim_x, aim_y)
+        if fighter.has_kunai:
+            if fighter.state == "JUMP":
+                fighter.trigger_midair_throw(aim_x, aim_y, projectiles)
+            else:
+                fighter.trigger_jump_and_throw(aim_x, aim_y, projectiles)
+        else:
+            fighter.trigger_thrust_attack(aim_x, aim_y)
     elif isinstance(fighter, AmericanNinja):
         fighter.trigger_shuriken(aim_x, aim_y, projectiles)
     elif isinstance(fighter, GrayNinja):
@@ -185,7 +193,10 @@ def execute_fighter_dash(fighter, aim_x: float, aim_y: float, dwx: float, dwy: f
         fighter.set_facing(aim_x, aim_y)
         fighter.trigger_parry()
     elif isinstance(fighter, YellowNinja):
-        fighter.trigger_throw_attack(aim_x, aim_y, projectiles)
+        if fighter.state == "JUMP" and fighter.has_kunai:
+            fighter.trigger_midair_throw(aim_x, aim_y, projectiles)
+        else:
+            fighter.trigger_jump(aim_x, aim_y, projectiles)
     elif isinstance(fighter, AmericanNinja):
         fighter.trigger_dog_attack(aim_x, aim_y)
     elif isinstance(fighter, GrayNinja):
@@ -363,6 +374,7 @@ def run_game():
                 else:
                     action = title_screen.handle_event(event)
                     if action == "VERSUS":
+                        char_select_screen.reset()
                         game_state = STATE_CHAR_SELECT
                     elif action == "OPTIONS":
                         settings_menu.open()
@@ -382,8 +394,6 @@ def run_game():
                 ctrl_mgr.handle_event(event)
                 if event.type == pygame.QUIT:
                     running = False
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    game_state = STATE_TITLE
                 else:
                     start_match = char_select_screen.handle_event(event)
                     if start_match == "BACK":
@@ -500,13 +510,11 @@ def run_game():
                         execute_fighter_dash(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, opponent=p1)
 
             elif event.type == pygame.JOYBUTTONDOWN:
-                if ctrl_mgr.is_event_menu_pause(event, 0) or ctrl_mgr.is_event_action(event, 0, "menu"):
+                if ctrl_mgr.is_event_menu_pause(event, 0) or (getattr(event, "button", None) == 6):
                     settings_menu.open()
                 elif ctrl_mgr.is_event_action(event, 0, "restart"):
                     if round_winner is not None:
                         start_new_match()
-                    else:
-                        game_state = STATE_ARENA_SELECT
                 elif p1.is_alive and round_winner is None:
                     if ctrl_mgr.is_event_action(event, 0, "attack"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
@@ -517,7 +525,7 @@ def run_game():
 
                 # Gamepad Jogador 2
                 if not vs_ai_mode and p2.is_alive and round_winner is None:
-                    if ctrl_mgr.is_event_menu_pause(event, 1) or ctrl_mgr.is_event_action(event, 1, "menu"):
+                    if ctrl_mgr.is_event_menu_pause(event, 1) or (getattr(event, "button", None) == 6):
                         settings_menu.open()
                     elif ctrl_mgr.is_event_action(event, 1, "attack"):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)

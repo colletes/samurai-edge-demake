@@ -465,7 +465,7 @@ class CombatSystem:
 
         if p1.hitbox_active and p2.is_alive:
             hx, hy = p1.hitbox_center
-            if world_distance(hx, hy, p2.wx, p2.wy) < (p1.hitbox_radius + p2.radius):
+            if world_distance(hx, hy, p2.wx, p2.wy) < (p1.hitbox_radius + p2.radius) and getattr(p2, "wz", 0.0) < 0.65:
                 p1.hitbox_active = False
 
                 if p2.state == STATE_PARRY:
@@ -542,7 +542,7 @@ class CombatSystem:
 
         if p2.hitbox_active and p1.is_alive and winner is None:
             hx, hy = p2.hitbox_center
-            if world_distance(hx, hy, p1.wx, p1.wy) < (p2.hitbox_radius + p1.radius):
+            if world_distance(hx, hy, p1.wx, p1.wy) < (p2.hitbox_radius + p1.radius) and getattr(p1, "wz", 0.0) < 0.65:
                 p2.hitbox_active = False
 
                 if p1.state == STATE_PARRY:

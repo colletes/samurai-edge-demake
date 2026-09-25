@@ -291,14 +291,23 @@ def test_complete_roster():
     assert target.is_alive == True
     print("Teste 8: Shuriken atordoa (STUN) sem matar OK!")
 
-    # 9. Testar Hajime Saitou: Gatotsu contínuo e frenagem
+    # 9. Testar Hajime Saitou: Gatotsu contínuo, frenagem e contenção rígida nos limites do mapa
     saitou = SaitouSamurai(wx=10.5, wy=7.0)
     saitou.trigger_gatotsu(10.5, 15.0)
     assert saitou.state == "GATOTSU_CHARGE"
     for _ in range(15):
         saitou.update(0.05, game_map, particles)
     assert saitou.charge_speed >= 12.0
-    print("Teste 9: Gatotsu Saitou aceleração OK!")
+
+    # Testar que investida rumo à borda do mapa respeita os limites e não vaza para fora
+    saitou_edge = SaitouSamurai(wx=20.0, wy=11.0)
+    saitou_edge.trigger_gatotsu(30.0, 11.0) # Apontado para fora do mapa no eixo X
+    for _ in range(30):
+        saitou_edge.update(0.05, game_map, particles)
+    assert 1.0 <= saitou_edge.wx <= game_map.cols - 1.0
+    assert 1.0 <= saitou_edge.wy <= game_map.rows - 1.0
+    assert saitou_edge.wx == game_map.cols - 1.0
+    print("Teste 9: Gatotsu Saitou aceleração e limites de mapa OK!")
 
     # 10. Testar Foice de Precedência do Ninja Roxo
     murasaki2 = PurpleNinja(wx=10.0, wy=11.0)
@@ -397,6 +406,21 @@ def test_complete_roster():
     cs_test.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_s))
     assert cs_test.p2_choice_idx == 7  # Kasumi (IA) selecionada pelo P1!
     assert cs_test.p1_choice_idx == 1  # P1 permanece intacto!
+
+    # Teste de regressão do bug de ESC:
+    # No passo AI, apertar ESC deve voltar para o passo P1 (não sair para o menu principal)
+    res_esc_ai = cs_test.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE))
+    assert res_esc_ai == False, "ESC no passo AI deve retornar False e voltar para P1"
+    assert cs_test.selection_step == "P1", "selection_step deve retornar para P1"
+
+    # Agora no passo P1, apertar ESC deve retornar 'BACK' para voltar ao menu principal
+    res_esc_p1 = cs_test.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE))
+    assert res_esc_p1 == "BACK", "ESC no passo P1 deve retornar 'BACK'"
+
+    # Testar método reset()
+    cs_test.selection_step = "AI"
+    cs_test.reset()
+    assert cs_test.selection_step == "P1"
 
     # B. Render de coronhada de Teppo sem UnboundLocalError
     teppo_melee = Rifleman(wx=10.0, wy=10.0)
@@ -663,10 +687,27 @@ def test_complete_roster():
     kyoto.render_terrain(screen, camera, 1.0)
     for b in kyoto.buildings:
         b.render(screen, camera, 1.0)
-    carriage.render(screen, camera)
-    debris.render(screen, camera)
+    # Testar duas carruagens simultâneas passando em sentidos opostos
+    c1 = RunawayCarriage(start_pos=(9.8, -4.0), end_pos=(9.8, 26.0), speed=14.0)
+    c2 = RunawayCarriage(start_pos=(11.2, 26.0), end_pos=(11.2, -4.0), speed=14.0)
+    assert c1.dir_y > 0 and c2.dir_y < 0 # Sentidos rigorosamente opostos
+    c1.warning_timer = 0.0
+    c2.warning_timer = 0.0
+    for _ in range(10):
+        c1.update(0.05, camera, c_particles)
+        c2.update(0.05, camera, c_particles)
+    assert c1.wy > -4.0 and c2.wy < 26.0
+    c1.render(screen, camera)
+    c2.render(screen, camera)
 
-    print("Teste 20: Arena Kyoto Bakumatsu (Avenida Espaçosa, Mobilidade Total, Carruagens Letais e Escombros Voxel) OK!")
+    # Testar update do mapa Kyoto com timers acelerados gerando perigos
+    kyoto.carriage_timer = 0.0
+    kyoto.debris_timer = 0.0
+    kyoto.update(0.05, [dummy_p1, dummy_p2], camera, c_particles, c_banners, cinematic_director)
+    assert len(kyoto.carriages) >= 1
+    assert len(kyoto.falling_debris) >= 1
+
+    print("Teste 20: Arena Kyoto Bakumatsu (Avenida Espaçosa, Mobilidade Total, Carruagens Cruzadas e Alta Frequência de Escombros) OK!")
 
     # 21. Testar Nome Kenshi, Pólvora Condicional e Portraits Conceituais de Arena
     kenshi_fighter = RedSamurai(wx=5.0, wy=5.0)
@@ -675,10 +716,12 @@ def test_complete_roster():
     from src.config import DEFAULT_CONTROLS
     from src.ui.settings_menu import SettingsMenu
     settings_menu = SettingsMenu(DEFAULT_CONTROLS)
-    kenshi_labels = [label for key, label, col in settings_menu.items if "Kenshi" in label]
-    assert len(kenshi_labels) >= 6, f"Esperado ao menos 6 itens remapeáveis de Kenshi, encontrados: {len(kenshi_labels)}"
-    kenshin_labels = [label for key, label, col in settings_menu.items if "Kenshin" in label]
-    assert len(kenshin_labels) == 0, f"Nenhuma string deve conter 'Kenshin' no SettingsMenu! Encontradas: {kenshin_labels}"
+    p1_items = [key for key, label, col in settings_menu.items if key.startswith("P1_")]
+    assert len(p1_items) >= 6, f"Esperado ao menos 6 itens remapeáveis para Player 1, encontrados: {len(p1_items)}"
+    p2_items = [key for key, label, col in settings_menu.items if key.startswith("P2_")]
+    assert len(p2_items) >= 6, f"Esperado ao menos 6 itens remapeáveis para Player 2, encontrados: {len(p2_items)}"
+    legacy_fighter_labels = [label for key, label, col in settings_menu.items if any(n in label for n in ["Kenshin", "Kenshi", "Musashi"])]
+    assert len(legacy_fighter_labels) == 0, f"Nenhuma string deve conter nomes de lutadores específicos no SettingsMenu! Encontradas: {legacy_fighter_labels}"
 
     # Pólvora condicional: SEM teppo = lista vazia
     pouches_no_teppo = PowderPouch.create_arena_pouches(game_map, [kenshi_fighter, dummy_p2], total_pouches=3)

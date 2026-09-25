@@ -219,9 +219,9 @@ class ControllerDevice:
         except Exception:
             pass
 
-        # 3. Fallback: Botões virtuais de D-Pad apenas se o dispositivo NÃO possuir Hats
+        # 3. Leitura de Botões Virtuais de D-Pad (padrão SDL GameController: 11=Cima, 12=Baixo, 13=Esq, 14=Dir)
         try:
-            if self.joystick.get_numhats() == 0 and self.joystick.get_numbuttons() > BTN_DPAD_RIGHT:
+            if self.joystick.get_numbuttons() > BTN_DPAD_RIGHT:
                 if self.joystick.get_button(BTN_DPAD_LEFT):
                     dx = -1.0
                 elif self.joystick.get_button(BTN_DPAD_RIGHT):
@@ -240,6 +240,87 @@ class ControllerDevice:
             dy /= dist
 
         return dx, dy
+
+    def get_button_name(self, button_index: int | None) -> str:
+        """Retorna o nome amigável e legível do botão no controle especificado."""
+        if button_index is None:
+            return "Nenhum"
+        if self.is_playstation:
+            names = {
+                0: "✕ Cruz",
+                1: "○ Círculo",
+                2: "▢ Quadrado",
+                3: "△ Triângulo",
+                4: "Share / Create",
+                5: "PS",
+                6: "Options",
+                7: "L3",
+                8: "R3",
+                9: "L1",
+                10: "R1",
+                11: "D-Pad Cima",
+                12: "D-Pad Baixo",
+                13: "D-Pad Esquerda",
+                14: "D-Pad Direita",
+                15: "Touchpad",
+            }
+            return names.get(button_index, f"Botão {button_index}")
+        elif self.is_xbox:
+            names = {
+                0: "A",
+                1: "B",
+                2: "X",
+                3: "Y",
+                4: "View",
+                5: "Xbox",
+                6: "Menu",
+                7: "L-Stick",
+                8: "R-Stick",
+                9: "LB",
+                10: "RB",
+                11: "D-Pad Cima",
+                12: "D-Pad Baixo",
+                13: "D-Pad Esquerda",
+                14: "D-Pad Direita",
+            }
+            return names.get(button_index, f"Botão {button_index}")
+        elif self.is_nintendo:
+            names = {
+                0: "B",
+                1: "A",
+                2: "Y",
+                3: "X",
+                4: "-",
+                5: "Home",
+                6: "+",
+                7: "L-Stick",
+                8: "R-Stick",
+                9: "L",
+                10: "R",
+                11: "D-Pad Cima",
+                12: "D-Pad Baixo",
+                13: "D-Pad Esquerda",
+                14: "D-Pad Direita",
+            }
+            return names.get(button_index, f"Botão {button_index}")
+        return f"Botão {button_index}"
+
+    def get_mapped_button_name(self, action: str) -> str:
+        """Retorna o nome legível do botão configurado para uma ação (customizado ou padrão)."""
+        custom_btn = self.custom_mappings.get(action)
+        if custom_btn is not None:
+            return self.get_button_name(custom_btn)
+        if action == ACTION_ATTACK:
+            return self.get_button_name(2)
+        elif action in (ACTION_DASH, ACTION_PARRY):
+            return self.get_button_name(0)
+        elif action == ACTION_MENU:
+            return self.get_button_name(6)
+        elif action == ACTION_CONFIRM:
+            return self.get_button_name(0 if not self.is_nintendo else 1)
+        elif action == ACTION_CANCEL:
+            return self.get_button_name(1 if not self.is_nintendo else 0)
+        return "Padrão"
 
     def get_menu_nav_step(self) -> tuple[int, int]:
         """
@@ -297,26 +378,26 @@ class ControllerDevice:
 
         # 2. Mapeamentos padrão por modelo de controle
         if self.is_playstation:
-            # PlayStation (DualSense / DualShock):
-            # Raw HID: 0=Square, 1=Cross, 2=Circle, 3=Triangle, 4=L1, 5=R1, 8=Share, 9=Options
-            # SDL GameController: 0=Cross, 1=Circle, 2=Square, 3=Triangle, 6=Options, 9=L1, 10=R1
+            # PlayStation (DualSense / DualShock padrão SDL GameController):
+            # 0=✕ Cruz, 1=○ Círculo, 2=▢ Quadrado, 3=△ Triângulo, 4=Share, 6=Options, 9=L1, 10=R1, 11-14=D-Pad
             if action in (ACTION_ATTACK,):
                 # Quadrado (Ação Principal) ou R1
-                return button_index in (0, 2, 5, 10)
+                return button_index in (2, 10)
             elif action in (ACTION_DASH, ACTION_PARRY):
-                # ✕ (Ação Secundária) ou L1
-                return button_index in (1, 0, 4, 9)
+                # ✕ Cruz (Ação Secundária)
+                return button_index in (0,)
             elif action == ACTION_CONFIRM:
-                # ✕ (Confirmação nos Menus)
-                return button_index in (1, 0)
+                # ✕ Cruz (Confirmação nos Menus)
+                return button_index in (0,)
             elif action == ACTION_CANCEL:
-                # ○ (Voltar nos Menus)
-                return button_index in (2, 1)
+                # ○ Círculo (Voltar nos Menus)
+                return button_index in (1,)
             elif action == ACTION_MENU:
-                # Options / Pausa
-                return button_index in (9, 6, 7)
+                # Options / Pausa (apenas botão 6; NUNCA L1)
+                return button_index in (6,)
             elif action == ACTION_RESTART:
-                return button_index in (8, 4, 13)
+                # Share / Touchpad (NUNCA D-Pad nem L1)
+                return button_index in (4, 15)
 
         elif self.is_xbox:
             # Xbox: 0=A, 1=B, 2=X, 3=Y, 4=View, 6=Menu/Start, 9=LB, 10=RB
@@ -334,22 +415,22 @@ class ControllerDevice:
                 return button_index in (1,)
             elif action == ACTION_MENU:
                 # Menu / Start
-                return button_index in (6, 7)
+                return button_index in (6,)
             elif action == ACTION_RESTART:
                 return button_index in (4,)
 
         elif self.is_nintendo:
-            # Switch: B=0, A=1, Y=2, X=3, +=6
+            # Switch: B=0, A=1, Y=2, X=3, +=6, -=4
             if action in (ACTION_ATTACK,):
                 # Y (Ação Principal)
                 return button_index in (2, 3)
             elif action in (ACTION_DASH, ACTION_PARRY):
                 # B (Ação Secundária)
-                return button_index in (0, 1)
+                return button_index in (0,)
             elif action == ACTION_CONFIRM:
-                return button_index in (0, 1)
-            elif action == ACTION_CANCEL:
                 return button_index in (1, 0)
+            elif action == ACTION_CANCEL:
+                return button_index in (0, 1)
             elif action == ACTION_MENU:
                 return button_index in (6,)
             elif action == ACTION_RESTART:
@@ -357,17 +438,17 @@ class ControllerDevice:
 
         else: # Genérico
             if action in (ACTION_ATTACK,):
-                return button_index in (2, 3, 0)
+                return button_index in (2, 3)
             elif action in (ACTION_DASH, ACTION_PARRY):
-                return button_index in (1, 0)
-            elif action == ACTION_CONFIRM:
                 return button_index in (0, 1)
+            elif action == ACTION_CONFIRM:
+                return button_index in (0,)
             elif action == ACTION_CANCEL:
-                return button_index in (1, 2)
+                return button_index in (1,)
             elif action == ACTION_MENU:
-                return button_index in (6, 7, 8, 9)
+                return button_index in (6, 7)
             elif action == ACTION_RESTART:
-                return button_index in (4, 5)
+                return button_index in (4, 8)
 
         return False
 
@@ -384,23 +465,23 @@ class ControllerDevice:
             # Checar botões padrão
             if self.is_playstation:
                 if action == ACTION_ATTACK:
-                    return (num_b > 0 and bool(self.joystick.get_button(0))) or (num_b > 2 and bool(self.joystick.get_button(2)))
-                elif action in (ACTION_DASH, ACTION_PARRY):
-                    return (num_b > 1 and bool(self.joystick.get_button(1))) or (num_b > 0 and bool(self.joystick.get_button(0)))
-                elif action == ACTION_MENU:
-                    return (num_b > 9 and bool(self.joystick.get_button(9))) or (num_b > 6 and bool(self.joystick.get_button(6)))
-            elif self.is_xbox:
-                if action == ACTION_ATTACK:
-                    return num_b > 2 and bool(self.joystick.get_button(2))
+                    return (num_b > 2 and bool(self.joystick.get_button(2))) or (num_b > 10 and bool(self.joystick.get_button(10)))
                 elif action in (ACTION_DASH, ACTION_PARRY):
                     return num_b > 0 and bool(self.joystick.get_button(0))
                 elif action == ACTION_MENU:
                     return num_b > 6 and bool(self.joystick.get_button(6))
+            elif self.is_xbox:
+                if action == ACTION_ATTACK:
+                    return (num_b > 2 and bool(self.joystick.get_button(2))) or (num_b > 10 and bool(self.joystick.get_button(10)))
+                elif action in (ACTION_DASH, ACTION_PARRY):
+                    return (num_b > 0 and bool(self.joystick.get_button(0))) or (num_b > 9 and bool(self.joystick.get_button(9)))
+                elif action == ACTION_MENU:
+                    return num_b > 6 and bool(self.joystick.get_button(6))
             else:
                 if action == ACTION_ATTACK:
-                    return (num_b > 2 and bool(self.joystick.get_button(2))) or (num_b > 0 and bool(self.joystick.get_button(0)))
+                    return (num_b > 2 and bool(self.joystick.get_button(2))) or (num_b > 3 and bool(self.joystick.get_button(3)))
                 elif action in (ACTION_DASH, ACTION_PARRY):
-                    return num_b > 1 and bool(self.joystick.get_button(1)) or (num_b > 0 and bool(self.joystick.get_button(0)))
+                    return (num_b > 0 and bool(self.joystick.get_button(0))) or (num_b > 1 and bool(self.joystick.get_button(1)))
         except Exception:
             pass
         return False
@@ -549,6 +630,12 @@ class ControllerManager:
             return "[🎮 Switch Pro]"
         return f"[🎮 Genérico: {ctrl.name[:12]}]"
 
+    def get_mapped_button_name(self, player_idx: int, action: str) -> str:
+        ctrl = self.get_controller_for_player(player_idx)
+        if ctrl:
+            return ctrl.get_mapped_button_name(action)
+        return ""
+
     def get_prompts_summary(self, player_idx: int = 0) -> str:
         ctrl = self.get_controller_for_player(player_idx)
         if not ctrl:
@@ -556,6 +643,26 @@ class ControllerManager:
         btn_atk = ctrl.get_button_glyph(ACTION_ATTACK)
         btn_dash = ctrl.get_button_glyph(ACTION_DASH)
         return f"[{btn_atk}] Ação Principal  [{btn_dash}] Ação Secundária"
+
+
+def get_dpad_motion_from_event(event: pygame.event.Event) -> tuple[int, int] | None:
+    """Extrai passos direcionais discretos (-1, 0, 1) se o evento for de D-Pad (botão ou hat)."""
+    if event.type == pygame.JOYBUTTONDOWN:
+        if event.button == BTN_DPAD_UP:
+            return 0, -1
+        elif event.button == BTN_DPAD_DOWN:
+            return 0, 1
+        elif event.button == BTN_DPAD_LEFT:
+            return -1, 0
+        elif event.button == BTN_DPAD_RIGHT:
+            return 1, 0
+    elif event.type == pygame.JOYHATMOTION:
+        hx, hy = event.value
+        dx = 1 if hx > 0 else (-1 if hx < 0 else 0)
+        dy = -1 if hy > 0 else (1 if hy < 0 else 0)
+        if dx != 0 or dy != 0:
+            return dx, dy
+    return None
 
 
 _GLOBAL_CONTROLLER_MGR: ControllerManager | None = None

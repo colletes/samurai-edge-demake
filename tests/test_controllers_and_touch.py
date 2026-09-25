@@ -125,12 +125,13 @@ def test_controller_glyphs():
     assert dev_ps5.get_button_glyph(ACTION_CANCEL) == "○"
     assert dev_ps5.get_button_glyph(ACTION_MENU) == "Options"
 
-    # Verificação de Ações Pressionadas para PS5 (Raw e SDL GameController)
-    assert dev_ps5.is_action_pressed(0, ACTION_ATTACK) # Quadrado
-    assert dev_ps5.is_action_pressed(1, ACTION_DASH)   # ✕
-    assert dev_ps5.is_action_pressed(1, ACTION_CONFIRM)
-    assert dev_ps5.is_action_pressed(2, ACTION_CANCEL)  # ○
-    assert dev_ps5.is_action_pressed(9, ACTION_MENU)    # Options
+    # Verificação de Ações Pressionadas para PS5 (SDL GameController padrão macOS)
+    assert dev_ps5.is_action_pressed(2, ACTION_ATTACK)  # ▢ Quadrado
+    assert dev_ps5.is_action_pressed(10, ACTION_ATTACK) # R1
+    assert dev_ps5.is_action_pressed(0, ACTION_DASH)    # ✕ Cruz
+    assert dev_ps5.is_action_pressed(0, ACTION_CONFIRM) # ✕ Cruz
+    assert dev_ps5.is_action_pressed(1, ACTION_CANCEL)  # ○ Círculo
+    assert dev_ps5.is_action_pressed(6, ACTION_MENU)    # Options
 
     print("Teste 2: Mapeamento de Glifos Visuais contextuais e ações padronizadas OK!")
 
