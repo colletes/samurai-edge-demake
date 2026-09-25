@@ -629,19 +629,19 @@ class KyudoArrowProjectile:
 
 class RopeArrowProjectile:
     """Flecha de corda do Arqueiro Kyudo. Ao se fixar em obstáculo ou solo, puxa o arqueiro velozmente."""
-    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner):
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, start_latched: bool = False):
         self.wx = wx
         self.wy = wy
         self.wz = wz
         self.dir_x = dir_x
         self.dir_y = dir_y
         self.owner = owner
-        speed = 22.0
+        speed = 24.0
         self.vx = dir_x * speed
         self.vy = dir_y * speed
-        self.state = "FLYING" # "FLYING", "LATCHED_PULLING"
+        self.state = "LATCHED_PULLING" if start_latched else "FLYING"
         self.dist_traveled = 0.0
-        self.max_range = 11.5
+        self.max_range = 10.5
         self.is_active = True
         self.pull_timer = 0.0
 
@@ -649,24 +649,49 @@ class RopeArrowProjectile:
         if not self.is_active:
             return False
 
+        min_x = 1.0
+        max_x = (game_map.cols - 1.0) if game_map else 20.0
+        min_y = 1.0
+        max_y = (game_map.rows - 1.0) if game_map else 20.0
+
         if self.state == "FLYING":
             step = math.hypot(self.vx * dt, self.vy * dt)
             self.wx += self.vx * dt
             self.wy += self.vy * dt
             self.dist_traveled += step
 
-            # Cravar em obstáculos ou alcance
+            # Cravar em obstáculos da arena
             hit = False
-            for r in game_map.rocks:
-                if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius + 0.2:
-                    hit = True; break
-            if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius + 0.2:
-                hit = True
-            for b in game_map.bamboos:
-                if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.5:
-                    hit = True; break
+            if game_map:
+                for r in game_map.rocks:
+                    if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius + 0.2:
+                        hit = True; break
+                if not hit and game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius + 0.2:
+                    hit = True
+                if not hit:
+                    for b in game_map.bamboos:
+                        if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.5:
+                            hit = True; break
 
-            if hit or self.dist_traveled >= self.max_range:
+            # Limite estrito de arena: a flecha NÃO pode ultrapassar as bordas do mapa
+            hit_boundary = False
+            if self.wx <= min_x:
+                self.wx = min_x
+                hit_boundary = True
+            elif self.wx >= max_x:
+                self.wx = max_x
+                hit_boundary = True
+
+            if self.wy <= min_y:
+                self.wy = min_y
+                hit_boundary = True
+            elif self.wy >= max_y:
+                self.wy = max_y
+                hit_boundary = True
+
+            if hit or hit_boundary or self.dist_traveled >= self.max_range:
+                self.wx = max(min_x, min(max_x, self.wx))
+                self.wy = max(min_y, min(max_y, self.wy))
                 self.state = "LATCHED_PULLING"
                 if particles is not None:
                     for _ in range(6):
@@ -674,18 +699,25 @@ class RopeArrowProjectile:
 
         elif self.state == "LATCHED_PULLING":
             self.pull_timer += dt
+            # Garante que a ponta cravada permaneça dentro dos limites
+            self.wx = max(min_x, min(max_x, self.wx))
+            self.wy = max(min_y, min(max_y, self.wy))
+
             # Puxar o arqueiro até a ponta cravada
             dx = self.wx - self.owner.wx
             dy = self.wy - self.owner.wy
             dist = math.hypot(dx, dy)
-            if dist <= 0.85 or self.pull_timer >= 0.60:
+            if dist <= 0.85 or self.pull_timer >= 0.70:
                 self.is_active = False
                 return False
             else:
-                pull_speed = 20.0
+                pull_speed = 22.0
                 step = min(dist, pull_speed * dt)
                 self.owner.wx += (dx / dist) * step
                 self.owner.wy += (dy / dist) * step
+                # Garantir que o arqueiro permaneça 100% dentro dos limites do mapa durante o trajeto
+                self.owner.wx = max(min_x, min(max_x, self.owner.wx))
+                self.owner.wy = max(min_y, min(max_y, self.owner.wy))
                 if particles is not None and random.random() < 0.4:
                     particles.append(SparkParticle(self.owner.wx, self.owner.wy, 0.2))
 

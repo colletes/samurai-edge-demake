@@ -201,6 +201,7 @@ class CharacterSelectScreen:
                 vignette = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
                 vignette.fill((14, 14, 18, 195))  # 75% escurecido para legibilidade
                 self.bg_surf.blit(vignette, (0, 0))
+                self.bg_surf.fill((0, 0, 0, 255), special_flags=pygame.BLEND_RGBA_MAX)
             except Exception:
                 self.bg_surf = None
 
@@ -370,6 +371,12 @@ class CharacterSelectScreen:
         self.p1_ready = False
         self.p2_ready = False
         self.focus_zone = "GRID"
+        self._axis_x_held_p1 = False
+        self._axis_y_held_p1 = False
+        self._axis_x_held_p2 = False
+        self._axis_y_held_p2 = False
+        if hasattr(self, "help_modal"):
+            self.help_modal.close()
 
     def handle_event(self, event: pygame.event.Event) -> str | bool:
         """
@@ -392,7 +399,7 @@ class CharacterSelectScreen:
         def move_cursor(player: str, dx: int, dy: int):
             if player == "P1":
                 if self.focus_zone == "MODE_BTN":
-                    if dy > 0:
+                    if dy != 0:
                         self.focus_zone = "GRID"
                     elif dx != 0:
                         self.vs_ai = not self.vs_ai
@@ -478,12 +485,9 @@ class CharacterSelectScreen:
         # --- 1. GAMEPAD EVENTS ---
         if event.type == pygame.JOYBUTTONDOWN:
             ctrl2 = ctrl_mgr.get_controller_for_player(1)
-            is_p2 = (ctrl2 is not None and getattr(event, "instance_id", None) == ctrl2.instance_id)
+            is_p2 = (not self.vs_ai and len(ctrl_mgr.controllers) > 1 and ctrl2 is not None and getattr(event, "instance_id", None) == ctrl2.instance_id)
 
-            if self.vs_ai and is_p2:
-                return False
-
-            target_player = "P2" if (is_p2 and not self.vs_ai) else "P1"
+            target_player = "P2" if is_p2 else "P1"
             player_idx = 1 if is_p2 else 0
 
             # D-Pad botões virtuais (11=Up, 12=Down, 13=Left, 14=Right)
@@ -520,11 +524,9 @@ class CharacterSelectScreen:
 
         elif event.type == pygame.JOYHATMOTION:
             ctrl2 = ctrl_mgr.get_controller_for_player(1)
-            is_p2 = (ctrl2 is not None and getattr(event, "instance_id", None) == ctrl2.instance_id)
-            if self.vs_ai and is_p2:
-                return False
+            is_p2 = (not self.vs_ai and len(ctrl_mgr.controllers) > 1 and ctrl2 is not None and getattr(event, "instance_id", None) == ctrl2.instance_id)
 
-            target_player = "P2" if (is_p2 and not self.vs_ai) else "P1"
+            target_player = "P2" if is_p2 else "P1"
             from src.input.controller_manager import get_dpad_motion_from_event
             d_dir = get_dpad_motion_from_event(event)
             if d_dir:
@@ -532,52 +534,50 @@ class CharacterSelectScreen:
 
         elif event.type == pygame.JOYAXISMOTION:
             ctrl2 = ctrl_mgr.get_controller_for_player(1)
-            is_p2 = (ctrl2 is not None and getattr(event, "instance_id", None) == ctrl2.instance_id)
-            if self.vs_ai and is_p2:
-                return False
+            is_p2 = (not self.vs_ai and len(ctrl_mgr.controllers) > 1 and ctrl2 is not None and getattr(event, "instance_id", None) == ctrl2.instance_id)
 
-            target_player = "P2" if (is_p2 and not self.vs_ai) else "P1"
+            target_player = "P2" if is_p2 else "P1"
 
             if target_player == "P1":
                 if event.axis == 0:
-                    if event.value > 0.65 and not self._axis_x_held_p1:
+                    if event.value > 0.60 and not self._axis_x_held_p1:
                         move_cursor("P1", 1, 0)
                         self._axis_x_held_p1 = True
-                    elif event.value < -0.65 and not self._axis_x_held_p1:
+                    elif event.value < -0.60 and not self._axis_x_held_p1:
                         move_cursor("P1", -1, 0)
                         self._axis_x_held_p1 = True
-                    elif abs(event.value) < 0.25:
+                    elif abs(event.value) < 0.30:
                         self._axis_x_held_p1 = False
 
                 elif event.axis == 1:
-                    if event.value > 0.65 and not self._axis_y_held_p1:
+                    if event.value > 0.60 and not self._axis_y_held_p1:
                         move_cursor("P1", 0, 1)
                         self._axis_y_held_p1 = True
-                    elif event.value < -0.65 and not self._axis_y_held_p1:
+                    elif event.value < -0.60 and not self._axis_y_held_p1:
                         move_cursor("P1", 0, -1)
                         self._axis_y_held_p1 = True
-                    elif abs(event.value) < 0.25:
+                    elif abs(event.value) < 0.30:
                         self._axis_y_held_p1 = False
 
             elif target_player == "P2":
                 if event.axis == 0:
-                    if event.value > 0.65 and not self._axis_x_held_p2:
+                    if event.value > 0.60 and not self._axis_x_held_p2:
                         move_cursor("P2", 1, 0)
                         self._axis_x_held_p2 = True
-                    elif event.value < -0.65 and not self._axis_x_held_p2:
+                    elif event.value < -0.60 and not self._axis_x_held_p2:
                         move_cursor("P2", -1, 0)
                         self._axis_x_held_p2 = True
-                    elif abs(event.value) < 0.25:
+                    elif abs(event.value) < 0.30:
                         self._axis_x_held_p2 = False
 
                 elif event.axis == 1:
-                    if event.value > 0.65 and not self._axis_y_held_p2:
+                    if event.value > 0.60 and not self._axis_y_held_p2:
                         move_cursor("P2", 0, 1)
                         self._axis_y_held_p2 = True
-                    elif event.value < -0.65 and not self._axis_y_held_p2:
+                    elif event.value < -0.60 and not self._axis_y_held_p2:
                         move_cursor("P2", 0, -1)
                         self._axis_y_held_p2 = True
-                    elif abs(event.value) < 0.25:
+                    elif abs(event.value) < 0.30:
                         self._axis_y_held_p2 = False
 
         # --- 2. KEYBOARD EVENTS ---
@@ -739,21 +739,19 @@ class CharacterSelectScreen:
             surface.blit(self.bg_surf, (0, 0))
         else:
             surface.fill(COLOR_BG)
+        surface.fill((0, 0, 0, 255), special_flags=pygame.BLEND_RGBA_MAX)
 
         for p in self.particles:
             pygame.draw.circle(surface, (175, 170, 165), (int(p["x"]), int(p["y"])), int(p["size"]))
 
-        # 3. TOPO: Título Sumi-E com Selo Imperial e Divisória de Nanquim
+        # 3. TOPO: Título Sumi-E Nobre Centralizado
         header_y = 12
-        draw_hanko_stamp(surface, font_zen_stamp, "SE", 36, header_y + 2, size=34, color=COLOR_HANKO_RED)
-
         title_text = t("select_title")
         s_shadow = font_oriental_title.render(title_text, True, (8, 8, 10))
         s_title = font_oriental_title.render(title_text, True, COLOR_GOLD)
-        surface.blit(s_shadow, (82, header_y + 8))
-        surface.blit(s_title, (80, header_y + 6))
-
-        draw_brush_divider(surface, 82, header_y + 42, 680, color=(140, 115, 65))
+        title_x = SCREEN_WIDTH // 2 - s_title.get_width() // 2
+        surface.blit(s_shadow, (title_x + 1, header_y + 7))
+        surface.blit(s_title, (title_x, header_y + 6))
 
         # Botão Seletor Flutuante de Idioma [ PT | EN ] (Hanko / Kanban)
         lang = get_lang()
@@ -790,22 +788,28 @@ class CharacterSelectScreen:
 
         # 5. Banner Indicador de Etapa / Instrução
         step_y = 90
+        lang = get_lang()
         if self.vs_ai:
             if self.selection_step == "P1":
-                step_title = "PASSO 1: ESCOLHA SEU GUERREIRO (P1)"
+                step_title = "PASSO 1: ESCOLHA SEU COMBATENTE (P1)" if lang == LANG_PT else "STEP 1: CHOOSE YOUR FIGHTER (P1)"
                 step_color = COLOR_HANKO_RED
-                draw_brush_divider(surface, SCREEN_WIDTH // 2 - 280, step_y + 14, SCREEN_WIDTH // 2 + 280, color=(160, 50, 45))
+                div_color = (160, 50, 45)
             else:
-                step_title = "PASSO 2: ESCOLHA SEU OPONENTE (IA)"
+                step_title = "PASSO 2: ESCOLHA SEU OPONENTE (IA)" if lang == LANG_PT else "STEP 2: CHOOSE YOUR OPPONENT (AI)"
                 step_color = COLOR_HANKO_BLUE
-                draw_brush_divider(surface, SCREEN_WIDTH // 2 - 280, step_y + 14, SCREEN_WIDTH // 2 + 280, color=(45, 100, 180))
+                div_color = (45, 100, 180)
         else:
-            step_title = "MODO 2 JOGADORES (VERSUS LOCAL)"
+            step_title = "MODO 2 JOGADORES (VERSUS LOCAL)" if lang == LANG_PT else "2 PLAYERS MODE (LOCAL VERSUS)"
             step_color = COLOR_GOLD
-            draw_brush_divider(surface, SCREEN_WIDTH // 2 - 280, step_y + 14, SCREEN_WIDTH // 2 + 280, color=(160, 130, 50))
+            div_color = (160, 130, 50)
 
         step_s = font_zen_mid.render(step_title, True, step_color)
-        surface.blit(step_s, (SCREEN_WIDTH // 2 - step_s.get_width() // 2, step_y))
+        step_x = SCREEN_WIDTH // 2 - step_s.get_width() // 2
+        surface.blit(step_s, (step_x, step_y))
+
+        # Divisórias de pincel nas laterais do texto (sem riscar as letras)
+        draw_brush_divider(surface, step_x - 140, step_y + 11, step_x - 16, color=div_color)
+        draw_brush_divider(surface, step_x + step_s.get_width() + 16, step_y + 11, step_x + step_s.get_width() + 140, color=div_color)
 
         # 6. Grade Simétrica 6x2 (6 cards na Linha 1, 6 cards na Linha 2)
         card_w = 194
@@ -929,16 +933,14 @@ class CharacterSelectScreen:
         pygame.draw.rect(surface, btn_bg, self.start_btn_rect, border_radius=6)
         pygame.draw.rect(surface, COLOR_GOLD, self.start_btn_rect, 2, border_radius=6)
 
-        # Selo Hanko KEN no botão
-        draw_hanko_stamp(surface, font_zen_stamp, "KEN", self.start_btn_rect.x + 12, self.start_btn_rect.y + 6, size=32, color=COLOR_GOLD, border_w=1)
-
-        st_label = "INICIAR DUELO" if (not self.vs_ai or self.selection_step == "AI") else "CONFIRMAR P1"
+        st_label = ("INICIAR DUELO" if lang == LANG_PT else "START DUEL") if (not self.vs_ai or self.selection_step == "AI") else ("CONFIRMAR P1" if lang == LANG_PT else "CONFIRM P1")
         s_title_sh = font_oriental_action.render(st_label, True, (20, 10, 10))
         s_title_tx = font_oriental_action.render(st_label, True, COLOR_GOLD)
-        s_hint_tx = font_zen_small.render("[ ENTER / ESPAÇO ]", True, (245, 225, 185))
+        hint_label = "[ ENTER / ESPAÇO ]" if lang == LANG_PT else "[ ENTER / SPACE ]"
+        s_hint_tx = font_zen_small.render(hint_label, True, (245, 225, 185))
 
         total_content_w = s_title_tx.get_width() + 14 + s_hint_tx.get_width()
-        content_x = self.start_btn_rect.x + 48 + (self.start_btn_rect.width - 48 - total_content_w) // 2
+        content_x = self.start_btn_rect.centerx - total_content_w // 2
 
         surface.blit(s_title_sh, (content_x + 1, self.start_btn_rect.centery - s_title_tx.get_height() // 2 + 1))
         surface.blit(s_title_tx, (content_x, self.start_btn_rect.centery - s_title_tx.get_height() // 2))

@@ -129,6 +129,7 @@ class TouchButton:
         self.finger_id: int | None = None
         self.is_down = False
         self.just_pressed = False
+        self.just_released = False
 
     def contains(self, vx: float, vy: float) -> bool:
         return math.hypot(vx - self.cx, vy - self.cy) <= (self.radius * 1.25)
@@ -145,12 +146,14 @@ class TouchButton:
         if self.finger_id == finger_id:
             self.finger_id = None
             self.is_down = False
+            self.just_released = True
             return True
         return False
 
     def reset_frame_state(self):
         """Limpa o gatilho de disparo de clique no início de cada frame."""
         self.just_pressed = False
+        self.just_released = False
 
     def render(self, surface: pygame.Surface, font_large: pygame.font.Font, font_small: pygame.font.Font):
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -339,6 +342,9 @@ class TouchControls:
 
     def is_dash_just_pressed(self) -> bool:
         return self.btn_dash.just_pressed
+
+    def is_dash_just_released(self) -> bool:
+        return self.btn_dash.just_released
 
     def is_dash_held(self) -> bool:
         return self.btn_dash.is_down

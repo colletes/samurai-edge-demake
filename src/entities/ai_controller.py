@@ -97,7 +97,7 @@ class SamuraiAI:
                 return
             # Se for Kyudo Archer: flecha de corda para fuga rápida
             elif hasattr(ai_fighter, "trigger_rope_arrow") and projectiles is not None and random.random() < 0.65:
-                ai_fighter.trigger_rope_arrow(opponent.wx, opponent.wy, projectiles)
+                ai_fighter.trigger_rope_arrow(opponent.wx, opponent.wy, projectiles, game_map=game_map)
                 return
             # Se for Pirata (Anne): pólvora nos olhos para cegar o oponente
             elif hasattr(ai_fighter, "trigger_gunpowder_blind") and random.random() < 0.60:

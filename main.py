@@ -185,7 +185,7 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
     elif isinstance(fighter, Musketeer):
         fighter.trigger_fleche_thrust(aim_x, aim_y)
 
-def execute_fighter_dash(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, opponent=None):
+def execute_fighter_dash(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, opponent=None, game_map=None):
     """Executa a ação secundária de esquiva/parry/especial do lutador."""
     if isinstance(fighter, RedSamurai):
         fighter.trigger_dash(dwx, dwy)
@@ -210,7 +210,7 @@ def execute_fighter_dash(fighter, aim_x: float, aim_y: float, dwx: float, dwy: f
     elif isinstance(fighter, Kabuki):
         fighter.trigger_kawarimi_decoy(dwx, dwy, decoys, particles)
     elif isinstance(fighter, KyudoArcher):
-        fighter.trigger_rope_arrow(aim_x, aim_y, projectiles, particles)
+        fighter.start_rope_arrow_charge(aim_x, aim_y, game_map)
     elif isinstance(fighter, PirateSwordswoman):
         fighter.trigger_gunpowder_blind(aim_x, aim_y, opponent=opponent, particles=particles)
     elif isinstance(fighter, Musketeer):
@@ -498,7 +498,7 @@ def run_game():
                         execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
                     elif event.key == controls["P1_DASH"]:
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                        execute_fighter_dash(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, opponent=p2)
+                        execute_fighter_dash(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, opponent=p2, game_map=game_map)
 
                 # Comandos Jogador 2 (Teclado)
                 if not vs_ai_mode and p2.is_alive and round_winner is None:
@@ -507,7 +507,7 @@ def run_game():
                         execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles)
                     elif event.key == controls["P2_PARRY"]:
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
-                        execute_fighter_dash(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, opponent=p1)
+                        execute_fighter_dash(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, opponent=p1, game_map=game_map)
 
             elif event.type == pygame.JOYBUTTONDOWN:
                 if ctrl_mgr.is_event_menu_pause(event, 0) or (getattr(event, "button", None) == 6):
@@ -521,7 +521,7 @@ def run_game():
                         execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
                     elif ctrl_mgr.is_event_action(event, 0, "dash"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                        execute_fighter_dash(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, opponent=p2)
+                        execute_fighter_dash(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, opponent=p2, game_map=game_map)
 
                 # Gamepad Jogador 2
                 if not vs_ai_mode and p2.is_alive and round_winner is None:
@@ -532,7 +532,7 @@ def run_game():
                         execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles)
                     elif ctrl_mgr.is_event_action(event, 1, "dash"):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
-                        execute_fighter_dash(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, opponent=p1)
+                        execute_fighter_dash(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, opponent=p1, game_map=game_map)
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
@@ -558,7 +558,7 @@ def run_game():
                 execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
             elif touch_controls.is_dash_just_pressed():
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                execute_fighter_dash(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, opponent=p2)
+                execute_fighter_dash(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, opponent=p2, game_map=game_map)
 
         # Hitstop congelado
         if combat_system.hitstop_timer > 0:
@@ -576,12 +576,42 @@ def run_game():
             else:
                 p1.is_reloading = False
 
+        # Suporte ao Hold and Release da Flecha de Corda de Tomoe (KyudoArcher)
+        if isinstance(p1, KyudoArcher) and p1.is_alive and round_winner is None:
+            if p1_dash_held:
+                aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                if not p1.is_charging_rope:
+                    p1.start_rope_arrow_charge(aim_x, aim_y, game_map)
+                else:
+                    p1.update_rope_charge(dt, aim_x, aim_y, game_map)
+            else:
+                if p1.is_charging_rope:
+                    p1.release_rope_arrow(projectiles, particles, game_map)
+
         p2_dash_held = keys[controls["P2_PARRY"]] or ctrl_mgr.is_action_down(1, "dash")
         if not vs_ai_mode and isinstance(p2, Rifleman) and p2.is_alive and round_winner is None:
             if p2_dash_held:
                 p2.trigger_reload_hold()
             else:
                 p2.is_reloading = False
+
+        if not vs_ai_mode and isinstance(p2, KyudoArcher) and p2.is_alive and round_winner is None:
+            if p2_dash_held:
+                aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
+                if not p2.is_charging_rope:
+                    p2.start_rope_arrow_charge(aim_x, aim_y, game_map)
+                else:
+                    p2.update_rope_charge(dt, aim_x, aim_y, game_map)
+            else:
+                if p2.is_charging_rope:
+                    p2.release_rope_arrow(projectiles, particles, game_map)
+
+        # Cancelar carregamento se a rodada terminou
+        if round_winner is not None:
+            if isinstance(p1, KyudoArcher):
+                p1.is_charging_rope = False
+            if isinstance(p2, KyudoArcher):
+                p2.is_charging_rope = False
 
         # Suporte ao congelamento dramático de cinema samurai
         is_cinematic_freeze = cinematic_director.is_frozen()

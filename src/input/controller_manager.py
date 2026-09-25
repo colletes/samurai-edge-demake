@@ -512,6 +512,23 @@ class ControllerManager:
         for i in range(pygame.joystick.get_count()):
             self._add_device(i)
 
+    def _reassign_players(self):
+        """Garante que instâncias únicas e válidas estejam mapeadas em P1 e P2 sem duplicidade."""
+        valid_ids = list(self.controllers.keys())
+        if self.player_map[0] not in valid_ids:
+            self.player_map[0] = None
+        if self.player_map[1] not in valid_ids or self.player_map[1] == self.player_map[0]:
+            self.player_map[1] = None
+
+        if self.player_map[0] is None and len(valid_ids) > 0:
+            self.player_map[0] = valid_ids[0]
+
+        if self.player_map[1] is None:
+            for vid in valid_ids:
+                if vid != self.player_map[0]:
+                    self.player_map[1] = vid
+                    break
+
     def _add_device(self, device_index: int):
         try:
             joy = pygame.joystick.Joystick(device_index)
@@ -519,12 +536,7 @@ class ControllerManager:
             inst_id = joy.get_instance_id()
             dev = ControllerDevice(joy)
             self.controllers[inst_id] = dev
-
-            # Atribuição automática a P1 ou P2
-            if self.player_map[0] is None:
-                self.player_map[0] = inst_id
-            elif self.player_map[1] is None:
-                self.player_map[1] = inst_id
+            self._reassign_players()
         except Exception:
             pass
 
@@ -535,13 +547,7 @@ class ControllerManager:
             self.player_map[0] = None
         if self.player_map[1] == instance_id:
             self.player_map[1] = None
-
-        # Reorganizar P1/P2
-        remaining = list(self.controllers.keys())
-        if self.player_map[0] is None and len(remaining) > 0:
-            self.player_map[0] = remaining[0]
-        if self.player_map[1] is None and len(remaining) > 1:
-            self.player_map[1] = remaining[1]
+        self._reassign_players()
 
     def handle_event(self, event: pygame.event.Event):
         """Atualiza a lista de controles em caso de plug/unplug."""
@@ -555,6 +561,8 @@ class ControllerManager:
             inst_id = self.player_map[player_idx]
             if inst_id is not None and inst_id in self.controllers:
                 return self.controllers[inst_id]
+        if player_idx == 0 and len(self.controllers) > 0:
+            return next(iter(self.controllers.values()))
         return None
 
     def has_controller(self, player_idx: int = 0) -> bool:
@@ -581,9 +589,32 @@ class ControllerManager:
             return False
         ctrl = self.get_controller_for_player(player_idx)
         if not ctrl:
-            return False
+            if player_idx == 0 and len(self.controllers) > 0:
+                ctrl = next(iter(self.controllers.values()))
+            else:
+                return False
         if getattr(event, "instance_id", None) is not None and event.instance_id != ctrl.instance_id:
+            if len(self.controllers) <= 1:
+                pass
+            else:
+                return False
+        return ctrl.is_action_pressed(event.button, action)
+
+    def is_event_action_up(self, event: pygame.event.Event, player_idx: int, action: str) -> bool:
+        """Verifica se o evento JOYBUTTONUP atual corresponde à liberação da ação."""
+        if event.type != pygame.JOYBUTTONUP:
             return False
+        ctrl = self.get_controller_for_player(player_idx)
+        if not ctrl:
+            if player_idx == 0 and len(self.controllers) > 0:
+                ctrl = next(iter(self.controllers.values()))
+            else:
+                return False
+        if getattr(event, "instance_id", None) is not None and event.instance_id != ctrl.instance_id:
+            if len(self.controllers) <= 1:
+                pass
+            else:
+                return False
         return ctrl.is_action_pressed(event.button, action)
 
     def is_event_menu_confirm(self, event: pygame.event.Event, player_idx: int = 0) -> bool:

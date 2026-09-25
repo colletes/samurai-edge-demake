@@ -42,6 +42,7 @@ class SumieTitleScreen:
                     alpha = int(195 * (i / 140.0) ** 1.4)
                     pygame.draw.rect(vignette, (10, 10, 12, alpha), (0, SCREEN_HEIGHT - 190 + i, SCREEN_WIDTH, 2))
                 self.bg_surf.blit(vignette, (0, 0))
+                self.bg_surf.fill((0, 0, 0, 255), special_flags=pygame.BLEND_RGBA_MAX)
             except Exception:
                 self.bg_surf = None
 
@@ -160,6 +161,7 @@ class SumieTitleScreen:
             # Fallback procedural em nanquim
             surface.fill((22, 22, 24))
             pygame.draw.circle(surface, (230, 230, 230), (SCREEN_WIDTH - 200, 160), 65) # Lua crescente
+        surface.fill((0, 0, 0, 255), special_flags=pygame.BLEND_RGBA_MAX)
 
         # 2. Partículas atmosféricas de cinzas
         for p in self.particles:
