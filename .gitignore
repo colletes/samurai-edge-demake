@@ -23,5 +23,6 @@ dist/
 .buildozer/
 bin/
 
-# Scratch & temporary scripts
+# Scratch & temporary testing scripts
 scratch/
+
