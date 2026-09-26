@@ -70,6 +70,7 @@ from src.ui.arena_select import ArenaSelectScreen
 from src.ui.fonts import get_title_font, get_text_font
 from src.i18n import t
 from src.input import get_controller_manager, TouchControls, DisplayScaler
+from src.input.controls_storage import load_controls_config, save_controls_config
 
 # Estados Globais do Jogo
 STATE_TITLE = "TITLE"
@@ -425,8 +426,17 @@ def run_game():
     touch_controls = TouchControls()
     scaler = DisplayScaler(SCREEN_WIDTH, SCREEN_HEIGHT)
 
-    # Menus e Telas
+    # Carregar configurações de controles salvas (Fase 3 / Item 8)
+    saved_cfg = load_controls_config()
     controls = dict(DEFAULT_CONTROLS)
+    for k, v in saved_cfg.get("keyboard", {}).items():
+        if k in controls:
+            controls[k] = int(v)
+    if "controllers" in saved_cfg:
+        ctrl_mgr.apply_saved_mappings(saved_cfg["controllers"])
+    if touch_controls and "touch_mode" in saved_cfg:
+        touch_controls.mode = saved_cfg["touch_mode"]
+
     settings_menu = SettingsMenu(controls, touch_controls=touch_controls)
     title_screen = SumieTitleScreen()
     char_select_screen = CharacterSelectScreen()

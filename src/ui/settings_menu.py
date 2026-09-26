@@ -65,6 +65,14 @@ class SettingsMenu:
         self.button_rects: list[tuple[pygame.Rect, int]] = []
         self.touch_toggle_rect = pygame.Rect(0, 0, 0, 0)
 
+    def save_settings(self):
+        """Salva as configurações atuais no arquivo controls_config.json."""
+        from src.input.controller_manager import get_controller_manager
+        from src.input.controls_storage import save_controls_config
+        ctrl_mgr = get_controller_manager()
+        t_mode = getattr(self.touch_controls, "mode", "auto") if self.touch_controls else "auto"
+        save_controls_config(self.controls, ctrl_mgr, t_mode)
+
     def open(self):
         self.is_open = True
         self.waiting_for_key_action = None
@@ -72,9 +80,10 @@ class SettingsMenu:
     def close(self):
         self.is_open = False
         self.waiting_for_key_action = None
+        self.save_settings()
 
     def reset_to_defaults(self):
-        """Restaura os controles para o padrão de fábrica."""
+        """Restaura os controles para o padrão de fábrica e salva."""
         for k, v in DEFAULT_CONTROLS.items():
             self.controls[k] = v
         from src.input.controller_manager import get_controller_manager
@@ -83,6 +92,7 @@ class SettingsMenu:
             ctrl = ctrl_mgr.get_controller_for_player(p_idx)
             if ctrl:
                 ctrl.custom_mappings.clear()
+        self.save_settings()
 
     def cycle_touch_mode(self):
         if self.touch_controls:
@@ -90,6 +100,7 @@ class SettingsMenu:
             order = [TOUCH_MODE_AUTO, TOUCH_MODE_ALWAYS, TOUCH_MODE_OFF]
             cur_idx = order.index(self.touch_controls.mode) if self.touch_controls.mode in order else 0
             self.touch_controls.mode = order[(cur_idx + 1) % len(order)]
+            self.save_settings()
 
     def handle_event(self, event: pygame.event.Event) -> bool:
         """
@@ -111,6 +122,7 @@ class SettingsMenu:
                 else:
                     self.controls[self.waiting_for_key_action] = event.key
                     self.waiting_for_key_action = None
+                    self.save_settings()
                 return True
             elif event.type == pygame.JOYBUTTONDOWN:
                 # Se for Círculo (botão 1) e estiver esperando para cancelar
@@ -126,6 +138,7 @@ class SettingsMenu:
                 p_idx = 1 if "P2" in self.waiting_for_key_action else 0
                 if act_name:
                     ctrl_mgr.remap_action(p_idx, act_name, event.button)
+                    self.save_settings()
                 self.waiting_for_key_action = None
                 return True
             elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.FINGERDOWN):
@@ -227,11 +240,8 @@ class SettingsMenu:
                 action_key, _, _ = self.items[self.selected_index]
                 self.waiting_for_key_action = action_key
                 return True
-            elif event.key == pygame.K_r:
+            elif event.key in (pygame.K_BACKSPACE, pygame.K_DELETE):
                 self.reset_to_defaults()
-                return True
-            elif event.key == pygame.K_t:
-                self.cycle_touch_mode()
                 return True
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -358,48 +368,50 @@ class SettingsMenu:
                     )
                 )
 
-                # Determinar o ícone SVG correspondente (PlayStation)
+                dpad_names = {
+                    "P1_UP": "D-PAD CIMA",
+                    "P1_DOWN": "D-PAD BAIXO",
+                    "P1_LEFT": "D-PAD ESQ",
+                    "P1_RIGHT": "D-PAD DIR",
+                    "P2_UP": "D-PAD CIMA",
+                    "P2_DOWN": "D-PAD BAIXO",
+                    "P2_LEFT": "D-PAD ESQ",
+                    "P2_RIGHT": "D-PAD DIR",
+                }
+
                 svg_icon_name = None
                 btn_label = ""
-                if ctrl and ctrl.is_playstation:
-                    if act_suffix:
-                        svg_icon_name = ctrl.get_button_svg_icon(act_suffix)
-                        btn_label = ctrl.get_mapped_button_name(act_suffix)
-                    else:
-                        svg_icon_name = "dpad"
-                        btn_label = "D-Pad"
+
+                if action_key in dpad_names:
+                    svg_icon_name = "dpad"
+                    btn_label = dpad_names[action_key]
                 elif ctrl:
                     if act_suffix:
-                        btn_label = f"🎮 {ctrl.get_mapped_button_name(act_suffix)}"
-                    else:
-                        btn_label = "🎮 D-Pad"
+                        svg_icon_name = ctrl.get_button_svg_icon(act_suffix) if ctrl.is_playstation else None
+                        btn_label = ctrl.get_mapped_button_name(act_suffix)
                 else:
-                    # Sem controle conectado: exibe ícone PlayStation de referência pedagógica
+                    # Sem controle conectado: exibe botões PlayStation de referência
                     if act_suffix == "attack":
                         svg_icon_name = "square"
-                        btn_label = "▢"
+                        btn_label = "▢ / R1"
                     elif act_suffix == "secondary":
                         svg_icon_name = "triangle"
-                        btn_label = "△"
+                        btn_label = "✕ / △"
                     elif act_suffix == "dash":
                         svg_icon_name = "circle"
-                        btn_label = "○"
-                    else:
-                        svg_icon_name = "dpad"
-                        btn_label = "D-Pad"
+                        btn_label = "○ / L1"
 
                 key_color = (255, 215, 120) if is_selected else (200, 210, 205)
-                
+
                 # Renderiza do canto direito para a esquerda
                 cur_right_x = btn_rect.right - 12
                 if svg_icon_name:
-                    # Desenhar Ícone SVG de 20x20
                     icon_surf = get_button_icon_surface(svg_icon_name, 20, 20)
                     cur_right_x -= 22
                     surface.blit(icon_surf, (cur_right_x, btn_rect.y + 7))
 
-                if btn_label and not (ctrl and ctrl.is_playstation):
-                    label_surf = font_small.render(f"[{btn_label}]", True, (160, 185, 175))
+                if btn_label:
+                    label_surf = font_small.render(f"[{btn_label}]", True, (160, 205, 185))
                     cur_right_x -= (label_surf.get_width() + 6)
                     surface.blit(label_surf, (cur_right_x, btn_rect.y + 8))
 
@@ -427,7 +439,7 @@ class SettingsMenu:
         self.touch_toggle_rect = pygame.Rect(panel_rect.centerx - 175, panel_y + panel_h - 138, 350, 28)
         pygame.draw.rect(surface, (28, 36, 32), self.touch_toggle_rect, border_radius=6)
         pygame.draw.rect(surface, COLOR_GOLD, self.touch_toggle_rect, 1, border_radius=6)
-        touch_lbl = font_small.render(f"Controles Touch: [ {touch_mode_str} ] (Clique ou T)", True, COLOR_GOLD)
+        touch_lbl = font_small.render(f"Controles Touch: [ {touch_mode_str} ] (Clique para alternar)", True, COLOR_GOLD)
         surface.blit(touch_lbl, (self.touch_toggle_rect.centerx - touch_lbl.get_width() // 2, self.touch_toggle_rect.y + 6))
 
         # 6. Botões de Ação no Rodapé do Painel
@@ -435,7 +447,7 @@ class SettingsMenu:
         reset_rect = pygame.Rect(SCREEN_WIDTH // 2 - 130, panel_y + panel_h - 100, 260, 30)
         pygame.draw.rect(surface, (32, 38, 34), reset_rect, border_radius=6)
         pygame.draw.rect(surface, (70, 85, 75), reset_rect, 1, border_radius=6)
-        rst_surf = font_small.render("[R] Restaurar Padrões", True, (220, 210, 160))
+        rst_surf = font_small.render("[BACKSPACE] Restaurar Padrões", True, (220, 210, 160))
         surface.blit(rst_surf, (reset_rect.centerx - rst_surf.get_width() // 2, reset_rect.y + 6))
 
         # Botão Fechar / Voltar

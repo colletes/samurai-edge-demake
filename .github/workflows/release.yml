@@ -37,6 +37,7 @@ jobs:
           python test_game.py
           python tests/test_controllers_and_touch.py
           python tests/test_tomoe_hold_release.py
+          python tests/test_phase3_controls_and_persistence.py
 
   build:
     name: Build (${{ matrix.platform }})

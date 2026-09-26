@@ -5,6 +5,8 @@ import os
 import sys
 import pygame
 
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
 # Resolução da Janela
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720

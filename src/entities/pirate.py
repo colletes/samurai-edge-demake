@@ -139,6 +139,20 @@ class PirateSwordswoman(Samurai):
 
     def trigger_gunpowder_blind(self, target_wx: float = None, target_wy: float = None, opponent = None, particles: list = None, projectiles: list = None):
         """Disparo tático compatível para IA e chamadas diretas."""
+        if opponent is not None:
+            self.state = STATE_RECOVERY
+            self.state_timer = 0.25
+            self.wx += 0.5  # Avanço agressivo fechando a distância
+            if hasattr(opponent, "stun"):
+                opponent.stun(0.8)
+            else:
+                opponent.state = STATE_STUNNED
+                opponent.state_timer = 0.8
+            if hasattr(opponent, "apply_slow"):
+                opponent.apply_slow(1.5)
+            else:
+                opponent.slow_timer = 1.5
+            return
         if target_wx is not None and target_wy is not None:
             if projectiles is not None:
                 self.trigger_quick_cannon(target_wx, target_wy, projectiles, particles)

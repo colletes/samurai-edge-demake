@@ -109,11 +109,11 @@ class ControllerDevice:
         self._axis_x_held = False
         self._axis_y_held = False
 
-        # Mapeamentos customizados de botões (editáveis nas opções de jogo)
-        self.custom_mappings: dict[str, int | None] = {
-            ACTION_ATTACK: None,
-            ACTION_SECONDARY: None,
-            ACTION_DASH: None,
+        # Mapeamentos customizados de botões (suporta múltiplos botões por ação)
+        self.custom_mappings: dict[str, list[int]] = {
+            ACTION_ATTACK: [],
+            ACTION_SECONDARY: [],
+            ACTION_DASH: [],
         }
 
     @property
@@ -264,10 +264,10 @@ class ControllerDevice:
                 8: "R3",
                 9: "L1",
                 10: "R1",
-                11: "D-Pad Cima",
-                12: "D-Pad Baixo",
-                13: "D-Pad Esquerda",
-                14: "D-Pad Direita",
+                11: "D-PAD CIMA",
+                12: "D-PAD BAIXO",
+                13: "D-PAD ESQ",
+                14: "D-PAD DIR",
                 15: "Touchpad",
             }
             return names.get(button_index, f"Botão {button_index}")
@@ -284,10 +284,10 @@ class ControllerDevice:
                 8: "R-Stick",
                 9: "LB",
                 10: "RB",
-                11: "D-Pad Cima",
-                12: "D-Pad Baixo",
-                13: "D-Pad Esquerda",
-                14: "D-Pad Direita",
+                11: "D-PAD CIMA",
+                12: "D-PAD BAIXO",
+                13: "D-PAD ESQ",
+                14: "D-PAD DIR",
             }
             return names.get(button_index, f"Botão {button_index}")
         elif self.is_nintendo:
@@ -303,25 +303,37 @@ class ControllerDevice:
                 8: "R-Stick",
                 9: "L",
                 10: "R",
-                11: "D-Pad Cima",
-                12: "D-Pad Baixo",
-                13: "D-Pad Esquerda",
-                14: "D-Pad Direita",
+                11: "D-PAD CIMA",
+                12: "D-PAD BAIXO",
+                13: "D-PAD ESQ",
+                14: "D-PAD DIR",
             }
             return names.get(button_index, f"Botão {button_index}")
-        return f"Botão {button_index}"
+        else:
+            names = {
+                11: "D-PAD CIMA",
+                12: "D-PAD BAIXO",
+                13: "D-PAD ESQ",
+                14: "D-PAD DIR",
+            }
+            return names.get(button_index, f"Botão {button_index}")
 
     def get_button_svg_icon(self, action_or_index: str | int) -> str | None:
         """Retorna o identificador do ícone SVG correspondente ao botão ou ação no controle."""
         from src.ui.svg_icon_renderer import get_playstation_icon_name_for_button
         if isinstance(action_or_index, int):
+            if action_or_index in (11, 12, 13, 14):
+                return "dpad"
             return get_playstation_icon_name_for_button(action_or_index)
-        
+
+        if "UP" in action_or_index or "DOWN" in action_or_index or "LEFT" in action_or_index or "RIGHT" in action_or_index:
+            return "dpad"
+
         # Mapeamento por ação
-        custom_btn = self.custom_mappings.get(action_or_index)
-        if custom_btn is not None:
-            return get_playstation_icon_name_for_button(custom_btn)
-        
+        custom_btns = self.get_action_buttons(action_or_index)
+        if custom_btns:
+            return get_playstation_icon_name_for_button(custom_btns[0])
+
         if self.is_playstation:
             if action_or_index == ACTION_ATTACK:
                 return "square"
@@ -338,23 +350,11 @@ class ControllerDevice:
         return None
 
     def get_mapped_button_name(self, action: str) -> str:
-        """Retorna o nome legível do botão configurado para uma ação (customizado ou padrão)."""
-        custom_btn = self.custom_mappings.get(action)
-        if custom_btn is not None:
-            return self.get_button_name(custom_btn)
-        if action == ACTION_ATTACK:
-            return self.get_button_name(2)
-        elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
-            return self.get_button_name(0)
-        elif action == ACTION_DASH:
-            return self.get_button_name(1)
-        elif action == ACTION_MENU:
-            return self.get_button_name(6)
-        elif action == ACTION_CONFIRM:
-            return self.get_button_name(0 if not self.is_nintendo else 1)
-        elif action == ACTION_CANCEL:
-            return self.get_button_name(1 if not self.is_nintendo else 0)
-        return "Padrão"
+        """Retorna o nome legível dos botões configurados para uma ação (suporta múltiplos botões)."""
+        buttons = self.get_action_buttons(action)
+        if not buttons:
+            return "Nenhum"
+        return " / ".join(self.get_button_name(b) for b in buttons)
 
     def get_menu_nav_step(self) -> tuple[int, int]:
         """
@@ -400,137 +400,113 @@ class ControllerDevice:
 
         return step_x, step_y
 
+    def get_default_action_buttons(self, action: str) -> list[int]:
+        """Retorna a lista canônica padrão de botões de acordo com o modelo de controle."""
+        if self.is_playstation:
+            if action in (ACTION_ATTACK,):
+                return [2, 10]        # ▢ Quadrado e R1
+            elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
+                return [0, 3]         # ✕ Cruz e △ Triângulo
+            elif action in (ACTION_DASH,):
+                return [1, 9]         # ○ Círculo e L1
+            elif action == ACTION_CONFIRM:
+                return [0]            # ✕ Cruz
+            elif action == ACTION_CANCEL:
+                return [1]            # ○ Círculo
+            elif action == ACTION_MENU:
+                return [6]            # Options
+            elif action == ACTION_RESTART:
+                return [4, 15]        # Share, Touchpad
+        elif self.is_xbox:
+            if action in (ACTION_ATTACK,):
+                return [2, 10]        # X e RB
+            elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
+                return [0, 3]         # A e Y
+            elif action in (ACTION_DASH,):
+                return [1, 9]         # B e LB
+            elif action == ACTION_CONFIRM:
+                return [0]
+            elif action == ACTION_CANCEL:
+                return [1]
+            elif action == ACTION_MENU:
+                return [6]
+            elif action == ACTION_RESTART:
+                return [4]
+        elif self.is_nintendo:
+            if action in (ACTION_ATTACK,):
+                return [2, 3]         # Y e X
+            elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
+                return [0, 10]        # B e R
+            elif action in (ACTION_DASH,):
+                return [1, 9]         # A e L
+            elif action == ACTION_CONFIRM:
+                return [1, 0]
+            elif action == ACTION_CANCEL:
+                return [0, 1]
+            elif action == ACTION_MENU:
+                return [6]
+            elif action == ACTION_RESTART:
+                return [4]
+        else: # Genérico
+            if action in (ACTION_ATTACK,):
+                return [2, 3]
+            elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
+                return [0, 5]
+            elif action in (ACTION_DASH,):
+                return [1, 4]
+            elif action == ACTION_CONFIRM:
+                return [0]
+            elif action == ACTION_CANCEL:
+                return [1]
+            elif action == ACTION_MENU:
+                return [6, 7]
+            elif action == ACTION_RESTART:
+                return [4, 8]
+        return []
+
+    def get_action_buttons(self, action: str) -> list[int]:
+        """Retorna todos os botões configurados para a ação (customizados ou padrões)."""
+        if action in self.custom_mappings and self.custom_mappings[action]:
+            val = self.custom_mappings[action]
+            if isinstance(val, list) and len(val) > 0:
+                return val
+            elif isinstance(val, int):
+                return [val]
+        return self.get_default_action_buttons(action)
+
+    def remap_action(self, action: str, button_index: int, toggle: bool = True):
+        """
+        Adiciona ou alterna múltiplos botões por ação (ex: R1 e X para Secundária).
+        """
+        current = list(self.get_action_buttons(action))
+        if button_index in current:
+            if len(current) > 1 and toggle:
+                current.remove(button_index)
+        else:
+            if len(current) < 3:
+                current.append(button_index)
+            else:
+                current = [button_index]
+        self.custom_mappings[action] = current
+
+    def set_action_buttons(self, action: str, button_indices: list[int]):
+        """Define explicitamente a lista de botões associados a uma ação."""
+        self.custom_mappings[action] = [int(b) for b in button_indices]
+
     def is_action_pressed(self, button_index: int, action: str) -> bool:
         """
         Verifica se o botão que acabou de ser pressionado corresponde à ação.
-        Suporta botões customizados definidos pelo jogador.
+        Suporta múltiplos botões mapeados simultaneamente para a mesma ação.
         """
-        # 1. Checar mapeamento customizado se configurado
-        custom_btn = self.custom_mappings.get(action)
-        if custom_btn is not None:
-            return button_index == custom_btn
-
-        # 2. Mapeamentos padrão por modelo de controle
-        if self.is_playstation:
-            # PlayStation (DualSense / DualShock padrão SDL GameController):
-            # 0=✕ Cruz, 1=○ Círculo, 2=▢ Quadrado, 3=△ Triângulo, 4=Share, 6=Options, 9=L1, 10=R1, 11-14=D-Pad
-            if action in (ACTION_ATTACK,):
-                # Quadrado (Ação Principal) ou R1
-                return button_index in (2, 10)
-            elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
-                # ✕ Cruz (Ação Secundária) ou △ Triângulo
-                return button_index in (0, 3)
-            elif action in (ACTION_DASH,):
-                # ○ Círculo (Roll / Dash dedicado) ou L1
-                return button_index in (1, 9)
-            elif action == ACTION_CONFIRM:
-                # ✕ Cruz (Confirmação nos Menus)
-                return button_index in (0,)
-            elif action == ACTION_CANCEL:
-                # ○ Círculo (Voltar nos Menus)
-                return button_index in (1,)
-            elif action == ACTION_MENU:
-                # Options / Pausa (apenas botão 6; NUNCA L1)
-                return button_index in (6,)
-            elif action == ACTION_RESTART:
-                # Share / Touchpad (NUNCA D-Pad nem L1)
-                return button_index in (4, 15)
-
-        elif self.is_xbox:
-            # Xbox: 0=A, 1=B, 2=X, 3=Y, 4=View, 6=Menu/Start, 9=LB, 10=RB
-            if action in (ACTION_ATTACK,):
-                # X (Ação Principal) ou RB
-                return button_index in (2, 10)
-            elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
-                # A (Ação Secundária) ou Y
-                return button_index in (0, 3)
-            elif action in (ACTION_DASH,):
-                # B (Roll / Dash dedicado) ou LB
-                return button_index in (1, 9)
-            elif action == ACTION_CONFIRM:
-                # A (Confirmação)
-                return button_index in (0,)
-            elif action == ACTION_CANCEL:
-                # B (Voltar)
-                return button_index in (1,)
-            elif action == ACTION_MENU:
-                # Menu / Start
-                return button_index in (6,)
-            elif action == ACTION_RESTART:
-                return button_index in (4,)
-
-        elif self.is_nintendo:
-            # Switch: B=0, A=1, Y=2, X=3, +=6, -=4
-            if action in (ACTION_ATTACK,):
-                # Y (Ação Principal)
-                return button_index in (2, 3)
-            elif action in (ACTION_DASH, ACTION_PARRY):
-                # B (Ação Secundária)
-                return button_index in (0,)
-            elif action == ACTION_CONFIRM:
-                return button_index in (1, 0)
-            elif action == ACTION_CANCEL:
-                return button_index in (0, 1)
-            elif action == ACTION_MENU:
-                return button_index in (6,)
-            elif action == ACTION_RESTART:
-                return button_index in (4,)
-
-        else: # Genérico
-            if action in (ACTION_ATTACK,):
-                return button_index in (2, 3)
-            elif action in (ACTION_DASH, ACTION_PARRY):
-                return button_index in (0, 1)
-            elif action == ACTION_CONFIRM:
-                return button_index in (0,)
-            elif action == ACTION_CANCEL:
-                return button_index in (1,)
-            elif action == ACTION_MENU:
-                return button_index in (6, 7)
-            elif action == ACTION_RESTART:
-                return button_index in (4, 8)
-
-        return False
+        return button_index in self.get_action_buttons(action)
 
     def is_action_down(self, action: str) -> bool:
-        """Verifica se o botão associado à ação está sendo mantido pressionado."""
+        """Verifica se qualquer botão associado à ação está sendo mantido pressionado."""
         try:
             num_b = self.joystick.get_numbuttons()
-
-            # Checar mapeamento customizado
-            custom_btn = self.custom_mappings.get(action)
-            if custom_btn is not None:
-                return custom_btn < num_b and bool(self.joystick.get_button(custom_btn))
-
-            # Checar botões padrão
-            if self.is_playstation:
-                if action == ACTION_ATTACK:
-                    return (num_b > 2 and bool(self.joystick.get_button(2))) or (num_b > 10 and bool(self.joystick.get_button(10)))
-                elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
-                    return (num_b > 0 and bool(self.joystick.get_button(0))) or (num_b > 3 and bool(self.joystick.get_button(3)))
-                elif action in (ACTION_DASH,):
-                    return (num_b > 1 and bool(self.joystick.get_button(1))) or (num_b > 9 and bool(self.joystick.get_button(9)))
-                elif action == ACTION_MENU:
-                    return num_b > 6 and bool(self.joystick.get_button(6))
-            elif self.is_xbox:
-                if action == ACTION_ATTACK:
-                    return (num_b > 2 and bool(self.joystick.get_button(2))) or (num_b > 10 and bool(self.joystick.get_button(10)))
-                elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
-                    return (num_b > 0 and bool(self.joystick.get_button(0))) or (num_b > 3 and bool(self.joystick.get_button(3)))
-                elif action in (ACTION_DASH,):
-                    return (num_b > 1 and bool(self.joystick.get_button(1))) or (num_b > 9 and bool(self.joystick.get_button(9)))
-                elif action == ACTION_MENU:
-                    return num_b > 6 and bool(self.joystick.get_button(6))
-            else:
-                if action == ACTION_ATTACK:
-                    return (num_b > 2 and bool(self.joystick.get_button(2))) or (num_b > 3 and bool(self.joystick.get_button(3)))
-                elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
-                    return num_b > 0 and bool(self.joystick.get_button(0))
-                elif action in (ACTION_DASH,):
-                    return num_b > 1 and bool(self.joystick.get_button(1))
+            return any(b < num_b and bool(self.joystick.get_button(b)) for b in self.get_action_buttons(action))
         except Exception:
-            pass
-        return False
+            return False
 
     def rumble(self, low_freq: float = 0.5, high_freq: float = 0.8, duration_ms: int = 150):
         """Ativa o feedback tátil de vibração no controle (se suportado pelo hardware)."""
@@ -583,6 +559,15 @@ class ControllerManager:
             dev = ControllerDevice(joy)
             self.controllers[inst_id] = dev
             self._reassign_players()
+
+            # Carregar estritamente configuração salva se existir (sem comandos aleatórios)
+            try:
+                from src.input.controls_storage import load_controls_config
+                cfg = load_controls_config()
+                if "controllers" in cfg:
+                    self.apply_saved_mappings(cfg["controllers"])
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -687,11 +672,25 @@ class ControllerManager:
             return ctrl.get_menu_nav_step()
         return 0, 0
 
-    def remap_action(self, player_idx: int, action: str, button_index: int):
-        """Salva remapeamento de botão para um jogador."""
+    def remap_action(self, player_idx: int, action: str, button_index: int, toggle: bool = True):
+        """Salva remapeamento de botão para um jogador (suporta múltiplos botões por ação)."""
         ctrl = self.get_controller_for_player(player_idx)
         if ctrl:
-            ctrl.custom_mappings[action] = button_index
+            ctrl.remap_action(action, button_index, toggle=toggle)
+
+    def apply_saved_mappings(self, saved_controllers: dict):
+        """Aplica mapeamentos persistidos de controls_config.json nos controles conectados."""
+        if not saved_controllers:
+            return
+        for p_idx, p_key in ((0, "P1"), (1, "P2")):
+            if p_key in saved_controllers:
+                ctrl = self.get_controller_for_player(p_idx)
+                if ctrl and isinstance(saved_controllers[p_key], dict):
+                    for act, btns in saved_controllers[p_key].items():
+                        if isinstance(btns, list):
+                            ctrl.set_action_buttons(act, btns)
+                        elif isinstance(btns, int):
+                            ctrl.set_action_buttons(act, [btns])
 
     def rumble_player(self, player_idx: int, low_freq: float = 0.5, high_freq: float = 0.8, duration_ms: int = 150):
         ctrl = self.get_controller_for_player(player_idx)

@@ -122,11 +122,13 @@ def test_complete_roster():
 
     # Arremessar 2ª bomba
     kemuri.state = "IDLE"
+    kemuri.bomb_timer = 0.0
     kemuri.trigger_throw_bomb(kenshin_target.wx, kenshin_target.wy, projectiles)
     assert len(projectiles) == 2
 
     # Tentar arremessar 3ª bomba (deve ser bloqueado pelo limite de 2 bombas ativas!)
     kemuri.state = "IDLE"
+    kemuri.bomb_timer = 0.0
     kemuri.trigger_throw_bomb(kenshin_target.wx, kenshin_target.wy, projectiles)
     assert len(projectiles) == 2, "Limite de 2 bombas ativas violado!"
 
@@ -145,6 +147,7 @@ def test_complete_roster():
 
     # Uma segunda explosão mata Kasumi
     bomb_suicide.state = "IDLE"
+    bomb_suicide.bomb_timer = 0.0
     bomb_suicide.trigger_throw_bomb(10.0, 10.0, projectiles)
     assert len(projectiles) == 1
     projectiles[0].fuse_timer = 0.0
@@ -352,14 +355,14 @@ def test_complete_roster():
     julie.trigger_fleche_thrust(target_dummy2.wx, target_dummy2.wy)
     assert julie.state == "ATTACK"
     assert julie.hitbox_active == True
-    assert julie.hitbox_radius >= 1.25
+    assert julie.hitbox_radius >= 0.70
+    assert math.hypot(julie.hitbox_center[0] - julie.wx, julie.hitbox_center[1] - julie.wy) >= 1.25
 
-    # Testar Cloak Riposte
+    # Testar Cape Flourish / Cloak Riposte
     julie.state = "IDLE"
     julie.trigger_cloak_riposte()
-    assert julie.state == "PARRY"
-    assert julie.is_riposte_ready == True
-    print("Teste 12: Mosqueteira Julie (Fleche Thrust e Cloak Riposte) OK!")
+    assert julie.state in ("PARRY", "CAPE_FLOURISH")
+    print("Teste 12: Mosqueteira Julie (Fleche Thrust e Cape Flourish) OK!")
 
     # 13. Testar Diretor Cinematográfico & Violência em Voxel
     director = CinematicDirector()

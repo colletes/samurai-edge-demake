@@ -39,6 +39,21 @@ class RedSamurai(Samurai):
         """Kenshi pode agir se estiver viva, em IDLE/WALK e sem recovery de dash."""
         return self.is_alive and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY) and self.dash_recovery_timer <= 0
 
+    def can_move(self) -> bool:
+        """Kenshi pode se mover livremente enquanto embainha a katana (STATE_RECOVERY)."""
+        if self.state == STATE_RECOVERY:
+            return self.is_alive
+        return super().can_move()
+
+    def apply_movement(self, move_x: float, move_y: float, dt: float, game_map):
+        """Aplica movimentação mantendo o estado de RECOVERY (embainhar/noto) se aplicável."""
+        if self.state == STATE_RECOVERY:
+            saved_state = self.state
+            super().apply_movement(move_x, move_y, dt, game_map)
+            self.state = saved_state
+        else:
+            super().apply_movement(move_x, move_y, dt, game_map)
+
     def trigger_iai_attack(self, target_wx: float, target_wy: float):
         """Inicia o golpe Iai-jutsu se puder agir."""
         if not self.can_act():
