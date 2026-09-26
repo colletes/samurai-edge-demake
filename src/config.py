@@ -155,7 +155,7 @@ KEY_P1_LEFT = pygame.K_a
 KEY_P1_RIGHT = pygame.K_d
 KEY_P1_ATTACK = pygame.K_e        # Ataque Principal (Tecla E)
 KEY_P1_SECONDARY = pygame.K_r     # Ação Secundária / Especial (Tecla R)
-KEY_P1_DASH = pygame.K_q          # Terceira Ação: Roll / Dash dedicado (Tecla Q)
+KEY_P1_DASH = pygame.K_t          # Terceira Ação: Roll / Dash dedicado (Tecla T)
 
 # Jogador 2 (Player 2)
 KEY_P2_UP = pygame.K_UP

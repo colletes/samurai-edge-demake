@@ -670,7 +670,7 @@ def run_game():
                     elif event.key == controls.get("P1_SECONDARY", pygame.K_r):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                         execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
-                    elif event.key == controls.get("P1_DASH", pygame.K_q):
+                    elif event.key == controls.get("P1_DASH", pygame.K_t):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                         execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
 
@@ -789,7 +789,7 @@ def run_game():
                 p2.is_reloading = False
 
         # Suporte ao Hold and Release da Flecha de Corda de Tomoe (KyudoArcher) na Terceira Ação (Roll / Dash dedicado)
-        p1_dash_held = keys[controls.get("P1_DASH", pygame.K_q)] or ctrl_mgr.is_action_down(0, "dash") or touch_controls.is_dash_held()
+        p1_dash_held = keys[controls.get("P1_DASH", pygame.K_t)] or ctrl_mgr.is_action_down(0, "dash") or touch_controls.is_dash_held()
         if isinstance(p1, KyudoArcher) and p1.is_alive and round_winner is None and round_start_timer <= 0:
             if p1_dash_held:
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)

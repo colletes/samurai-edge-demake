@@ -243,6 +243,7 @@ Pressione `F1` no teclado, clique no botão `[ ? ]` sobre o card de qualquer gue
 | **Movimento** | `W, A, S, D` | `Setas Direcionais (↑, ←, ↓, →)` |
 | **Ataque Primário** | `E` | `U` |
 | **Ação Secundária / Especial** | `R` | `I` |
+| **Esquiva (Roll / Dash)** | `T` | `O` |
 | **Confirmar Seleção** | `E` ou `Espaço` | `U` ou `Enter` |
 | **Troca de Modo (1P vs IA / 2 Jogadores)** | `TAB` | `TAB` |
 | **Menu de Configurações** | `C` | `C` |
