@@ -10,6 +10,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('assets', 'assets'),
+        ('assets/icons', 'assets/icons'),
         ('assets/portraits', 'assets/portraits'),
         ('assets/fonts', 'assets/fonts'),
         ('assets/concepts', 'assets/concepts'),
@@ -17,6 +18,7 @@ a = Analysis(
     hiddenimports=[
         'src',
         'src.config',
+        'src.ui.svg_icon_renderer',
         'src.combat',
         'src.combat.collision',
         'src.effects',

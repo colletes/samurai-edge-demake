@@ -44,8 +44,32 @@ class KyudoArcher(Samurai):
         self.rope_cooldown = 0.0
         self.rope_timer = 0.0
 
+        # Mecânica de Recarga de Flecha Yumi (Cooldown)
+        self.arrow_cooldown = 1.20
+        self.arrow_cooldown_timer = 0.0
+
+        # Ação Secundária: Barreira dos Ventos Kami (Ofuda Barrier)
+        self.ofuda_barrier_timer = 0.0
+        self.ofuda_barrier_duration = 0.85
+        self.ofuda_cooldown = 3.2
+        self.ofuda_cooldown_timer = 0.0
+        self.ofuda_orbit_angle = 0.0
+
     def can_act(self) -> bool:
-        return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD)
+        return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD) and self.dash_recovery_timer <= 0
+
+    def trigger_ofuda_barrier(self, particles: list = None):
+        """Ação Secundária: Barreira dos Ventos Kami — talismãs sagrados giratórios que repelem projéteis e empurram oponentes."""
+        if not self.can_act() or self.ofuda_cooldown_timer > 0:
+            return
+        self.ofuda_barrier_timer = self.ofuda_barrier_duration
+        self.ofuda_cooldown_timer = self.ofuda_cooldown
+        if particles is not None:
+            for _ in range(14):
+                particles.append(SparkParticle(self.wx, self.wy, 0.45))
+
+    def is_ofuda_active(self) -> bool:
+        return self.is_alive and self.ofuda_barrier_timer > 0
 
     def can_move(self) -> bool:
         if self.is_charging_rope:
@@ -63,7 +87,7 @@ class KyudoArcher(Samurai):
 
     def trigger_bow_draw(self, target_wx: float, target_wy: float, projectiles: list = None, particles: list = None):
         """Ataque Primário: Disparo imediato da flecha Yumi sem windup (mira manual)."""
-        if not self.can_act():
+        if not self.can_act() or self.arrow_cooldown_timer > 0:
             return
 
         self.set_facing(target_wx, target_wy)
@@ -71,6 +95,7 @@ class KyudoArcher(Samurai):
         self.target_aim_y = target_wy
         self.state = STATE_RECOVERY
         self.state_timer = 0.20
+        self.arrow_cooldown_timer = self.arrow_cooldown
 
         proj_list = projectiles if projectiles is not None else getattr(self, "projectiles_ref", None)
         if proj_list is not None:
@@ -128,7 +153,7 @@ class KyudoArcher(Samurai):
                 cy = max(min_y, min(max_y, ny))
                 break
 
-            # Trava em obstáculos sólidos da arena
+            # Trava em obstáculos sólidos da arena (rochas e poço - bambus são transpassados)
             hit = False
             if game_map:
                 for r in game_map.rocks:
@@ -136,10 +161,6 @@ class KyudoArcher(Samurai):
                         hit = True; break
                 if not hit and game_map.well and math.hypot(nx - game_map.well.wx, ny - game_map.well.wy) < (game_map.well.radius + 0.2):
                     hit = True
-                if not hit:
-                    for b in game_map.bamboos:
-                        if not b.is_cut and math.hypot(nx - b.wx, ny - b.wy) < 0.5:
-                            hit = True; break
             if hit:
                 cx, cy = nx, ny
                 break
@@ -195,6 +216,12 @@ class KyudoArcher(Samurai):
 
         self.update_stealth(game_map)
 
+        if self.arrow_cooldown_timer > 0:
+            self.arrow_cooldown_timer -= dt
+
+        if self.dash_recovery_timer > 0:
+            self.dash_recovery_timer -= dt
+
         if self.rope_timer > 0:
             self.rope_timer -= dt
 
@@ -226,11 +253,55 @@ class KyudoArcher(Samurai):
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
 
+        # Atualização dos cronômetros e efeitos da Barreira dos Ventos Kami
+        if self.ofuda_cooldown_timer > 0:
+            self.ofuda_cooldown_timer -= dt
+        if self.ofuda_barrier_timer > 0:
+            self.ofuda_barrier_timer -= dt
+            self.ofuda_orbit_angle += dt * 8.0
+
+    def update_ofuda_barrier_effects(self, dt: float, projectiles: list = None, opponent = None, particles: list = None):
+        """Aplica os efeitos de deflexão e repulsão da Barreira Kami."""
+        if not self.is_ofuda_active():
+            return
+
+        # 1. Defletir / Anular projéteis inimigos
+        if projectiles:
+            for p in projectiles:
+                if getattr(p, "is_active", False) and getattr(p, "owner", None) is not self:
+                    if math.hypot(p.wx - self.wx, p.wy - self.wy) < 1.85:
+                        p.is_active = False
+                        if particles is not None:
+                            for _ in range(6):
+                                particles.append(SparkParticle(p.wx, p.wy, 0.35))
+
+        # 2. Empurrão / Knockback em oponente melee
+        if opponent is not None and getattr(opponent, "is_alive", False):
+            d = math.hypot(opponent.wx - self.wx, opponent.wy - self.wy)
+            if d < 1.75 and d > 0.001:
+                push = 5.0 * dt
+                opponent.wx += ((opponent.wx - self.wx) / d) * push
+                opponent.wy += ((opponent.wy - self.wy) / d) * push
+                if hasattr(opponent, "hitbox_active") and opponent.hitbox_active:
+                    opponent.hitbox_active = False
+
     def render(self, surface: pygame.Surface, camera):
         """Renderiza o Arqueiro Kyudo e seu arco Yumi em Voxel 3D."""
         if self.is_hidden:
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
+
+        # Efeito visual da Barreira dos Ventos Kami (3 Ofudas Sagradas em Órbita)
+        if self.is_ofuda_active():
+            cx, cy = camera.apply(self.wx, self.wy, 0.6)
+            orbit_r = 34
+            pygame.draw.circle(surface, (255, 230, 100), (cx, cy), orbit_r, 1)
+            for i in range(3):
+                ang = self.ofuda_orbit_angle + i * (2.0 * math.pi / 3.0)
+                ox = int(cx + orbit_r * math.cos(ang))
+                oy = int(cy + (orbit_r * 0.55) * math.sin(ang))
+                pygame.draw.rect(surface, (250, 250, 245), (ox - 4, oy - 7, 8, 14), border_radius=1)
+                pygame.draw.line(surface, (220, 40, 40), (ox - 2, oy - 4), (ox + 2, oy + 4), 2)
 
         # 1. Guia Visual Tática de Mira (Hold & Release)
         if self.is_charging_rope and self.is_alive:

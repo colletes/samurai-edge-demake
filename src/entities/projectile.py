@@ -12,11 +12,12 @@ from src.isometric.iso_math import world_distance
 from src.effects.particles import SparkParticle
 
 class KunaiProjectile:
-    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner):
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, vz: float = 0.0):
         self.wx = wx
         self.wy = wy
         self.wz = wz
         self.owner = owner
+        self.vz = vz
 
         # Velocidade de arremesso
         speed = 16.0
@@ -43,7 +44,15 @@ class KunaiProjectile:
             self.wy += self.vy * dt
             self.dist_traveled += step
 
-            # Corte de bambus no caminho
+            if self.vz != 0.0:
+                self.wz += self.vz * dt
+                if self.wz <= 0.05:
+                    self.wz = 0.05
+                    self.state = "ON_GROUND"
+                    for _ in range(4):
+                        particles.append(SparkParticle(self.wx, self.wy, 0.2))
+
+            # Corte de bambus no caminho (atravessa sem ser parada)
             for b in game_map.bamboos:
                 if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.45:
                     part = b.cut((self.dir_x, self.dir_y))
@@ -83,7 +92,7 @@ class KunaiProjectile:
         return True
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza a kunai no ar ou cravada no chão como modelo voxel 3D."""
+        """Renderiza a kunai no ar ou cravada no chão com indicador pulsante."""
         if not self.is_active:
             return
 
@@ -100,11 +109,27 @@ class KunaiProjectile:
         else:
             # Cravada no solo em ângulo
             base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
+
+            # Indicador visual pulsante no piso (Item 2)
+            ticks = pygame.time.get_ticks()
+            pulse = 0.5 + 0.5 * math.sin(ticks * 0.007)
+            glow_rad = int(12 + pulse * 6)
+            glow_surf = pygame.Surface((glow_rad * 2, glow_rad * 2), pygame.SRCALPHA)
+            pygame.draw.ellipse(glow_surf, (255, 215, 50, int(45 + pulse * 45)), (0, glow_rad // 2, glow_rad * 2, glow_rad))
+            surface.blit(glow_surf, (base_sx - glow_rad, base_sy - glow_rad // 2))
+
+            # Sombra e haste cravada
             pygame.draw.ellipse(surface, (15, 20, 18), (base_sx - 6, base_sy - 3, 12, 6))
-            # Haste cravada
             draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.05, 0.02, 0.10, 0.10, 0.16, COLOR_STEEL)
-            # Anel / empunhadura dourada
             draw_voxel_box(surface, camera, self.wx - 0.04, self.wy - 0.04, 0.18, 0.08, 0.08, 0.08, COLOR_GOLD)
+
+            # Marcador vertical flutuante (Bobbing marker)
+            bob = math.sin(ticks * 0.009) * 4.0
+            arrow_sx, arrow_sy = camera.apply(self.wx, self.wy, 0.65)
+            tip_y = arrow_sy + bob
+            pts = [(arrow_sx, tip_y), (arrow_sx - 5, tip_y - 8), (arrow_sx + 5, tip_y - 8)]
+            pygame.draw.polygon(surface, (255, 225, 50), pts)
+            pygame.draw.polygon(surface, (180, 140, 20), pts, 1)
 
 
 class ShurikenProjectile:
@@ -315,6 +340,90 @@ class SmokeCloudEntity:
                 outline=True,
                 alpha=alpha
             )
+
+
+class RemoteMineEntity:
+    """Mina de detonação remota de Kasumi (Item 16).
+    1º toque: Planta no solo com atraso de armamento de 0.4s.
+    2º toque: Detona remotamente gerando explosão letal que atinge também Kasumi se estiver no raio.
+    """
+    def __init__(self, wx: float, wy: float, owner):
+        self.wx = wx
+        self.wy = wy
+        self.wz = 0.05
+        self.owner = owner
+        self.radius = 2.2
+        self.arm_delay = 0.40
+        self.age = 0.0
+        self.is_active = True
+        self.is_armed = False
+
+    def is_ready_to_detonate(self) -> bool:
+        return self.is_active and self.age >= self.arm_delay
+
+    def update(self, dt: float, game_map, particles: list = None) -> bool:
+        if not self.is_active:
+            return False
+        self.age += dt
+        if self.age >= self.arm_delay:
+            self.is_armed = True
+        return True
+
+    def detonate(self, fighters: list, particles: list = None, banners: list = None, cinematic_director = None):
+        """Detona a mina: danifica todos os combatentes no raio de 2.2m (incluindo o próprio dono se estiver no raio - Item 16)."""
+        if not self.is_active:
+            return
+        self.is_active = False
+
+        if particles is not None:
+            from src.effects.particles import SparkParticle
+            for _ in range(25):
+                particles.append(SparkParticle(self.wx, self.wy, 0.6))
+
+        if banners is not None:
+            from src.effects.particles import FloatingBanner
+            banners.append(FloatingBanner("REMOTE DETONATION!", self.wx, self.wy, wz=1.8, color=(255, 120, 40)))
+
+        for f in fighters:
+            if getattr(f, "is_alive", False):
+                dist = world_distance(self.wx, self.wy, f.wx, f.wy)
+                if dist <= (self.radius + getattr(f, "radius", 0.4)):
+                    dmg = 1 if f == self.owner else 2
+                    hit, dead = f.take_hit((0.0, 0.0), damage=dmg)
+                    if dead and cinematic_director:
+                        cinematic_director.trigger_fatal_strike(self.owner, f, "HEADSHOT_EXPLODE", (0, 0))
+            if hasattr(f, "dog") and f.dog and f.dog.state != "KNOCKED_OUT":
+                if world_distance(self.wx, self.wy, f.dog.wx, f.dog.wy) <= (self.radius + f.dog.radius):
+                    f.dog.knock_out(2.0)
+                    if banners is not None:
+                        banners.append(FloatingBanner("DOG STUNNED! (2.0s)", f.dog.wx, f.dog.wy, wz=1.4, color=(255, 80, 80)))
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+        from src.isometric.voxel_renderer import draw_voxel_box
+
+        # Sombra suave no chão
+        base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
+        pygame.draw.ellipse(surface, (15, 18, 16), (base_sx - 12, base_sy - 6, 24, 12))
+
+        # Base da mina em ferro fundido facetado em voxel
+        draw_voxel_box(surface, camera, self.wx - 0.14, self.wy - 0.14, 0.0, 0.28, 0.28, 0.10, (45, 48, 54))
+        # Placa central metálica
+        draw_voxel_box(surface, camera, self.wx - 0.10, self.wy - 0.10, 0.09, 0.20, 0.20, 0.06, (70, 75, 85))
+
+        # LED indicador de armamento (Vermelho pulsante enquanto arma, Verde/Vermelho brilhante após armada)
+        if self.is_armed:
+            pulse = 0.5 + 0.5 * math.sin(pygame.time.get_ticks() * 0.015)
+            led_color = (255, int(40 + pulse * 60), 30)
+            glow_rad = int(8 + pulse * 4)
+            glow_s = pygame.Surface((glow_rad * 2, glow_rad * 2), pygame.SRCALPHA)
+            pygame.draw.circle(glow_s, (255, 60, 40, int(60 + pulse * 80)), (glow_rad, glow_rad), glow_rad)
+            surface.blit(glow_s, (base_sx - glow_rad, base_sy - 15 - glow_rad))
+        else:
+            led_color = (255, 200, 40)  # Âmbar (armando...)
+
+        draw_voxel_box(surface, camera, self.wx - 0.03, self.wy - 0.03, 0.15, 0.06, 0.06, 0.06, led_color, outline=False)
 
 
 class KusarigamaChainEntity:
@@ -550,18 +659,29 @@ class PoisonCloudProjectile:
         return True
 
     def render(self, surface: pygame.Surface, camera):
-        if not self.is_active:
+        if not self.is_active or self.age >= self.lifetime:
             return
-        from src.isometric.voxel_renderer import draw_voxel_box
-        color_p = (165, 60, 215)
-        color_g = (70, 220, 125)
 
-        for i in range(4):
-            angle = i * 1.57 + self.age * 3.5
-            ox = math.cos(angle) * (self.radius * 0.45)
-            oy = math.sin(angle) * (self.radius * 0.45)
-            c = color_p if i % 2 == 0 else color_g
-            draw_voxel_box(surface, camera, self.wx + ox - 0.12, self.wy + oy - 0.12, self.wz, 0.24, 0.24, 0.24, c)
+        progress = min(1.0, max(0.0, self.age / self.lifetime))
+        alpha = max(0, min(140, int(160 * (1.0 - progress))))
+        if alpha <= 0:
+            return
+
+        # Plumas de vapor esvoaçante em formato de névoa orgânica
+        for i in range(5):
+            angle = i * 1.25 + self.age * 2.2
+            dist = (self.radius * 0.45) * (0.6 + 0.4 * progress)
+            ox = math.cos(angle) * dist
+            oy = math.sin(angle) * dist
+            px, py = camera.apply(self.wx + ox, self.wy + oy, self.wz + math.sin(angle) * 0.05)
+            pw = int(self.radius * 18)
+            ph = max(3, int(pw * 0.55))
+
+            surf = pygame.Surface((pw * 2, ph * 2), pygame.SRCALPHA)
+            col = (135, 45, 185) if i % 2 == 0 else (65, 165, 95)
+            pygame.draw.ellipse(surf, (*col, alpha), (0, 0, pw * 2, ph * 2))
+            pygame.draw.ellipse(surf, (180, 85, 230, int(alpha * 0.6)), (pw // 4, ph // 4, int(pw * 1.5), int(ph * 1.5)))
+            surface.blit(surf, (px - pw, py - ph))
 
 
 class KyudoArrowProjectile:
@@ -660,7 +780,7 @@ class RopeArrowProjectile:
             self.wy += self.vy * dt
             self.dist_traveled += step
 
-            # Cravar em obstáculos da arena
+            # Cravar em obstáculos rígidos da arena (rochas e poço)
             hit = False
             if game_map:
                 for r in game_map.rocks:
@@ -668,10 +788,13 @@ class RopeArrowProjectile:
                         hit = True; break
                 if not hit and game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius + 0.2:
                     hit = True
-                if not hit:
-                    for b in game_map.bamboos:
-                        if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.5:
-                            hit = True; break
+
+                # Cortar bambus no trajeto sem ser interrompida
+                for b in game_map.bamboos:
+                    if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.5:
+                        part = b.cut((self.dir_x, self.dir_y))
+                        if part and particles is not None:
+                            particles.append(part)
 
             # Limite estrito de arena: a flecha NÃO pode ultrapassar as bordas do mapa
             hit_boundary = False
@@ -718,6 +841,15 @@ class RopeArrowProjectile:
                 # Garantir que o arqueiro permaneça 100% dentro dos limites do mapa durante o trajeto
                 self.owner.wx = max(min_x, min(max_x, self.owner.wx))
                 self.owner.wy = max(min_y, min(max_y, self.owner.wy))
+
+                # Cortar bambus atravessados durante o deslocamento de fuga
+                if game_map:
+                    for b in game_map.bamboos:
+                        if not b.is_cut and world_distance(self.owner.wx, self.owner.wy, b.wx, b.wy) < 0.6:
+                            part = b.cut((dx / dist, dy / dist))
+                            if part and particles is not None:
+                                particles.append(part)
+
                 if particles is not None and random.random() < 0.4:
                     particles.append(SparkParticle(self.owner.wx, self.owner.wy, 0.2))
 
@@ -738,6 +870,106 @@ class RopeArrowProjectile:
         draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.05, self.wz, 0.10, 0.10, 0.10, (140, 145, 155))
         if self.state == "LATCHED_PULLING":
             pygame.draw.circle(surface, (120, 220, 160), (int(sx2), int(sy2)), 8, 2)
+
+
+class CannonballProjectile:
+    """Bala de canhão naval pesada que cai verticalmente do céu em área de impacto com explosão fatal."""
+    def __init__(self, target_wx: float, target_wy: float, owner):
+        self.wx = target_wx
+        self.wy = target_wy
+        self.wz = 9.0       # Altura no céu
+        self.target_wx = target_wx
+        self.target_wy = target_wy
+        self.fall_speed = 22.0
+        self.owner = owner
+        self.radius = 1.6   # Raio de dano em área
+        self.is_active = True
+        self.has_exploded = False
+        self.explosion_timer = 0.35
+
+    def update(self, dt: float, game_map=None, particles: list = None, camera = None, fighters: list = None) -> bool:
+        if not self.is_active:
+            return False
+
+        if not self.has_exploded:
+            self.wz -= self.fall_speed * dt
+            if self.wz <= 0.0:
+                self.wz = 0.0
+                self.has_exploded = True
+                if camera and hasattr(camera, "add_shake"):
+                    camera.add_shake(12.0)
+                if particles is not None:
+                    from src.effects.particles import SparkParticle, FlameVoxelParticle
+                    for _ in range(40):
+                        particles.append(FlameVoxelParticle(self.wx, self.wy, wz=0.15))
+                    for _ in range(16):
+                        particles.append(SparkParticle(self.wx, self.wy, 0.45))
+                # Dano fatal de área em todos os combatentes no raio de explosão
+                if fighters:
+                    for f in fighters:
+                        if getattr(f, "is_alive", False) and f is not self.owner:
+                            dist = math.hypot(f.wx - self.wx, f.wy - self.wy)
+                            if dist < (self.radius + getattr(f, "radius", 0.35)):
+                                f.take_hit((0.0, 0.0), damage=2)
+        else:
+            self.explosion_timer -= dt
+            if self.explosion_timer <= 0:
+                self.is_active = False
+                return False
+        return self.is_active
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+        # Sombra no solo que expande à medida que a bala se aproxima
+        sx_g, sy_g = camera.apply(self.wx, self.wy, 0.0)
+        progress = max(0.1, 1.0 - (self.wz / 9.0))
+        shadow_r = int(14 * progress)
+        pygame.draw.ellipse(surface, (10, 10, 12, 180), (sx_g - shadow_r, sy_g - shadow_r // 2, shadow_r * 2, shadow_r))
+
+        if not self.has_exploded:
+            # Bala esférica pesada de ferro fundido com Jolly Roger pirata estampada
+            sx, sy = camera.apply(self.wx, self.wy, self.wz)
+            ball_r = 13
+            # Corpo metálico e sombreamento esférico
+            pygame.draw.circle(surface, (28, 30, 36), (sx, sy), ball_r)
+            pygame.draw.circle(surface, (45, 50, 60), (sx - 1, sy - 1), ball_r - 2)
+            pygame.draw.circle(surface, (80, 90, 105), (sx - 4, sy - 4), 4) # Brilho especular zenital
+            pygame.draw.circle(surface, (14, 16, 20), (sx, sy), ball_r, 2) # Borda de ferro forjado
+
+            # Caveira Pirata estilizada (Jolly Roger) em osso branco fosco
+            skull_col = (235, 235, 235)
+            dark_col = (20, 22, 26)
+
+            # Ossos cruzados atrás (X)
+            pygame.draw.line(surface, (190, 195, 205), (sx - 7, sy - 6), (sx + 7, sy + 6), 2)
+            pygame.draw.line(surface, (190, 195, 205), (sx + 7, sy - 6), (sx - 7, sy + 6), 2)
+
+            # Crânio
+            pygame.draw.circle(surface, skull_col, (sx, sy - 1), 5)
+            # Mandíbula / dentes
+            pygame.draw.rect(surface, skull_col, (sx - 3, sy + 2, 6, 4), border_radius=1)
+            # Linha de divisão dos dentes
+            pygame.draw.line(surface, dark_col, (sx, sy + 3), (sx, sy + 5), 1)
+
+            # Órbitas oculares vazias
+            pygame.draw.circle(surface, dark_col, (sx - 2, sy - 1), 1)
+            pygame.draw.circle(surface, dark_col, (sx + 2, sy - 1), 1)
+            # Cavidade nasal
+            pygame.draw.rect(surface, dark_col, (sx, sy + 1, 1, 1))
+        else:
+            # Clarão de impacto inicial e onda de choque no solo
+            progress = max(0.0, min(1.0, 1.0 - (self.explosion_timer / 0.35)))
+            exp_w = int(self.radius * 34 * progress)
+            exp_h = max(2, exp_w // 2)
+            if exp_w > 4:
+                exp_surf = pygame.Surface((exp_w * 2, exp_h * 2 + 10), pygame.SRCALPHA)
+                alpha_val = max(0, min(255, int((1.0 - progress) * 220)))
+                pygame.draw.ellipse(exp_surf, (255, 120, 20, alpha_val), (0, 0, exp_w * 2, exp_h * 2))
+                pygame.draw.ellipse(exp_surf, (255, 220, 70, min(255, alpha_val + 30)), (exp_w // 4, exp_h // 4, int(exp_w * 1.5), int(exp_h * 1.5)))
+                pygame.draw.ellipse(exp_surf, (255, 255, 200, alpha_val), (exp_w // 2, exp_h // 2, exp_w, exp_h))
+                surface.blit(exp_surf, (sx_g - exp_w, sy_g - exp_h))
+
 
 
 

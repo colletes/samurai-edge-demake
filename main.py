@@ -53,20 +53,21 @@ from src.entities.american_ninja import AmericanNinja
 from src.entities.gray_ninja import GrayNinja
 from src.entities.purple_ninja import PurpleNinja
 from src.entities.saitou_samurai import SaitouSamurai
-from src.entities.rifleman import Rifleman
-from src.entities.kabuki import Kabuki
+from src.entities.rifleman import Rifleman, PowderTrap
+from src.entities.kabuki import Kabuki, PoisonCloud
 from src.entities.kyudo_archer import KyudoArcher
 from src.entities.pirate import PirateSwordswoman
 from src.entities.musketeer import Musketeer
 from src.entities.ai_controller import SamuraiAI
 from src.entities.pickups import PowderPouch
 from src.combat.collision import CombatSystem
-from src.effects.particles import AmbientLeafParticle
+from src.effects.particles import AmbientLeafParticle, SparkParticle, BloodParticle, FloatingBanner
 from src.effects.cinematic_director import CinematicDirector
 from src.ui.settings_menu import SettingsMenu, format_key_name
 from src.ui.character_select import CharacterSelectScreen
 from src.ui.title_screen import SumieTitleScreen
 from src.ui.arena_select import ArenaSelectScreen
+from src.ui.fonts import get_title_font, get_text_font
 from src.i18n import t
 from src.input import get_controller_manager, TouchControls, DisplayScaler
 
@@ -161,6 +162,94 @@ def get_fighter_action_labels(fighter):
         return "Estocada Fleche", "Capa Riposte"
     return "Ataque", "Especial"
 
+def get_fighter_cooldown_data(fighter) -> dict | None:
+    """Retorna os dados da principal habilidade com cooldown do combatente para renderização no HUD e na arena."""
+    if not fighter or not getattr(fighter, "is_alive", True):
+        return None
+
+    if isinstance(fighter, RedSamurai):
+        timer = max(0.0, getattr(fighter, "ryuu_timer", 0.0))
+        cd = getattr(fighter, "ryuu_cooldown", 3.5)
+        return {"name": "Ryuu Tsui Sen", "timer": timer, "max_cd": cd, "color": (235, 60, 60)}
+
+    elif isinstance(fighter, BlueSamurai):
+        if getattr(fighter, "combo_window_timer", 0.0) > 0:
+            timer = getattr(fighter, "combo_window_timer", 0.0)
+            return {"name": f"Combo {fighter.combo_step}/3", "timer": timer, "max_cd": 0.45, "color": (255, 215, 60)}
+        timer = max(0.0, getattr(fighter, "parry_timer", 0.0))
+        return {"name": "Parry", "timer": timer, "max_cd": 1.8, "color": (60, 140, 255)}
+
+    elif isinstance(fighter, YellowNinja):
+        if not getattr(fighter, "has_kunai", True):
+            return {"name": "Sem Kunai", "timer": 1.0, "max_cd": 1.0, "color": (230, 70, 70), "warning": True}
+        timer = max(0.0, getattr(fighter, "jump_timer", 0.0))
+        cd = getattr(fighter, "jump_cooldown", 3.2)
+        return {"name": "Salto Ninja", "timer": timer, "max_cd": cd, "color": (245, 210, 40)}
+
+    elif isinstance(fighter, AmericanNinja):
+        if hasattr(fighter, "dog") and fighter.dog and getattr(fighter.dog, "state", "") == "KNOCKED_OUT":
+            timer = max(0.0, getattr(fighter.dog, "knockout_timer", 0.0))
+            return {"name": "Cão Yamato KO", "timer": timer, "max_cd": 2.0, "color": (240, 60, 60), "warning": True}
+        timer = max(0.0, getattr(fighter, "dog_attack_cooldown_timer", 0.0))
+        cd = getattr(fighter, "dog_attack_cooldown", 3.0)
+        return {"name": "Yamato Dash", "timer": timer, "max_cd": cd, "color": (220, 70, 70)}
+
+    elif isinstance(fighter, SaitouSamurai):
+        timer = max(0.0, getattr(fighter, "zeroshiki_timer", 0.0))
+        cd = getattr(fighter, "zeroshiki_cooldown", 2.5)
+        return {"name": "Zeroshiki", "timer": timer, "max_cd": cd, "color": (115, 205, 245)}
+
+    elif isinstance(fighter, Rifleman):
+        if not getattr(fighter, "has_ammo", True):
+            return {"name": "Sem Pólvora", "timer": 1.0, "max_cd": 1.0, "color": (230, 80, 80), "warning": True}
+        timer = max(0.0, getattr(fighter, "trap_cooldown_timer", 0.0))
+        cd = getattr(fighter, "trap_cooldown", 5.0)
+        return {"name": "Armadilha", "timer": timer, "max_cd": cd, "color": (225, 165, 80)}
+
+    elif isinstance(fighter, PurpleNinja):
+        timer = max(0.0, getattr(fighter, "shield_cooldown_timer", 0.0))
+        cd = getattr(fighter, "shield_cooldown", 3.0)
+        return {"name": "Escudo Foice", "timer": timer, "max_cd": cd, "color": (185, 110, 245)}
+
+    elif isinstance(fighter, GrayNinja):
+        m_timer = max(0.0, getattr(fighter, "mine_cooldown_timer", 0.0))
+        if m_timer > 0:
+            return {"name": "Mina Remota", "timer": m_timer, "max_cd": getattr(fighter, "mine_cooldown", 2.2), "color": (175, 185, 195)}
+        timer = max(0.0, getattr(fighter, "smoke_cooldown_timer", 0.0))
+        cd = getattr(fighter, "smoke_cooldown", 2.0)
+        return {"name": "Fumaça", "timer": timer, "max_cd": cd, "color": (160, 170, 180)}
+
+    elif isinstance(fighter, Kabuki):
+        p_timer = max(0.0, getattr(fighter, "dokukiri_cooldown_timer", 0.0))
+        if p_timer > 0:
+            return {"name": "Dokukiri", "timer": p_timer, "max_cd": getattr(fighter, "dokukiri_cooldown", 4.0), "color": (80, 230, 120)}
+        timer = max(0.0, getattr(fighter, "decoy_cooldown_timer", 0.0))
+        cd = getattr(fighter, "decoy_cooldown", 3.0)
+        return {"name": "Kawarimi", "timer": timer, "max_cd": cd, "color": (210, 70, 150)}
+
+    elif isinstance(fighter, KyudoArcher):
+        a_timer = max(0.0, getattr(fighter, "arrow_cooldown_timer", 0.0))
+        if a_timer > 0:
+            return {"name": "Flecha Yumi", "timer": a_timer, "max_cd": getattr(fighter, "arrow_cooldown", 1.8), "color": (100, 215, 140)}
+        timer = max(0.0, getattr(fighter, "ofuda_cooldown_timer", 0.0))
+        cd = getattr(fighter, "ofuda_cooldown", 5.5)
+        return {"name": "Barreira Kami", "timer": timer, "max_cd": cd, "color": (130, 230, 180)}
+
+    elif isinstance(fighter, PirateSwordswoman):
+        timer = max(0.0, getattr(fighter, "cannon_cooldown_timer", 0.0))
+        cd = getattr(fighter, "cannon_cooldown", 4.5)
+        return {"name": "Canhão Naval", "timer": timer, "max_cd": cd, "color": (240, 110, 45)}
+
+    elif isinstance(fighter, Musketeer):
+        f_timer = max(0.0, getattr(fighter, "flintlock_timer", 0.0))
+        if f_timer > 0:
+            return {"name": "Pederneira", "timer": f_timer, "max_cd": getattr(fighter, "flintlock_cooldown", 4.5), "color": (245, 195, 60)}
+        timer = max(0.0, getattr(fighter, "cape_timer", 0.0))
+        cd = getattr(fighter, "cape_cooldown", 2.4)
+        return {"name": "Floreio Capa", "timer": timer, "max_cd": cd, "color": (80, 160, 255)}
+
+    return None
+
 def get_player_aim_target(fighter, controls, prefix: str, distance: float = 4.0, move_dir: tuple[float, float] | None = None) -> tuple[float, float]:
     """Calcula as coordenadas de mira para o ataque com base na entrada direcional ativa ou na orientação do lutador."""
     if move_dir and (move_dir[0] != 0 or move_dir[1] != 0):
@@ -185,7 +274,7 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
             if fighter.state == "JUMP":
                 fighter.trigger_midair_throw(aim_x, aim_y, projectiles)
             else:
-                fighter.trigger_jump_and_throw(aim_x, aim_y, projectiles)
+                fighter.trigger_standing_throw(aim_x, aim_y, projectiles)
         else:
             fighter.trigger_thrust_attack(aim_x, aim_y)
     elif isinstance(fighter, AmericanNinja):
@@ -210,10 +299,11 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
     elif isinstance(fighter, Musketeer):
         fighter.trigger_fleche_thrust(aim_x, aim_y)
 
-def execute_fighter_dash(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, opponent=None, game_map=None):
-    """Executa a ação secundária de esquiva/parry/especial do lutador."""
+def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, poison_clouds: list, powder_traps: list, opponent=None, game_map=None, banners: list = None):
+    """Executa a Ação Secundária (Técnica Especial / Defesa / Contra-ataque) do combatente."""
     if isinstance(fighter, RedSamurai):
-        fighter.trigger_dash(dwx, dwy)
+        # Kenshi: Ryuu Tsui Sen (Salto vertical e corte descendente devastador)
+        fighter.trigger_ryuu_tsui_sen(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent)
     elif isinstance(fighter, BlueSamurai):
         fighter.set_facing(aim_x, aim_y)
         fighter.trigger_parry()
@@ -225,21 +315,48 @@ def execute_fighter_dash(fighter, aim_x: float, aim_y: float, dwx: float, dwy: f
     elif isinstance(fighter, AmericanNinja):
         fighter.trigger_dog_attack(aim_x, aim_y)
     elif isinstance(fighter, GrayNinja):
-        fighter.trigger_smoke_bomb(aim_x, aim_y, projectiles)
+        all_f = [fighter, opponent] if opponent else [fighter]
+        fighter.trigger_remote_mine(aim_x, aim_y, projectiles, fighters=all_f, particles=particles, banners=banners)
     elif isinstance(fighter, PurpleNinja):
-        fighter.trigger_kusarigama_pull(aim_x, aim_y, projectiles)
+        fighter.start_chain_shield(aim_x, aim_y)
     elif isinstance(fighter, SaitouSamurai):
         fighter.trigger_zeroshiki(aim_x, aim_y)
     elif isinstance(fighter, Rifleman):
-        fighter.trigger_evasive_backstep(particles)
+        # Teppo: Black Powder Ground Trap (Trilha de pólvora inflamável no solo)
+        fighter.trigger_powder_trap(aim_x, aim_y, powder_traps, particles)
     elif isinstance(fighter, Kabuki):
-        fighter.trigger_kawarimi_decoy(dwx, dwy, decoys, particles)
+        # Okuni: Dokukiri (Sopro de névoa venenosa com leques de ferro)
+        fighter.trigger_dokukiri(aim_x, aim_y, poison_clouds)
     elif isinstance(fighter, KyudoArcher):
-        fighter.start_rope_arrow_charge(aim_x, aim_y, game_map)
+        # Tomoe: Barreira dos Ventos Kami (3 Ofudas defensivos em órbita)
+        fighter.trigger_ofuda_barrier()
     elif isinstance(fighter, PirateSwordswoman):
-        fighter.trigger_gunpowder_blind(aim_x, aim_y, opponent=opponent, particles=particles)
+        # Anne Bonny: Naval Artillery Strike (Hold & release orbital cannonball)
+        fighter.start_cannon_strike(aim_x, aim_y)
     elif isinstance(fighter, Musketeer):
-        fighter.trigger_cloak_riposte()
+        fighter.trigger_cape_flourish(aim_x, aim_y, opponent=opponent, particles=particles, banners=banners, projectiles=projectiles)
+
+def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None):
+    """Executa a Terceira Ação (Roll / Dash dedicado) com invulnerabilidade temporária (i-frames)."""
+    if isinstance(fighter, RedSamurai):
+        fighter.trigger_dash(dwx, dwy)
+    elif isinstance(fighter, Kabuki):
+        fighter.trigger_kabuki_roll(dwx, dwy, particles=particles, decoys=decoys)
+    elif isinstance(fighter, Rifleman):
+        fighter.trigger_tumble_roll(dwx, dwy, particles)
+    elif isinstance(fighter, PirateSwordswoman):
+        fighter.trigger_roll(dwx, dwy, particles)
+    elif isinstance(fighter, KyudoArcher):
+        # Tomoe: Flecha de corda para movimentação rápida
+        fighter.start_rope_arrow_charge(aim_x, aim_y, game_map)
+    else:
+        # Demais personagens (BlueSamurai, YellowNinja, AmericanNinja, GrayNinja, PurpleNinja, SaitouSamurai, Musketeer)
+        if hasattr(fighter, "trigger_roll"):
+            fighter.trigger_roll(dwx, dwy, particles)
+
+def execute_fighter_dash(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, opponent=None, game_map=None, poison_clouds=None, powder_traps=None):
+    """Compatibilidade legada: direciona para a terceira ação de roll/dash dedicado."""
+    execute_fighter_roll(fighter, dwx, dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
 
 def get_random_arena_spawns(game_map, min_distance: float = 7.0) -> tuple[tuple[float, float], tuple[float, float]]:
     """
@@ -339,13 +456,16 @@ def run_game():
     ambient_leaves = []
     powder_pouches = []
     decoys = []
+    poison_clouds = []
+    powder_traps = []
 
     round_winner = None
     game_time = 0.0
-    round_start_timer = 2.4
+    round_start_timer = 1.8
+    round_start_shaken = False
 
     def start_new_match():
-        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, round_winner, round_start_timer, powder_pouches, decoys
+        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, round_winner, round_start_timer, round_start_shaken, powder_pouches, decoys, poison_clouds, powder_traps
         if selected_arena_id == ARENA_KYOTO:
             game_map = KyotoMap()
             (p1_wx, p1_wy), (p2_wx, p2_wy) = get_kyoto_arena_spawns(game_map, min_distance=7.0)
@@ -357,15 +477,21 @@ def run_game():
         p2 = create_fighter(p2_char_id, wx=p2_wx, wy=p2_wy)
         p1.set_facing(p2.wx, p2.wy)
         p2.set_facing(p1.wx, p1.wy)
+        for f in (p1, p2):
+            if isinstance(f, Kabuki):
+                f.registered_decoys = decoys
         camera = Camera(target_wx=(p1_wx + p2_wx) / 2.0, target_wy=(p1_wy + p2_wy) / 2.0)
         particles.clear()
         banners.clear()
         projectiles.clear()
         decoys.clear()
+        poison_clouds.clear()
+        powder_traps.clear()
         powder_pouches = PowderPouch.create_arena_pouches(game_map, [p1, p2], total_pouches=3)
         ambient_leaves = [AmbientLeafParticle(game_map.cols, game_map.rows) for _ in range(45)]
         round_winner = None
-        round_start_timer = 2.4
+        round_start_timer = 1.8
+        round_start_shaken = False
         cinematic_director.reset_round()
 
     running = True
@@ -500,6 +626,20 @@ def run_game():
         p1_dwx, p1_dwy = input_to_world_direction(p1_active_dir[0], p1_active_dir[1])
         p2_dwx, p2_dwy = input_to_world_direction(p2_active_dir[0], p2_active_dir[1])
 
+        # Atualização do Temporizador de Abertura de Round e Tremor de Tela (Item 10)
+        if round_start_timer > -0.5:
+            round_start_timer -= dt
+            if round_start_timer <= 0.6 and not round_start_shaken:
+                camera.add_shake(4.5)
+                ctrl_mgr.rumble_player(0, 0.4, 0.6, 120)
+                ctrl_mgr.rumble_player(1, 0.4, 0.6, 120)
+                round_start_shaken = True
+
+        # Bloqueio de movimentação durante abertura do round (Item 10)
+        if round_start_timer > 0:
+            p1_dwx, p1_dwy = 0.0, 0.0
+            p2_dwx, p2_dwy = 0.0, 0.0
+
         for event in pygame.event.get():
             ctrl_mgr.handle_event(event)
             if touch_controls.handle_event(event, scaler):
@@ -512,52 +652,74 @@ def run_game():
                 elif event.key == KEY_SETTINGS:
                     settings_menu.open()
                 elif event.key == KEY_RESTART:
-                    start_new_match()
+                    if round_winner is not None:
+                        start_new_match()
                 elif event.key == KEY_TOGGLE_AI:
                     vs_ai_mode = not vs_ai_mode
 
+                # Ao terminar um duelo, permitir que Quadrado / Ação Primária reinicie o duelo (mas nunca com duelo em andamento)
+                if round_winner is not None:
+                    if event.key in (KEY_RESTART, controls["P1_ATTACK"], controls["P2_ATTACK"]):
+                        start_new_match()
+
                 # Comandos Jogador 1 (Teclado)
-                if p1.is_alive and round_winner is None:
+                if p1.is_alive and round_winner is None and round_start_timer <= 0:
                     if event.key == controls["P1_ATTACK"]:
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                         execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
-                    elif event.key == controls["P1_DASH"]:
+                    elif event.key == controls.get("P1_SECONDARY", pygame.K_r):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                        execute_fighter_dash(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, opponent=p2, game_map=game_map)
+                        execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
+                    elif event.key == controls.get("P1_DASH", pygame.K_q):
+                        aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                        execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
 
                 # Comandos Jogador 2 (Teclado)
-                if not vs_ai_mode and p2.is_alive and round_winner is None:
+                if not vs_ai_mode and p2.is_alive and round_winner is None and round_start_timer <= 0:
                     if event.key == controls["P2_ATTACK"]:
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
                         execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles)
-                    elif event.key == controls["P2_PARRY"]:
+                    elif event.key in (controls.get("P2_SECONDARY"), controls.get("P2_PARRY")):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
-                        execute_fighter_dash(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, opponent=p1, game_map=game_map)
+                        execute_fighter_secondary(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p1, game_map=game_map, banners=banners)
+                    elif event.key == controls.get("P2_DASH", pygame.K_o):
+                        aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
+                        execute_fighter_roll(p2, p2_dwx, p2_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
 
             elif event.type == pygame.JOYBUTTONDOWN:
-                if ctrl_mgr.is_event_menu_pause(event, 0) or (getattr(event, "button", None) == 6):
+                if ctrl_mgr.is_event_menu_pause(event, 0) or ctrl_mgr.is_event_menu_pause(event, 1) or (getattr(event, "button", None) == 6):
                     settings_menu.open()
-                elif ctrl_mgr.is_event_action(event, 0, "restart"):
-                    if round_winner is not None:
+                elif round_winner is not None:
+                    # Ao terminar o duelo, tanto restart quanto quadrado/ação primária reiniciam
+                    if (ctrl_mgr.is_event_action(event, 0, "restart") or
+                        ctrl_mgr.is_event_action(event, 0, "attack") or
+                        ctrl_mgr.is_event_action(event, 1, "restart") or
+                        ctrl_mgr.is_event_action(event, 1, "attack")):
                         start_new_match()
-                elif p1.is_alive and round_winner is None:
+                elif p1.is_alive and round_winner is None and round_start_timer <= 0:
                     if ctrl_mgr.is_event_action(event, 0, "attack"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                         execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
+                    elif ctrl_mgr.is_event_action(event, 0, "secondary"):
+                        aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                        execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
                     elif ctrl_mgr.is_event_action(event, 0, "dash"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                        execute_fighter_dash(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, opponent=p2, game_map=game_map)
+                        execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
 
                 # Gamepad Jogador 2
-                if not vs_ai_mode and p2.is_alive and round_winner is None:
+                if not vs_ai_mode and p2.is_alive and round_winner is None and round_start_timer <= 0:
                     if ctrl_mgr.is_event_menu_pause(event, 1) or (getattr(event, "button", None) == 6):
                         settings_menu.open()
                     elif ctrl_mgr.is_event_action(event, 1, "attack"):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
                         execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles)
+                    elif ctrl_mgr.is_event_action(event, 1, "secondary"):
+                        aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
+                        execute_fighter_secondary(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p1, game_map=game_map, banners=banners)
                     elif ctrl_mgr.is_event_action(event, 1, "dash"):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
-                        execute_fighter_dash(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, opponent=p1, game_map=game_map)
+                        execute_fighter_roll(p2, p2_dwx, p2_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
@@ -577,13 +739,13 @@ def run_game():
         if touch_controls.is_select_requested():
             game_state = STATE_ARENA_SELECT
 
-        if p1.is_alive and round_winner is None:
+        if p1.is_alive and round_winner is None and round_start_timer <= 0:
             if touch_controls.is_attack_just_pressed():
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                 execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
             elif touch_controls.is_dash_just_pressed():
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                execute_fighter_dash(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, opponent=p2, game_map=game_map)
+                execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
 
         # Hitstop congelado
         if combat_system.hitstop_timer > 0:
@@ -593,16 +755,42 @@ def run_game():
 
         game_time += dt
 
-        # Suporte ao carregamento contínuo de pólvora do Rifleman (segurando botão de ação secundária)
-        p1_dash_held = keys[controls["P1_DASH"]] or ctrl_mgr.is_action_down(0, "dash") or touch_controls.is_dash_held()
-        if isinstance(p1, Rifleman) and p1.is_alive and round_winner is None:
-            if p1_dash_held:
+        # Suporte ao Hold and Release do Bombardeio de Canhão Celestial da Pirata Anne Bonny
+        p1_sec_held = keys[controls.get("P1_SECONDARY", pygame.K_r)] or ctrl_mgr.is_action_down(0, "secondary")
+        if isinstance(p1, PirateSwordswoman) and p1.is_alive and round_winner is None and round_start_timer <= 0:
+            if p1_sec_held:
+                aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                p1.update_cannon_strike(dt, aim_x, aim_y)
+            else:
+                if p1.is_aiming_cannon:
+                    p1.release_cannon_strike(projectiles, particles)
+
+        p2_sec_key = controls.get("P2_SECONDARY", pygame.K_i)
+        p2_sec_held = keys[p2_sec_key] or (controls.get("P2_PARRY") and keys[controls["P2_PARRY"]]) or ctrl_mgr.is_action_down(1, "secondary")
+        if not vs_ai_mode and isinstance(p2, PirateSwordswoman) and p2.is_alive and round_winner is None and round_start_timer <= 0:
+            if p2_sec_held:
+                aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
+                p2.update_cannon_strike(dt, aim_x, aim_y)
+            else:
+                if p2.is_aiming_cannon:
+                    p2.release_cannon_strike(projectiles, particles)
+
+        # Suporte ao carregamento contínuo de pólvora do Rifleman (segurando ação secundária)
+        if isinstance(p1, Rifleman) and p1.is_alive and round_winner is None and round_start_timer <= 0:
+            if p1_sec_held and not p1.has_ammo:
                 p1.trigger_reload_hold()
             else:
                 p1.is_reloading = False
 
-        # Suporte ao Hold and Release da Flecha de Corda de Tomoe (KyudoArcher)
-        if isinstance(p1, KyudoArcher) and p1.is_alive and round_winner is None:
+        if not vs_ai_mode and isinstance(p2, Rifleman) and p2.is_alive and round_winner is None and round_start_timer <= 0:
+            if p2_sec_held and not p2.has_ammo:
+                p2.trigger_reload_hold()
+            else:
+                p2.is_reloading = False
+
+        # Suporte ao Hold and Release da Flecha de Corda de Tomoe (KyudoArcher) na Terceira Ação (Roll / Dash dedicado)
+        p1_dash_held = keys[controls.get("P1_DASH", pygame.K_q)] or ctrl_mgr.is_action_down(0, "dash") or touch_controls.is_dash_held()
+        if isinstance(p1, KyudoArcher) and p1.is_alive and round_winner is None and round_start_timer <= 0:
             if p1_dash_held:
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                 if not p1.is_charging_rope:
@@ -613,14 +801,9 @@ def run_game():
                 if p1.is_charging_rope:
                     p1.release_rope_arrow(projectiles, particles, game_map)
 
-        p2_dash_held = keys[controls["P2_PARRY"]] or ctrl_mgr.is_action_down(1, "dash")
-        if not vs_ai_mode and isinstance(p2, Rifleman) and p2.is_alive and round_winner is None:
-            if p2_dash_held:
-                p2.trigger_reload_hold()
-            else:
-                p2.is_reloading = False
-
-        if not vs_ai_mode and isinstance(p2, KyudoArcher) and p2.is_alive and round_winner is None:
+        p2_dash_key = controls.get("P2_DASH", pygame.K_o)
+        p2_dash_held = keys[p2_dash_key] or ctrl_mgr.is_action_down(1, "dash")
+        if not vs_ai_mode and isinstance(p2, KyudoArcher) and p2.is_alive and round_winner is None and round_start_timer <= 0:
             if p2_dash_held:
                 aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
                 if not p2.is_charging_rope:
@@ -631,12 +814,33 @@ def run_game():
                 if p2.is_charging_rope:
                     p2.release_rope_arrow(projectiles, particles, game_map)
 
-        # Cancelar carregamento se a rodada terminou
+        # Suporte ao Hold & Release do Escudo de Corrente de Murasaki (Item 24)
+        if isinstance(p1, PurpleNinja) and p1.is_alive and round_winner is None and round_start_timer <= 0:
+            if p1_sec_held:
+                aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                p1.update_chain_shield(dt, aim_x, aim_y)
+            else:
+                if getattr(p1, "is_holding_shield", False):
+                    p1.release_chain_shield(projectiles, particles)
+
+        if not vs_ai_mode and isinstance(p2, PurpleNinja) and p2.is_alive and round_winner is None and round_start_timer <= 0:
+            if p2_sec_held:
+                aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
+                p2.update_chain_shield(dt, aim_x, aim_y)
+            else:
+                if getattr(p2, "is_holding_shield", False):
+                    p2.release_chain_shield(projectiles, particles)
+
+        # Cancelar carregamentos se a rodada terminou
         if round_winner is not None:
-            if isinstance(p1, KyudoArcher):
-                p1.is_charging_rope = False
-            if isinstance(p2, KyudoArcher):
-                p2.is_charging_rope = False
+            for f in (p1, p2):
+                if isinstance(f, KyudoArcher):
+                    f.is_charging_rope = False
+                elif isinstance(f, PirateSwordswoman):
+                    f.is_aiming_cannon = False
+                elif isinstance(f, PurpleNinja):
+                    f.is_holding_shield = False
+                    f.is_spinning_chain = False
 
         # Suporte ao congelamento dramático de cinema samurai
         is_cinematic_freeze = cinematic_director.is_frozen()
@@ -650,7 +854,8 @@ def run_game():
 
             # Movimento Jogador 2 (IA ou Humano)
             if vs_ai_mode:
-                ai.update(p2, p1, dt, game_map, projectiles, powder_pouches, decoys)
+                if round_start_timer <= 0:
+                    ai.update(p2, p1, dt, game_map, projectiles, powder_pouches, decoys)
             else:
                 if hasattr(p2, "apply_gatotsu_steering") and p2.state == "GATOTSU_CHARGE":
                     p2.apply_gatotsu_steering(p2_dwx, p2_dwy, dt)
@@ -662,28 +867,33 @@ def run_game():
             # Atualização de perigos da Arena de Kyoto (Carruagens e Escombros)
             if isinstance(game_map, KyotoMap):
                 game_map.update(dt, [p1, p2], camera, particles, banners, cinematic_director)
-                if round_winner is None:
-                    if not p1.is_alive and p2.is_alive:
-                        round_winner = "P2_WINS"
-                        score_p2 += 1
-                        ctrl_mgr.rumble_player(0, 0.7, 1.0, 260)
-                        ctrl_mgr.rumble_player(1, 0.7, 1.0, 260)
-                    elif not p2.is_alive and p1.is_alive:
-                        round_winner = "P1_WINS"
-                        score_p1 += 1
-                        ctrl_mgr.rumble_player(0, 0.7, 1.0, 260)
-                        ctrl_mgr.rumble_player(1, 0.7, 1.0, 260)
-                    elif not p1.is_alive and not p2.is_alive:
-                        round_winner = "DRAW"
 
             for pouch in powder_pouches:
                 pouch.update(dt, game_map, particles)
+
+            # Atualizar manequins teatrais Kawarimi de Okuni
+            decoys[:] = [d for d in decoys if d.update(dt)]
+
+            # Atualizar nuvens de veneno Dokukiri de Okuni
+            poison_clouds = [pc for pc in poison_clouds if pc.update(dt, [p1, p2], particles, banners=banners, cinematic_director=cinematic_director)]
+
+            # Atualizar armadilhas de pólvora negra de Teppo
+            powder_traps = [pt for pt in powder_traps if pt.update(dt, [p1, p2], particles, banners=banners, cinematic_director=cinematic_director)]
+
+            # Atualizar Barreira dos Ventos Kami de Tomoe
+            for archer, opp in ((p1, p2), (p2, p1)):
+                if isinstance(archer, KyudoArcher):
+                    archer.update_ofuda_barrier_effects(dt, projectiles, opponent=opp, particles=particles)
+
             for f in (p1, p2):
+                opp = p2 if f is p1 else p1
                 if isinstance(f, Rifleman):
                     f.check_powder_pickup(powder_pouches, particles)
-                if isinstance(f, SaitouSamurai):
+                if isinstance(f, PirateSwordswoman):
+                    f.update(dt, game_map, particles, opponent=opp)
+                elif isinstance(f, SaitouSamurai):
                     f.update(dt, game_map, particles)
-                elif isinstance(f, (Rifleman, Kabuki, PirateSwordswoman, Musketeer)):
+                elif isinstance(f, (Rifleman, Kabuki, Musketeer)):
                     f.update(dt, game_map, particles)
                 elif isinstance(f, KyudoArcher):
                     f.update(dt, game_map, particles, projectiles)
@@ -703,6 +913,21 @@ def run_game():
                 score_p1 += 1
             elif winner == "P2_WINS":
                 score_p2 += 1
+
+        # Verificação universal de vencedor de rodada (caso qualquer combatente tenha morrido por qualquer razão)
+        if round_winner is None:
+            if not p1.is_alive and p2.is_alive:
+                round_winner = "P2_WINS"
+                score_p2 += 1
+                ctrl_mgr.rumble_player(0, 0.7, 1.0, 260)
+                ctrl_mgr.rumble_player(1, 0.7, 1.0, 260)
+            elif not p2.is_alive and p1.is_alive:
+                round_winner = "P1_WINS"
+                score_p1 += 1
+                ctrl_mgr.rumble_player(0, 0.7, 1.0, 260)
+                ctrl_mgr.rumble_player(1, 0.7, 1.0, 260)
+            elif not p1.is_alive and not p2.is_alive:
+                round_winner = "DRAW"
 
         # Câmera segue o ponto médio
         mid_x = (p1.wx + p2.wx) / 2.0
@@ -771,6 +996,14 @@ def run_game():
             if decoy.is_active:
                 render_queue.append((decoy.wx + decoy.wy, 'decoy', decoy))
 
+        for pt in powder_traps:
+            if pt.is_active:
+                render_queue.append((pt.wx + pt.wy, 'powder_trap', pt))
+
+        for pc in poison_clouds:
+            if pc.is_active:
+                render_queue.append((pc.wx + pc.wy, 'poison_cloud', pc))
+
         for proj in projectiles:
             render_queue.append((proj.wx + proj.wy, 'projectile', proj))
 
@@ -803,6 +1036,10 @@ def run_game():
                 obj.render(screen, camera, font_small)
             elif item_type == 'decoy':
                 obj.render(screen, camera)
+            elif item_type == 'powder_trap':
+                obj.render(screen, camera)
+            elif item_type == 'poison_cloud':
+                obj.render(screen, camera)
             elif item_type == 'projectile':
                 obj.render(screen, camera)
             elif item_type == 'particle':
@@ -829,7 +1066,6 @@ def run_game():
 
         # Marcadores piscantes [ P1 ] e [ P2 ] no início de cada round
         if round_start_timer > 0:
-            round_start_timer -= dt
             if (int(round_start_timer * 6.5)) % 2 == 0:
                 for fighter, label, col in ((p1, "P1", (255, 85, 85)), (p2, "P2", (95, 170, 255))):
                     if fighter and fighter.is_alive:
@@ -844,11 +1080,82 @@ def run_game():
                         # Pequena seta indicadora apontando para a cabeça
                         pygame.draw.polygon(screen, col, [(sx, sy - 8), (sx - 6, sy - 16), (sx + 6, sy - 16)])
 
+        # Contador Regressivo de Veneno (Dokukiri) com alarme visual e barra decrescente
+        for fighter in (p1, p2):
+            if fighter and fighter.is_alive and getattr(fighter, "is_poisoned", False):
+                p_time = max(0.0, getattr(fighter, "poison_timer", 0.0))
+                psx, psy = camera.apply(fighter.wx, fighter.wy, 1.95)
+
+                card_w = 84
+                card_h = 28
+                card_rect = pygame.Rect(psx - card_w // 2, psy - 42, card_w, card_h)
+
+                # Alerta visual pulsante (pisca vermelho rápido quando < 2.0s)
+                pulse_rate = 14.0 if p_time < 2.0 else 5.0
+                is_crit = (p_time < 2.0 and int(game_time * pulse_rate) % 2 == 0)
+                card_border_col = (255, 60, 60) if is_crit else (60, 240, 110)
+                text_col = (255, 90, 90) if is_crit else (100, 255, 140)
+
+                pygame.draw.rect(screen, (16, 22, 18), card_rect, border_radius=6)
+                pygame.draw.rect(screen, card_border_col, card_rect, 2, border_radius=6)
+
+                try:
+                    p_txt = font_small.render(f"☠ {p_time:.1f}s", True, text_col)
+                except Exception:
+                    p_txt = font_small.render(f"POISON {p_time:.1f}s", True, text_col)
+                screen.blit(p_txt, (card_rect.centerx - p_txt.get_width() // 2, card_rect.y + 4))
+
+                # Barra horizontal proporcional aos 6.0s totais
+                bar_pct = max(0.0, min(1.0, p_time / 6.0))
+                bar_w = int((card_w - 8) * bar_pct)
+                bar_rect = pygame.Rect(card_rect.x + 4, card_rect.bottom - 6, bar_w, 3)
+                pygame.draw.rect(screen, card_border_col, bar_rect, border_radius=2)
+
+                # Pequena gota/seta indicadora sobre a cabeça
+                pygame.draw.polygon(screen, card_border_col, [(psx, psy - 10), (psx - 5, psy - 18), (psx + 5, psy - 18)])
+
+                if random.random() < 0.28:
+                    particles.append(SparkParticle(fighter.wx, fighter.wy, 0.45, color=(80, 235, 110)))
+
+        # Barra de Cooldown flutuante sobre a cabeça dos combatentes na arena (Item 6)
+        if round_winner is None:
+            for fighter in (p1, p2):
+                if fighter and fighter.is_alive:
+                    cd_data = get_fighter_cooldown_data(fighter)
+                    if cd_data and (cd_data.get("timer", 0.0) > 0.0 or cd_data.get("warning")):
+                        fsx, fsy = camera.apply(fighter.wx, fighter.wy, 1.82)
+                        bar_w = 46
+                        bar_h = 5
+                        bx = fsx - bar_w // 2
+                        by = fsy - 28
+
+                        # Sombra / Fundo
+                        pygame.draw.rect(screen, (14, 18, 16, 210), (bx - 1, by - 1, bar_w + 2, bar_h + 2), border_radius=2)
+
+                        if cd_data.get("warning"):
+                            if int(game_time * 8.0) % 2 == 0:
+                                pygame.draw.rect(screen, cd_data.get("color", (240, 60, 60)), (bx, by, bar_w, bar_h), border_radius=2)
+                            lbl_surf = font_small.render(cd_data["name"], True, (255, 190, 190))
+                            screen.blit(lbl_surf, (fsx - lbl_surf.get_width() // 2, by - 13))
+                        else:
+                            timer = cd_data.get("timer", 0.0)
+                            max_cd = max(0.01, cd_data.get("max_cd", 1.0))
+                            pct = max(0.0, min(1.0, 1.0 - timer / max_cd))
+                            fill_w = int(bar_w * pct)
+
+                            pygame.draw.rect(screen, (36, 44, 40), (bx, by, bar_w, bar_h), border_radius=1)
+                            if fill_w > 0:
+                                pygame.draw.rect(screen, cd_data.get("color", (100, 200, 255)), (bx, by, fill_w, bar_h), border_radius=1)
+                            pygame.draw.rect(screen, (170, 180, 175), (bx - 1, by - 1, bar_w + 2, bar_h + 2), 1, border_radius=2)
+
+                            lbl_surf = font_small.render(f"{timer:.1f}s", True, (230, 240, 235))
+                            screen.blit(lbl_surf, (fsx - lbl_surf.get_width() // 2, by - 14))
+
         # -------------------------------------------------------------
         # INTERFACE DE USUÁRIO (HUD)
         # -------------------------------------------------------------
-        panel_rect = pygame.Rect(SCREEN_WIDTH // 2 - 240, 14, 480, 54)
-        pygame.draw.rect(screen, (20, 24, 22, 210), panel_rect, border_radius=8)
+        panel_rect = pygame.Rect(SCREEN_WIDTH // 2 - 270, 10, 540, 66)
+        pygame.draw.rect(screen, (20, 24, 22, 220), panel_rect, border_radius=8)
         pygame.draw.rect(screen, (60, 75, 68), panel_rect, 2, border_radius=8)
 
         p1_color = get_fighter_color(p1)
@@ -859,12 +1166,100 @@ def run_game():
 
         p1_title = font_mid.render(f"{p1_name}  {score_p1}", True, p1_color)
         p2_title = font_mid.render(f"{score_p2}  {p2_name}", True, p2_color)
-        screen.blit(p1_title, (panel_rect.x + 20, panel_rect.y + 16))
-        screen.blit(p2_title, (panel_rect.right - p2_title.get_width() - 20, panel_rect.y + 16))
+        screen.blit(p1_title, (panel_rect.x + 20, panel_rect.y + 10))
+        screen.blit(p2_title, (panel_rect.right - p2_title.get_width() - 20, panel_rect.y + 10))
 
         mode_text = t("mode_hud_1p") if vs_ai_mode else t("mode_hud_2p")
         mode_surf = font_small.render(mode_text, True, COLOR_GOLD)
-        screen.blit(mode_surf, (panel_rect.centerx - mode_surf.get_width() // 2, panel_rect.y + 18))
+        screen.blit(mode_surf, (panel_rect.centerx - mode_surf.get_width() // 2, panel_rect.y + 12))
+
+        # Badges de Veneno no HUD (posicionadas ao lado dos nomes)
+        if getattr(p1, "is_poisoned", False) and p1.is_alive:
+            p1_p_time = max(0.0, getattr(p1, "poison_timer", 0.0))
+            try:
+                p1_badge = font_small.render(f"☠ {p1_p_time:.1f}s", True, (80, 245, 120))
+            except Exception:
+                p1_badge = font_small.render(f"POISON {p1_p_time:.1f}s", True, (80, 245, 120))
+            screen.blit(p1_badge, (panel_rect.x + p1_title.get_width() + 28, panel_rect.y + 12))
+
+        if getattr(p2, "is_poisoned", False) and p2.is_alive:
+            p2_p_time = max(0.0, getattr(p2, "poison_timer", 0.0))
+            try:
+                p2_badge = font_small.render(f"☠ {p2_p_time:.1f}s", True, (80, 245, 120))
+            except Exception:
+                p2_badge = font_small.render(f"POISON {p2_p_time:.1f}s", True, (80, 245, 120))
+            screen.blit(p2_badge, (panel_rect.right - p2_title.get_width() - p2_badge.get_width() - 28, panel_rect.y + 12))
+
+        # Barras Sincronizadas de Cooldown no HUD (Item 6)
+        cd1 = get_fighter_cooldown_data(p1)
+        if cd1 and p1.is_alive:
+            bar_w = 150
+            bar_h = 7
+            bar_x1 = panel_rect.x + 20
+            bar_y1 = panel_rect.y + 48
+
+            if cd1.get("warning"):
+                t_col = (255, 90, 90) if (int(game_time * 8.0) % 2 == 0) else (255, 180, 180)
+                txt1 = font_small.render(f"⚠ {cd1['name']}", True, t_col)
+                screen.blit(txt1, (bar_x1, panel_rect.y + 32))
+                pygame.draw.rect(screen, (40, 20, 20), (bar_x1, bar_y1, bar_w, bar_h), border_radius=2)
+                pygame.draw.rect(screen, (240, 70, 70), (bar_x1, bar_y1, bar_w, bar_h), 1, border_radius=2)
+            else:
+                t1 = cd1["timer"]
+                m1 = max(0.01, cd1["max_cd"])
+                pct1 = max(0.0, min(1.0, 1.0 - t1 / m1))
+                fill_w1 = int(bar_w * pct1)
+
+                if t1 > 0:
+                    status_str = f"{cd1['name']}  {t1:.1f}s"
+                    status_col = (215, 220, 220)
+                else:
+                    status_str = f"{cd1['name']}  READY"
+                    status_col = (130, 250, 170)
+
+                txt1 = font_small.render(status_str, True, status_col)
+                screen.blit(txt1, (bar_x1, panel_rect.y + 32))
+
+                pygame.draw.rect(screen, (34, 40, 36), (bar_x1, bar_y1, bar_w, bar_h), border_radius=2)
+                if fill_w1 > 0:
+                    fill_col1 = cd1["color"] if t1 > 0 else (60, 205, 120)
+                    pygame.draw.rect(screen, fill_col1, (bar_x1, bar_y1, fill_w1, bar_h), border_radius=2)
+                pygame.draw.rect(screen, (75, 90, 82), (bar_x1, bar_y1, bar_w, bar_h), 1, border_radius=2)
+
+        cd2 = get_fighter_cooldown_data(p2)
+        if cd2 and p2.is_alive:
+            bar_w = 150
+            bar_h = 7
+            bar_x2 = panel_rect.right - 20 - bar_w
+            bar_y2 = panel_rect.y + 48
+
+            if cd2.get("warning"):
+                t_col = (255, 90, 90) if (int(game_time * 8.0) % 2 == 0) else (255, 180, 180)
+                txt2 = font_small.render(f"⚠ {cd2['name']}", True, t_col)
+                screen.blit(txt2, (panel_rect.right - 20 - txt2.get_width(), panel_rect.y + 32))
+                pygame.draw.rect(screen, (40, 20, 20), (bar_x2, bar_y2, bar_w, bar_h), border_radius=2)
+                pygame.draw.rect(screen, (240, 70, 70), (bar_x2, bar_y2, bar_w, bar_h), 1, border_radius=2)
+            else:
+                t2 = cd2["timer"]
+                m2 = max(0.01, cd2["max_cd"])
+                pct2 = max(0.0, min(1.0, 1.0 - t2 / m2))
+                fill_w2 = int(bar_w * pct2)
+
+                if t2 > 0:
+                    status_str = f"{t2:.1f}s  {cd2['name']}"
+                    status_col = (215, 220, 220)
+                else:
+                    status_str = f"READY  {cd2['name']}"
+                    status_col = (130, 250, 170)
+
+                txt2 = font_small.render(status_str, True, status_col)
+                screen.blit(txt2, (panel_rect.right - 20 - txt2.get_width(), panel_rect.y + 32))
+
+                pygame.draw.rect(screen, (34, 40, 36), (bar_x2, bar_y2, bar_w, bar_h), border_radius=2)
+                if fill_w2 > 0:
+                    fill_col2 = cd2["color"] if t2 > 0 else (60, 205, 120)
+                    pygame.draw.rect(screen, fill_col2, (bar_x2 + bar_w - fill_w2, bar_y2, fill_w2, bar_h), border_radius=2)
+                pygame.draw.rect(screen, (75, 90, 82), (bar_x2, bar_y2, bar_w, bar_h), 1, border_radius=2)
 
         # Indicador Tático de Pólvora para o Teppo (quando desmuniciado)
         for fighter in (p1, p2):
@@ -954,6 +1349,53 @@ def run_game():
         pygame.draw.rect(screen, COLOR_GOLD, settings_btn_rect, 1, border_radius=4)
         c3 = font_small.render(t("settings_btn"), True, COLOR_GOLD)
         screen.blit(c3, (settings_btn_rect.centerx - c3.get_width() // 2, settings_btn_rect.y + 5))
+
+        # Banner Central de Início de Round (Item 10)
+        if round_start_timer > -0.45 and round_winner is None:
+            center_x = SCREEN_WIDTH // 2
+            center_y = SCREEN_HEIGHT // 2 - 40
+            card_w = 260
+            card_h = 92
+
+            if round_start_timer > 0.0:
+                banner_alpha = 240
+            else:
+                banner_alpha = int(240 * max(0.0, (round_start_timer + 0.45) / 0.45))
+
+            if banner_alpha > 5:
+                banner_surf = pygame.Surface((card_w, card_h), pygame.SRCALPHA)
+                pygame.draw.rect(banner_surf, (16, 22, 19, banner_alpha), (0, 0, card_w, card_h), border_radius=10)
+
+                if round_start_timer > 0.6:
+                    # 準備 (Junbi / READY...)
+                    border_col = (200, 170, 80, banner_alpha)
+                    pygame.draw.rect(banner_surf, border_col, (0, 0, card_w, card_h), 2, border_radius=10)
+
+                    font_kanji = get_text_font(46)
+                    k_surf = font_kanji.render("準備", True, (250, 240, 205))
+                    k_surf.set_alpha(banner_alpha)
+                    banner_surf.blit(k_surf, (card_w // 2 - k_surf.get_width() // 2, 8))
+
+                    font_sub = get_title_font(18)
+                    sub_surf = font_sub.render("READY...", True, (215, 200, 160))
+                    sub_surf.set_alpha(banner_alpha)
+                    banner_surf.blit(sub_surf, (card_w // 2 - sub_surf.get_width() // 2, 60))
+                else:
+                    # 始め! (Hajime! / START!)
+                    border_col = (245, 70, 60, banner_alpha)
+                    pygame.draw.rect(banner_surf, border_col, (0, 0, card_w, card_h), 3, border_radius=10)
+
+                    font_kanji = get_text_font(48)
+                    k_surf = font_kanji.render("始め!", True, (255, 85, 75))
+                    k_surf.set_alpha(banner_alpha)
+                    banner_surf.blit(k_surf, (card_w // 2 - k_surf.get_width() // 2, 6))
+
+                    font_sub = get_title_font(20)
+                    sub_surf = font_sub.render("START!", True, (255, 220, 90))
+                    sub_surf.set_alpha(banner_alpha)
+                    banner_surf.blit(sub_surf, (card_w // 2 - sub_surf.get_width() // 2, 60))
+
+                screen.blit(banner_surf, (center_x - card_w // 2, center_y - card_h // 2))
 
         # Banner de Vitória
         if round_winner:

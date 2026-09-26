@@ -11,9 +11,10 @@ from src.entities.samurai import STATE_PARRY, STATE_RECOVERY, STATE_STUNNED
 from src.entities.projectile import (
     KunaiProjectile, ShurikenProjectile, TimedBombEntity, SmokeCloudEntity,
     KusarigamaChainEntity, MusketBulletProjectile, PoisonCloudProjectile,
-    KyudoArrowProjectile, RopeArrowProjectile
+    KyudoArrowProjectile, RopeArrowProjectile, CannonballProjectile,
+    RemoteMineEntity
 )
-from src.entities.doberman import STATE_DOG_CHARGE
+from src.entities.doberman import STATE_DOG_CHARGE, STATE_DOG_KNOCKED_OUT
 
 def _get_death_style_for_attacker(attacker):
     char_type = getattr(attacker, "char_type", "").lower()
@@ -81,18 +82,40 @@ class CombatSystem:
                             banners.append(FloatingBanner("CHAIN DEFLECTION!", proj.wx, proj.wy, wz=1.7, color=(220, 140, 255)))
                             camera.add_shake(5.0)
 
-            # 3. Anne: Corte em Meia-Lua do Alfanje (Cutlass Cleave Deflection)
+            # 3. Anne: Corte em Meia-Lua do Alfanje (Cutlass Cleave Deflection ampliado)
             elif char_t == "pirate" and def_fighter.hitbox_active:
                 cx, cy = def_fighter.hitbox_center
                 cr = def_fighter.hitbox_radius
                 for proj in projectiles:
                     if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter:
-                        if world_distance(cx, cy, proj.wx, proj.wy) < (cr + 0.45):
+                        if world_distance(cx, cy, proj.wx, proj.wy) < (cr + 0.65):
                             proj.is_active = False
                             for _ in range(12):
                                 particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
                             banners.append(FloatingBanner("CUTLASS DEFLECTION!", proj.wx, proj.wy, wz=1.7, color=(255, 215, 80)))
                             camera.add_shake(5.0)
+
+            # 4. Tomoe: Barreira dos Ventos Kami (Ofuda Ward Deflection)
+            elif getattr(def_fighter, "is_ofuda_active", None) and def_fighter.is_ofuda_active():
+                for proj in projectiles:
+                    if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter:
+                        if world_distance(def_fighter.wx, def_fighter.wy, proj.wx, proj.wy) < 1.85:
+                            proj.is_active = False
+                            for _ in range(10):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.5))
+                            banners.append(FloatingBanner("OFUDA WARD!", proj.wx, proj.wy, wz=1.7, color=(120, 220, 160)))
+                            camera.add_shake(4.0)
+
+            # 5. Julie: Floreio de Capa Defensivo (Cape Deflection)
+            elif char_t == "musketeer" and def_fighter.state == "CAPE_FLOURISH":
+                for proj in projectiles:
+                    if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter:
+                        if world_distance(def_fighter.wx, def_fighter.wy, proj.wx, proj.wy) < 1.95:
+                            proj.is_active = False
+                            for _ in range(12):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.55, color=(100, 180, 255)))
+                            banners.append(FloatingBanner("CAPE DEFLECTION!", def_fighter.wx, def_fighter.wy, wz=1.75, color=(100, 180, 255)))
+                            camera.add_shake(4.5)
 
         active_projectiles = []
         for proj in projectiles:
@@ -111,6 +134,28 @@ class CombatSystem:
                             decoy_intercepted = True
                             break
                 if decoy_intercepted or not getattr(proj, "is_active", True):
+                    continue
+
+            # Item 23: O cão do ninja americano é atingível por armas e projéteis inimigos
+            target_dog = None
+            if getattr(proj, "owner", None) == p1 and hasattr(p2, "dog") and p2.dog and p2.dog.state != "KNOCKED_OUT":
+                target_dog = p2.dog
+            elif getattr(proj, "owner", None) == p2 and hasattr(p1, "dog") and p1.dog and p1.dog.state != "KNOCKED_OUT":
+                target_dog = p1.dog
+
+            if target_dog and not isinstance(proj, (TimedBombEntity, RemoteMineEntity)):
+                proj_flying = (getattr(proj, "state", "FLYING") == "FLYING") if hasattr(proj, "state") else getattr(proj, "is_active", True)
+                if proj_flying and world_distance(proj.wx, proj.wy, target_dog.wx, target_dog.wy) < (0.45 + target_dog.radius):
+                    target_dog.knock_out(2.0)
+                    camera.add_shake(6.0)
+                    banners.append(FloatingBanner("DOG STUNNED! (2.0s)", target_dog.wx, target_dog.wy, wz=1.4, color=(255, 80, 80)))
+                    for _ in range(12):
+                        particles.append(SparkParticle(target_dog.wx, target_dog.wy, 0.4))
+                    if isinstance(proj, KunaiProjectile):
+                        proj.state = "ON_GROUND"
+                        proj.wz = 0.05
+                    else:
+                        proj.is_active = False
                     continue
 
             # Se for KUNAI em vôo
@@ -183,6 +228,11 @@ class CombatSystem:
                                 particles.append(slice_part)
 
                     # Dano em área (com 50% de redução de dano para Kasumi contra sua própria bomba)
+                    for dog_cand in [getattr(p1, "dog", None), getattr(p2, "dog", None)]:
+                        if dog_cand and dog_cand.state != "KNOCKED_OUT" and world_distance(proj.wx, proj.wy, dog_cand.wx, dog_cand.wy) < proj.explosion_radius:
+                            dog_cand.knock_out(2.0)
+                            banners.append(FloatingBanner("DOG STUNNED! (2.0s)", dog_cand.wx, dog_cand.wy, wz=1.4, color=(255, 80, 80)))
+
                     p1_in_range = p1.is_alive and world_distance(proj.wx, proj.wy, p1.wx, p1.wy) < proj.explosion_radius
                     p2_in_range = p2.is_alive and world_distance(proj.wx, proj.wy, p2.wx, p2.wy) < proj.explosion_radius
 
@@ -250,12 +300,12 @@ class CombatSystem:
                     if not getattr(target, "is_poisoned", False):
                         proj.is_active = False
                         target.is_poisoned = True
-                        target.poison_timer = 4.0
+                        target.poison_timer = 6.0
                         target.speed *= 1.08  # Leve boost de adrenalina sem torná-lo invencível
                         if hasattr(proj.owner, "on_poison_inflicted"):
                             proj.owner.on_poison_inflicted(target)
                         camera.add_shake(7.0)
-                        banners.append(FloatingBanner("POISONED! 4s TO SURVIVE!", target.wx, target.wy, wz=1.8, color=(80, 225, 120), duration=3.5))
+                        banners.append(FloatingBanner("POISONED! 6s TO SURVIVE!", target.wx, target.wy, wz=1.8, color=(80, 225, 120), duration=2.5))
                         for _ in range(16):
                             particles.append(SparkParticle(target.wx, target.wy, 0.5))
 
@@ -307,6 +357,25 @@ class CombatSystem:
                             for _ in range(12):
                                 particles.append(SparkParticle(target.wx, target.wy, 0.4))
 
+            # Se for BALA DE CANHÃO NAVAL (CannonballProjectile)
+            elif isinstance(proj, CannonballProjectile) and proj.is_active:
+                if proj.has_exploded:
+                    # Explodir e atingir adversários no solo
+                    for target, win_id in ((p1, "P2_WINS"), (p2, "P1_WINS")):
+                        if target.is_alive and target != proj.owner:
+                            if world_distance(proj.wx, proj.wy, target.wx, target.wy) < (proj.radius + target.radius):
+                                hit, dead = target.take_hit((0, 0), damage=2)
+                                if dead:
+                                    camera.add_shake(20.0)
+                                    banners.append(FloatingBanner("NAVAL CANNON FATALITY!", target.wx, target.wy, wz=2.0, color=(255, 120, 30)))
+                                    for _ in range(35):
+                                        particles.append(BloodParticle(target.wx, target.wy, 0.7))
+                                    self.hitstop_timer = 0.16
+                                    if winner is None:
+                                        winner = win_id
+                                    if cinematic_director:
+                                        cinematic_director.trigger_fatal_strike(proj.owner, target, "KASUMI_EXPLODE", (0, 0))
+
             if proj.is_active:
                 active_projectiles.append(proj)
 
@@ -331,18 +400,17 @@ class CombatSystem:
         # -------------------------------------------------------------
         # 2. COMBATE DO CÃO DOBERMAN (SE HOUVER AMERICAN NINJA)
         # -------------------------------------------------------------
-        # Cão do Jogador 1 contra Jogador 2
-        if hasattr(p1, "dog") and p1.dog and p1.dog.state == STATE_DOG_CHARGE and p2.is_alive:
+        # Cão do Jogador 1 contra Jogador 2 (Item 23)
+        if hasattr(p1, "dog") and p1.dog and p1.dog.state != STATE_DOG_KNOCKED_OUT:
             dog = p1.dog
-            # Verificar se o Jogador 2 acertou o cão durante o ataque!
-            if p2.hitbox_active and world_distance(p2.hitbox_center[0], p2.hitbox_center[1], dog.wx, dog.wy) < (p2.hitbox_radius + dog.radius):
-                # O oponente acertou o cachorro! Nocauteado por 4.5s!
-                dog.knock_out(4.5)
+            # Verificar se o Jogador 2 acertou o cão com arma (hitbox ativa) a qualquer momento!
+            if p2.is_alive and p2.hitbox_active and world_distance(p2.hitbox_center[0], p2.hitbox_center[1], dog.wx, dog.wy) < (p2.hitbox_radius + dog.radius):
+                dog.knock_out(2.0)
                 for _ in range(12):
                     particles.append(SparkParticle(dog.wx, dog.wy, 0.4))
                 camera.add_shake(6.0)
-                banners.append(FloatingBanner("DOG INJURED! (4.5s)", dog.wx, dog.wy, wz=1.4, color=(255, 80, 80)))
-            elif world_distance(dog.wx, dog.wy, p2.wx, p2.wy) < (dog.hitbox_radius + p2.radius):
+                banners.append(FloatingBanner("DOG STUNNED! (2.0s)", dog.wx, dog.wy, wz=1.4, color=(255, 80, 80)))
+            elif dog.state == STATE_DOG_CHARGE and p2.is_alive and world_distance(dog.wx, dog.wy, p2.wx, p2.wy) < (dog.hitbox_radius + p2.radius):
                 # O cão atingiu o oponente!
                 if p2.state == STATE_PARRY:
                     dog.knock_out(2.0)
@@ -363,16 +431,16 @@ class CombatSystem:
                         if cinematic_director:
                             cinematic_director.trigger_fatal_strike(p1, p2, "CLEAN_DECAP", (dog.facing_x, dog.facing_y))
 
-        # Cão do Jogador 2 contra Jogador 1
-        if hasattr(p2, "dog") and p2.dog and p2.dog.state == STATE_DOG_CHARGE and p1.is_alive and winner is None:
+        # Cão do Jogador 2 contra Jogador 1 (Item 23)
+        if hasattr(p2, "dog") and p2.dog and p2.dog.state != STATE_DOG_KNOCKED_OUT and winner is None:
             dog = p2.dog
-            if p1.hitbox_active and world_distance(p1.hitbox_center[0], p1.hitbox_center[1], dog.wx, dog.wy) < (p1.hitbox_radius + dog.radius):
-                dog.knock_out(4.5)
+            if p1.is_alive and p1.hitbox_active and world_distance(p1.hitbox_center[0], p1.hitbox_center[1], dog.wx, dog.wy) < (p1.hitbox_radius + dog.radius):
+                dog.knock_out(2.0)
                 for _ in range(12):
                     particles.append(SparkParticle(dog.wx, dog.wy, 0.4))
                 camera.add_shake(6.0)
-                banners.append(FloatingBanner("DOG INJURED! (4.5s)", dog.wx, dog.wy, wz=1.4, color=(255, 80, 80)))
-            elif world_distance(dog.wx, dog.wy, p1.wx, p1.wy) < (dog.hitbox_radius + p1.radius):
+                banners.append(FloatingBanner("DOG STUNNED! (2.0s)", dog.wx, dog.wy, wz=1.4, color=(255, 80, 80)))
+            elif dog.state == STATE_DOG_CHARGE and p1.is_alive and world_distance(dog.wx, dog.wy, p1.wx, p1.wy) < (dog.hitbox_radius + p1.radius):
                 if p1.state == STATE_PARRY:
                     dog.knock_out(2.0)
                     camera.add_shake(7.0)

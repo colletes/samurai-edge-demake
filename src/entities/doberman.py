@@ -30,7 +30,7 @@ class DobermanDog:
         self.state = STATE_DOG_FOLLOW
         self.state_timer = 0.0
         self.cooldown_timer = 0.0
-        self.knockout_duration = 4.5
+        self.knockout_duration = 2.0
 
         # Atributos de corrida
         self.follow_speed = 4.8
@@ -67,8 +67,8 @@ class DobermanDog:
         self.state_timer = 0.20
         self.hitbox_active = False
 
-    def knock_out(self, duration: float = 4.5):
-        """Nocauteia o cão temporariamente quando golpeado pelo adversário."""
+    def knock_out(self, duration: float = 2.0):
+        """Nocauteia o cão temporariamente (2.0s) quando golpeado pelo adversário."""
         self.state = STATE_DOG_KNOCKED_OUT
         self.state_timer = duration
         self.knockout_duration = duration

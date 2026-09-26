@@ -197,15 +197,51 @@ class SamuraiAI:
                     ai_fighter.trigger_bow_draw(opponent.wx, opponent.wy, projectiles)
                     return
 
-            # Pirata (Anne): sopro de pólvora nos olhos a curta/média distância
-            if hasattr(ai_fighter, "trigger_gunpowder_blind"):
-                if 1.6 <= dist <= 3.2 and random.random() < 0.60:
-                    ai_fighter.trigger_gunpowder_blind(opponent.wx, opponent.wy, opponent=opponent)
+            # Pirata (Anne): canhão naval tático, roll agressivo de pólvora e alfanje
+            if hasattr(ai_fighter, "trigger_cutlass_cleave"):
+                # Disparo de Canhão se oponente estiver a média/longa distância
+                if dist >= 2.5 and getattr(ai_fighter, "cannon_cooldown_timer", 0.0) <= 0 and projectiles is not None:
+                    if hasattr(ai_fighter, "trigger_quick_cannon") and random.random() < 0.75:
+                        ai_fighter.trigger_quick_cannon(opponent.wx, opponent.wy, projectiles)
+                        return
+
+                # Black Powder Dash para encurtar distância e surpreender com mini-stun
+                if dist >= 2.8 and random.random() < 0.40 and hasattr(ai_fighter, "trigger_roll"):
+                    if ai_fighter.can_act():
+                        dx = opponent.wx - ai_fighter.wx
+                        dy = opponent.wy - ai_fighter.wy
+                        ai_fighter.trigger_roll(dx, dy)
+                        return
+
+                # Corte de Alfanje na curta distância
+                if dist <= 1.85:
+                    ai_fighter.trigger_cutlass_cleave(opponent.wx, opponent.wy)
                     return
 
-            # Mosqueteira (Julie): investida longa Fleche
+            # Mosqueteira (Julie): esgrima elegante, floreio defensivo de capa, pederneira e estocada
             if hasattr(ai_fighter, "trigger_fleche_thrust"):
-                if 1.4 <= dist <= 2.8 and random.random() < 0.60:
+                # 1. Deflexão defensiva de capa se houver projéteis inimigos em rota de colisão
+                if projectiles and getattr(ai_fighter, "cape_timer", 0.0) <= 0:
+                    for p in projectiles:
+                        if getattr(p, "is_active", True) and getattr(p, "owner", None) != ai_fighter:
+                            p_dist = world_distance(ai_fighter.wx, ai_fighter.wy, p.wx, p.wy)
+                            if p_dist < 2.8:
+                                ai_fighter.trigger_cape_flourish(opponent.wx, opponent.wy, opponent=opponent, projectiles=projectiles)
+                                return
+
+                # 2. Coup de Pied / Floreio de capa a queima-roupa para criar espaçamento
+                if dist < 1.70 and getattr(ai_fighter, "cape_timer", 0.0) <= 0 and random.random() < 0.65:
+                    ai_fighter.trigger_cape_flourish(opponent.wx, opponent.wy, opponent=opponent, projectiles=projectiles)
+                    return
+
+                # 3. Disparo tático de pederneira de bolso a média/longa distância
+                if dist >= 2.8 and getattr(ai_fighter, "flintlock_timer", 99.0) <= 0 and projectiles is not None:
+                    if hasattr(ai_fighter, "trigger_flintlock_shot") and random.random() < 0.70:
+                        ai_fighter.trigger_flintlock_shot(opponent.wx, opponent.wy, projectiles)
+                        return
+
+                # 4. Bote linear veloz de estocada Fleche
+                if 1.30 <= dist <= 2.65 and random.random() < 0.65:
                     ai_fighter.trigger_fleche_thrust(opponent.wx, opponent.wy)
                     return
 

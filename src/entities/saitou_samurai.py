@@ -12,7 +12,7 @@ from src.config import (
 )
 from src.entities.samurai import (
     Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY,
-    STATE_PARRY, STATE_STUNNED, STATE_DEAD
+    STATE_PARRY, STATE_STUNNED, STATE_DEAD, STATE_ROLL
 )
 from src.entities.voxel_models import render_voxel_humanoid
 from src.effects.particles import SparkParticle
@@ -332,6 +332,9 @@ class SaitouSamurai(Samurai):
             self.hitbox_active = False
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
+
+        elif self.state == STATE_ROLL:
+            self.update_roll(dt, game_map)
 
         elif self.state == STATE_RECOVERY:
             self.state_timer -= dt

@@ -21,14 +21,15 @@ CONTROLLER_TYPE_NINTENDO = "nintendo"
 CONTROLLER_TYPE_GENERIC = "generic"
 
 # Identificadores de Ações
-ACTION_ATTACK = "attack"      # Ação Principal no jogo (Quadrado / X)
-ACTION_DASH = "dash"          # Ação Secundária no jogo (✕ / A)
-ACTION_PARRY = "parry"        # Sinônimo da ação secundária defensiva
+ACTION_ATTACK = "attack"            # Ação Principal no jogo (Quadrado / X)
+ACTION_SECONDARY = "secondary"      # Ação Secundária / Especial no jogo (✕ / Triângulo / A)
+ACTION_DASH = "dash"                # Terceira Ação: Esquiva / Roll / Dash dedicado (○ Círculo / B)
+ACTION_PARRY = "parry"              # Sinônimo da ação secundária defensiva
 ACTION_SPECIAL = "special"
-ACTION_MENU = "menu"          # Options / Start / Pausa
-ACTION_RESTART = "restart"    # Reiniciar duelo
-ACTION_CONFIRM = "confirm"    # Confirmação nos menus (✕ / A)
-ACTION_CANCEL = "cancel"      # Retorno nos menus (○ / B)
+ACTION_MENU = "menu"                # Options / Start / Pausa
+ACTION_RESTART = "restart"          # Reiniciar duelo
+ACTION_CONFIRM = "confirm"          # Confirmação nos menus (✕ / A)
+ACTION_CANCEL = "cancel"            # Retorno nos menus (○ / B)
 
 # Constantes de Botões Padrão SDL GameController (referência)
 BTN_A = 0               # Xbox: A | PS: ✕ Cross | Switch: B | Genérico: 1
@@ -111,6 +112,7 @@ class ControllerDevice:
         # Mapeamentos customizados de botões (editáveis nas opções de jogo)
         self.custom_mappings: dict[str, int | None] = {
             ACTION_ATTACK: None,
+            ACTION_SECONDARY: None,
             ACTION_DASH: None,
         }
 
@@ -147,8 +149,9 @@ class ControllerDevice:
         if self.is_playstation:
             glyphs = {
                 ACTION_ATTACK: "▢",     # Quadrado = Ação Principal
-                ACTION_DASH: "✕",       # ✕ = Ação Secundária
-                ACTION_PARRY: "✕",
+                ACTION_SECONDARY: "△",  # Triângulo ou ✕ = Ação Secundária
+                ACTION_PARRY: "△",
+                ACTION_DASH: "○",       # ○ Círculo = Roll / Dash dedicado (botão O)
                 ACTION_CONFIRM: "✕",    # ✕ = Confirmação nos menus
                 ACTION_CANCEL: "○",     # ○ = Volta nos menus
                 ACTION_SPECIAL: "△",
@@ -158,8 +161,9 @@ class ControllerDevice:
         elif self.is_xbox:
             glyphs = {
                 ACTION_ATTACK: "X",     # X = Ação Principal
-                ACTION_DASH: "A",       # A = Ação Secundária
-                ACTION_PARRY: "A",
+                ACTION_SECONDARY: "Y",  # Y = Ação Secundária
+                ACTION_PARRY: "Y",
+                ACTION_DASH: "B",       # B = Roll / Dash dedicado
                 ACTION_CONFIRM: "A",    # A = Confirmação nos menus
                 ACTION_CANCEL: "B",     # B = Volta nos menus
                 ACTION_SPECIAL: "Y",
@@ -169,8 +173,9 @@ class ControllerDevice:
         elif self.is_nintendo:
             glyphs = {
                 ACTION_ATTACK: "Y",     # Y = Ação Principal
-                ACTION_DASH: "B",       # B = Ação Secundária
-                ACTION_PARRY: "B",
+                ACTION_SECONDARY: "X",  # X = Ação Secundária
+                ACTION_PARRY: "X",
+                ACTION_DASH: "A",       # A = Roll / Dash dedicado
                 ACTION_CONFIRM: "B",    # B = Confirmação
                 ACTION_CANCEL: "A",     # A = Volta
                 ACTION_SPECIAL: "X",
@@ -180,8 +185,9 @@ class ControllerDevice:
         else: # Genérico
             glyphs = {
                 ACTION_ATTACK: "▢ / X",
-                ACTION_DASH: "✕ / A",
-                ACTION_PARRY: "✕ / A",
+                ACTION_SECONDARY: "△ / Y",
+                ACTION_PARRY: "△ / Y",
+                ACTION_DASH: "○ / B",
                 ACTION_CONFIRM: "✕ / A",
                 ACTION_CANCEL: "○ / B",
                 ACTION_SPECIAL: "△ / Y",
@@ -305,6 +311,32 @@ class ControllerDevice:
             return names.get(button_index, f"Botão {button_index}")
         return f"Botão {button_index}"
 
+    def get_button_svg_icon(self, action_or_index: str | int) -> str | None:
+        """Retorna o identificador do ícone SVG correspondente ao botão ou ação no controle."""
+        from src.ui.svg_icon_renderer import get_playstation_icon_name_for_button
+        if isinstance(action_or_index, int):
+            return get_playstation_icon_name_for_button(action_or_index)
+        
+        # Mapeamento por ação
+        custom_btn = self.custom_mappings.get(action_or_index)
+        if custom_btn is not None:
+            return get_playstation_icon_name_for_button(custom_btn)
+        
+        if self.is_playstation:
+            if action_or_index == ACTION_ATTACK:
+                return "square"
+            elif action_or_index in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
+                return "cross"
+            elif action_or_index == ACTION_DASH:
+                return "circle"
+            elif action_or_index == ACTION_CONFIRM:
+                return "cross"
+            elif action_or_index == ACTION_CANCEL:
+                return "circle"
+            elif action_or_index == ACTION_MENU:
+                return "options"
+        return None
+
     def get_mapped_button_name(self, action: str) -> str:
         """Retorna o nome legível do botão configurado para uma ação (customizado ou padrão)."""
         custom_btn = self.custom_mappings.get(action)
@@ -312,8 +344,10 @@ class ControllerDevice:
             return self.get_button_name(custom_btn)
         if action == ACTION_ATTACK:
             return self.get_button_name(2)
-        elif action in (ACTION_DASH, ACTION_PARRY):
+        elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
             return self.get_button_name(0)
+        elif action == ACTION_DASH:
+            return self.get_button_name(1)
         elif action == ACTION_MENU:
             return self.get_button_name(6)
         elif action == ACTION_CONFIRM:
@@ -383,9 +417,12 @@ class ControllerDevice:
             if action in (ACTION_ATTACK,):
                 # Quadrado (Ação Principal) ou R1
                 return button_index in (2, 10)
-            elif action in (ACTION_DASH, ACTION_PARRY):
-                # ✕ Cruz (Ação Secundária)
-                return button_index in (0,)
+            elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
+                # ✕ Cruz (Ação Secundária) ou △ Triângulo
+                return button_index in (0, 3)
+            elif action in (ACTION_DASH,):
+                # ○ Círculo (Roll / Dash dedicado) ou L1
+                return button_index in (1, 9)
             elif action == ACTION_CONFIRM:
                 # ✕ Cruz (Confirmação nos Menus)
                 return button_index in (0,)
@@ -404,9 +441,12 @@ class ControllerDevice:
             if action in (ACTION_ATTACK,):
                 # X (Ação Principal) ou RB
                 return button_index in (2, 10)
-            elif action in (ACTION_DASH, ACTION_PARRY):
-                # A (Ação Secundária) ou LB
-                return button_index in (0, 9)
+            elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
+                # A (Ação Secundária) ou Y
+                return button_index in (0, 3)
+            elif action in (ACTION_DASH,):
+                # B (Roll / Dash dedicado) ou LB
+                return button_index in (1, 9)
             elif action == ACTION_CONFIRM:
                 # A (Confirmação)
                 return button_index in (0,)
@@ -466,22 +506,28 @@ class ControllerDevice:
             if self.is_playstation:
                 if action == ACTION_ATTACK:
                     return (num_b > 2 and bool(self.joystick.get_button(2))) or (num_b > 10 and bool(self.joystick.get_button(10)))
-                elif action in (ACTION_DASH, ACTION_PARRY):
-                    return num_b > 0 and bool(self.joystick.get_button(0))
+                elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
+                    return (num_b > 0 and bool(self.joystick.get_button(0))) or (num_b > 3 and bool(self.joystick.get_button(3)))
+                elif action in (ACTION_DASH,):
+                    return (num_b > 1 and bool(self.joystick.get_button(1))) or (num_b > 9 and bool(self.joystick.get_button(9)))
                 elif action == ACTION_MENU:
                     return num_b > 6 and bool(self.joystick.get_button(6))
             elif self.is_xbox:
                 if action == ACTION_ATTACK:
                     return (num_b > 2 and bool(self.joystick.get_button(2))) or (num_b > 10 and bool(self.joystick.get_button(10)))
-                elif action in (ACTION_DASH, ACTION_PARRY):
-                    return (num_b > 0 and bool(self.joystick.get_button(0))) or (num_b > 9 and bool(self.joystick.get_button(9)))
+                elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
+                    return (num_b > 0 and bool(self.joystick.get_button(0))) or (num_b > 3 and bool(self.joystick.get_button(3)))
+                elif action in (ACTION_DASH,):
+                    return (num_b > 1 and bool(self.joystick.get_button(1))) or (num_b > 9 and bool(self.joystick.get_button(9)))
                 elif action == ACTION_MENU:
                     return num_b > 6 and bool(self.joystick.get_button(6))
             else:
                 if action == ACTION_ATTACK:
                     return (num_b > 2 and bool(self.joystick.get_button(2))) or (num_b > 3 and bool(self.joystick.get_button(3)))
-                elif action in (ACTION_DASH, ACTION_PARRY):
-                    return (num_b > 0 and bool(self.joystick.get_button(0))) or (num_b > 1 and bool(self.joystick.get_button(1)))
+                elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
+                    return num_b > 0 and bool(self.joystick.get_button(0))
+                elif action in (ACTION_DASH,):
+                    return num_b > 1 and bool(self.joystick.get_button(1))
         except Exception:
             pass
         return False
@@ -563,6 +609,11 @@ class ControllerManager:
                 return self.controllers[inst_id]
         if player_idx == 0 and len(self.controllers) > 0:
             return next(iter(self.controllers.values()))
+        if player_idx == 1 and len(self.controllers) > 1:
+            first_id = self.player_map[0] if (self.player_map[0] is not None and self.player_map[0] in self.controllers) else next(iter(self.controllers.keys()))
+            for cid, cdev in self.controllers.items():
+                if cid != first_id:
+                    return cdev
         return None
 
     def has_controller(self, player_idx: int = 0) -> bool:

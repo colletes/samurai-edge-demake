@@ -10,7 +10,7 @@ from src.config import (
     COLOR_WHITE, COLOR_BLACK, COLOR_GOLD, COLOR_STEEL
 )
 from src.entities.samurai import (
-    Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD
+    Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, STATE_ROLL
 )
 from src.entities.projectile import KusarigamaChainEntity
 from src.entities.voxel_models import render_voxel_humanoid
@@ -27,7 +27,8 @@ class PurpleNinja(Samurai):
         self.kama_timer = 0.0
 
         # Ataque Especial: Kusarigama Chain Grapple / Pull
-        self.chain_cooldown = 2.0
+        # Ataque Especial: Kusarigama Chain Grapple / Pull
+        self.chain_cooldown = 2.5
         self.chain_timer = 0.0
 
         # Timers da animação de ataque (windup reduzido para 0.04s para resposta fulminante)
@@ -35,16 +36,35 @@ class PurpleNinja(Samurai):
         self.active_time = 0.14
         self.recovery_time = 0.28
 
-        # Giro Protetor de Corrente (deflete projéteis)
+        # Escudo de Corrente Hold & Release (Item 24)
         self.chain_spin_timer = 0.0
         self.is_spinning_chain = False
+        self.is_holding_shield = False
+        self.shield_spin_angle = 0.0
 
-    def trigger_kama_strike(self, target_wx: float, target_wy: float):
+    def can_act(self) -> bool:
+        return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD) and self.dash_recovery_timer <= 0
+
+    def can_move(self) -> bool:
+        if self.is_holding_shield:
+            return self.is_alive
+        return super().can_move()
+
+    def apply_movement(self, move_x: float, move_y: float, dt: float, game_map):
+        if self.is_holding_shield:
+            orig = self.speed
+            self.speed = orig * 0.70  # Movimentação suave enquanto mantém o escudo giratório
+            super().apply_movement(move_x, move_y, dt, game_map)
+            self.speed = orig
+        else:
+            super().apply_movement(move_x, move_y, dt, game_map)
+
+    def trigger_kama_strike(self, target_wx: float, target_wy: float, game_map = None, particles = None):
         """
         Ataque Primário: Golpe rápido de foice de alcance ampliado (1.15m),
-        com PRECEDÊNCIA ABSOLUTA sobre qualquer outro ataque.
+        com PRECEDÊNCIA ABSOLUTA sobre qualquer outro ataque. Corta bambus no caminho.
         """
-        if not self.can_move() or self.kama_timer > 0:
+        if not self.can_act() or self.kama_timer > 0:
             return
 
         self.set_facing(target_wx, target_wy)
@@ -62,24 +82,44 @@ class PurpleNinja(Samurai):
         self.hitbox_center = (self.wx + self.facing_x * 0.80, self.wy + self.facing_y * 0.80)
         self.hitbox_radius = 1.15
 
-    def trigger_kusarigama_pull(self, target_wx: float, target_wy: float, projectiles: list):
-        """
-        Ataque Secundário / Especial: Gira o peso da corrente criando um vórtice protetor
-        que repele projéteis e arremessa o gancho para puxar o adversário.
-        """
-        if not self.can_move() or self.chain_timer > 0:
-            return
+        if game_map:
+            for b in game_map.bamboos:
+                if not b.is_cut and math.hypot(self.hitbox_center[0] - b.wx, self.hitbox_center[1] - b.wy) < 0.6:
+                    part = b.cut((self.facing_x, self.facing_y))
+                    if part and particles is not None:
+                        particles.append(part)
 
+    def start_chain_shield(self, target_wx: float, target_wy: float):
+        """Inicia o escudo giratório de corrente (Hold - Item 24)."""
+        if not self.can_act() or self.chain_timer > 0:
+            return
         self.set_facing(target_wx, target_wy)
+        self.is_holding_shield = True
+        self.is_spinning_chain = True
+        self.shield_spin_angle = 0.0
+
+    def update_chain_shield(self, dt: float, target_wx: float, target_wy: float):
+        """Atualiza a mira/direção e giro protetor da corrente enquanto segurado (Item 24)."""
+        if not self.is_alive or not self.is_holding_shield:
+            self.is_holding_shield = False
+            self.is_spinning_chain = False
+            return
+        self.set_facing(target_wx, target_wy)
+        self.shield_spin_angle += dt * 35.0
+        self.is_spinning_chain = True
+
+    def release_chain_shield(self, projectiles: list, particles: list = None):
+        """Dispara a corrente ao soltar o botão de secundário (Release - Item 24)."""
+        if not self.is_holding_shield or not self.is_alive:
+            self.is_holding_shield = False
+            self.is_spinning_chain = False
+            return
+        self.is_holding_shield = False
+        self.is_spinning_chain = False
         self.chain_timer = self.chain_cooldown
         self.state = STATE_RECOVERY
         self.state_timer = 0.18
 
-        # Ativa o giro protetor de corrente por 0.40s
-        self.chain_spin_timer = 0.40
-        self.is_spinning_chain = True
-
-        # Spawn da corrente saindo das mãos
         chain = KusarigamaChainEntity(
             wx=self.wx + self.facing_x * 0.35,
             wy=self.wy + self.facing_y * 0.35,
@@ -89,21 +129,35 @@ class PurpleNinja(Samurai):
             owner=self
         )
         projectiles.append(chain)
+        if particles is not None:
+            from src.effects.particles import SparkParticle
+            for _ in range(6):
+                particles.append(SparkParticle(chain.wx, chain.wy, 0.3))
+
+    def trigger_kusarigama_pull(self, target_wx: float, target_wy: float, projectiles: list):
+        """Compatibilidade para IA e testes legados."""
+        self.start_chain_shield(target_wx, target_wy)
+        self.release_chain_shield(projectiles)
 
     def update(self, dt: float, game_map):
         if not self.is_alive:
             self.hitbox_active = False
             self.is_priority_strike = False
             self.is_spinning_chain = False
+            self.is_holding_shield = False
             return
 
         self.update_stealth(game_map)
 
-        if self.chain_spin_timer > 0:
-            self.chain_spin_timer -= dt
-            self.is_spinning_chain = (self.chain_spin_timer > 0)
-        else:
-            self.is_spinning_chain = False
+        if self.dash_recovery_timer > 0:
+            self.dash_recovery_timer -= dt
+
+        if not self.is_holding_shield:
+            if self.chain_spin_timer > 0:
+                self.chain_spin_timer -= dt
+                self.is_spinning_chain = (self.chain_spin_timer > 0)
+            else:
+                self.is_spinning_chain = False
 
         if self.kama_timer > 0:
             self.kama_timer -= dt
@@ -134,10 +188,16 @@ class PurpleNinja(Samurai):
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
 
+        elif self.state == STATE_ROLL:
+            self.update_roll(dt, game_map)
+            if self.state == STATE_IDLE:
+                self.dash_recovery_timer = self.dash_recovery_duration
+
         elif self.state == STATE_STUNNED:
             self.hitbox_active = False
             self.is_priority_strike = False
             self.is_spinning_chain = False
+            self.is_holding_shield = False
             self.state_timer -= dt
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
@@ -149,10 +209,18 @@ class PurpleNinja(Samurai):
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
         if self.is_spinning_chain and self.is_alive:
-            # Efeito visual do giro protetor de corrente
-            sx, sy = camera.apply(self.wx, self.wy, 0.4)
-            pygame.draw.circle(surface, COLOR_CHAIN, (sx, sy), 22, 2)
-            pygame.draw.circle(surface, COLOR_PURPLE_AURA, (sx, sy), 16, 1)
+            # Efeito visual do giro protetor de corrente em voxel 3D e anéis de energia
+            sx, sy = camera.apply(self.wx, self.wy, 0.45)
+            pygame.draw.circle(surface, COLOR_CHAIN, (sx, sy), 26, 2)
+            pygame.draw.circle(surface, COLOR_PURPLE_AURA, (sx, sy), 20, 1)
+            from src.isometric.voxel_renderer import draw_voxel_box
+            cx = self.wx + self.facing_x * 0.45
+            cy = self.wy + self.facing_y * 0.45
+            for i in range(4):
+                ang = self.shield_spin_angle + (i / 4.0) * math.pi * 2
+                ox = math.cos(ang) * 0.42
+                oy = math.sin(ang) * 0.42
+                draw_voxel_box(surface, camera, cx + ox - 0.04, cy + oy - 0.04, 0.45, 0.08, 0.08, 0.08, (180, 140, 230), outline=False)
 
         render_voxel_humanoid(
             surface, camera,

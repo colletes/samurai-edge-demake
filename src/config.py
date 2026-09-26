@@ -148,21 +148,24 @@ CHAR_PIRATE = "pirate"
 CHAR_MUSKETEER = "musketeer"
 
 # Mapeamento de Teclas Padrão
-# Jogador 1 (Samurai Vermelho - Kenshin)
+# Jogador 1 (Player 1)
 KEY_P1_UP = pygame.K_w
 KEY_P1_DOWN = pygame.K_s
 KEY_P1_LEFT = pygame.K_a
 KEY_P1_RIGHT = pygame.K_d
-KEY_P1_ATTACK = pygame.K_e    # Iai Flash Slash (Agora padrão Tecla E)
-KEY_P1_DASH = pygame.K_r      # Esquiva / Dash (Agora padrão Tecla R)
+KEY_P1_ATTACK = pygame.K_e        # Ataque Principal (Tecla E)
+KEY_P1_SECONDARY = pygame.K_r     # Ação Secundária / Especial (Tecla R)
+KEY_P1_DASH = pygame.K_q          # Terceira Ação: Roll / Dash dedicado (Tecla Q)
 
-# Jogador 2 (Samurai Azul - Musashi)
+# Jogador 2 (Player 2)
 KEY_P2_UP = pygame.K_UP
 KEY_P2_DOWN = pygame.K_DOWN
 KEY_P2_LEFT = pygame.K_LEFT
 KEY_P2_RIGHT = pygame.K_RIGHT
-KEY_P2_ATTACK = pygame.K_u    # Combo 3-Cortes
-KEY_P2_PARRY = pygame.K_i     # Postura de Defesa / Bloqueio
+KEY_P2_ATTACK = pygame.K_u        # Ataque Principal (Tecla U)
+KEY_P2_SECONDARY = pygame.K_i     # Ação Secundária / Especial (Tecla I)
+KEY_P2_PARRY = pygame.K_i         # Sinônimo compatível para secundária
+KEY_P2_DASH = pygame.K_o          # Terceira Ação: Roll / Dash dedicado (Tecla O)
 
 # Teclas de Sistema
 KEY_RESTART = pygame.K_SPACE
@@ -175,13 +178,16 @@ DEFAULT_CONTROLS = {
     "P1_LEFT": KEY_P1_LEFT,
     "P1_RIGHT": KEY_P1_RIGHT,
     "P1_ATTACK": KEY_P1_ATTACK,
+    "P1_SECONDARY": KEY_P1_SECONDARY,
     "P1_DASH": KEY_P1_DASH,
     "P2_UP": KEY_P2_UP,
     "P2_DOWN": KEY_P2_DOWN,
     "P2_LEFT": KEY_P2_LEFT,
     "P2_RIGHT": KEY_P2_RIGHT,
     "P2_ATTACK": KEY_P2_ATTACK,
+    "P2_SECONDARY": KEY_P2_SECONDARY,
     "P2_PARRY": KEY_P2_PARRY,
+    "P2_DASH": KEY_P2_DASH,
 }
 
 # Configurações de Controles Touch e Gamepad

@@ -57,7 +57,7 @@ I18N = {
         "powder_tracker": "PÓLVORA {dist:.1f}m",
         "draw_text": "EMPATE! (DOUBLE KO)",
         "victory_text": "VITÓRIA DE {name}!",
-        "next_round_hint": "Pressione ESPAÇO para o próximo duelo ou ESC para trocar lutadores",
+        "next_round_hint": "Pressione ESPAÇO ou ▢ (Quadrado) para o próximo duelo ou ESC para trocar lutadores",
 
         # Modal de Ajuda - Cabeçalho e Abas
         "help_modal_title": "MANUAL DO GUERREIRO & GUIA DE COMBATE",
@@ -192,7 +192,7 @@ I18N = {
         "powder_tracker": "POWDER {dist:.1f}m",
         "draw_text": "DRAW! (DOUBLE KO)",
         "victory_text": "VICTORY: {name}!",
-        "next_round_hint": "Press SPACE for next duel or ESC to switch warriors",
+        "next_round_hint": "Press SPACE or ▢ (Square) for next duel or ESC to switch warriors",
 
         # Help Modal - Header and Tabs
         "help_modal_title": "WARRIOR MANUAL & COMBAT GUIDE",

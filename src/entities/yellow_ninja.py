@@ -10,7 +10,7 @@ from src.config import (
     COLOR_YELLOW_AURA, COLOR_STEEL, COLOR_GOLD, COLOR_WHITE, COLOR_BLACK
 )
 from src.entities.samurai import (
-    Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD
+    Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, STATE_ROLL
 )
 from src.entities.projectile import KunaiProjectile
 from src.entities.voxel_models import render_voxel_humanoid
@@ -32,18 +32,24 @@ class YellowNinja(Samurai):
         self.jump_max_height = 1.35
         self.jump_speed = 6.4
         self.jump_dir = (1.0, 0.0)
+        self.jump_cooldown = 0.50
+        self.jump_cooldown_timer = 0.0
+        self.is_midair_dash = False
         self.has_thrown_in_jump = False
         self.auto_throw_in_jump = False
         self._throw_target = (0.0, 0.0)
         self._throw_projectiles = None
 
+    def can_act(self) -> bool:
+        return self.is_alive and self.state in (STATE_IDLE, STATE_WALK) and self.dash_recovery_timer <= 0
+
     def trigger_jump(self, target_wx: float, target_wy: float, projectiles: list | None = None):
         """
-        Ação Secundária (Dash/Especial): Pulo Parabólico Evasivo.
+        Ação Secundária: Pulo Parabólico Evasivo (Item 14 & 3).
         Hanzo salta alto no ar, desviando de ataques no solo.
         Durante o salto, se possuir a Kunai, pode arremessá-la.
         """
-        if not self.can_move():
+        if not self.can_act() or self.jump_cooldown_timer > 0:
             return
 
         self.set_facing(target_wx, target_wy)
@@ -54,9 +60,30 @@ class YellowNinja(Samurai):
         self.auto_throw_in_jump = False
         self.hitbox_active = False
 
+    def trigger_standing_throw(self, target_wx: float, target_wy: float, projectiles: list):
+        """Ação Primária: Arremesso direto de Kunai em pé a partir do solo (Item 14)."""
+        if not self.can_act() or not self.has_kunai:
+            return
+
+        self.set_facing(target_wx, target_wy)
+        self.has_kunai = False
+        self.state = STATE_RECOVERY
+        self.state_timer = 0.16
+
+        kunai = KunaiProjectile(
+            wx=self.wx + self.facing_x * 0.40,
+            wy=self.wy + self.facing_y * 0.40,
+            wz=0.45,
+            dir_x=self.facing_x,
+            dir_y=self.facing_y,
+            owner=self,
+            vz=0.0
+        )
+        projectiles.append(kunai)
+
     def trigger_jump_and_throw(self, target_wx: float, target_wy: float, projectiles: list):
-        """Inicia o salto parabólico e arremessa a kunai em pleno ar."""
-        if not self.can_move() or not self.has_kunai:
+        """Compatibilidade: salto parabólico seguido de arremesso."""
+        if not self.can_act() or not self.has_kunai:
             return
         self.trigger_jump(target_wx, target_wy)
         self.has_kunai = False
@@ -68,12 +95,13 @@ class YellowNinja(Samurai):
             wz=0.65,
             dir_x=self.facing_x,
             dir_y=self.facing_y,
-            owner=self
+            owner=self,
+            vz=-2.5
         )
         projectiles.append(kunai)
 
     def trigger_midair_throw(self, target_wx: float, target_wy: float, projectiles: list):
-        """Arremessa a kunai de cima para baixo em pleno ar."""
+        """Arremessa a kunai de cima para baixo em pleno ar com ângulo descendente (Item 3)."""
         if self.state != "JUMP" or not self.has_kunai or self.has_thrown_in_jump:
             return
 
@@ -87,7 +115,8 @@ class YellowNinja(Samurai):
             wz=max(0.4, self.wz),
             dir_x=self.facing_x,
             dir_y=self.facing_y,
-            owner=self
+            owner=self,
+            vz=-3.5  # Ângulo ligeiramente descendente em direção ao chão!
         )
         projectiles.append(kunai)
 
@@ -97,10 +126,9 @@ class YellowNinja(Samurai):
         Regra: Fica disponível EXCLUSIVAMENTE se Hanzo NÃO tiver mais a Kunai!
         """
         if self.has_kunai:
-            # Tanto indisponível enquanto tiver a kunai!
             return
 
-        if not self.can_move():
+        if not self.can_act():
             return
 
         self.set_facing(target_wx, target_wy)
@@ -112,12 +140,20 @@ class YellowNinja(Samurai):
         self.hitbox_center = (self.wx + self.facing_x * 0.85, self.wy + self.facing_y * 0.85)
 
     def trigger_throw_attack(self, target_wx: float, target_wy: float, projectiles: list):
-        """Atalho de compatibilidade para arremesso com salto."""
+        """Atalho: arremesso em pé ou midair."""
         if self.has_kunai:
             if self.state == "JUMP":
                 self.trigger_midair_throw(target_wx, target_wy, projectiles)
             else:
-                self.trigger_jump_and_throw(target_wx, target_wy, projectiles)
+                self.trigger_standing_throw(target_wx, target_wy, projectiles)
+
+    def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
+        """Rolamento com i-frames. Se executado durante o salto no ar, preserva a gravidade até o solo (Item 3)."""
+        if not self.is_alive or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK) or self.dash_recovery_timer > 0:
+            return
+        was_jumping = (self.state == "JUMP")
+        super().trigger_roll(dir_x, dir_y, particles)
+        self.is_midair_dash = was_jumping
 
     def update(self, dt: float, game_map):
         """Atualiza a lógica e física do Ninja Amarelo."""
@@ -125,6 +161,18 @@ class YellowNinja(Samurai):
             return
 
         self.update_stealth(game_map)
+
+        if self.jump_cooldown_timer > 0:
+            self.jump_cooldown_timer -= dt
+        if self.dash_recovery_timer > 0:
+            self.dash_recovery_timer -= dt
+
+        if self.is_midair_dash:
+            if self.wz > 0.0:
+                self.wz = max(0.0, self.wz - (self.jump_max_height / self.jump_duration) * 1.8 * dt)
+            if self.wz <= 0.0:
+                self.wz = 0.0
+                self.is_midair_dash = False
 
         if self.state == "JUMP":
             self.state_timer -= dt
@@ -136,7 +184,7 @@ class YellowNinja(Samurai):
                 if self._throw_projectiles is not None:
                     self.trigger_midair_throw(self._throw_target[0], self._throw_target[1], self._throw_projectiles)
 
-            # Deslocamento no ar
+            # Deslocamento no ar (sem controle direcional durante o voo - Item 3)
             new_wx = self.wx + self.jump_dir[0] * self.jump_speed * dt
             new_wy = self.wy + self.jump_dir[1] * self.jump_speed * dt
 
@@ -159,7 +207,9 @@ class YellowNinja(Samurai):
 
             if self.state_timer <= 0:
                 self.wz = 0.0
-                self.state = STATE_IDLE
+                self.state = STATE_RECOVERY
+                self.state_timer = 0.18  # Landing delay / lag ao aterrissar (Item 3)
+                self.jump_cooldown_timer = 0.35
                 self.has_thrown_in_jump = False
                 self.auto_throw_in_jump = False
 
@@ -200,6 +250,9 @@ class YellowNinja(Samurai):
             self.hitbox_active = False
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
+
+        elif self.state == STATE_ROLL:
+            self.update_roll(dt, game_map)
 
         elif self.state == STATE_STUNNED:
             self.state_timer -= dt

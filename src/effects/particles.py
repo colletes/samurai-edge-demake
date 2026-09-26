@@ -181,3 +181,51 @@ class FloatingBanner:
         rect = txt_surf.get_rect(center=(sx, sy))
         surface.blit(shadow_surf, (rect.x + 2, rect.y + 2))
         surface.blit(txt_surf, rect)
+
+
+class FlameVoxelParticle:
+    """Partícula de estilhaço flamejante tridimensional (voxel 3D) para explosões balísticas."""
+    def __init__(self, wx: float, wy: float, wz: float = 0.2):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        angle = random.uniform(0, math.pi * 2)
+        speed = random.uniform(2.5, 7.5)
+        self.vx = math.cos(angle) * speed
+        self.vy = math.sin(angle) * speed
+        self.vz = random.uniform(3.5, 8.5)
+        self.gz = -16.0
+        self.lifetime = random.uniform(0.40, 0.75)
+        self.age = 0.0
+        self.size = random.uniform(0.09, 0.16)
+        self.colors = [
+            (255, 245, 180),  # Incandescente zenital
+            (255, 180, 40),   # Amarelo/laranja vivo
+            (240, 90, 20),    # Fogo alaranjado
+            (190, 35, 15),    # Brasa carmim
+            (65, 45, 45)      # Fuligem cinza escuro
+        ]
+
+    def update(self, dt: float) -> bool:
+        self.age += dt
+        self.wx += self.vx * dt
+        self.wy += self.vy * dt
+        self.wz += self.vz * dt
+        self.vz += self.gz * dt
+        self.vx *= max(0.0, 1.0 - 1.2 * dt)
+        self.vy *= max(0.0, 1.0 - 1.2 * dt)
+        if self.wz < 0.02:
+            self.wz = 0.02
+            self.vz = -self.vz * 0.3
+            self.vx *= 0.6
+            self.vy *= 0.6
+        return self.age < self.lifetime
+
+    def render(self, surface: pygame.Surface, camera):
+        from src.isometric.voxel_renderer import draw_voxel_box
+        t = self.age / self.lifetime
+        idx = min(len(self.colors) - 1, int(t * len(self.colors)))
+        col = self.colors[idx]
+        half_s = self.size * 0.5
+        draw_voxel_box(surface, camera, self.wx - half_s, self.wy - half_s, self.wz, self.size, self.size, self.size, col, outline=False)
+

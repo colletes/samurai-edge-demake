@@ -10,7 +10,7 @@ from src.config import (
     COLOR_MUSKETEER_BLUE, COLOR_MUSKETEER_HAT, COLOR_MUSKETEER_AURA, COLOR_STEEL, COLOR_WHITE, COLOR_GOLD
 )
 from src.entities.samurai import (
-    Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, STATE_PARRY
+    Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, STATE_PARRY, STATE_ROLL
 )
 from src.entities.voxel_models import render_voxel_humanoid
 from src.entities.projectile import MusketBulletProjectile
@@ -22,57 +22,121 @@ class Musketeer(Samurai):
         self.char_type = "musketeer"
         self.speed = 4.4
 
-        # Mecânica do Florete (Fleche Lunge)
-        self.thrust_cooldown = 0.58
+        # Ataque Primário: Fleche Thrust (+25% alcance, bote linear cirúrgico de esgrima)
+        self.thrust_cooldown = 0.48
         self.thrust_timer = 0.0
 
-        # Riposte com Capa & Pistola Flintlock
-        self.riposte_cooldown = 3.5
-        self.riposte_timer = 0.0
-        self.has_flintlock = True
+        # Ação Secundária: Floreio de Capa com Chute de Repulsão (Cape Flourish & Deflection)
+        self.cape_cooldown = 2.4
+        self.cape_timer = 0.0
+
+        # Arma Secundária de Bolso: Pistola Pederneira (Pocket Flintlock)
+        self.flintlock_cooldown = 4.5
+        self.flintlock_timer = 1.0  # Inicia com 1.0s no round para evitar tiro instantâneo no spawn
 
     def can_act(self) -> bool:
-        return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD)
+        return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, "CAPE_FLOURISH") and self.dash_recovery_timer <= 0
 
     def trigger_fleche_thrust(self, target_wx: float, target_wy: float):
-        """Ataque Primário: Estocada relâmpago de esgrima clássica com o florete."""
+        """
+        Ataque Primário: Fleche Thrust.
+        Estocada de florete linear com +25% de alcance e hitbox refinada (0.70m).
+        """
         if not self.can_act() or self.thrust_timer > 0:
             return
 
         self.set_facing(target_wx, target_wy)
         self.state = STATE_ATTACK
-        self.state_timer = 0.22
+        self.state_timer = 0.20
         self.hitbox_active = True
-        self.hitbox_radius = 1.30
+        self.hitbox_radius = 0.70  # Calibrada para evitar errar esquivas diagonais
         self.slash_dir = (self.facing_x, self.facing_y)
-        self.hitbox_center = (self.wx + self.facing_x * 0.90, self.wy + self.facing_y * 0.90)
+        # Alcance estendido à frente
+        self.hitbox_center = (self.wx + self.facing_x * 1.30, self.wy + self.facing_y * 1.30)
         self.thrust_timer = self.thrust_cooldown
 
-    def trigger_cloak_riposte(self, target_wx: float = None, target_wy: float = None, projectiles: list = None, particles: list = None):
+    def trigger_flintlock_shot(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None):
         """
-        Ação Secundária: Riposte de Capa e Tiro de Pederneira (Flintlock).
-        Entra em postura de defesa e dispara um tiro rápido.
+        Disparo de Pederneira de Bolso (Pocket Flintlock):
+        Disparo veloz à média/longa distância para conter zhoners e punir aproximações descuidadas.
         """
-        if not self.can_act() or self.riposte_timer > 0:
+        if not self.can_act() or self.flintlock_timer > 0 or projectiles is None:
+            return
+
+        self.set_facing(target_wx, target_wy)
+        self.flintlock_timer = self.flintlock_cooldown
+
+        dx = target_wx - self.wx
+        dy = target_wy - self.wy
+        length = math.hypot(dx, dy)
+        if length > 0.001:
+            dir_x = dx / length
+            dir_y = dy / length
+        else:
+            dir_x, dir_y = self.facing_x, self.facing_y
+
+        # Cria projétil supersônico de pederneira
+        projectiles.append(MusketBulletProjectile(self.wx, self.wy, 0.45, dir_x, dir_y, owner=self))
+
+        # Recuo sutil do tiro de pederneira
+        self.wx -= dir_x * 0.25
+        self.wy -= dir_y * 0.25
+
+        if particles is not None:
+            for _ in range(16):
+                particles.append(SparkParticle(self.wx + dir_x * 0.5, self.wy + dir_y * 0.5, 0.45, color=(255, 210, 100)))
+
+    def trigger_cape_flourish(self, target_wx: float = None, target_wy: float = None, opponent = None, particles: list = None, banners: list = None, projectiles: list = None):
+        """
+        Ação Secundária: Cape Flourish & Coup de Pied.
+        Giro teatral da capa de veludo azul que repele rivais a curta distância e deflete projéteis frontais.
+        Se o oponente estiver à média/longa distância (> 2.8m), utiliza a pistola pederneira caso disponível.
+        """
+        if not self.can_act():
+            return
+
+        # Se houver mira à distância e pederneira pronta: atira de pederneira!
+        if target_wx is not None and target_wy is not None and projectiles is not None:
+            dist_aim = math.hypot(target_wx - self.wx, target_wy - self.wy)
+            if dist_aim >= 2.8 and self.flintlock_timer <= 0:
+                self.trigger_flintlock_shot(target_wx, target_wy, projectiles, particles)
+                return
+
+        if self.cape_timer > 0:
             return
 
         if target_wx is not None and target_wy is not None:
             self.set_facing(target_wx, target_wy)
-        self.riposte_timer = self.riposte_cooldown
-        self.state = STATE_PARRY
-        self.state_timer = 0.22
-        self.is_riposte_ready = True
 
-        # Disparo da pistola de pederneira (se projectiles fornecido)
-        if projectiles is not None:
-            bx = self.wx + self.facing_x * 0.55
-            by = self.wy + self.facing_y * 0.55
-            bullet = MusketBulletProjectile(bx, by, wz=0.55, dir_x=self.facing_x, dir_y=self.facing_y, owner=self)
-            projectiles.append(bullet)
+        self.cape_timer = self.cape_cooldown
+        self.state = "CAPE_FLOURISH"
+        self.state_timer = 0.25
+        self.hitbox_active = False
 
-            if particles is not None:
-                for _ in range(12):
-                    particles.append(SparkParticle(bx, by, 0.5))
+        # Partículas de tecido azul da capa esvoaçante
+        if particles is not None:
+            for i in range(14):
+                angle = (i / 14.0) * math.pi * 2
+                px = self.wx + math.cos(angle) * 0.70
+                py = self.wy + math.sin(angle) * 0.70
+                particles.append(SparkParticle(px, py, 0.4, color=(100, 175, 255)))
+
+        # Efeito de repulsão física e stagger no oponente a curta distância (< 1.85m)
+        if opponent is not None and getattr(opponent, "is_alive", False):
+            dist = math.hypot(self.wx - opponent.wx, self.wy - opponent.wy)
+            if dist < 1.85:
+                if hasattr(opponent, "stun"):
+                    opponent.stun(0.40)  # Stagger de 0.40s
+                # Knockback de ~2 metros na direção frontal
+                opponent.wx += self.facing_x * 1.85
+                opponent.wy += self.facing_y * 1.85
+                if banners is not None:
+                    from src.effects.particles import FloatingBanner
+                    banners.append(FloatingBanner("COUP DE PIED! REPEL!", opponent.wx, opponent.wy, wz=1.75, color=(100, 175, 255)))
+
+    def trigger_cloak_riposte(self, target_wx: float = None, target_wy: float = None, projectiles: list = None, particles: list = None, opponent = None, banners: list = None):
+        """Compatibilidade para chamadas legadas: redireciona para o floreio de capa ou tiro de pederneira."""
+        self.trigger_cape_flourish(target_wx, target_wy, opponent=opponent, particles=particles, banners=banners, projectiles=projectiles)
 
     def update(self, dt: float, game_map, particles: list = None):
         if not self.is_alive:
@@ -82,21 +146,30 @@ class Musketeer(Samurai):
 
         if self.thrust_timer > 0:
             self.thrust_timer -= dt
-        if self.riposte_timer > 0:
-            self.riposte_timer -= dt
+        if self.cape_timer > 0:
+            self.cape_timer -= dt
+        if self.flintlock_timer > 0:
+            self.flintlock_timer -= dt
+        if self.dash_recovery_timer > 0:
+            self.dash_recovery_timer -= dt
 
         if self.state == STATE_ATTACK:
             self.state_timer -= dt
-            # Bote linear veloz de esgrima
-            step = 6.2 * dt
+            # Bote linear veloz de fleche
+            step = 7.5 * dt
             self.wx = max(1.0, min(game_map.cols - 1.0, self.wx + self.facing_x * step))
             self.wy = max(1.0, min(game_map.rows - 1.0, self.wy + self.facing_y * step))
-            self.hitbox_center = (self.wx + self.facing_x * 0.90, self.wy + self.facing_y * 0.90)
+            self.hitbox_center = (self.wx + self.facing_x * 1.30, self.wy + self.facing_y * 1.30)
 
             if self.state_timer <= 0:
                 self.state = STATE_RECOVERY
-                self.state_timer = 0.24  # Punição no erro do bote
+                self.state_timer = 0.18  # Recovery reduzido (era 0.28s) para punição justa sem paralisia letal
                 self.hitbox_active = False
+
+        elif self.state == "CAPE_FLOURISH":
+            self.state_timer -= dt
+            if self.state_timer <= 0:
+                self.state = STATE_IDLE
 
         elif self.state == STATE_PARRY:
             self.state_timer -= dt
@@ -107,6 +180,9 @@ class Musketeer(Samurai):
             self.state_timer -= dt
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
+
+        elif self.state == STATE_ROLL:
+            self.update_roll(dt, game_map)
 
         elif self.state == STATE_STUNNED:
             self.state_timer -= dt

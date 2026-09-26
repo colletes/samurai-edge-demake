@@ -23,6 +23,7 @@ from src.config import (
     CHAR_PIRATE, CHAR_MUSKETEER
 )
 from src.world.map_data import GameMap
+from src.world.kyoto_map import KyotoMap
 from src.isometric.camera import Camera
 from src.combat.collision import CombatSystem
 from src.entities.ai_controller import SamuraiAI
@@ -34,7 +35,7 @@ from src.entities.kyudo_archer import KyudoArcher
 from src.entities.pirate import PirateSwordswoman
 from src.entities.musketeer import Musketeer
 from src.entities.pickups import PowderPouch
-from main import get_random_arena_spawns, create_fighter
+from main import get_random_arena_spawns, get_kyoto_arena_spawns, create_fighter
 
 ROSTER = [
     {"id": CHAR_KENSHIN, "name": "Kenshin", "title": "Retalhador (Iai/Shukuchi)"},
@@ -54,18 +55,20 @@ ROSTER = [
 CHAR_IDS = [char["id"] for char in ROSTER]
 CHAR_NAMES = {char["id"]: char["name"] for char in ROSTER}
 
-def update_fighter(f, dt, game_map, particles, projectiles, powder_pouches=None):
+def update_fighter(f, dt, game_map, particles, projectiles, powder_pouches=None, opponent=None):
     """Atualiza o lutador com os argumentos esperados pela sua subclasse."""
     if isinstance(f, Rifleman) and powder_pouches:
         f.check_powder_pickup(powder_pouches, particles)
     if isinstance(f, KyudoArcher):
         f.update(dt, game_map, particles, projectiles)
-    elif isinstance(f, (RedSamurai, SaitouSamurai, Rifleman, Kabuki, PirateSwordswoman, Musketeer)):
+    elif isinstance(f, PirateSwordswoman):
+        f.update(dt, game_map, particles, opponent=opponent)
+    elif isinstance(f, (RedSamurai, SaitouSamurai, Rifleman, Kabuki, Musketeer)):
         f.update(dt, game_map, particles)
     else:
         f.update(dt, game_map)
 
-def simulate_single_battle(c1_id: str, c2_id: str, game_map: GameMap, max_time: float = 35.0, dt: float = 0.016):
+def simulate_single_battle(c1_id: str, c2_id: str, game_map, max_time: float = 35.0, dt: float = 0.016):
     """
     Simula um duelo headless entre dois personagens controlados por IA.
     Retorna: (winner_char_id, fight_duration, win_reason)
@@ -75,29 +78,50 @@ def simulate_single_battle(c1_id: str, c2_id: str, game_map: GameMap, max_time: 
     ai1 = SamuraiAI()
     ai2 = SamuraiAI()
 
-    (s1_x, s1_y), (s2_x, s2_y) = get_random_arena_spawns(game_map, min_distance=7.0)
+    if isinstance(game_map, KyotoMap):
+        (s1_x, s1_y), (s2_x, s2_y) = get_kyoto_arena_spawns(game_map, min_distance=7.0)
+    else:
+        (s1_x, s1_y), (s2_x, s2_y) = get_random_arena_spawns(game_map, min_distance=7.0)
+
     p1 = create_fighter(c1_id, s1_x, s1_y)
     p2 = create_fighter(c2_id, s2_x, s2_y)
+    p1.set_facing(p2.wx, p2.wy)
+    p2.set_facing(p1.wx, p1.wy)
 
     projectiles = []
     particles = []
     banners = []
     decoys = []
+    poison_clouds = []
+    powder_traps = []
     powder_pouches = PowderPouch.create_arena_pouches(game_map, [p1, p2], total_pouches=3)
 
     elapsed = 0.0
     winner_result = None
 
     while elapsed < max_time and winner_result is None:
+        # Perigos dinâmicos da Arena de Kyoto
+        if isinstance(game_map, KyotoMap):
+            game_map.update(dt, [p1, p2], cam, particles, banners)
+
         # 1. Decisão e comandos da IA
         ai1.update(p1, p2, dt, game_map, projectiles, powder_pouches, decoys)
         ai2.update(p2, p1, dt, game_map, projectiles, powder_pouches, decoys)
 
+        # 1.5 Atualização de entidades secundárias
+        decoys[:] = [d for d in decoys if d.update(dt)]
+        poison_clouds[:] = [pc for pc in poison_clouds if pc.update(dt, [p1, p2], particles, banners=banners)]
+        powder_traps[:] = [pt for pt in powder_traps if pt.update(dt, [p1, p2], particles, banners=banners)]
+
+        for archer, opp in ((p1, p2), (p2, p1)):
+            if isinstance(archer, KyudoArcher):
+                archer.update_ofuda_barrier_effects(dt, projectiles, opponent=opp, particles=particles)
+
         # 2. Atualização física dos lutadores e pouches
         for pouch in powder_pouches:
             pouch.update(dt, game_map, particles)
-        update_fighter(p1, dt, game_map, particles, projectiles, powder_pouches)
-        update_fighter(p2, dt, game_map, particles, projectiles, powder_pouches)
+        update_fighter(p1, dt, game_map, particles, projectiles, powder_pouches, opponent=p2)
+        update_fighter(p2, dt, game_map, particles, projectiles, powder_pouches, opponent=p1)
 
         # 3. Processamento de regras de combate e projéteis
         winner_result = combat.process_combat(p1, p2, game_map, particles, banners, cam, projectiles, dt, decoys=decoys)
@@ -126,39 +150,61 @@ def simulate_single_battle(c1_id: str, c2_id: str, game_map: GameMap, max_time: 
             return c2_id, elapsed, "TIMEOUT_HP"
         return "DRAW", elapsed, "TIMEOUT_DRAW"
 
-def run_matchup(c1_id: str, c2_id: str, game_map: GameMap, battles_per_match: int = 24):
+def run_matchup(c1_id: str, c2_id: str, game_maps: list, battles_per_match: int = 24):
     """
-    Executa uma série de batalhas com simetria estrita (metade C1 como P1, metade C2 como P1).
+    Executa uma série de batalhas distribuídas igualmente entre os cenários (game_maps),
+    mantendo simetria estrita de posições (metade C1 como P1, metade C2 como P1 em cada arena).
     """
     wins_c1 = 0
     wins_c2 = 0
     draws = 0
     times = []
 
-    half = battles_per_match // 2
-    rem = battles_per_match - half
+    arena_stats = {}
+    num_maps = len(game_maps)
+    battles_per_map = battles_per_match // num_maps
 
-    # Rodada 1: c1 como P1, c2 como P2
-    for _ in range(half):
-        w, t, _ = simulate_single_battle(c1_id, c2_id, game_map)
-        times.append(t)
-        if w == c1_id:
-            wins_c1 += 1
-        elif w == c2_id:
-            wins_c2 += 1
-        else:
-            draws += 1
+    for map_name, g_map in game_maps:
+        m_wins_c1 = 0
+        m_wins_c2 = 0
+        m_draws = 0
+        half = battles_per_map // 2
+        rem = battles_per_map - half
 
-    # Rodada 2: c2 como P1, c1 como P2
-    for _ in range(rem):
-        w, t, _ = simulate_single_battle(c2_id, c1_id, game_map)
-        times.append(t)
-        if w == c1_id:
-            wins_c1 += 1
-        elif w == c2_id:
-            wins_c2 += 1
-        else:
-            draws += 1
+        # Rodada 1: C1 como P1
+        for _ in range(half):
+            w, t, _ = simulate_single_battle(c1_id, c2_id, g_map)
+            times.append(t)
+            if w == c1_id:
+                wins_c1 += 1
+                m_wins_c1 += 1
+            elif w == c2_id:
+                wins_c2 += 1
+                m_wins_c2 += 1
+            else:
+                draws += 1
+                m_draws += 1
+
+        # Rodada 2: C2 como P1
+        for _ in range(rem):
+            w, t, _ = simulate_single_battle(c2_id, c1_id, g_map)
+            times.append(t)
+            if w == c1_id:
+                wins_c1 += 1
+                m_wins_c1 += 1
+            elif w == c2_id:
+                wins_c2 += 1
+                m_wins_c2 += 1
+            else:
+                draws += 1
+                m_draws += 1
+
+        arena_stats[map_name] = {
+            "wins_c1": m_wins_c1,
+            "wins_c2": m_wins_c2,
+            "draws": m_draws,
+            "total": battles_per_map
+        }
 
     avg_time = sum(times) / len(times) if times else 0.0
     return {
@@ -170,15 +216,20 @@ def run_matchup(c1_id: str, c2_id: str, game_map: GameMap, battles_per_match: in
         "wins_c2": wins_c2,
         "draws": draws,
         "total_battles": battles_per_match,
-        "avg_time": round(avg_time, 2)
+        "avg_time": round(avg_time, 2),
+        "arena_stats": arena_stats
     }
 
 def run_full_tournament_simulation(battles_per_pair: int = 24):
     """
-    Simula todas as combinações (C(12, 2) = 66 pares) com battles_per_pair batalhas cada.
+    Simula todas as combinações (C(12, 2) = 66 pares) com battles_per_pair batalhas cada,
+    repartidas igualmente entre os cenários (Floresta de Bambu e Kyoto Bakumatsu).
     Total = 66 * 24 = 1.584 batalhas.
     """
-    game_map = GameMap()
+    game_maps = [
+        ("Floresta de Bambu", GameMap()),
+        ("Kyoto Bakumatsu", KyotoMap())
+    ]
     n = len(CHAR_IDS)
     pairs = []
     for i in range(n):
@@ -189,21 +240,26 @@ def run_full_tournament_simulation(battles_per_pair: int = 24):
     total_battles = total_pairs * battles_per_pair
 
     print("=" * 78)
-    print(f" INICIANDO SIMULAÇÃO DE TORNEIO HEADLESS AUTOMATIZADO")
+    print(f" INICIANDO SIMULAÇÃO DE TORNEIO HEADLESS AUTOMATIZADO MULTI-CENÁRIOS")
     print(f" Roster: {n} Lutadores | Combinações: {total_pairs} | Lutas por Par: {battles_per_pair}")
+    print(f" Cenários: {', '.join(name for name, _ in game_maps)}")
     print(f" Total de Batalhas Simuladas: {total_battles}")
     print("=" * 78)
 
     matchups = {}
     h2h_matrix = defaultdict(lambda: defaultdict(lambda: {"wins": 0, "losses": 0, "draws": 0, "total": 0}))
+    arena_matrix = {
+        name: defaultdict(lambda: defaultdict(lambda: {"wins": 0, "losses": 0, "draws": 0, "total": 0}))
+        for name, _ in game_maps
+    }
 
     start_time = time.time()
     for idx, (c1, c2) in enumerate(pairs, 1):
         pair_key = f"{c1}_vs_{c2}"
-        res = run_matchup(c1, c2, game_map, battles_per_match=battles_per_pair)
+        res = run_matchup(c1, c2, game_maps, battles_per_match=battles_per_pair)
         matchups[pair_key] = res
 
-        # Registrar na matriz bidirecional
+        # Registrar na matriz bidirecional global
         h2h_matrix[c1][c2]["wins"] += res["wins_c1"]
         h2h_matrix[c1][c2]["losses"] += res["wins_c2"]
         h2h_matrix[c1][c2]["draws"] += res["draws"]
@@ -213,6 +269,18 @@ def run_full_tournament_simulation(battles_per_pair: int = 24):
         h2h_matrix[c2][c1]["losses"] += res["wins_c1"]
         h2h_matrix[c2][c1]["draws"] += res["draws"]
         h2h_matrix[c2][c1]["total"] += res["total_battles"]
+
+        # Registrar estatísticas por arena
+        for m_name, a_res in res["arena_stats"].items():
+            arena_matrix[m_name][c1][c2]["wins"] += a_res["wins_c1"]
+            arena_matrix[m_name][c1][c2]["losses"] += a_res["wins_c2"]
+            arena_matrix[m_name][c1][c2]["draws"] += a_res["draws"]
+            arena_matrix[m_name][c1][c2]["total"] += a_res["total"]
+
+            arena_matrix[m_name][c2][c1]["wins"] += a_res["wins_c2"]
+            arena_matrix[m_name][c2][c1]["losses"] += a_res["wins_c1"]
+            arena_matrix[m_name][c2][c1]["draws"] += a_res["draws"]
+            arena_matrix[m_name][c2][c1]["total"] += a_res["total"]
 
         # Log de progresso a cada 6 pares ou no final
         if idx % 6 == 0 or idx == total_pairs:
@@ -236,6 +304,22 @@ def run_full_tournament_simulation(battles_per_pair: int = 24):
         total_m = total_w + total_l + total_d
         winrate = (total_w / total_m) * 100 if total_m > 0 else 0.0
 
+        # Estatísticas por cenário
+        char_arena_stats = {}
+        for m_name, _ in game_maps:
+            aw = sum(arena_matrix[m_name][c_id][opp]["wins"] for opp in CHAR_IDS if opp != c_id)
+            al = sum(arena_matrix[m_name][c_id][opp]["losses"] for opp in CHAR_IDS if opp != c_id)
+            ad = sum(arena_matrix[m_name][c_id][opp]["draws"] for opp in CHAR_IDS if opp != c_id)
+            am = aw + al + ad
+            awr = (aw / am) * 100 if am > 0 else 0.0
+            char_arena_stats[m_name] = {
+                "wins": aw,
+                "losses": al,
+                "draws": ad,
+                "total": am,
+                "winrate": round(awr, 2)
+            }
+
         standings.append({
             "id": c_id,
             "name": CHAR_NAMES[c_id],
@@ -243,12 +327,14 @@ def run_full_tournament_simulation(battles_per_pair: int = 24):
             "losses": total_l,
             "draws": total_d,
             "total_matches": total_m,
-            "winrate": round(winrate, 2)
+            "winrate": round(winrate, 2),
+            "arena_stats": char_arena_stats
         })
 
     return {
         "matchups": matchups,
         "h2h_matrix": h2h_matrix,
+        "arena_matrix": arena_matrix,
         "standings": standings,
         "total_battles": total_battles,
         "sim_time": round(total_sim_time, 2)
@@ -425,8 +511,22 @@ def generate_balance_report(tournament_data, merge_sorted_roster, output_path: s
         lines.append(f"| {r} | **{s['name']}** | {char_info['title']} | {s['wins']} | {s['losses']} | {s['draws']} | **{s['winrate']:.1f}%** | {tier} |")
     lines.append("")
 
-    lines.append("## 2. Matriz de Confrontos Head-to-Head (H2H 12x12)")
-    lines.append("A tabela exibe a taxa percentual de vitórias da linha contra a coluna nas 24 lutas disputadas:")
+    lines.append("## 2. Comparativo de Desempenho por Cenário (Bambu vs Kyoto)")
+    lines.append("Impacto do layout (área aberta e reflexiva do lago vs via estreita de Kyoto com perigo ativo de carruagens e escombros):")
+    lines.append("")
+    lines.append("| Rank | Lutador | Winrate Geral | Winrate Bambu | Winrate Kyoto | Impacto Kyoto vs Bambu |")
+    lines.append("|:---:|:---|:---:|:---:|:---:|:---:|")
+    for r, s in enumerate(sorted_by_wr, 1):
+        astats = s.get("arena_stats", {})
+        b_wr = astats.get("Floresta de Bambu", {}).get("winrate", 0.0)
+        k_wr = astats.get("Kyoto Bakumatsu", {}).get("winrate", 0.0)
+        diff = k_wr - b_wr
+        diff_str = f"+{diff:.1f}%" if diff > 0 else f"{diff:.1f}%"
+        lines.append(f"| {r} | **{s['name']}** | **{s['winrate']:.1f}%** | {b_wr:.1f}% | {k_wr:.1f}% | {diff_str} |")
+    lines.append("")
+
+    lines.append("## 3. Matriz de Confrontos Head-to-Head (H2H 12x12)")
+    lines.append("A tabela exibe a taxa percentual de vitórias da linha contra a coluna nas 24 lutas disputadas (12 em cada arena):")
     lines.append("")
 
     # Cabeçalho da matriz
@@ -446,7 +546,7 @@ def generate_balance_report(tournament_data, merge_sorted_roster, output_path: s
         lines.append("| " + " | ".join(row) + " |")
     lines.append("")
 
-    lines.append("## 3. Resultado do Algoritmo Merge Sort de Duelos")
+    lines.append("## 4. Resultado do Algoritmo Merge Sort de Duelos")
     lines.append("O Merge Sort executou uma ordenação por divisão e conquista onde cada decisão de precedência foi arbitrada pelo retrospecto direto de combates:")
     lines.append("")
     for r, c_id in enumerate(merge_sorted_roster, 1):
@@ -454,23 +554,23 @@ def generate_balance_report(tournament_data, merge_sorted_roster, output_path: s
         lines.append(f"{r}. **{s['name']}** — Winrate Geral: {s['winrate']:.1f}% ({s['wins']}V / {s['losses']}D / {s['draws']}E)")
     lines.append("")
 
-    lines.append("## 4. Avaliação Técnica Aprofundada do Balanceamento")
+    lines.append("## 5. Avaliação Técnica Aprofundada do Balanceamento")
     lines.append("")
-    lines.append("### 4.1 Opressão e Dominância (Top Tiers)")
+    lines.append("### 5.1 Opressão e Dominância (Top Tiers)")
     top1 = sorted_by_wr[0]
     top2 = sorted_by_wr[1]
     lines.append(f"- **{top1['name']} ({top1['winrate']:.1f}%) & {top2['name']} ({top2['winrate']:.1f}%)**:")
     lines.append("  - As mecânicas de ataque com prioridade/precedência absoluta, alcance de projéteis instantâneos (snipers) ou frames defensivos de Parry/Riposte garantem uma taxa de vitória esmagadora contra lutadores de aproximação pura.")
     lines.append("")
 
-    lines.append("### 4.2 Vulnerabilidades Críticas (Bottom Tiers)")
+    lines.append("### 5.2 Vulnerabilidades Críticas (Bottom Tiers)")
     bot1 = sorted_by_wr[-1]
     bot2 = sorted_by_wr[-2]
     lines.append(f"- **{bot1['name']} ({bot1['winrate']:.1f}%) & {bot2['name']} ({bot2['winrate']:.1f}%)**:")
     lines.append("  - Lutadores que dependem de tempos longos de recarga parada (ex: recarga do arcabuz sem cobertura móvel), auto-dano/suicídio por fogo amigo de explosivos, ou windup de retesamento de arco sofrem punições instantâneas contra oponentes rápidos.")
     lines.append("")
 
-    lines.append("### 4.3 Dinâmica de Pedra-Papel-Tesoura e Polarização Extrema")
+    lines.append("### 5.3 Dinâmica de Pedra-Papel-Tesoura e Polarização Extrema")
     polar_matchups = []
     for k, m in matchups.items():
         w1 = m["wins_c1"]
@@ -488,7 +588,7 @@ def generate_balance_report(tournament_data, merge_sorted_roster, output_path: s
         lines.append("Não foram detectados confrontos com polarização extrema superior a 87%.")
     lines.append("")
 
-    lines.append("## 5. Propostas Concretas de Balance Patch (Recomendações de Design)")
+    lines.append("## 6. Propostas Concretas de Balance Patch (Recomendações de Design)")
     lines.append("Para equalizar o elenco e aproximar todos os combatentes da faixa saudável de 45% a 55% de winrate:")
     lines.append("1. **Ajuste de Precedência e Cooldowns de Projéteis**: Aumentar ligeiramente o recovery de golpes com prioridade e projéteis rápidos.")
     lines.append("2. **Mobilidade durante a Recarga**: Permitir que classes que recarregam mantenham movimentação a 50% da velocidade, evitando vulnerabilidade estática total.")

@@ -223,10 +223,12 @@ class VoxelCorpse:
         # Poça de veneno de Okuni
         if self.death_style == "OKUNI_MELT" and hasattr(self, "acid_radius"):
             sx, sy = camera.apply(self.wx, self.wy, 0.02)
-            rw = int(self.acid_radius * 48)
-            rh = int(self.acid_radius * 24)
-            pygame.draw.ellipse(surface, (40, 180, 90, 180), (sx - rw, sy - rh, rw * 2, rh * 2))
-            pygame.draw.ellipse(surface, (120, 240, 140), (sx - rw // 2, sy - rh // 2, rw, rh))
+            rw = max(2, int(self.acid_radius * 48))
+            rh = max(2, int(self.acid_radius * 24))
+            acid_surf = pygame.Surface((rw * 2, rh * 2), pygame.SRCALPHA)
+            pygame.draw.ellipse(acid_surf, (40, 180, 90, 180), (0, 0, rw * 2, rh * 2))
+            pygame.draw.ellipse(acid_surf, (120, 240, 140, 220), (rw // 2, rh // 2, rw, rh))
+            surface.blit(acid_surf, (sx - rw, sy - rh))
 
         # 2. Peças volumétricas em Voxel 3D
         for p in self.pieces:

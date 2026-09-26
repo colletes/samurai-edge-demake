@@ -28,52 +28,20 @@ class RedSamurai(Samurai):
         self.recovery_duration = 0.80 # Calibrado: cooldown justo embainhando a katana!
         self.attack_range = 2.4
 
+        # Ação Secundária: Ryuu Tsui Sen (竜槌閃 - Item 17)
+        self.ryuu_cooldown = 3.5
+        self.ryuu_timer = 0.0
+
         # Efeito visual de rastro de lâmina
         self.slash_trail_points: list[tuple[float, float]] = []
 
-    def can_move(self) -> bool:
-        """Kenshin pode se movimentar em IDLE, WALK e durante o RECOVERY (guardando a espada na bainha)."""
-        return self.is_alive and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY)
-
-    def apply_movement(self, move_x: float, move_y: float, dt: float, game_map):
-        if not self.can_move():
-            return
-        if self.state == STATE_RECOVERY:
-            # Movimento gracioso (75% da velocidade) enquanto embainha a katana (Noto)
-            self.is_moving = (move_x != 0 or move_y != 0)
-            if not self.is_moving:
-                return
-            self.walk_cycle += dt * 8.0
-            current_speed = self.speed * 0.75
-            if self.slow_timer > 0:
-                current_speed *= 0.35
-                self.slow_timer -= dt
-            if game_map.is_water(self.wx, self.wy):
-                current_speed *= 0.55
-
-            new_wx = self.wx + move_x * current_speed * dt
-            new_wy = self.wy + move_y * current_speed * dt
-            self.facing_x = move_x
-            self.facing_y = move_y
-
-            new_wx = max(1.0, min(game_map.cols - 1.0, new_wx))
-            new_wy = max(1.0, min(game_map.rows - 1.0, new_wy))
-
-            for rock in game_map.rocks:
-                col, ox, oy = rock.check_collision(new_wx, new_wy, self.radius)
-                if col:
-                    new_wx, new_wy = ox, oy
-            if game_map.well:
-                col, ox, oy = game_map.well.check_collision(new_wx, new_wy, self.radius)
-                if col:
-                    new_wx, new_wy = ox, oy
-            self.wx, self.wy = new_wx, new_wy
-        else:
-            super().apply_movement(move_x, move_y, dt, game_map)
+    def can_act(self) -> bool:
+        """Kenshi pode agir se estiver viva, em IDLE/WALK e sem recovery de dash."""
+        return self.is_alive and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY) and self.dash_recovery_timer <= 0
 
     def trigger_iai_attack(self, target_wx: float, target_wy: float):
         """Inicia o golpe Iai-jutsu se puder agir."""
-        if self.state not in (STATE_IDLE, STATE_WALK):
+        if not self.can_act():
             return
 
         self.set_facing(target_wx, target_wy)
@@ -85,9 +53,43 @@ class RedSamurai(Samurai):
         self.slash_trail_points = [(self.wx, self.wy)]
         self.hitbox_center = (self.wx + self.facing_x * 0.8, self.wy + self.facing_y * 0.8)
 
+    def trigger_ryuu_tsui_sen(self, target_wx: float, target_wy: float, particles: list = None, banners: list = None, opponent = None):
+        """
+        Ação Secundária: Ryuu Tsui Sen (竜槌閃 - Item 17).
+        Kenshi desaparece com blur de velocidade, salta alto no ar acima de sua posição
+        e despenca com um devastador corte vertical descendente com a katana.
+        """
+        if not self.can_act() or self.ryuu_timer > 0:
+            return
+
+        self.set_facing(target_wx, target_wy)
+        self.ryuu_timer = self.ryuu_cooldown
+        self.state = "RYUU_TSUI_SEN"
+        self.state_timer = 0.38
+        self.is_invulnerable_dodge = True
+        self.hitbox_active = False
+
+        # Pós-imagem de velocidade inicial
+        if not hasattr(self, "zanzou_ghosts"):
+            self.zanzou_ghosts = []
+        self.zanzou_ghosts.append({
+            "wx": self.wx, "wy": self.wy,
+            "facing_x": self.facing_x, "facing_y": self.facing_y,
+            "alpha": 220, "duration": 0.35
+        })
+
+        if particles is not None:
+            from src.effects.particles import SparkParticle
+            for _ in range(8):
+                particles.append(SparkParticle(self.wx, self.wy, 0.4))
+
+    def trigger_tsuka_ate(self, target_wx: float, target_wy: float, particles: list = None, opponent = None, banners: list = None):
+        """Compatibilidade: redireciona para Ryuu Tsui Sen."""
+        self.trigger_ryuu_tsui_sen(target_wx, target_wy, particles=particles, banners=banners, opponent=opponent)
+
     def trigger_dash(self, dir_x: float, dir_y: float):
-        """Passo Relâmpago Shukuchi (縮地): Deslocamento veloz com pós-imagens."""
-        if self.state not in (STATE_IDLE, STATE_WALK):
+        """Terceira Ação: Passo Relâmpago Shukuchi (縮地) — Deslocamento veloz com pós-imagens e i-frames."""
+        if not self.is_alive or self.state not in (STATE_IDLE, STATE_WALK) or self.dash_recovery_timer > 0:
             return
         if dir_x == 0 and dir_y == 0:
             dir_x, dir_y = -self.facing_x, -self.facing_y # Recuo para trás
@@ -102,6 +104,7 @@ class RedSamurai(Samurai):
         self.shukuchi_speed = 28.0
         self.facing_x = dir_x
         self.facing_y = dir_y
+        self.is_invulnerable_dodge = True
         self.zanzou_spawn_timer = 0.0
         # Registrar primeira pós-imagem fantasma (zanzou)
         if not hasattr(self, "zanzou_ghosts"):
@@ -128,7 +131,10 @@ class RedSamurai(Samurai):
 
         self.update_stealth(game_map)
 
-        if self.state == STATE_ATTACK:
+        if self.ryuu_timer > 0:
+            self.ryuu_timer -= dt
+        if self.dash_recovery_timer > 0:
+            self.dash_recovery_timer -= dt
             # Avanço relâmpago Iai
             self.state_timer -= dt
             dash_dist = self.dash_speed * dt
@@ -211,10 +217,46 @@ class RedSamurai(Samurai):
 
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
+                self.is_invulnerable_dodge = False
+                self.dash_recovery_timer = self.dash_recovery_duration
+
+        elif self.state == "RYUU_TSUI_SEN":
+            self.state_timer -= dt
+            progress = max(0.0, min(1.0, 1.0 - (self.state_timer / 0.38)))
+            # Salto vertical parabólico até o ápice e queda veloz cortando com a katana (Item 17)
+            self.wz = math.sin(progress * math.pi) * 1.65
+
+            if progress < 0.45:
+                self.is_invulnerable_dodge = True
+                self.hitbox_active = False
+            else:
+                # Descendo com o corte vertical
+                self.is_invulnerable_dodge = False
+                self.hitbox_active = True
+                self.hitbox_radius = 1.35
+                self.slash_dir = (self.facing_x, self.facing_y)
+                self.hitbox_center = (self.wx + self.facing_x * 0.75, self.wy + self.facing_y * 0.75)
+
+            if self.state_timer <= 0:
+                self.wz = 0.0
+                self.state = STATE_RECOVERY
+                self.state_timer = 0.22
+                self.hitbox_active = False
+                self.is_invulnerable_dodge = False
+                if particles is not None:
+                    from src.effects.particles import SparkParticle
+                    for _ in range(14):
+                        particles.append(SparkParticle(self.wx + self.facing_x * 0.6, self.wy + self.facing_y * 0.6, 0.5))
+
+        elif self.state == "TSUKA_ATE":
+            self.state_timer -= dt
+            if self.state_timer <= 0:
+                self.state = STATE_IDLE
 
         elif self.state == STATE_DASH:
             self.state = "SHUKUCHI"
             self.state_timer = 0.15
+            self.is_invulnerable_dodge = True
 
         elif self.state == STATE_STUNNED:
             self.state_timer -= dt

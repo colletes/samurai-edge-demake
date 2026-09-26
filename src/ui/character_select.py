@@ -485,7 +485,15 @@ class CharacterSelectScreen:
         # --- 1. GAMEPAD EVENTS ---
         if event.type == pygame.JOYBUTTONDOWN:
             ctrl2 = ctrl_mgr.get_controller_for_player(1)
-            is_p2 = (not self.vs_ai and len(ctrl_mgr.controllers) > 1 and ctrl2 is not None and getattr(event, "instance_id", None) == ctrl2.instance_id)
+            num_controllers = ctrl_mgr.get_controller_count()
+
+            # P2 só controla pelo controle se houver um segundo controle dedicado conectado
+            is_p2 = (
+                not self.vs_ai and
+                num_controllers > 1 and
+                ctrl2 is not None and
+                getattr(event, "instance_id", None) == ctrl2.instance_id
+            )
 
             target_player = "P2" if is_p2 else "P1"
             player_idx = 1 if is_p2 else 0
@@ -497,13 +505,13 @@ class CharacterSelectScreen:
                 move_cursor(target_player, d_dir[0], d_dir[1])
                 return False
 
-            # Confirmação: Apenas Botão 0 (✕ Cruz / A)
+            # Confirmação: Botão 0 (✕ Cruz / A)
             if ctrl_mgr.is_event_menu_confirm(event, player_idx) or event.button == 0:
                 res = handle_confirm(target_player)
                 if res:
                     return res
                 return False
-            # Cancelar / Voltar: Apenas Botão 1 (○ Círculo / B)
+            # Cancelar / Voltar: Botão 1 (○ Círculo / B)
             elif ctrl_mgr.is_event_menu_cancel(event, player_idx) or event.button == 1:
                 res = handle_cancel(target_player)
                 if res:
@@ -524,8 +532,13 @@ class CharacterSelectScreen:
 
         elif event.type == pygame.JOYHATMOTION:
             ctrl2 = ctrl_mgr.get_controller_for_player(1)
-            is_p2 = (not self.vs_ai and len(ctrl_mgr.controllers) > 1 and ctrl2 is not None and getattr(event, "instance_id", None) == ctrl2.instance_id)
-
+            num_controllers = ctrl_mgr.get_controller_count()
+            is_p2 = (
+                not self.vs_ai and
+                num_controllers > 1 and
+                ctrl2 is not None and
+                getattr(event, "instance_id", None) == ctrl2.instance_id
+            )
             target_player = "P2" if is_p2 else "P1"
             from src.input.controller_manager import get_dpad_motion_from_event
             d_dir = get_dpad_motion_from_event(event)
@@ -534,8 +547,13 @@ class CharacterSelectScreen:
 
         elif event.type == pygame.JOYAXISMOTION:
             ctrl2 = ctrl_mgr.get_controller_for_player(1)
-            is_p2 = (not self.vs_ai and len(ctrl_mgr.controllers) > 1 and ctrl2 is not None and getattr(event, "instance_id", None) == ctrl2.instance_id)
-
+            num_controllers = ctrl_mgr.get_controller_count()
+            is_p2 = (
+                not self.vs_ai and
+                num_controllers > 1 and
+                ctrl2 is not None and
+                getattr(event, "instance_id", None) == ctrl2.instance_id
+            )
             target_player = "P2" if is_p2 else "P1"
 
             if target_player == "P1":
@@ -608,18 +626,14 @@ class CharacterSelectScreen:
                 move_cursor("P1", 0, -1)
             elif event.key == pygame.K_s:
                 move_cursor("P1", 0, 1)
-            elif event.key in (pygame.K_SPACE, pygame.K_RETURN):
+            elif event.key == pygame.K_e:
+                # Tecla de ação/ataque de P1 confirma P1
                 res = handle_confirm("P1")
                 if res:
                     return res
                 return False
-            elif event.key == pygame.K_ESCAPE:
-                res = handle_cancel("P1")
-                if res:
-                    return res
-                return False
 
-            # Teclado P2 (SETAS) - Navega P2 no modo 2P ou escolhe o oponente da IA no modo vs_ai
+            # Teclado P2 (SETAS)
             if event.key == pygame.K_LEFT:
                 move_cursor("P2", -1, 0)
             elif event.key == pygame.K_RIGHT:
@@ -628,8 +642,43 @@ class CharacterSelectScreen:
                 move_cursor("P2", 0, -1)
             elif event.key == pygame.K_DOWN:
                 move_cursor("P2", 0, 1)
-            elif not self.vs_ai and event.key in (pygame.K_KP_ENTER, pygame.K_RCTRL):
+            elif not self.vs_ai and event.key in (
+                pygame.K_u, pygame.K_i, pygame.K_o,
+                pygame.K_KP_ENTER, pygame.K_RCTRL, pygame.K_RSHIFT, pygame.K_BACKSLASH
+            ):
+                # Ação primária [U], [I], [O] ou teclas direitas confirmam P2 diretamente!
                 res = handle_confirm("P2")
+                if res:
+                    return res
+                return False
+
+            # Teclas de Confirmação Universais de Teclado (SPACE e RETURN / ENTER)
+            if event.key in (pygame.K_SPACE, pygame.K_RETURN):
+                if self.vs_ai:
+                    res = handle_confirm("P1")
+                else:
+                    # Se P1 já está confirmado (seja pelo gamepad ou teclado),
+                    # qualquer SPACE ou RETURN confirma o Jogador 2!
+                    if self.p1_ready and not self.p2_ready:
+                        res = handle_confirm("P2")
+                    elif not self.p1_ready:
+                        res = handle_confirm("P1")
+                    else:
+                        # Ambos confirmados: iniciar partida
+                        return True
+                if res:
+                    return res
+                return False
+
+            elif event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+                if not self.vs_ai and self.p2_ready and event.key == pygame.K_BACKSPACE:
+                    res = handle_cancel("P2")
+                elif not self.vs_ai and self.p2_ready and not self.p1_ready:
+                    res = handle_cancel("P2")
+                elif not self.vs_ai and self.p1_ready and self.p2_ready:
+                    res = handle_cancel("P2")
+                else:
+                    res = handle_cancel("P1")
                 if res:
                     return res
                 return False
@@ -662,9 +711,20 @@ class CharacterSelectScreen:
                         else:
                             self.p2_choice_idx = idx
                     else:
-                        self.p1_choice_idx = idx
+                        if self.p1_ready and not self.p2_ready:
+                            self.p2_choice_idx = idx
+                        else:
+                            self.p1_choice_idx = idx
             if self.start_btn_rect.collidepoint(vx, vy):
-                res = handle_confirm("P1")
+                if self.vs_ai:
+                    res = handle_confirm("P1")
+                else:
+                    if not self.p1_ready:
+                        res = handle_confirm("P1")
+                    elif not self.p2_ready:
+                        res = handle_confirm("P2")
+                    else:
+                        return True
                 if res:
                     return res
                 return False
@@ -696,9 +756,20 @@ class CharacterSelectScreen:
                             else:
                                 self.p2_choice_idx = idx
                         else:
-                            self.p1_choice_idx = idx
+                            if self.p1_ready and not self.p2_ready:
+                                self.p2_choice_idx = idx
+                            else:
+                                self.p1_choice_idx = idx
                 if self.start_btn_rect.collidepoint(mx, my):
-                    res = handle_confirm("P1")
+                    if self.vs_ai:
+                        res = handle_confirm("P1")
+                    else:
+                        if not self.p1_ready:
+                            res = handle_confirm("P1")
+                        elif not self.p2_ready:
+                            res = handle_confirm("P2")
+                        else:
+                            return True
                     if res:
                         return res
                     return False
@@ -933,10 +1004,31 @@ class CharacterSelectScreen:
         pygame.draw.rect(surface, btn_bg, self.start_btn_rect, border_radius=6)
         pygame.draw.rect(surface, COLOR_GOLD, self.start_btn_rect, 2, border_radius=6)
 
-        st_label = ("INICIAR DUELO" if lang == LANG_PT else "START DUEL") if (not self.vs_ai or self.selection_step == "AI") else ("CONFIRMAR P1" if lang == LANG_PT else "CONFIRM P1")
+        from src.input.controller_manager import get_controller_manager
+        ctrl_mgr = get_controller_manager()
+        has_c1 = ctrl_mgr.has_controller(0) if ctrl_mgr else False
+        has_c2 = ctrl_mgr.has_controller(1) if ctrl_mgr else False
+
+        if self.vs_ai:
+            if self.selection_step == "P1":
+                st_label = "CONFIRMAR P1" if lang == LANG_PT else "CONFIRM P1"
+                hint_label = "[ ✕ / ESPAÇO ]" if has_c1 else ("[ ENTER / ESPAÇO ]" if lang == LANG_PT else "[ ENTER / SPACE ]")
+            else:
+                st_label = "INICIAR DUELO" if lang == LANG_PT else "START DUEL"
+                hint_label = "[ ✕ / ESPAÇO ]" if has_c1 else ("[ ENTER / ESPAÇO ]" if lang == LANG_PT else "[ ENTER / SPACE ]")
+        else:
+            if not self.p1_ready:
+                st_label = "CONFIRMAR P1" if lang == LANG_PT else "CONFIRM P1"
+                hint_label = "[ ✕ / ESPAÇO / [E] ]" if has_c1 else ("[ ESPAÇO / [E] ]" if lang == LANG_PT else "[ SPACE / [E] ]")
+            elif not self.p2_ready:
+                st_label = "CONFIRMAR P2" if lang == LANG_PT else "CONFIRM P2"
+                hint_label = "[ ✕ / ENTER / [U] ]" if has_c2 else "[ ENTER / [U] ]"
+            else:
+                st_label = "INICIAR DUELO" if lang == LANG_PT else "START DUEL"
+                hint_label = "[ ENTER / ESPAÇO ]" if lang == LANG_PT else "[ ENTER / SPACE ]"
+
         s_title_sh = font_oriental_action.render(st_label, True, (20, 10, 10))
         s_title_tx = font_oriental_action.render(st_label, True, COLOR_GOLD)
-        hint_label = "[ ENTER / ESPAÇO ]" if lang == LANG_PT else "[ ENTER / SPACE ]"
         s_hint_tx = font_zen_small.render(hint_label, True, (245, 225, 185))
 
         total_content_w = s_title_tx.get_width() + 14 + s_hint_tx.get_width()

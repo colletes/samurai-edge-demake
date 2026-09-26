@@ -24,6 +24,7 @@ from src.input.controller_manager import (
     CONTROLLER_TYPE_NINTENDO,
     CONTROLLER_TYPE_GENERIC,
     ACTION_ATTACK,
+    ACTION_SECONDARY,
     ACTION_DASH,
     ACTION_MENU,
     ACTION_CONFIRM,
@@ -107,7 +108,8 @@ def test_controller_glyphs():
     dev_xbox = ControllerDevice(MockJoystick())
     assert dev_xbox.controller_type == CONTROLLER_TYPE_XBOX
     assert dev_xbox.get_button_glyph(ACTION_ATTACK) == "X"
-    assert dev_xbox.get_button_glyph(ACTION_DASH) == "A"
+    assert dev_xbox.get_button_glyph(ACTION_SECONDARY) == "Y"
+    assert dev_xbox.get_button_glyph(ACTION_DASH) == "B"
     assert dev_xbox.get_button_glyph(ACTION_CONFIRM) == "A"
     assert dev_xbox.get_button_glyph(ACTION_CANCEL) == "B"
 
@@ -120,18 +122,20 @@ def test_controller_glyphs():
     dev_ps5 = ControllerDevice(MockPS5Joystick())
     assert dev_ps5.controller_type == CONTROLLER_TYPE_DUALSENSE
     assert dev_ps5.get_button_glyph(ACTION_ATTACK) == "▢"
-    assert dev_ps5.get_button_glyph(ACTION_DASH) == "✕"
+    assert dev_ps5.get_button_glyph(ACTION_SECONDARY) == "△"
+    assert dev_ps5.get_button_glyph(ACTION_DASH) == "○"
     assert dev_ps5.get_button_glyph(ACTION_CONFIRM) == "✕"
     assert dev_ps5.get_button_glyph(ACTION_CANCEL) == "○"
     assert dev_ps5.get_button_glyph(ACTION_MENU) == "Options"
 
     # Verificação de Ações Pressionadas para PS5 (SDL GameController padrão macOS)
-    assert dev_ps5.is_action_pressed(2, ACTION_ATTACK)  # ▢ Quadrado
-    assert dev_ps5.is_action_pressed(10, ACTION_ATTACK) # R1
-    assert dev_ps5.is_action_pressed(0, ACTION_DASH)    # ✕ Cruz
-    assert dev_ps5.is_action_pressed(0, ACTION_CONFIRM) # ✕ Cruz
-    assert dev_ps5.is_action_pressed(1, ACTION_CANCEL)  # ○ Círculo
-    assert dev_ps5.is_action_pressed(6, ACTION_MENU)    # Options
+    assert dev_ps5.is_action_pressed(2, ACTION_ATTACK)     # ▢ Quadrado
+    assert dev_ps5.is_action_pressed(10, ACTION_ATTACK)    # R1
+    assert dev_ps5.is_action_pressed(0, ACTION_SECONDARY) # ✕ Cruz (Secundário)
+    assert dev_ps5.is_action_pressed(1, ACTION_DASH)       # ○ Círculo (Roll/Dash dedicado)
+    assert dev_ps5.is_action_pressed(0, ACTION_CONFIRM)    # ✕ Cruz
+    assert dev_ps5.is_action_pressed(1, ACTION_CANCEL)     # ○ Círculo
+    assert dev_ps5.is_action_pressed(6, ACTION_MENU)       # Options
 
     print("Teste 2: Mapeamento de Glifos Visuais contextuais e ações padronizadas OK!")
 

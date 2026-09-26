@@ -12,6 +12,7 @@ from src.config import (
 STATE_IDLE = "IDLE"
 STATE_WALK = "WALK"
 STATE_DASH = "DASH"
+STATE_ROLL = "ROLL"
 STATE_WINDUP = "WINDUP"
 STATE_ATTACK = "ATTACK"
 STATE_RECOVERY = "RECOVERY"
@@ -55,6 +56,11 @@ class Samurai:
         self.hitbox_center: tuple[float, float] = (0.0, 0.0)
         self.slash_dir: tuple[float, float] = (0.0, 0.0)
         self.slow_timer = 0.0
+        self.is_invulnerable_dodge = False
+        self.roll_speed = 10.5
+        self.roll_duration = 0.22
+        self.dash_recovery_timer = 0.0
+        self.dash_recovery_duration = 0.15
 
     def apply_slow(self, duration: float = 2.5):
         """Aplica desaceleração de 65% na velocidade de movimentação."""
@@ -73,12 +79,70 @@ class Samurai:
         """Determina se o guerreiro pode andar no estado atual."""
         return self.state in (STATE_IDLE, STATE_WALK)
 
+    def can_act(self) -> bool:
+        """Determina se o guerreiro pode desferir ataques ou técnicas."""
+        return self.is_alive and self.state in (STATE_IDLE, STATE_WALK) and self.dash_recovery_timer <= 0
+
+    def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
+        """Terceira Ação Universal: Rolamento / Esquiva com frames de invulnerabilidade (i-frames)."""
+        if not self.is_alive or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK) or self.dash_recovery_timer > 0:
+            return
+
+        if dir_x == 0 and dir_y == 0:
+            dir_x, dir_y = -self.facing_x, -self.facing_y
+        else:
+            mag = math.hypot(dir_x, dir_y)
+            if mag > 0.001:
+                dir_x /= mag
+                dir_y /= mag
+
+        self.state = STATE_ROLL
+        self.state_timer = self.roll_duration
+        self.facing_x = dir_x
+        self.facing_y = dir_y
+        self.is_invulnerable_dodge = True
+        self.hitbox_active = False
+
+        if particles is not None:
+            from src.effects.particles import SparkParticle
+            for _ in range(8):
+                particles.append(SparkParticle(self.wx, self.wy, 0.35))
+
+    def update_roll(self, dt: float, game_map, particles: list = None):
+        """Atualiza a translação física e cronômetro do rolamento/esquiva."""
+        if self.state != STATE_ROLL:
+            return
+        self.state_timer -= dt
+        step = self.roll_speed * dt
+        new_wx = self.wx + self.facing_x * step
+        new_wy = self.wy + self.facing_y * step
+
+        new_wx = max(1.0, min(game_map.cols - 1.0, new_wx))
+        new_wy = max(1.0, min(game_map.rows - 1.0, new_wy))
+
+        # Testar colisão com rochas
+        for rock in game_map.rocks:
+            c, px, py = rock.check_collision(new_wx, new_wy, self.radius)
+            if c:
+                new_wx += px; new_wy += py
+
+        self.wx, self.wy = new_wx, new_wy
+
+        if self.state_timer <= 0:
+            self.state = STATE_IDLE
+            self.is_invulnerable_dodge = False
+            self.dash_recovery_timer = self.dash_recovery_duration
+
     def take_hit(self, slash_dir: tuple[float, float], damage: int = 2) -> tuple[bool, bool]:
         """
         Aplica dano ao guerreiro.
         Retorna (acertou, causou_morte).
         """
         if not self.is_alive:
+            return False, False
+
+        # Se estiver em esquiva / roll com i-frames ativos
+        if self.state in (STATE_ROLL, STATE_DASH, "SHUKUCHI", "KAWARIMI_ROLL", "DODGE") and (self.is_invulnerable_dodge or getattr(self, "is_invulnerable_dodge", False)):
             return False, False
 
         # Se estiver em postura de parry e de frente para o ataque
@@ -105,6 +169,7 @@ class Samurai:
             self.state = STATE_STUNNED
             self.state_timer = duration
             self.hitbox_active = False
+            self.is_invulnerable_dodge = False
 
     def apply_movement(self, move_x: float, move_y: float, dt: float, game_map):
         """Aplica a movimentação com detecção de obstáculos e desaceleração na água."""

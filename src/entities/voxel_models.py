@@ -21,7 +21,7 @@ e Lâminas com Orientação Angular 3D Dinâmica (nunca estáticas em eixos puro
 import math
 import pygame
 from src.isometric.voxel_renderer import draw_voxel_box, draw_oriented_voxel_box
-from src.isometric.voxel_rig import calc_leg_joints, calc_blade_slash_3d
+from src.isometric.voxel_rig import calc_leg_joints, calc_blade_slash_3d, calc_character_idle_pose
 from src.config import (
     COLOR_STEEL, COLOR_GOLD, COLOR_WHITE, COLOR_BLACK,
     COLOR_RED_KIMONO, COLOR_RED_HAIR, COLOR_RED_HAKAMA, COLOR_RED_AURA,
@@ -100,12 +100,24 @@ def render_voxel_humanoid(
     col_belt = _get_char_belt_color(char_type)
     is_female = is_female_character(char_type)
 
-    # Estado de Morte simples no solo
+    # Estado de Morte no solo
     if (not is_alive and state != "DYING_FREEZE") or state == "DEAD":
         sx, sy = camera.apply(wx, wy, 0.0)
-        pygame.draw.ellipse(surface, (12, 16, 14, 130), (sx - 24, sy - 10, 48, 20))
-        draw_voxel_box(surface, camera, wx - 0.22, wy - 0.12, 0.04, 0.44, 0.24, 0.14, col_torso, outline=True, alpha=alpha)
-        draw_voxel_box(surface, camera, wx + 0.22, wy - 0.10, 0.04, 0.18, 0.18, 0.15, col_hair, outline=True, alpha=alpha)
+        # Poça de sangue dramática no solo
+        pygame.draw.ellipse(surface, (120, 16, 20, 180), (sx - 30, sy - 14, 60, 28))
+        pygame.draw.ellipse(surface, (70, 10, 12, 220), (sx - 20, sy - 10, 40, 20))
+        # Torso caído
+        draw_voxel_box(surface, camera, wx - 0.18, wy - 0.12, 0.03, 0.36, 0.24, 0.15, col_torso, outline=True, alpha=alpha)
+        # Pelve e cinto
+        draw_voxel_box(surface, camera, wx - 0.28, wy - 0.10, 0.03, 0.12, 0.20, 0.13, col_belt, outline=True, alpha=alpha)
+        # Pernas estendidas no chão
+        draw_voxel_box(surface, camera, wx - 0.52, wy - 0.08, 0.03, 0.26, 0.16, 0.11, col_pants, outline=True, alpha=alpha)
+        # Cabeça caída de lado
+        draw_voxel_box(surface, camera, wx + 0.18, wy - 0.09, 0.03, 0.18, 0.18, 0.15, SKIN_COLOR, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, wx + 0.20, wy - 0.10, 0.05, 0.18, 0.18, 0.13, col_hair, outline=True, alpha=alpha)
+        # Braço estendido
+        draw_voxel_box(surface, camera, wx - 0.08, wy + 0.12, 0.03, 0.24, 0.10, 0.09, col_torso, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, wx + 0.16, wy + 0.12, 0.03, 0.08, 0.08, 0.07, SKIN_COLOR, outline=False, alpha=alpha)
         return
 
     # Sombra dinâmica no chão
@@ -147,18 +159,31 @@ def render_voxel_humanoid(
     lunge_x = fx * lunge_dist * lunge_curve
     lunge_y = fy * lunge_dist * lunge_curve
 
-    # Respiração / Idle bob
-    idle_bob = math.sin(walk_timer * 3.4) * 0.016 if not is_moving else 0.0
-
-    base_x = wx + lunge_x
-    base_y = wy + lunge_y
-    base_z = wz + idle_bob
+    # Respiração / Idle bob / Caminhada orgânica
+    if is_moving:
+        # Elevação elástica da cintura na passada (a cada meio ciclo de passada)
+        step_bob = abs(math.sin(walk_timer * 9.0)) * 0.025
+        # Sutil inclinação do tronco no sentido do movimento (dinamismo e peso)
+        torso_lean_x = fx * 0.035
+        torso_lean_y = fy * 0.035
+        base_x = wx + lunge_x + torso_lean_x
+        base_y = wy + lunge_y + torso_lean_y
+        base_z = wz + step_bob
+    else:
+        idle_bob = math.sin(walk_timer * 2.8) * 0.015
+        base_x = wx + lunge_x
+        base_y = wy + lunge_y
+        base_z = wz + idle_bob
 
     # -------------------------------------------------------------
     # 1. PERNAS HUMANAS ARTICULADAS (COXA + JOELHO/CANELA + PÉ)
     # -------------------------------------------------------------
     hip_w = 0.075 if is_female else 0.09
-    legs_data = calc_leg_joints(base_x, base_y, base_z, fx, fy, px, py, is_moving, walk_timer, is_melee, atk_progress, hip_w, is_female)
+    legs_data = calc_leg_joints(
+        base_x, base_y, base_z, fx, fy, px, py,
+        is_moving, walk_timer, is_melee, atk_progress,
+        hip_w, is_female, char_type=char_type
+    )
 
     for side in ("L", "R"):
         ld = legs_data[side]
@@ -335,13 +360,23 @@ def render_voxel_humanoid(
             arm_r_z = torso_z + 0.16
     else:
         # Caminhada ou Idle
-        arm_sw = -walk_swing * 0.14
-        arm_l_x = base_x + px * sh_span + fx * arm_sw
-        arm_l_y = base_y + py * sh_span + fy * arm_sw
-        arm_l_z = torso_z + 0.06
-        arm_r_x = base_x - px * sh_span - fx * arm_sw
-        arm_r_y = base_y - py * sh_span - fy * arm_sw
-        arm_r_z = torso_z + 0.06
+        if is_moving:
+            # Balanço contra-fase dinâmico com cotovelos suaves e elevação orgânica
+            arm_sw = -walk_swing * 0.16
+            arm_lift = abs(walk_swing) * 0.02
+            arm_l_x = base_x + px * sh_span + fx * arm_sw
+            arm_l_y = base_y + py * sh_span + fy * arm_sw
+            arm_l_z = torso_z + 0.06 + arm_lift
+            arm_r_x = base_x - px * sh_span - fx * arm_sw
+            arm_r_y = base_y - py * sh_span - fy * arm_sw
+            arm_r_z = torso_z + 0.06 + arm_lift
+        else:
+            # IDLE: Poses características exclusivas de cada combatente com respiração suave
+            arm_l_pose, arm_r_pose, idle_weap_data = calc_character_idle_pose(
+                char_type, base_x, base_y, torso_z, fx, fy, px, py, walk_timer, extra_props
+            )
+            arm_l_x, arm_l_y, arm_l_z = arm_l_pose
+            arm_r_x, arm_r_y, arm_r_z = arm_r_pose
 
     # Desenho dos Braços (Ombro/Manga + Antebraço + Mão)
     for arm_x, arm_y, arm_z_curr, sh_x, sh_y in [
@@ -505,7 +540,7 @@ def render_voxel_humanoid(
                 color=COLOR_GOLD, outline=True, alpha=alpha
             )
 
-    elif char_type == "musashi":
+    elif char_type in ("musashi", "blue"):
         if state == "PARRY":
             # Espadas cruzadas em X defensivo 3D
             draw_oriented_voxel_box(surface, camera, base_x + fx*0.15 - px*0.12, base_y + fy*0.15 - py*0.12, torso_z + 0.05, fx*0.3 + px*0.6, fy*0.3 + py*0.6, 0.75, 0.65, 0.05, 0.04, COLOR_STEEL)
@@ -520,9 +555,33 @@ def render_voxel_humanoid(
             # Rastro
             draw_voxel_box(surface, camera, ox + dx*0.2, oy + dy*0.2, oz + dz*0.2, 0.12, 0.12, 0.22, COLOR_BLUE_AURA, outline=False, alpha=150)
         else:
-            # Duas bainhas inclinadas no quadril esquerdo
-            draw_oriented_voxel_box(surface, camera, base_x - px*0.16, base_y - py*0.16, pelvis_z + 0.03, fx*0.6 - px*0.3, fy*0.6 - py*0.3, -0.25, 0.42, 0.045, 0.045, (30, 36, 48))
-            draw_oriented_voxel_box(surface, camera, base_x - px*0.14, base_y - py*0.14, pelvis_z + 0.08, fx*0.6 - px*0.3, fy*0.6 - py*0.3, -0.20, 0.30, 0.04, 0.04, (30, 36, 48))
+            if not is_moving:
+                # Niten Ichi-ryū em IDLE: Duas lâminas desembainhadas em mãos!
+                # Katana na mão direita (guarda média Chūdan)
+                draw_oriented_voxel_box(
+                    surface, camera,
+                    arm_r_x, arm_r_y, arm_r_z - 0.04,
+                    dir_x=fx*0.65 + px*0.2, dir_y=fy*0.65 + py*0.2, dir_z=0.35,
+                    length=0.62, width=0.045, height=0.04,
+                    color=COLOR_STEEL, outline=True, alpha=alpha
+                )
+                draw_voxel_box(surface, camera, arm_r_x - 0.025, arm_r_y - 0.025, arm_r_z - 0.05, 0.05, 0.05, 0.05, COLOR_GOLD, outline=False, alpha=alpha)
+                # Wakizashi na mão esquerda (guarda baixa invertida cruzando o tronco)
+                draw_oriented_voxel_box(
+                    surface, camera,
+                    arm_l_x, arm_l_y, arm_l_z - 0.04,
+                    dir_x=fx*0.4 - px*0.6, dir_y=fy*0.4 - py*0.6, dir_z=-0.20,
+                    length=0.45, width=0.04, height=0.035,
+                    color=COLOR_STEEL, outline=True, alpha=alpha
+                )
+                draw_voxel_box(surface, camera, arm_l_x - 0.025, arm_l_y - 0.025, arm_l_z - 0.05, 0.05, 0.05, 0.05, COLOR_GOLD, outline=False, alpha=alpha)
+                # Bainhas vazias no quadril esquerdo
+                draw_oriented_voxel_box(surface, camera, base_x - px*0.16, base_y - py*0.16, pelvis_z + 0.03, fx*0.6 - px*0.3, fy*0.6 - py*0.3, -0.25, 0.40, 0.045, 0.045, (30, 36, 48))
+                draw_oriented_voxel_box(surface, camera, base_x - px*0.14, base_y - py*0.14, pelvis_z + 0.08, fx*0.6 - px*0.3, fy*0.6 - py*0.3, -0.20, 0.28, 0.04, 0.04, (30, 36, 48))
+            else:
+                # Duas bainhas inclinadas no quadril esquerdo durante a marcha
+                draw_oriented_voxel_box(surface, camera, base_x - px*0.16, base_y - py*0.16, pelvis_z + 0.03, fx*0.6 - px*0.3, fy*0.6 - py*0.3, -0.25, 0.42, 0.045, 0.045, (30, 36, 48))
+                draw_oriented_voxel_box(surface, camera, base_x - px*0.14, base_y - py*0.14, pelvis_z + 0.08, fx*0.6 - px*0.3, fy*0.6 - py*0.3, -0.20, 0.30, 0.04, 0.04, (30, 36, 48))
 
     elif char_type in ("saitou", "saito"):
         if is_melee:
@@ -533,79 +592,180 @@ def render_voxel_humanoid(
             draw_voxel_box(surface, camera, ox - 0.03, oy - 0.03, oz, 0.06, 0.06, 0.06, COLOR_GOLD, outline=False, alpha=alpha)
             draw_voxel_box(surface, camera, ox + dx*0.3, oy + dy*0.3, oz, 0.12, 0.12, 0.35, COLOR_SAITOU_AURA, outline=False, alpha=160)
         else:
-            draw_oriented_voxel_box(surface, camera, base_x - px*0.15, base_y - py*0.15, pelvis_z + 0.05, fx*0.7, fy*0.7, -0.20, 0.48, 0.05, 0.05, (30, 32, 38))
+            if not is_moving:
+                # Gatotsu Kamae de perfil em IDLE: Katana horizontal no nível dos olhos
+                draw_oriented_voxel_box(
+                    surface, camera,
+                    arm_l_x, arm_l_y, arm_l_z,
+                    dir_x=fx*0.92, dir_y=fy*0.92, dir_z=-0.04,
+                    length=0.72, width=0.045, height=0.04,
+                    color=COLOR_STEEL, outline=True, alpha=alpha
+                )
+                draw_voxel_box(surface, camera, arm_r_x - 0.025, arm_r_y - 0.025, arm_r_z, 0.05, 0.05, 0.05, COLOR_GOLD, outline=False, alpha=alpha)
+                # Bainha vazia no quadril
+                draw_oriented_voxel_box(surface, camera, base_x - px*0.15, base_y - py*0.15, pelvis_z + 0.05, fx*0.7, fy*0.7, -0.20, 0.45, 0.05, 0.05, (30, 32, 38))
+            else:
+                draw_oriented_voxel_box(surface, camera, base_x - px*0.15, base_y - py*0.15, pelvis_z + 0.05, fx*0.7, fy*0.7, -0.20, 0.48, 0.05, 0.05, (30, 32, 38))
 
     elif char_type in ("musketeer", "julie"):
-        b_info = calc_blade_slash_3d("musketeer", state, atk_progress, base_x, base_y, torso_z, fx, fy, px, py)
-        ox, oy, oz = b_info["origin"]
-        dx, dy, dz = b_info["dir"]
-        # Cazoleta / guarda em concha
-        draw_voxel_box(surface, camera, ox - 0.04, oy - 0.04, oz - 0.03, 0.08, 0.08, 0.06, COLOR_STEEL, outline=True, alpha=alpha)
-        # Florete estocado
-        draw_oriented_voxel_box(surface, camera, ox, oy, oz, dx, dy, dz, length=b_info["length"], width=b_info["width"], height=b_info["height"], color=COLOR_RAPIER_STEEL, outline=True, alpha=alpha)
         if is_melee:
+            b_info = calc_blade_slash_3d("musketeer", state, atk_progress, base_x, base_y, torso_z, fx, fy, px, py)
+            ox, oy, oz = b_info["origin"]
+            dx, dy, dz = b_info["dir"]
+            # Cazoleta / guarda em concha
+            draw_voxel_box(surface, camera, ox - 0.04, oy - 0.04, oz - 0.03, 0.08, 0.08, 0.06, COLOR_STEEL, outline=True, alpha=alpha)
+            # Florete estocado
+            draw_oriented_voxel_box(surface, camera, ox, oy, oz, dx, dy, dz, length=b_info["length"], width=b_info["width"], height=b_info["height"], color=COLOR_RAPIER_STEEL, outline=True, alpha=alpha)
             draw_voxel_box(surface, camera, ox + dx*b_info["length"], oy + dy*b_info["length"], oz, 0.08, 0.08, 0.08, COLOR_MUSKETEER_AURA, outline=False, alpha=180)
+        else:
+            if not is_moving:
+                # En Garde de Esgrima em IDLE
+                draw_voxel_box(surface, camera, arm_r_x - 0.035, arm_r_y - 0.035, arm_r_z - 0.02, 0.07, 0.07, 0.05, COLOR_STEEL, outline=True, alpha=alpha)
+                draw_oriented_voxel_box(
+                    surface, camera,
+                    arm_r_x, arm_r_y, arm_r_z,
+                    dir_x=fx*0.82 + px*0.1, dir_y=fy*0.82 + py*0.1, dir_z=0.08,
+                    length=0.72, width=0.03, height=0.03,
+                    color=COLOR_RAPIER_STEEL, outline=True, alpha=alpha
+                )
+            else:
+                # Florete abaixado ao lado na caminhada
+                draw_voxel_box(surface, camera, arm_r_x - 0.03, arm_r_y - 0.03, arm_r_z - 0.02, 0.06, 0.06, 0.05, COLOR_STEEL, outline=True, alpha=alpha)
+                draw_oriented_voxel_box(
+                    surface, camera,
+                    arm_r_x, arm_r_y, arm_r_z,
+                    dir_x=fx*0.3, dir_y=fy*0.3, dir_z=-0.75,
+                    length=0.68, width=0.03, height=0.03,
+                    color=COLOR_RAPIER_STEEL, outline=True, alpha=alpha
+                )
 
     elif char_type in ("pirate", "anne"):
-        b_info = calc_blade_slash_3d("pirate", state, atk_progress, base_x, base_y, torso_z, fx, fy, px, py)
-        ox, oy, oz = b_info["origin"]
-        dx, dy, dz = b_info["dir"]
-        draw_voxel_box(surface, camera, ox - 0.04, oy - 0.04, oz - 0.03, 0.08, 0.08, 0.06, COLOR_PIRATE_GOLD, outline=True, alpha=alpha)
-        draw_oriented_voxel_box(surface, camera, ox, oy, oz, dx, dy, dz, length=b_info["length"], width=b_info["width"], height=b_info["height"], color=COLOR_CUTLASS_STEEL, outline=True, alpha=alpha)
         if is_melee:
+            b_info = calc_blade_slash_3d("pirate", state, atk_progress, base_x, base_y, torso_z, fx, fy, px, py)
+            ox, oy, oz = b_info["origin"]
+            dx, dy, dz = b_info["dir"]
+            draw_voxel_box(surface, camera, ox - 0.04, oy - 0.04, oz - 0.03, 0.08, 0.08, 0.06, COLOR_PIRATE_GOLD, outline=True, alpha=alpha)
+            draw_oriented_voxel_box(surface, camera, ox, oy, oz, dx, dy, dz, length=b_info["length"], width=b_info["width"], height=b_info["height"], color=COLOR_CUTLASS_STEEL, outline=True, alpha=alpha)
             draw_voxel_box(surface, camera, ox - dx*0.15, oy - dy*0.15, oz + 0.05, 0.15, 0.15, 0.25, COLOR_PIRATE_AURA, outline=False, alpha=160)
+        else:
+            if not is_moving:
+                # Descansando o alfanje cutlass sobre o ombro direito em pose desafiadora de pirata
+                draw_voxel_box(surface, camera, arm_r_x - 0.03, arm_r_y - 0.03, arm_r_z - 0.02, 0.07, 0.07, 0.06, COLOR_PIRATE_GOLD, outline=True, alpha=alpha)
+                draw_oriented_voxel_box(
+                    surface, camera,
+                    arm_r_x, arm_r_y, arm_r_z,
+                    dir_x=-fx*0.65 - px*0.3, dir_y=-fy*0.65 - py*0.3, dir_z=0.60,
+                    length=0.58, width=0.065, height=0.04,
+                    color=COLOR_CUTLASS_STEEL, outline=True, alpha=alpha
+                )
+            else:
+                # Alfanje abaixado na mão direita durante a marcha
+                draw_voxel_box(surface, camera, arm_r_x - 0.03, arm_r_y - 0.03, arm_r_z - 0.02, 0.07, 0.07, 0.06, COLOR_PIRATE_GOLD, outline=True, alpha=alpha)
+                draw_oriented_voxel_box(
+                    surface, camera,
+                    arm_r_x, arm_r_y, arm_r_z,
+                    dir_x=fx*0.4, dir_y=fy*0.4, dir_z=-0.70,
+                    length=0.55, width=0.065, height=0.04,
+                    color=COLOR_CUTLASS_STEEL, outline=True, alpha=alpha
+                )
 
-    elif char_type == "ninja":
+    elif char_type in ("ninja", "yellow_ninja", "hanzo"):
+        # Tantō embainhado nas costas em diagonal
+        draw_oriented_voxel_box(
+            surface, camera,
+            base_x - fx * 0.12 - px * 0.06,
+            base_y - fy * 0.12 - py * 0.06,
+            torso_z + 0.12,
+            dir_x=px*0.7, dir_y=py*0.7, dir_z=0.55,
+            length=0.38, width=0.04, height=0.04,
+            color=(35, 35, 40), outline=True, alpha=alpha
+        )
         has_kunai = extra_props.get("has_kunai", True)
         if has_kunai:
-            kx = arm_r_x + fx * 0.14
-            ky = arm_r_y + fy * 0.14
+            kx = arm_r_x + fx * 0.10
+            ky = arm_r_y + fy * 0.10
             kz = arm_r_z - 0.04
             draw_oriented_voxel_box(surface, camera, kx, ky, kz, fx, fy, -0.15, 0.28, 0.05, 0.04, COLOR_STEEL, outline=True, alpha=alpha)
             draw_voxel_box(surface, camera, kx - 0.03, ky - 0.03, kz - 0.02, 0.06, 0.06, 0.04, COLOR_GOLD, outline=False, alpha=alpha)
             if is_melee:
                 draw_voxel_box(surface, camera, kx + fx*0.12, ky + fy*0.12, kz, 0.08, 0.08, 0.15, COLOR_YELLOW_AURA, outline=False, alpha=160)
 
-    elif char_type == "gray":
-        bx = base_x + fx * 0.18 if state == "ATTACK" else base_x + px * 0.16
-        by = base_y + fy * 0.18 if state == "ATTACK" else base_y + py * 0.16
-        draw_voxel_box(surface, camera, bx - 0.06, by - 0.06, torso_z - 0.02, 0.12, 0.12, 0.12, (25, 25, 30), outline=True, alpha=alpha)
-        draw_voxel_box(surface, camera, bx - 0.02, by - 0.02, torso_z + 0.10, 0.04, 0.04, 0.06, COLOR_BOMB_FUSE, outline=False, alpha=alpha)
+    elif char_type in ("gray", "kasumi"):
+        # Adaga shinobi na mão direita em guarda rápida
+        draw_oriented_voxel_box(
+            surface, camera,
+            arm_r_x, arm_r_y, arm_r_z - 0.04,
+            dir_x=fx*0.7 - px*0.3, dir_y=fy*0.7 - py*0.3, dir_z=-0.15,
+            length=0.26, width=0.045, height=0.035,
+            color=COLOR_STEEL, outline=True, alpha=alpha
+        )
+        # Bomba de fumaça na cintura
+        bx = base_x + px * 0.15
+        by = base_y + py * 0.15
+        draw_voxel_box(surface, camera, bx - 0.05, by - 0.05, torso_z - 0.02, 0.10, 0.10, 0.10, (30, 30, 35), outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, bx - 0.015, by - 0.015, torso_z + 0.08, 0.03, 0.03, 0.05, COLOR_BOMB_FUSE, outline=False, alpha=alpha)
 
-    elif char_type == "purple":
+    elif char_type in ("purple", "murasaki"):
         kx = arm_r_x + fx * 0.14
         ky = arm_r_y + fy * 0.14
         kz = arm_r_z - 0.06
         draw_oriented_voxel_box(surface, camera, kx, ky, kz, fx*0.3 - px*0.4, fy*0.3 - py*0.4, 0.8, 0.24, 0.05, 0.05, (80, 50, 30))
         draw_oriented_voxel_box(surface, camera, kx + fx*0.08, ky + fy*0.08, kz + 0.18, fx*0.8 + px*0.3, fy*0.8 + py*0.3, -0.3, 0.18, 0.06, 0.04, COLOR_STEEL)
+        # Corrente pendendo suavemente entre a foice e o braço esquerdo
+        ch_mid_x = (arm_r_x + arm_l_x) / 2
+        ch_mid_y = (arm_r_y + arm_l_y) / 2
+        ch_mid_z = min(arm_r_z, arm_l_z) - 0.14
+        draw_voxel_box(surface, camera, ch_mid_x - 0.02, ch_mid_y - 0.02, ch_mid_z, 0.04, 0.04, 0.04, COLOR_CHAIN, outline=False, alpha=alpha)
+        draw_voxel_box(surface, camera, arm_l_x - 0.03, arm_l_y - 0.03, arm_l_z - 0.06, 0.06, 0.06, 0.06, (60, 60, 70), outline=True, alpha=alpha)
         if is_melee:
             draw_voxel_box(surface, camera, kx + fx*0.15, ky + fy*0.15, kz + 0.08, 0.16, 0.16, 0.16, COLOR_PURPLE_AURA, outline=False, alpha=160)
 
-    elif char_type == "rifleman":
-        rx = arm_r_x + fx * 0.20
-        ry = arm_r_y + fy * 0.20
+    elif char_type in ("rifleman", "teppo"):
+        rx = arm_r_x + fx * 0.15
+        ry = arm_r_y + fy * 0.15
         rz = torso_z + 0.08
-        draw_oriented_voxel_box(surface, camera, rx - fx*0.15, ry - fy*0.15, rz - 0.02, fx, fy, 0.08, 0.55, 0.07, 0.08, COLOR_RIFLE_WOOD)
-        draw_oriented_voxel_box(surface, camera, rx + fx*0.18, ry + fy*0.18, rz + 0.02, fx, fy, 0.08, 0.25, 0.05, 0.05, COLOR_STEEL)
+        if not is_moving and not is_melee:
+            # Em guarda de infantaria diagonal pelo peito
+            draw_oriented_voxel_box(surface, camera, rx - fx*0.12 - px*0.08, ry - fy*0.12 - py*0.08, rz - 0.02, fx*0.6 + px*0.5, fy*0.6 + py*0.5, 0.35, 0.58, 0.065, 0.075, COLOR_RIFLE_WOOD)
+            draw_oriented_voxel_box(surface, camera, rx + fx*0.16 + px*0.12, ry + fy*0.16 + py*0.12, rz + 0.12, fx*0.6 + px*0.5, fy*0.6 + py*0.5, 0.35, 0.28, 0.045, 0.045, COLOR_STEEL)
+        else:
+            draw_oriented_voxel_box(surface, camera, rx - fx*0.15, ry - fy*0.15, rz - 0.02, fx, fy, 0.08, 0.55, 0.07, 0.08, COLOR_RIFLE_WOOD)
+            draw_oriented_voxel_box(surface, camera, rx + fx*0.18, ry + fy*0.18, rz + 0.02, fx, fy, 0.08, 0.25, 0.05, 0.05, COLOR_STEEL)
 
     elif char_type in ("kabuki", "okuni"):
-        kx = arm_r_x + fx * 0.14
-        ky = arm_r_y + fy * 0.14
-        draw_oriented_voxel_box(surface, camera, kx, ky, torso_z + 0.06, fx*0.5 + px*0.5, fy*0.5 + py*0.5, 0.6, 0.24, 0.14, 0.04, COLOR_KABUKI_RED)
-        draw_oriented_voxel_box(surface, camera, kx, ky, torso_z + 0.08, fx*0.5 - px*0.5, fy*0.5 - py*0.5, 0.6, 0.24, 0.14, 0.04, COLOR_GOLD)
+        if not is_moving and not is_melee:
+            # Leques Tessen elegantes repousando cruzados na cintura
+            draw_oriented_voxel_box(surface, camera, arm_l_x, arm_l_y, arm_l_z - 0.02, fx*0.4 + px*0.6, fy*0.4 + py*0.6, 0.3, 0.22, 0.07, 0.04, COLOR_KABUKI_RED)
+            draw_oriented_voxel_box(surface, camera, arm_r_x, arm_r_y, arm_r_z - 0.02, fx*0.4 - px*0.6, fy*0.4 - py*0.6, 0.3, 0.22, 0.07, 0.04, COLOR_GOLD)
+        else:
+            kx = arm_r_x + fx * 0.14
+            ky = arm_r_y + fy * 0.14
+            draw_oriented_voxel_box(surface, camera, kx, ky, torso_z + 0.06, fx*0.5 + px*0.5, fy*0.5 + py*0.5, 0.6, 0.24, 0.14, 0.04, COLOR_KABUKI_RED)
+            draw_oriented_voxel_box(surface, camera, kx, ky, torso_z + 0.08, fx*0.5 - px*0.5, fy*0.5 - py*0.5, 0.6, 0.24, 0.14, 0.04, COLOR_GOLD)
         if extra_props.get("has_poisoned", False):
-            draw_voxel_box(surface, camera, kx - 0.04, ky - 0.04, torso_z + 0.18, 0.08, 0.08, 0.08, COLOR_POISON_GREEN, outline=False, alpha=160)
+            draw_voxel_box(surface, camera, arm_r_x - 0.04, arm_r_y - 0.04, torso_z + 0.18, 0.08, 0.08, 0.08, COLOR_POISON_GREEN, outline=False, alpha=160)
 
     elif char_type in ("archer", "tomoe"):
-        bx = arm_l_x + fx * 0.12
-        by = arm_l_y + fy * 0.12
-        bz = torso_z + 0.05
-        draw_oriented_voxel_box(surface, camera, bx, by, bz - 0.35, fx*0.2, fy*0.2, 0.95, 0.85, 0.06, 0.06, COLOR_BOW_WOOD)
-        sx_top, sy_top = camera.apply(bx + fx*0.1, by + fy*0.1, bz + 0.50)
-        sx_bot, sy_bot = camera.apply(bx - fx*0.05, by - fy*0.05, bz - 0.35)
-        pygame.draw.line(surface, COLOR_WHITE, (sx_top, sy_top), (sx_bot, sy_bot), 1)
-        if extra_props.get("is_drawing", False):
-            draw_oriented_voxel_box(surface, camera, bx + fx*0.15, by + fy*0.15, bz + 0.08, fx, fy, 0.0, 0.50, 0.04, 0.04, (180, 140, 80))
+        if not is_moving and not is_melee:
+            # Arco Yumi vertical clássico segurado ao lado pela mão esquerda até o chão
+            bx = arm_l_x + fx * 0.04
+            by = arm_l_y + fy * 0.04
+            bz = base_z + 0.40
+            draw_oriented_voxel_box(surface, camera, bx, by, bz - 0.42, 0.0, 0.0, 1.0, 0.96, 0.05, 0.05, COLOR_BOW_WOOD)
+            # Corda do arco (Tsuru)
+            sx_top, sy_top = camera.apply(bx, by, bz + 0.54)
+            sx_bot, sy_bot = camera.apply(bx, by, bz - 0.42)
+            pygame.draw.line(surface, COLOR_WHITE, (sx_top, sy_top), (sx_bot, sy_bot), 1)
+        else:
+            bx = arm_l_x + fx * 0.12
+            by = arm_l_y + fy * 0.12
+            bz = torso_z + 0.05
+            draw_oriented_voxel_box(surface, camera, bx, by, bz - 0.35, fx*0.2, fy*0.2, 0.95, 0.85, 0.06, 0.06, COLOR_BOW_WOOD)
+            sx_top, sy_top = camera.apply(bx + fx*0.1, by + fy*0.1, bz + 0.50)
+            sx_bot, sy_bot = camera.apply(bx - fx*0.05, by - fy*0.05, bz - 0.35)
+            pygame.draw.line(surface, COLOR_WHITE, (sx_top, sy_top), (sx_bot, sy_bot), 1)
+            if extra_props.get("is_drawing", False):
+                draw_oriented_voxel_box(surface, camera, bx + fx*0.15, by + fy*0.15, bz + 0.08, fx, fy, 0.0, 0.50, 0.04, 0.04, (180, 140, 80))
 
 
 def render_voxel_doberman(
@@ -621,11 +781,17 @@ def render_voxel_doberman(
     Renderiza o cão Doberman com articulação quadrúpede de 4 patas (coxa, jarrete e pata).
     Suporta trote fluido, bote rasante e colapso no solo ao morrer.
     """
-    if not is_alive or state == "DEAD":
+    if not is_alive or state in ("DEAD", "KNOCKED_OUT"):
         sx, sy = camera.apply(wx, wy, 0.0)
         pygame.draw.ellipse(surface, (14, 18, 16, 120), (sx - 20, sy - 8, 40, 16))
-        draw_voxel_box(surface, camera, wx - 0.22, wy - 0.10, 0.02, 0.44, 0.20, 0.12, COLOR_DOBERMAN_BLACK, outline=True)
-        draw_voxel_box(surface, camera, wx + 0.18, wy - 0.08, 0.02, 0.16, 0.16, 0.12, COLOR_DOBERMAN_RUST, outline=True)
+        # Corpo caído de lado no solo (Item 23)
+        draw_voxel_box(surface, camera, wx - 0.22, wy - 0.10, wz + 0.02, 0.44, 0.20, 0.10, COLOR_DOBERMAN_BLACK, outline=True)
+        draw_voxel_box(surface, camera, wx + 0.16, wy - 0.08, wz + 0.02, 0.16, 0.16, 0.09, COLOR_DOBERMAN_RUST, outline=True)
+        # Patas estendidas lateralmente no chão
+        draw_voxel_box(surface, camera, wx - 0.12, wy + 0.10, wz + 0.01, 0.24, 0.06, 0.05, COLOR_DOBERMAN_RUST, outline=True)
+        draw_voxel_box(surface, camera, wx + 0.04, wy + 0.10, wz + 0.01, 0.20, 0.06, 0.05, COLOR_DOBERMAN_RUST, outline=True)
+        # Cabeça pousada de lado no solo
+        draw_voxel_box(surface, camera, wx + 0.26, wy - 0.04, wz + 0.02, 0.12, 0.12, 0.08, COLOR_DOBERMAN_BLACK, outline=True)
         return
 
     # Sombra

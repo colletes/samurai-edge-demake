@@ -8,7 +8,9 @@
 
 Um jogo de duelo mortal isométrico tático em **3D Voxel Art** e **HD-2D**, inspirado no realismo impiedoso de clássicos como *Bushido Blade*, filmes de samurai de Akira Kurosawa e estética de demakes retrô com física de desmembramento volumétrico, iluminação dinâmica e um elenco perfeitamente equilibrado de 12 guerreiros.
 
-![Samurai Edge Demake - Seleção de 12 Guerreiros](char_select_12p_preview.png)
+![Samurai Edge: Bakumatsu - Tela de Título Sumi-E](docs/screenshots/01_title_screen.png)
+
+![Samurai Edge Demake - Seleção de 12 Guerreiros do Bakumatsu](docs/screenshots/02_character_select.png)
 
 ---
 
@@ -30,20 +32,37 @@ Você pode baixar os pacotes executáveis pré-compilados diretamente na aba de 
 
 ### Cenário Histórico: O Crepúsculo do Período Edo (Bakumatsu)
 O jogo é ambientado em meados do século XIX, durante o turbulento período do **Bakumatsu** no Japão feudal — o fim da era dos samurais e a abertura para o comércio com o Ocidente. 
-Em uma arena sagrada cercada por um bambuzal denso, lagos alimentados por fontes termais, pontes de madeira e lanternas de pedra, guerreiros de diferentes origens colidem:
+Guerreiros de diferentes origens colidem em duas arenas temáticas com características e perigos próprios:
 - **Espadachins Tradicionais e Retalhadores**: Mestres das escolas *Iaijutsu*, *Niten Ichi-ryū* e os temidos capitães do *Shinsengumi*.
 - **Clãs Shinobi e Kunoichis**: Assassinas furtivas de Iga e Koga empunhando foices *Kusarigama* e explosivos de cerâmica.
 - **Arqueiras Miko e Mestras Kabuki**: Defensoras dos santuários xintoístas e acrobatas teatrais letais com leques de aço.
 - **Armas de Fogo Feudais**: Atiradores veteranos armados com os pesados arcabuzes *Tanegashima*.
 - **Guerreiros Estrangeiros**: Espadachins bucaneiros e mosqueteiras da guarda real europeia que aportaram nos portos de Nagasaki e Yokohama.
 
+![Seleção de Arenas e Perigos Ambientais](docs/screenshots/04_arena_select.png)
+
+### Arenas Dinâmicas de Combate
+
+#### 🎋 Arena 1: Floresta de Bambu Sagrada & Lago Zen
+Uma clareira mística cercada por bambuzais verdejantes e monumentos ancestrais:
+- **Bambuzal Cortável**: Golpes de lâmina decepam colunas de bambu, abrindo linhas de visão e novas rotas de ataque.
+- **Água Desaceleradora**: Atravessar a lagoa reduz a velocidade do lutador em 45%, tornando-o um alvo vulnerável para estocadas e projéteis.
+- **Ponte Estreita (Taiko-bashi)**: Zona de afunilamento que favorece golpes retilíneos de longo alcance e ataques de varredura ampla.
+- **Obstáculos de Cobertura**: Rochas talhadas e o poço de cantaria bloqueiam investidas, tiros de arcabuz, flechas e kunais.
+
+![Arena 1 - Jardim Sagrado de Bambus e Ponte Taiko-bashi](docs/screenshots/05_bamboo_arena_gameplay.png)
+
+#### 🔥 Arena 2: Kyoto: Bakumatsu (Guerra Urbana & Perigos Ativos)
+A capital imperial sitiada em chamas durante as rebeliões do final do xogunato:
+- **Avenida Imperial Larga**: Terreno amplo de paralelepípedos de granito, ideal para movimentação rápida, kiting e arrancadas supersônicas.
+- **Machiyas em Chamas**: Edificações tradicionais de madeira com telhados ardentes e iluminação dinâmica noturna com faíscas incandescentes.
+- **Carruagem Desgovernada (Runaway Carriage)**: Perigo ambiental letal! Uma carruagem em disparada cruza a via em alta velocidade (14.0 tiles/s), atropelando fatalmente qualquer combatente desatento.
+- **Escombros Flamejantes**: Vigas em brasa e telhas caem do topo das construções, exigindo atenção constante ao posicionamento.
+
+![Arena 2 - Kyoto Bakumatsu com Guerra Urbana e Carruagem Desgovernada](docs/screenshots/06_kyoto_bakumatsu_gameplay.png)
+
 ### Mecânicas de Combate: Bushido Letal (1-Hit Kill)
 - **Morte em 1 Golpe**: Não há barras de vida longas ou combos infinitos. Um único corte limpo de espada, flecha certeira ou tiro à queima-roupa é fatal. Cada aproximação exige frieza, posicionamento e cálculo milimétrico.
-- **Arena Volumétrica 3D Interativa**:
-  - **Bambuzal Cortável**: Golpes de lâmina cortam colunas de bambu, abrindo linhas de visão e novas rotas de ataque.
-  - **Água Desaceleradora**: Atravessar a lagoa reduz a velocidade do lutador em 45%, tornando-o um alvo fácil para estocadas e projéteis.
-  - **Ponte Estreita**: Zona de afunilamento que favorece golpes com trajetória reta de longo alcance e ataques de varredura ampla.
-  - **Obstáculos de Cobertura**: Pedras talhadas e o poço de cantaria bloqueiam investidas retilíneas, disparos de arcabuz, flechas e kunais.
 - **Violência Cinematográfica (Kurosawa Noir)**:
   - **Hitstop Freeze**: Congelamento dramático instantâneo no exato momento do impacto letal.
   - **Flash Monocromático de Alto Contraste**: Efeito inspirado na cinematografia de Akira Kurosawa (*Sanjuro*, *Yojimbo*), dessaturando a cena e destacando com intensidade o sangue carmesim.
@@ -53,7 +72,7 @@ Em uma arena sagrada cercada por um bambuzal denso, lagos alimentados por fontes
   - A cada novo round, os lutadores surgem em coordenadas aleatórias da arena com distância garantida $\ge 7.0$ tiles.
   - Indicadores piscantes `[ P1 ]` e `[ P2 ]` sobre as cabeças mostram instantaneamente quem é quem.
 
-![Violência Cinematográfica Samurai Kurosawa](cinematic_violence_preview.png)
+![Violência Cinematográfica Samurai Kurosawa - 1-Hit Kill](docs/screenshots/07_cinematic_violence_kurosawa.png)
 
 ---
 
@@ -76,6 +95,8 @@ O elenco conta com **12 combatentes (6 mulheres e 6 homens)**, cada um com mecâ
 Homens/Guerreiros: Kenshi | Musashi | Hanzo | Joe & Doberman | Saitou | Teppo
 Mulheres:           Murasaki | Kasumi | Okuni | Tomoe | Anne | Julie
 ```
+
+![Roster Completo dos 12 Guerreiros em 3D Voxel Art](docs/screenshots/03_roster_showcase.png)
 
 ---
 
@@ -126,6 +147,8 @@ Mulheres:           Murasaki | Kasumi | Okuni | Tomoe | Anne | Julie
 - **Ação Secundária [R / I]**: *Gatotsu Zeroshiki* — Estocada à queima-roupa desferida instantaneamente do corpo a corpo, sem corrida prévia.
 - **Estratégia a Favor**: O *Gatotsu* possui prioridade frontal absurda. Quando o rival iniciar um movimento, engrene a marcha do Gatotsu. Se ele tentar colar pelas costas, vire e solte o *Zeroshiki*.
 - **Estratégia Contra**: O *Gatotsu* perde controle lateral na alta velocidade e ricocheteia com atordoamento ao bater em pedras ou no poço. Lute perto dos obstáculos e esquive lateralmente no último segundo.
+
+![Mecânicas Especiais de Combate - Gatotsu Shinsen vs Parry Perfeito](docs/screenshots/08_special_combat_mechanics.png)
 
 ---
 
@@ -199,6 +222,18 @@ Mulheres:           Murasaki | Kasumi | Okuni | Tomoe | Anne | Julie
 
 ---
 
+### 📖 Manual Estratégico & Fichas Táticas in-game (`F1` ou `[ ? ]`)
+Pressione `F1` no teclado, clique no botão `[ ? ]` sobre o card de qualquer guerreiro na tela de seleção, ou use o atalho de ajuda no controle para abrir o guia estratégico oficial:
+- **Ficha Completa dos 12 Guerreiros**: História, estilo de luta, comandos de ataque e especial.
+- **Gráficos e Atributos**: Velocidade, alcance, cadência e estilo de combate.
+- **Táticas Ofensivas e Defensivas**: Dicas de como jogar com cada combatente e como contra-atacar seus pontos fracos (*How to Counter*).
+- **Modelo 3D Voxel ao Vivo**: Preview rotativo do modelo do personagem selecionado.
+- **Totalmente Bilíngue**: Alternância instantânea de idioma entre **Português (PT-BR)** e **Inglês (EN)**.
+
+![Manual Estratégico e Ficha Tática do Guerreiro in-game (F1)](docs/screenshots/09_help_strategy_manual.png)
+
+---
+
 ## 🎮 5. Controles e Opções
 
 ### Mapeamento no Teclado
@@ -228,11 +263,13 @@ O jogo reconhece e calibra automaticamente controles conectados via USB ou Bluet
 ---
 
 ### Controles Touchscreen & Dispositivos Móveis
-Ao ser executado em smartphones ou tablets, o jogo ativa automaticamente uma interface tátil calibrada:
-- **Analógico Virtual Flutuante**: Posicionado no polegar esquerdo, ajusta-se dinamicamente onde você tocar.
-- **Botões Táteis de Ataque e Especial**: Posicionados no polegar direito, com suporte a multitoque simultâneo.
-- **Suporte a Toque Contínuo (Hold)**: Permite segurar o botão de recarga da pólvora para o arcabuzeiro Teppo sem soltar a movimentação.
+Ao ser executado em smartphones ou tablets (Android e iOS), o jogo ativa automaticamente uma interface tátil calibrada:
+- **Analógico Virtual Flutuante**: Posicionado no polegar esquerdo, ajusta-se dinamicamente onde você tocar na tela.
+- **Botões Táteis de Ataque e Especial**: Posicionados no polegar direito, com legendas dinâmicas do guerreiro atual e suporte a multitoque simultâneo (*multi-touch*).
+- **Suporte a Toque Contínuo (Hold)**: Permite segurar o botão de recarga da pólvora para o arcabuzeiro Teppo sem interromper a movimentação.
 - **Display Scaler Responsivo**: Adaptação para telas 16:9, 19.5:9, 20:9 e tablets sem distorção.
+
+![Controles Virtuais Touchscreen para Android e iOS](docs/screenshots/10_touchscreen_mobile_controls.png)
 
 ---
 

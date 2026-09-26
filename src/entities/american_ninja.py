@@ -9,7 +9,7 @@ from src.config import (
     COLOR_STEEL, COLOR_WHITE, COLOR_BLACK, COLOR_GOLD
 )
 from src.entities.samurai import (
-    Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD
+    Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, STATE_ROLL
 )
 from src.entities.doberman import DobermanDog
 from src.entities.projectile import ShurikenProjectile
@@ -30,7 +30,7 @@ class AmericanNinja(Samurai):
 
     def trigger_shuriken(self, target_wx: float, target_wy: float, projectiles: list):
         """Arremessa uma shuriken atordoante (não mata, mas dá stun de 0.48s)."""
-        if not self.can_move() or self.shuriken_timer > 0:
+        if not self.can_act() or self.shuriken_timer > 0:
             return
 
         self.set_facing(target_wx, target_wy)
@@ -50,7 +50,7 @@ class AmericanNinja(Samurai):
 
     def trigger_dog_attack(self, target_wx: float, target_wy: float):
         """Ordena o Doberman a disparar em um dash de mordida letal (1-hit kill)."""
-        if not self.can_move():
+        if not self.can_act():
             return
         if self.dog and self.dog.can_attack():
             self.set_facing(target_wx, target_wy)
@@ -65,6 +65,9 @@ class AmericanNinja(Samurai):
 
         self.update_stealth(game_map)
 
+        if self.dash_recovery_timer > 0:
+            self.dash_recovery_timer -= dt
+
         if self.shuriken_timer > 0:
             self.shuriken_timer -= dt
 
@@ -72,6 +75,9 @@ class AmericanNinja(Samurai):
             self.state_timer -= dt
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
+
+        elif self.state == STATE_ROLL:
+            self.update_roll(dt, game_map)
 
         elif self.state == STATE_STUNNED:
             self.state_timer -= dt

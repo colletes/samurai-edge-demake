@@ -40,7 +40,7 @@ class SettingsMenu:
         self._axis_y_held = False
         self._axis_x_held = False
 
-        # Definição dos itens remapeáveis
+        # Definição dos itens remapeáveis (7 ações por jogador)
         self.items = [
             # Jogador 1 (Player 1)
             ("P1_UP", "Mover Cima", "red"),
@@ -48,7 +48,8 @@ class SettingsMenu:
             ("P1_LEFT", "Mover Esquerda", "red"),
             ("P1_RIGHT", "Mover Direita", "red"),
             ("P1_ATTACK", "Ataque Principal", "red"),
-            ("P1_DASH", "Ação Secundária (Dash)", "red"),
+            ("P1_SECONDARY", "Ação Secundária / Especial", "red"),
+            ("P1_DASH", "Esquiva (Roll / Dash)", "red"),
 
             # Jogador 2 (Player 2)
             ("P2_UP", "Mover Cima", "blue"),
@@ -56,7 +57,8 @@ class SettingsMenu:
             ("P2_LEFT", "Mover Esquerda", "blue"),
             ("P2_RIGHT", "Mover Direita", "blue"),
             ("P2_ATTACK", "Ataque Principal", "blue"),
-            ("P2_PARRY", "Ação Secundária (Defesa)", "blue"),
+            ("P2_SECONDARY", "Ação Secundária / Especial", "blue"),
+            ("P2_DASH", "Esquiva (Roll / Dash)", "blue"),
         ]
 
         # Áreas clicáveis na tela (atualizadas durante o render)
@@ -111,12 +113,16 @@ class SettingsMenu:
                     self.waiting_for_key_action = None
                 return True
             elif event.type == pygame.JOYBUTTONDOWN:
-                # Se for Círculo (botão 1), cancelar espera sem alterar
-                if event.button == 1:
+                # Se for Círculo (botão 1) e estiver esperando para cancelar
+                if event.button == 1 and not ("DASH" in self.waiting_for_key_action or "CANCEL" in self.waiting_for_key_action):
                     self.waiting_for_key_action = None
                     return True
                 # Remapear ação no controle correspondente (P1 ou P2)
-                act_name = "attack" if "ATTACK" in self.waiting_for_key_action else ("dash" if ("DASH" in self.waiting_for_key_action or "PARRY" in self.waiting_for_key_action) else None)
+                act_name = "attack" if "ATTACK" in self.waiting_for_key_action else (
+                    "dash" if "DASH" in self.waiting_for_key_action else (
+                        "secondary" if ("SECONDARY" in self.waiting_for_key_action or "PARRY" in self.waiting_for_key_action) else None
+                    )
+                )
                 p_idx = 1 if "P2" in self.waiting_for_key_action else 0
                 if act_name:
                     ctrl_mgr.remap_action(p_idx, act_name, event.button)
@@ -138,7 +144,7 @@ class SettingsMenu:
                     self.selected_index = (self.selected_index + dy) % len(self.items)
                 elif dx != 0:
                     # Alternar entre coluna da esquerda (P1) e da direita (P2)
-                    self.selected_index = (self.selected_index + 6) % len(self.items)
+                    self.selected_index = (self.selected_index + 7) % len(self.items)
                 return True
 
             if ctrl_mgr.is_event_menu_confirm(event) or event.button == 0:
@@ -176,10 +182,10 @@ class SettingsMenu:
                     self._axis_y_held = False
             elif event.axis == 0:
                 if event.value > 0.65 and not self._axis_x_held:
-                    self.selected_index = (self.selected_index + 6) % len(self.items)
+                    self.selected_index = (self.selected_index + 7) % len(self.items)
                     self._axis_x_held = True
                 elif event.value < -0.65 and not self._axis_x_held:
-                    self.selected_index = (self.selected_index + 6) % len(self.items)
+                    self.selected_index = (self.selected_index + 7) % len(self.items)
                     self._axis_x_held = True
                 elif abs(event.value) < 0.25:
                     self._axis_x_held = False
@@ -300,15 +306,16 @@ class SettingsMenu:
         self.button_rects.clear()
 
         from src.input.controller_manager import get_controller_manager
+        from src.ui.svg_icon_renderer import get_button_icon_surface
         ctrl_mgr = get_controller_manager()
 
         for idx, (action_key, label, faction) in enumerate(self.items):
             is_red = (faction == "red")
             item_col_x = col_left_x if is_red else col_right_x
-            row_index = idx if is_red else (idx - 6)
+            row_index = idx if is_red else (idx - 7)
             cur_y = start_y + row_index * row_h
 
-            btn_rect = pygame.Rect(item_col_x, cur_y, col_w, 36)
+            btn_rect = pygame.Rect(item_col_x, cur_y, col_w, 34)
             self.button_rects.append((btn_rect, idx))
 
             is_selected = (self.selected_index == idx)
@@ -332,35 +339,75 @@ class SettingsMenu:
             # Texto da Ação
             txt_color = COLOR_WHITE if not is_waiting else COLOR_GOLD
             action_surf = font_small.render(label, True, txt_color)
-            surface.blit(action_surf, (btn_rect.x + 12, btn_rect.y + 9))
+            surface.blit(action_surf, (btn_rect.x + 12, btn_rect.y + 8))
 
             # Tecla e Botão Atual
             if is_waiting:
                 key_text = "<PRESSIONE TECLA OU BOTÃO>"
-                key_color = COLOR_GOLD
+                val_surf = font_small.render(key_text, True, COLOR_GOLD)
+                surface.blit(val_surf, (btn_rect.right - val_surf.get_width() - 12, btn_rect.y + 8))
             else:
                 key_code = self.controls.get(action_key, pygame.K_UNKNOWN)
                 key_str = format_key_name(key_code)
 
                 p_idx = 0 if is_red else 1
                 ctrl = ctrl_mgr.get_controller_for_player(p_idx)
-                act_suffix = "attack" if "ATTACK" in action_key else ("dash" if ("DASH" in action_key or "PARRY" in action_key) else None)
+                act_suffix = "attack" if "ATTACK" in action_key else (
+                    "dash" if "DASH" in action_key else (
+                        "secondary" if ("SECONDARY" in action_key or "PARRY" in action_key) else None
+                    )
+                )
 
-                if act_suffix and ctrl:
-                    btn_name = ctrl.get_mapped_button_name(act_suffix)
-                    key_text = f"[{key_str}]  [🎮 {btn_name}]"
+                # Determinar o ícone SVG correspondente (PlayStation)
+                svg_icon_name = None
+                btn_label = ""
+                if ctrl and ctrl.is_playstation:
+                    if act_suffix:
+                        svg_icon_name = ctrl.get_button_svg_icon(act_suffix)
+                        btn_label = ctrl.get_mapped_button_name(act_suffix)
+                    else:
+                        svg_icon_name = "dpad"
+                        btn_label = "D-Pad"
                 elif ctrl:
-                    key_text = f"[{key_str}]  [🎮 D-Pad]"
+                    if act_suffix:
+                        btn_label = f"🎮 {ctrl.get_mapped_button_name(act_suffix)}"
+                    else:
+                        btn_label = "🎮 D-Pad"
                 else:
-                    key_text = f"[ {key_str} ]"
-                key_color = (255, 215, 120) if is_selected else (200, 210, 205)
+                    # Sem controle conectado: exibe ícone PlayStation de referência pedagógica
+                    if act_suffix == "attack":
+                        svg_icon_name = "square"
+                        btn_label = "▢"
+                    elif act_suffix == "secondary":
+                        svg_icon_name = "triangle"
+                        btn_label = "△"
+                    elif act_suffix == "dash":
+                        svg_icon_name = "circle"
+                        btn_label = "○"
+                    else:
+                        svg_icon_name = "dpad"
+                        btn_label = "D-Pad"
 
-            val_surf = font_small.render(key_text, True, key_color)
-            surface.blit(val_surf, (btn_rect.right - val_surf.get_width() - 12, btn_rect.y + 9))
+                key_color = (255, 215, 120) if is_selected else (200, 210, 205)
+                
+                # Renderiza do canto direito para a esquerda
+                cur_right_x = btn_rect.right - 12
+                if svg_icon_name:
+                    # Desenhar Ícone SVG de 20x20
+                    icon_surf = get_button_icon_surface(svg_icon_name, 20, 20)
+                    cur_right_x -= 22
+                    surface.blit(icon_surf, (cur_right_x, btn_rect.y + 7))
+
+                if btn_label and not (ctrl and ctrl.is_playstation):
+                    label_surf = font_small.render(f"[{btn_label}]", True, (160, 185, 175))
+                    cur_right_x -= (label_surf.get_width() + 6)
+                    surface.blit(label_surf, (cur_right_x, btn_rect.y + 8))
+
+                key_surf = font_small.render(f"[{key_str}]", True, key_color)
+                cur_right_x -= (key_surf.get_width() + 6)
+                surface.blit(key_surf, (cur_right_x, btn_rect.y + 8))
 
         # 5. Status de Gamepads e Controles Touch
-        from src.input.controller_manager import get_controller_manager
-        ctrl_mgr = get_controller_manager()
         badge_p1 = ctrl_mgr.get_badge_text(0) or "Nenhum detectado (Teclado)"
         badge_p2 = ctrl_mgr.get_badge_text(1) or "Nenhum detectado"
 

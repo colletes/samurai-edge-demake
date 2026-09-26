@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 48" width="72" height="48">
+  <defs>
+    <linearGradient id="btnGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4a5568"/>
+      <stop offset="100%" stop-color="#1f2429"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="6" width="64" height="36" rx="10" fill="url(#btnGrad)" stroke="#718096" stroke-width="2"/>
+  <rect x="7" y="9" width="58" height="30" rx="8" fill="none" stroke="#2d3748" stroke-width="1.5"/>
+  <text x="36" y="30" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="900" fill="#e2e8f0" text-anchor="middle" letter-spacing="1">R1</text>
+</svg>
