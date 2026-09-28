@@ -14,7 +14,7 @@ from src.entities.projectile import (
     KyudoArrowProjectile, RopeArrowProjectile, CannonballProjectile,
     RemoteMineEntity
 )
-from src.entities.doberman import STATE_DOG_CHARGE, STATE_DOG_KNOCKED_OUT
+from src.entities.doberman import STATE_DOG_CHARGE, STATE_DOG_KNOCKED_OUT, STATE_DOG_BARK
 
 def _get_death_style_for_attacker(attacker):
     char_type = getattr(attacker, "char_type", "").lower()
@@ -39,7 +39,7 @@ class CombatSystem:
     def __init__(self):
         self.hitstop_timer = 0.0
 
-    def process_combat(self, p1, p2, game_map, particles: list, banners: list, camera, projectiles: list, dt: float = 0.016, cinematic_director = None, decoys: list = None) -> str | None:
+    def process_combat(self, p1, p2, game_map, particles: list, banners: list, camera, projectiles: list, dt: float = 0.016, cinematic_director = None, decoys: list = None, ctrl_mgr = None) -> str | None:
         """
         Processa interações de combate: corpo a corpo, projéteis e ataques de cães.
         Retorna 'P1_WINS', 'P2_WINS' ou None.
@@ -70,17 +70,22 @@ class CombatSystem:
                             banners.append(FloatingBanner("SLASH DEFLECTION!", proj.wx, proj.wy, wz=1.7, color=(255, 230, 80)))
                             camera.add_shake(5.0)
 
-            # 2. Murasaki: Giro Protetor de Corrente da Kusarigama
+            # 2. Murasaki: Giro Protetor de Corrente da Kusarigama (Apenas Frente - Item 10)
             elif getattr(def_fighter, "is_spinning_chain", False):
                 mx, my = def_fighter.wx, def_fighter.wy
                 for proj in projectiles:
                     if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter:
-                        if world_distance(mx, my, proj.wx, proj.wy) < 1.65:
-                            proj.is_active = False
-                            for _ in range(12):
-                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
-                            banners.append(FloatingBanner("CHAIN DEFLECTION!", proj.wx, proj.wy, wz=1.7, color=(220, 140, 255)))
-                            camera.add_shake(5.0)
+                        dist = world_distance(mx, my, proj.wx, proj.wy)
+                        if dist < 1.75:
+                            dx = proj.wx - def_fighter.wx
+                            dy = proj.wy - def_fighter.wy
+                            dot = (dx * def_fighter.facing_x + dy * def_fighter.facing_y) / max(0.001, dist)
+                            if dot > 0.15:  # Protege estritamente a frente (cone de ~140°)
+                                proj.is_active = False
+                                for _ in range(12):
+                                    particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
+                                banners.append(FloatingBanner("FRONTAL CHAIN DEFLECTION!", proj.wx, proj.wy, wz=1.7, color=(220, 140, 255)))
+                                camera.add_shake(5.0)
 
             # 3. Anne: Corte em Meia-Lua do Alfanje (Cutlass Cleave Deflection ampliado)
             elif char_t == "pirate" and def_fighter.hitbox_active:
@@ -106,16 +111,23 @@ class CombatSystem:
                             banners.append(FloatingBanner("OFUDA WARD!", proj.wx, proj.wy, wz=1.7, color=(120, 220, 160)))
                             camera.add_shake(4.0)
 
-            # 5. Julie: Floreio de Capa Defensivo (Cape Deflection)
+            # 5. Julie: Floreio de Capa Defensivo (Cape Deflection - Cone Frontal de ~120°)
             elif char_t == "musketeer" and def_fighter.state == "CAPE_FLOURISH":
                 for proj in projectiles:
                     if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter:
-                        if world_distance(def_fighter.wx, def_fighter.wy, proj.wx, proj.wy) < 1.95:
-                            proj.is_active = False
-                            for _ in range(12):
-                                particles.append(SparkParticle(proj.wx, proj.wy, 0.55, color=(100, 180, 255)))
-                            banners.append(FloatingBanner("CAPE DEFLECTION!", def_fighter.wx, def_fighter.wy, wz=1.75, color=(100, 180, 255)))
-                            camera.add_shake(4.5)
+                        dist = world_distance(def_fighter.wx, def_fighter.wy, proj.wx, proj.wy)
+                        if dist < 1.95:
+                            # Verifica cone frontal: apenas projéteis vindos de frente são defletidos
+                            proj_dx = proj.wx - def_fighter.wx
+                            proj_dy = proj.wy - def_fighter.wy
+                            dot = (proj_dx * def_fighter.facing_x + proj_dy * def_fighter.facing_y) / max(0.001, dist)
+                            if dot > 0.0:  # Cone frontal de 90° de cada lado (180° total de frente)
+                                proj.is_active = False
+                                for _ in range(12):
+                                    particles.append(SparkParticle(proj.wx, proj.wy, 0.55, color=(100, 180, 255)))
+                                banners.append(FloatingBanner("CAPE DEFLECTION!", def_fighter.wx, def_fighter.wy, wz=1.75, color=(100, 180, 255)))
+                                camera.add_shake(4.5)
+
 
         active_projectiles = []
         for proj in projectiles:
@@ -215,6 +227,9 @@ class CombatSystem:
                     proj.is_active = False
                     camera.add_shake(18.0)
                     banners.append(FloatingBanner("BOOM! - BOMB DETONATION!", proj.wx, proj.wy, wz=1.8, color=(255, 140, 20)))
+                    if ctrl_mgr:
+                        ctrl_mgr.rumble_player(0, 0.9, 0.7, 280)
+                        ctrl_mgr.rumble_player(1, 0.9, 0.7, 280)
 
                     # Efeito de fogo e cinzas em área
                     for _ in range(30):
@@ -276,22 +291,38 @@ class CombatSystem:
                 target = p2 if proj.owner == p1 else p1
                 winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
                 if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.55 + target.radius):
-                    proj.is_active = False
-                    if target.state == STATE_PARRY:
-                        banners.append(FloatingBanner("PARRY BULLET!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
-                        for _ in range(14):
-                            particles.append(SparkParticle(proj.wx, proj.wy, 0.7))
+                    # Respeita invulnerabilidade do dodge (Cape Flourish, Roll, Shukuchi, etc.)
+                    target_in_dodge = (
+                        target.state in ("ROLL", "CAPE_FLOURISH", "SHUKUCHI", "KAWARIMI_ROLL", "DODGE")
+                        and getattr(target, "is_invulnerable_dodge", False)
+                    )
+                    if target_in_dodge:
+                        pass  # Bala passa através sem detonar (o dodge garante i-frames totais)
                     else:
-                        hit, dead = target.take_hit((proj.vx, proj.vy), damage=2)
-                        if dead:
-                            camera.add_shake(16.0)
-                            banners.append(FloatingBanner("TANEGASHIMA HEADSHOT!", target.wx, target.wy, wz=1.8, color=(255, 180, 50)))
-                            for _ in range(30):
-                                particles.append(BloodParticle(target.wx, target.wy, 0.6))
-                            self.hitstop_timer = 0.14
-                            winner = winner_id
-                            if cinematic_director:
-                                cinematic_director.trigger_fatal_strike(proj.owner, target, "HEADSHOT_EXPLODE", (proj.vx, proj.vy))
+                        proj.is_active = False
+                        if target.state == STATE_PARRY:
+                            banners.append(FloatingBanner("PARRY BULLET!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
+                            for _ in range(14):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.7))
+                        else:
+                            hit, dead = target.take_hit((proj.vx, proj.vy), damage=2)
+                            if dead:
+                                camera.add_shake(16.0)
+                                owner_type = getattr(proj.owner, "char_type", "")
+                                if owner_type in ("musketeer", "julie"):
+                                    banner_text = "POCKET FLINTLOCK SNIPE!"
+                                    banner_color = (255, 215, 70)
+                                else:
+                                    banner_text = "TANEGASHIMA HEADSHOT!"
+                                    banner_color = (255, 180, 50)
+                                banners.append(FloatingBanner(banner_text, target.wx, target.wy, wz=1.8, color=banner_color))
+                                for _ in range(30):
+                                    particles.append(BloodParticle(target.wx, target.wy, 0.6))
+                                self.hitstop_timer = 0.14
+                                winner = winner_id
+                                if cinematic_director:
+                                    cinematic_director.trigger_fatal_strike(proj.owner, target, "HEADSHOT_EXPLODE", (proj.vx, proj.vy))
+
 
             # Se for NUVEM DE VENENO (PoisonCloudProjectile)
             elif isinstance(proj, PoisonCloudProjectile) and proj.is_active:
@@ -386,6 +417,21 @@ class CombatSystem:
         for fighter, other_id in ((p1, "P2_WINS"), (p2, "P1_WINS")):
             if fighter.is_alive and getattr(fighter, "is_poisoned", False):
                 fighter.poison_timer -= dt
+                # Oponente envenenado ganha adrenalina: cooldowns 20% menores (recuperam 25% mais rápido)
+                bonus_dt = dt * 0.25
+                for cd_attr in (
+                    "ryuu_timer", "dash_recovery_timer", "jump_timer", "jump_cooldown_timer",
+                    "chain_timer", "mine_timer", "bomb_timer", "smoke_timer", "rope_timer",
+                    "arrow_cooldown_timer", "ofuda_cooldown_timer", "cannon_cooldown_timer",
+                    "flintlock_timer", "cape_timer", "trap_timer", "zeroshiki_timer",
+                    "shuriken_timer", "thrust_timer", "kama_timer", "backstep_timer", "cleave_timer"
+                ):
+                    val = getattr(fighter, cd_attr, 0.0)
+                    if val > 0:
+                        setattr(fighter, cd_attr, max(0.0, val - bonus_dt))
+                if hasattr(fighter, "dog") and fighter.dog and getattr(fighter.dog, "cooldown_timer", 0.0) > 0:
+                    fighter.dog.cooldown_timer = max(0.0, fighter.dog.cooldown_timer - bonus_dt)
+
                 if fighter.poison_timer <= 0:
                     fighter.is_poisoned = False
                     fighter.take_hit((0, 0), damage=99)
@@ -403,19 +449,24 @@ class CombatSystem:
         # Cão do Jogador 1 contra Jogador 2 (Item 23)
         if hasattr(p1, "dog") and p1.dog and p1.dog.state != STATE_DOG_KNOCKED_OUT:
             dog = p1.dog
-            # Verificar se o Jogador 2 acertou o cão com arma (hitbox ativa) a qualquer momento!
-            if p2.is_alive and p2.hitbox_active and world_distance(p2.hitbox_center[0], p2.hitbox_center[1], dog.wx, dog.wy) < (p2.hitbox_radius + dog.radius):
+            # Item 6: O cão só pode ser golpeado/atordoado se estiver atacando (BARK ou CHARGE)!
+            if dog.state in (STATE_DOG_CHARGE, STATE_DOG_BARK) and p2.is_alive and p2.hitbox_active and world_distance(p2.hitbox_center[0], p2.hitbox_center[1], dog.wx, dog.wy) < (p2.hitbox_radius + dog.radius):
                 dog.knock_out(2.0)
                 for _ in range(12):
                     particles.append(SparkParticle(dog.wx, dog.wy, 0.4))
                 camera.add_shake(6.0)
                 banners.append(FloatingBanner("DOG STUNNED! (2.0s)", dog.wx, dog.wy, wz=1.4, color=(255, 80, 80)))
+                if ctrl_mgr:
+                    ctrl_mgr.rumble_player(0, 0.5, 0.7, 200)
             elif dog.state == STATE_DOG_CHARGE and p2.is_alive and world_distance(dog.wx, dog.wy, p2.wx, p2.wy) < (dog.hitbox_radius + p2.radius):
                 # O cão atingiu o oponente!
                 if p2.state == STATE_PARRY:
                     dog.knock_out(2.0)
                     camera.add_shake(7.0)
                     banners.append(FloatingBanner("PARRY DOG!", p2.wx, p2.wy, wz=1.7, color=(100, 200, 255)))
+                    if ctrl_mgr:
+                        ctrl_mgr.rumble_player(0, 0.5, 0.7, 200)
+                        ctrl_mgr.rumble_player(1, 0.6, 0.8, 180)
                 else:
                     # MORTE FATAL PELO DOBERMAN!
                     hit, dead = p2.take_hit((dog.facing_x, dog.facing_y), damage=2)
@@ -430,21 +481,30 @@ class CombatSystem:
                         dog.hitbox_active = False
                         if cinematic_director:
                             cinematic_director.trigger_fatal_strike(p1, p2, "CLEAN_DECAP", (dog.facing_x, dog.facing_y))
+                        if ctrl_mgr:
+                            ctrl_mgr.rumble_player(0, 0.8, 1.0, 320)
+                            ctrl_mgr.rumble_player(1, 1.0, 1.0, 400)
 
         # Cão do Jogador 2 contra Jogador 1 (Item 23)
         if hasattr(p2, "dog") and p2.dog and p2.dog.state != STATE_DOG_KNOCKED_OUT and winner is None:
             dog = p2.dog
-            if p1.is_alive and p1.hitbox_active and world_distance(p1.hitbox_center[0], p1.hitbox_center[1], dog.wx, dog.wy) < (p1.hitbox_radius + dog.radius):
+            # Item 6: O cão só pode ser golpeado/atordoado se estiver atacando (BARK ou CHARGE)!
+            if dog.state in (STATE_DOG_CHARGE, STATE_DOG_BARK) and p1.is_alive and p1.hitbox_active and world_distance(p1.hitbox_center[0], p1.hitbox_center[1], dog.wx, dog.wy) < (p1.hitbox_radius + dog.radius):
                 dog.knock_out(2.0)
                 for _ in range(12):
                     particles.append(SparkParticle(dog.wx, dog.wy, 0.4))
                 camera.add_shake(6.0)
                 banners.append(FloatingBanner("DOG STUNNED! (2.0s)", dog.wx, dog.wy, wz=1.4, color=(255, 80, 80)))
+                if ctrl_mgr:
+                    ctrl_mgr.rumble_player(1, 0.5, 0.7, 200)
             elif dog.state == STATE_DOG_CHARGE and p1.is_alive and world_distance(dog.wx, dog.wy, p1.wx, p1.wy) < (dog.hitbox_radius + p1.radius):
                 if p1.state == STATE_PARRY:
                     dog.knock_out(2.0)
                     camera.add_shake(7.0)
                     banners.append(FloatingBanner("PARRY DOG!", p1.wx, p1.wy, wz=1.7, color=(100, 200, 255)))
+                    if ctrl_mgr:
+                        ctrl_mgr.rumble_player(1, 0.5, 0.7, 200)
+                        ctrl_mgr.rumble_player(0, 0.6, 0.8, 180)
                 else:
                     hit, dead = p1.take_hit((dog.facing_x, dog.facing_y), damage=2)
                     if dead:
@@ -458,14 +518,17 @@ class CombatSystem:
                         dog.hitbox_active = False
                         if cinematic_director:
                             cinematic_director.trigger_fatal_strike(p2, p1, "CLEAN_DECAP", (dog.facing_x, dog.facing_y))
+                        if ctrl_mgr:
+                            ctrl_mgr.rumble_player(1, 0.8, 1.0, 320)
+                            ctrl_mgr.rumble_player(0, 1.0, 1.0, 400)
 
         # -------------------------------------------------------------
         # 3. CORTE DE BAMBUS E FAÍSCAS EM ROCHAS
         # -------------------------------------------------------------
         self._check_bamboo_cuts(p1, game_map, particles)
         self._check_bamboo_cuts(p2, game_map, particles)
-        self._check_obstacle_sparks(p1, game_map, particles, camera)
-        self._check_obstacle_sparks(p2, game_map, particles, camera)
+        self._check_obstacle_sparks(p1, game_map, particles, camera, ctrl_mgr, p_idx=0)
+        self._check_obstacle_sparks(p2, game_map, particles, camera, ctrl_mgr, p_idx=1)
 
         if not p1.is_alive or not p2.is_alive:
             return winner
@@ -517,6 +580,9 @@ class CombatSystem:
                     camera.add_shake(7.0)
                     p1.stun(0.4)
                     p2.stun(0.4)
+                    if ctrl_mgr:
+                        ctrl_mgr.rumble_player(0, 0.6, 0.8, 180)
+                        ctrl_mgr.rumble_player(1, 0.6, 0.8, 180)
                     return None
 
         # -------------------------------------------------------------
@@ -543,6 +609,9 @@ class CombatSystem:
                     banners.append(FloatingBanner(parry_msg, p2.wx, p2.wy, wz=1.7, color=(100, 200, 255)))
                     camera.add_shake(8.0)
                     p1.stun(0.85)
+                    if ctrl_mgr:
+                        ctrl_mgr.rumble_player(0, 0.5, 0.8, 200)
+                        ctrl_mgr.rumble_player(1, 0.6, 0.8, 180)
                 elif getattr(p1, "is_rifle_butt", False):
                     # Coronhada agressiva do Teppo: causa 1 de dano, afasta 1.6m e atordoa o adversário
                     hit, dead = p2.take_hit(p1.slash_dir, damage=1)
@@ -620,6 +689,9 @@ class CombatSystem:
                     banners.append(FloatingBanner(parry_msg, p1.wx, p1.wy, wz=1.7, color=(100, 200, 255)))
                     camera.add_shake(8.0)
                     p2.stun(0.85)
+                    if ctrl_mgr:
+                        ctrl_mgr.rumble_player(1, 0.5, 0.8, 200)
+                        ctrl_mgr.rumble_player(0, 0.6, 0.8, 180)
                 elif getattr(p2, "is_rifle_butt", False):
                     # Coronhada agressiva do Teppo: causa 1 de dano, afasta 1.6m e atordoa o adversário
                     hit, dead = p1.take_hit(p2.slash_dir, damage=1)
@@ -697,19 +769,55 @@ class CombatSystem:
                         for _ in range(5):
                             particles.append(SparkParticle(bamboo.wx, bamboo.wy, bamboo.stump_height))
 
-    def _check_obstacle_sparks(self, fighter, game_map, particles: list, camera):
+    def _check_obstacle_sparks(self, fighter, game_map, particles: list, camera, ctrl_mgr = None, p_idx: int = 0):
         if not fighter.hitbox_active:
             return
         hx, hy = fighter.hitbox_center
+        hradius = fighter.hitbox_radius * 0.75
+        hit_solid = False
 
-        for rock in game_map.rocks:
-            if world_distance(hx, hy, rock.wx, rock.wy) < (fighter.hitbox_radius * 0.7 + rock.radius):
-                for _ in range(4):
-                    particles.append(SparkParticle(hx, hy, 0.5))
-                camera.add_shake(2.0)
+        # 1. Rochas da arena
+        for rock in getattr(game_map, "rocks", []):
+            if world_distance(hx, hy, rock.wx, rock.wy) < (hradius + getattr(rock, "radius", 0.65)):
+                hit_solid = True
+                break
 
-        if game_map.well:
-            if world_distance(hx, hy, game_map.well.wx, game_map.well.wy) < (fighter.hitbox_radius * 0.7 + game_map.well.radius):
-                for _ in range(4):
-                    particles.append(SparkParticle(hx, hy, 0.6))
-                camera.add_shake(2.0)
+        # 2. Lavatório Tsukubai / Poço
+        if not hit_solid and getattr(game_map, "well", None):
+            if world_distance(hx, hy, game_map.well.wx, game_map.well.wy) < (hradius + getattr(game_map.well, "radius", 0.70)):
+                hit_solid = True
+
+        # 3. Lanternas Ishi-doro (Kyoto e Bamboo Forest)
+        if not hit_solid:
+            for lantern in getattr(game_map, "lanterns", []):
+                if world_distance(hx, hy, lantern.wx, lantern.wy) < (hradius + 0.45):
+                    hit_solid = True
+                    break
+
+        # 4. Carruagens em disparada (Kyoto)
+        if not hit_solid:
+            for carriage in getattr(game_map, "carriages", []):
+                if carriage.is_active and carriage.warning_timer <= 0:
+                    if world_distance(hx, hy, carriage.wx, carriage.wy) < (hradius + getattr(carriage, "hit_radius", 1.2)):
+                        hit_solid = True
+                        break
+
+        # 5. Árvores e Pilares Torii
+        if not hit_solid:
+            for tree in getattr(game_map, "trees", []):
+                if world_distance(hx, hy, tree.wx, tree.wy) < (hradius + getattr(tree, "radius", 0.60)):
+                    hit_solid = True
+                    break
+            if not hit_solid:
+                for torii in getattr(game_map, "torii_gates", []):
+                    if world_distance(hx, hy, torii.wx, torii.wy) < (hradius + getattr(torii, "radius", 0.70)):
+                        hit_solid = True
+                        break
+
+        if hit_solid:
+            for _ in range(5):
+                particles.append(SparkParticle(hx, hy, 0.55))
+            camera.add_shake(2.8)
+            self.hitstop_timer = max(self.hitstop_timer, 0.06)
+            if ctrl_mgr:
+                ctrl_mgr.rumble_player(p_idx, 0.35, 0.5, 90)

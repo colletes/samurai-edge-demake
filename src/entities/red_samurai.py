@@ -36,8 +36,8 @@ class RedSamurai(Samurai):
         self.slash_trail_points: list[tuple[float, float]] = []
 
     def can_act(self) -> bool:
-        """Kenshi pode agir se estiver viva, em IDLE/WALK e sem recovery de dash."""
-        return self.is_alive and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY) and self.dash_recovery_timer <= 0
+        """Kenshi só pode agir se estiver viva, em IDLE/WALK e sem recovery de dash/golpes."""
+        return self.is_alive and self.state in (STATE_IDLE, STATE_WALK) and self.dash_recovery_timer <= 0
 
     def can_move(self) -> bool:
         """Kenshi pode se mover livremente enquanto embainha a katana (STATE_RECOVERY)."""
@@ -80,23 +80,25 @@ class RedSamurai(Samurai):
         self.set_facing(target_wx, target_wy)
         self.ryuu_timer = self.ryuu_cooldown
         self.state = "RYUU_TSUI_SEN"
-        self.state_timer = 0.38
+        self.state_timer = 0.36
+        self.wz = 2.6  # Aparece instantaneamente alto no ar acima de sua posição atual
         self.is_invulnerable_dodge = True
         self.hitbox_active = False
 
-        # Pós-imagem de velocidade inicial
+        # Pós-imagem do desaparecimento súbito com efeito de vento
         if not hasattr(self, "zanzou_ghosts"):
             self.zanzou_ghosts = []
         self.zanzou_ghosts.append({
             "wx": self.wx, "wy": self.wy,
             "facing_x": self.facing_x, "facing_y": self.facing_y,
-            "alpha": 220, "duration": 0.35
+            "alpha": 200, "duration": 0.30
         })
 
         if particles is not None:
-            from src.effects.particles import SparkParticle
+            from src.effects.particles import SmokeParticle, SparkParticle
             for _ in range(8):
-                particles.append(SparkParticle(self.wx, self.wy, 0.4))
+                particles.append(SmokeParticle(self.wx, self.wy, 0.4, color=(230, 235, 245), size=6))
+                particles.append(SparkParticle(self.wx, self.wy, 0.5, color=(240, 240, 255)))
 
     def trigger_tsuka_ate(self, target_wx: float, target_wy: float, particles: list = None, opponent = None, banners: list = None):
         """Compatibilidade: redireciona para Ryuu Tsui Sen."""
@@ -120,6 +122,7 @@ class RedSamurai(Samurai):
         self.facing_x = dir_x
         self.facing_y = dir_y
         self.is_invulnerable_dodge = True
+        self.slash_trail_points.clear()  # Limpar para nunca deixar rastro vermelho no dash
         self.zanzou_spawn_timer = 0.0
         # Registrar primeira pós-imagem fantasma (zanzou)
         if not hasattr(self, "zanzou_ghosts"):
@@ -127,7 +130,7 @@ class RedSamurai(Samurai):
         self.zanzou_ghosts.append({
             "wx": self.wx, "wy": self.wy,
             "facing_x": self.facing_x, "facing_y": self.facing_y,
-            "alpha": 200, "duration": 0.28
+            "alpha": 190, "duration": 0.28
         })
 
     def update(self, dt: float, game_map, particles: list = None):
@@ -150,6 +153,8 @@ class RedSamurai(Samurai):
             self.ryuu_timer -= dt
         if self.dash_recovery_timer > 0:
             self.dash_recovery_timer -= dt
+
+        if self.state == STATE_ATTACK:
             # Avanço relâmpago Iai
             self.state_timer -= dt
             dash_dist = self.dash_speed * dt
@@ -237,31 +242,33 @@ class RedSamurai(Samurai):
 
         elif self.state == "RYUU_TSUI_SEN":
             self.state_timer -= dt
-            progress = max(0.0, min(1.0, 1.0 - (self.state_timer / 0.38)))
-            # Salto vertical parabólico até o ápice e queda veloz cortando com a katana (Item 17)
-            self.wz = math.sin(progress * math.pi) * 1.65
+            # Queda vertical rápida partindo do ápice do ar em direção ao solo (Item 13)
+            self.wz = max(0.0, self.wz - 8.2 * dt)
 
-            if progress < 0.45:
+            if self.wz > 1.8:
                 self.is_invulnerable_dodge = True
                 self.hitbox_active = False
             else:
-                # Descendo com o corte vertical
+                # Descendo com o corte vertical agressivo
                 self.is_invulnerable_dodge = False
                 self.hitbox_active = True
-                self.hitbox_radius = 1.35
+                self.hitbox_radius = 1.45
                 self.slash_dir = (self.facing_x, self.facing_y)
-                self.hitbox_center = (self.wx + self.facing_x * 0.75, self.wy + self.facing_y * 0.75)
+                self.hitbox_center = (self.wx + self.facing_x * 0.80, self.wy + self.facing_y * 0.80)
+                self.slash_trail_points.append((self.wx, self.wy))
 
-            if self.state_timer <= 0:
+            if self.wz <= 0.0 or self.state_timer <= 0:
                 self.wz = 0.0
                 self.state = STATE_RECOVERY
                 self.state_timer = 0.22
                 self.hitbox_active = False
                 self.is_invulnerable_dodge = False
                 if particles is not None:
-                    from src.effects.particles import SparkParticle
-                    for _ in range(14):
-                        particles.append(SparkParticle(self.wx + self.facing_x * 0.6, self.wy + self.facing_y * 0.6, 0.5))
+                    from src.effects.particles import SparkParticle, SmokeParticle
+                    for _ in range(16):
+                        particles.append(SparkParticle(self.wx + self.facing_x * 0.6, self.wy + self.facing_y * 0.6, 0.2))
+                    for _ in range(8):
+                        particles.append(SmokeParticle(self.wx, self.wy, 0.1, color=(240, 240, 250), size=6))
 
         elif self.state == "TSUKA_ATE":
             self.state_timer -= dt

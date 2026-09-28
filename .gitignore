@@ -25,4 +25,5 @@ bin/
 
 # Scratch & temporary testing scripts
 scratch/
-
+# User runtime settings
+controls_config.json

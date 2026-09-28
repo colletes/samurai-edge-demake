@@ -13,7 +13,7 @@ from src.entities.samurai import (
     Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, STATE_ROLL
 )
 from src.entities.voxel_models import render_voxel_humanoid
-from src.effects.particles import SparkParticle
+from src.effects.particles import SparkParticle, SmokeParticle, FloatingBanner
 
 class PirateSwordswoman(Samurai):
     def __init__(self, wx: float, wy: float):
@@ -159,7 +159,7 @@ class PirateSwordswoman(Samurai):
             else:
                 self.start_cannon_strike(target_wx, target_wy)
 
-    def update(self, dt: float, game_map, particles: list = None, opponent = None):
+    def update(self, dt: float, game_map, particles: list = None, opponent = None, banners: list = None):
         if not self.is_alive:
             return
 
@@ -202,7 +202,7 @@ class PirateSwordswoman(Samurai):
             if particles is not None and random.random() < 0.5:
                 particles.append(SparkParticle(self.wx, self.wy, 0.3))
 
-            # Impacto do Black Powder Dash no oponente: aplica mini-stun, desorientação e lentidão
+            # Impacto do Black Powder Dash no oponente: aplica mini-stun, desorientação e lentidão (Item 17)
             if opponent is not None and getattr(opponent, "is_alive", False) and not self.dash_has_hit:
                 dist = math.hypot(self.wx - opponent.wx, self.wy - opponent.wy)
                 if dist < (self.radius + getattr(opponent, "radius", 0.4) + 0.45):
@@ -211,12 +211,16 @@ class PirateSwordswoman(Samurai):
                         opponent.stun(0.40)  # Mini-stun de 0.40s
                     if hasattr(opponent, "apply_slow"):
                         opponent.apply_slow(1.2)  # Lentidão de pólvora
+                    if banners is not None:
+                        banners.append(FloatingBanner("SLOW!", opponent.wx, opponent.wy, wz=1.7, color=(190, 180, 170), duration=1.2))
                     # Leve repulsão física do impacto de pólvora
                     opponent.wx += self.roll_dir_x * 0.35
                     opponent.wy += self.roll_dir_y * 0.35
                     if particles is not None:
-                        for _ in range(14):
+                        for _ in range(12):
                             particles.append(SparkParticle(opponent.wx, opponent.wy, 0.45))
+                        for _ in range(8):
+                            particles.append(SmokeParticle(opponent.wx, opponent.wy, wz=0.2, color=(50, 45, 45), radius=0.18, lifetime=0.5))
 
             if self.state_timer <= 0:
                 self.state = STATE_IDLE

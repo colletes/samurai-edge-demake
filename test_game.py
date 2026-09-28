@@ -262,15 +262,15 @@ def test_complete_roster():
     assert winner == "P1_WINS"
     assert archer_target.is_alive == False
 
-    # Testar Flecha de Corda sem cooldown
+    # Testar Flecha de Corda com cooldown de 2.0s
     projectiles.clear()
     archer2 = KyudoArcher(wx=5.0, wy=5.0)
-    assert archer2.rope_cooldown == 0.0
+    assert archer2.rope_cooldown == 2.0
     archer2.trigger_rope_arrow(12.0, 5.0, projectiles)
     assert len(projectiles) == 1
     rope = projectiles[0]
     assert rope.is_active == True
-    print("Teste 6: Kyudo Archer (Disparo Yumi Imediato e Flecha de Corda sem Cooldown) OK!")
+    print("Teste 6: Kyudo Archer (Disparo Yumi Imediato e Flecha de Corda com Cooldown de 2.0s) OK!")
 
     # 7. Testar Spawns Aleatórios com Distância Mínima >= 7.0 tiles
     for _ in range(25):

@@ -61,12 +61,13 @@ from src.entities.musketeer import Musketeer
 from src.entities.ai_controller import SamuraiAI
 from src.entities.pickups import PowderPouch
 from src.combat.collision import CombatSystem
-from src.effects.particles import AmbientLeafParticle, SparkParticle, BloodParticle, FloatingBanner
+from src.effects.particles import AmbientLeafParticle, SparkParticle, BloodParticle, FloatingBanner, SmokeParticle
 from src.effects.cinematic_director import CinematicDirector
 from src.ui.settings_menu import SettingsMenu, format_key_name
 from src.ui.character_select import CharacterSelectScreen
 from src.ui.title_screen import SumieTitleScreen
 from src.ui.arena_select import ArenaSelectScreen
+from src.ui.loading_screen import LoadingScreen
 from src.ui.fonts import get_title_font, get_text_font
 from src.i18n import t
 from src.input import get_controller_manager, TouchControls, DisplayScaler
@@ -169,6 +170,9 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
         return None
 
     if isinstance(fighter, RedSamurai):
+        if getattr(fighter, "state", "") == "RECOVERY" and getattr(fighter, "state_timer", 0.0) > 0.0:
+            rec_cd = getattr(fighter, "recovery_duration", 0.80)
+            return {"name": "Iai Noto", "timer": fighter.state_timer, "max_cd": rec_cd, "color": (235, 60, 60)}
         timer = max(0.0, getattr(fighter, "ryuu_timer", 0.0))
         cd = getattr(fighter, "ryuu_cooldown", 3.5)
         return {"name": "Ryuu Tsui Sen", "timer": timer, "max_cd": cd, "color": (235, 60, 60)}
@@ -189,11 +193,11 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
 
     elif isinstance(fighter, AmericanNinja):
         if hasattr(fighter, "dog") and fighter.dog and getattr(fighter.dog, "state", "") == "KNOCKED_OUT":
-            timer = max(0.0, getattr(fighter.dog, "knockout_timer", 0.0))
+            timer = max(0.0, getattr(fighter.dog, "state_timer", 0.0))
             return {"name": "Cão Yamato KO", "timer": timer, "max_cd": 2.0, "color": (240, 60, 60), "warning": True}
-        timer = max(0.0, getattr(fighter, "dog_attack_cooldown_timer", 0.0))
-        cd = getattr(fighter, "dog_attack_cooldown", 3.0)
-        return {"name": "Yamato Dash", "timer": timer, "max_cd": cd, "color": (220, 70, 70)}
+        dog_cd = getattr(getattr(fighter, "dog", None), "cooldown_timer", 0.0)
+        timer = max(0.0, dog_cd)
+        return {"name": "Yamato Dash", "timer": timer, "max_cd": 3.0, "color": (220, 70, 70)}
 
     elif isinstance(fighter, SaitouSamurai):
         timer = max(0.0, getattr(fighter, "zeroshiki_timer", 0.0))
@@ -203,37 +207,43 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
     elif isinstance(fighter, Rifleman):
         if not getattr(fighter, "has_ammo", True):
             return {"name": "Sem Pólvora", "timer": 1.0, "max_cd": 1.0, "color": (230, 80, 80), "warning": True}
-        timer = max(0.0, getattr(fighter, "trap_cooldown_timer", 0.0))
+        timer = max(0.0, getattr(fighter, "trap_timer", 0.0))
         cd = getattr(fighter, "trap_cooldown", 5.0)
         return {"name": "Armadilha", "timer": timer, "max_cd": cd, "color": (225, 165, 80)}
 
     elif isinstance(fighter, PurpleNinja):
-        timer = max(0.0, getattr(fighter, "shield_cooldown_timer", 0.0))
-        cd = getattr(fighter, "shield_cooldown", 3.0)
-        return {"name": "Escudo Foice", "timer": timer, "max_cd": cd, "color": (185, 110, 245)}
+        timer = max(0.0, getattr(fighter, "chain_timer", 0.0))
+        cd = getattr(fighter, "chain_cooldown", 3.0)
+        return {"name": "Corrente Foice", "timer": timer, "max_cd": cd, "color": (185, 110, 245)}
 
     elif isinstance(fighter, GrayNinja):
-        m_timer = max(0.0, getattr(fighter, "mine_cooldown_timer", 0.0))
+        m_timer = max(0.0, getattr(fighter, "mine_timer", 0.0))
         if m_timer > 0:
             return {"name": "Mina Remota", "timer": m_timer, "max_cd": getattr(fighter, "mine_cooldown", 2.2), "color": (175, 185, 195)}
-        timer = max(0.0, getattr(fighter, "smoke_cooldown_timer", 0.0))
+        b_timer = max(0.0, getattr(fighter, "bomb_timer", 0.0))
+        if b_timer > 0:
+            return {"name": "Bomba 3D", "timer": b_timer, "max_cd": getattr(fighter, "bomb_cooldown", 0.50), "color": (220, 140, 50)}
+        timer = max(0.0, getattr(fighter, "smoke_timer", 0.0))
         cd = getattr(fighter, "smoke_cooldown", 2.0)
         return {"name": "Fumaça", "timer": timer, "max_cd": cd, "color": (160, 170, 180)}
 
     elif isinstance(fighter, Kabuki):
-        p_timer = max(0.0, getattr(fighter, "dokukiri_cooldown_timer", 0.0))
+        p_timer = max(0.0, getattr(fighter, "poison_cooldown_timer", 0.0))
         if p_timer > 0:
-            return {"name": "Dokukiri", "timer": p_timer, "max_cd": getattr(fighter, "dokukiri_cooldown", 4.0), "color": (80, 230, 120)}
+            return {"name": "Dokukiri", "timer": p_timer, "max_cd": getattr(fighter, "poison_cooldown", 3.5), "color": (80, 230, 120)}
         timer = max(0.0, getattr(fighter, "decoy_cooldown_timer", 0.0))
-        cd = getattr(fighter, "decoy_cooldown", 3.0)
+        cd = 3.0
         return {"name": "Kawarimi", "timer": timer, "max_cd": cd, "color": (210, 70, 150)}
 
     elif isinstance(fighter, KyudoArcher):
+        r_timer = max(0.0, getattr(fighter, "rope_timer", 0.0))
+        if r_timer > 0:
+            return {"name": "Flecha Corda", "timer": r_timer, "max_cd": getattr(fighter, "rope_cooldown", 2.0), "color": (210, 185, 120)}
         a_timer = max(0.0, getattr(fighter, "arrow_cooldown_timer", 0.0))
         if a_timer > 0:
-            return {"name": "Flecha Yumi", "timer": a_timer, "max_cd": getattr(fighter, "arrow_cooldown", 1.8), "color": (100, 215, 140)}
+            return {"name": "Flecha Yumi", "timer": a_timer, "max_cd": getattr(fighter, "arrow_cooldown", 1.20), "color": (100, 215, 140)}
         timer = max(0.0, getattr(fighter, "ofuda_cooldown_timer", 0.0))
-        cd = getattr(fighter, "ofuda_cooldown", 5.5)
+        cd = getattr(fighter, "ofuda_cooldown", 3.2)
         return {"name": "Barreira Kami", "timer": timer, "max_cd": cd, "color": (130, 230, 180)}
 
     elif isinstance(fighter, PirateSwordswoman):
@@ -335,9 +345,10 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
         # Anne Bonny: Naval Artillery Strike (Hold & release orbital cannonball)
         fighter.start_cannon_strike(aim_x, aim_y)
     elif isinstance(fighter, Musketeer):
-        fighter.trigger_cape_flourish(aim_x, aim_y, opponent=opponent, particles=particles, banners=banners, projectiles=projectiles)
+        # Julie: Disparo veloz de pederneira (Pocket Flintlock de curto alcance - Item 7 e 20)
+        fighter.trigger_flintlock_shot(aim_x, aim_y, projectiles, particles=particles)
 
-def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None):
+def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None, opponent=None, banners=None):
     """Executa a Terceira Ação (Roll / Dash dedicado) com invulnerabilidade temporária (i-frames)."""
     if isinstance(fighter, RedSamurai):
         fighter.trigger_dash(dwx, dwy)
@@ -350,8 +361,11 @@ def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: f
     elif isinstance(fighter, KyudoArcher):
         # Tomoe: Flecha de corda para movimentação rápida
         fighter.start_rope_arrow_charge(aim_x, aim_y, game_map)
+    elif isinstance(fighter, Musketeer):
+        # Julie: Cape Flourish & Coup de Pied (Repel de esquiva - Item 7)
+        fighter.trigger_roll(dwx, dwy, particles=particles, opponent=opponent, banners=banners)
     else:
-        # Demais personagens (BlueSamurai, YellowNinja, AmericanNinja, GrayNinja, PurpleNinja, SaitouSamurai, Musketeer)
+        # Demais personagens (BlueSamurai, YellowNinja, AmericanNinja, GrayNinja, PurpleNinja, SaitouSamurai)
         if hasattr(fighter, "trigger_roll"):
             fighter.trigger_roll(dwx, dwy, particles)
 
@@ -417,6 +431,10 @@ def run_game():
     pygame.display.set_caption(TITLE)
     clock = pygame.time.Clock()
 
+    # Tela de Carregamento Estilizada com feedback imediato ao usuário
+    loading_screen = LoadingScreen(screen)
+    loading_screen.update(0.12, "Iniciando motor e renderizador...", delay_ms=40)
+
     font_large = pygame.font.Font(None, 48)
     font_mid = pygame.font.Font(None, 26)
     font_small = pygame.font.Font(None, 20)
@@ -425,6 +443,8 @@ def run_game():
     ctrl_mgr = get_controller_manager()
     touch_controls = TouchControls()
     scaler = DisplayScaler(SCREEN_WIDTH, SCREEN_HEIGHT)
+
+    loading_screen.update(0.30, "Carregando configurações de controles...", delay_ms=40)
 
     # Carregar configurações de controles salvas (Fase 3 / Item 8)
     saved_cfg = load_controls_config()
@@ -438,9 +458,17 @@ def run_game():
         touch_controls.mode = saved_cfg["touch_mode"]
 
     settings_menu = SettingsMenu(controls, touch_controls=touch_controls)
+
+    loading_screen.update(0.50, "Carregando atmosfera Sumi-e e tela inicial...", delay_ms=40)
     title_screen = SumieTitleScreen()
+
+    loading_screen.update(0.72, "Carregando retratos e atributos dos 12 guerreiros...", delay_ms=50)
     char_select_screen = CharacterSelectScreen()
+
+    loading_screen.update(0.90, "Sintonizando arenas e cenários dinâmicos...", delay_ms=40)
     arena_select_screen = ArenaSelectScreen()
+
+    loading_screen.update(1.0, "Pronto! Entrando no Bakumatsu...", delay_ms=60)
 
     game_state = STATE_TITLE
     selected_arena_id = ARENA_KYOTO
@@ -682,7 +710,7 @@ def run_game():
                         execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
                     elif event.key == controls.get("P1_DASH", pygame.K_t):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                        execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
+                        execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p2, banners=banners)
 
                 # Comandos Jogador 2 (Teclado)
                 if not vs_ai_mode and p2.is_alive and round_winner is None and round_start_timer <= 0:
@@ -694,7 +722,7 @@ def run_game():
                         execute_fighter_secondary(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p1, game_map=game_map, banners=banners)
                     elif event.key == controls.get("P2_DASH", pygame.K_o):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
-                        execute_fighter_roll(p2, p2_dwx, p2_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
+                        execute_fighter_roll(p2, p2_dwx, p2_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p1, banners=banners)
 
             elif event.type == pygame.JOYBUTTONDOWN:
                 if ctrl_mgr.is_event_menu_pause(event, 0) or ctrl_mgr.is_event_menu_pause(event, 1) or (getattr(event, "button", None) == 6):
@@ -715,7 +743,7 @@ def run_game():
                         execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
                     elif ctrl_mgr.is_event_action(event, 0, "dash"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                        execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
+                        execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p2, banners=banners)
 
                 # Gamepad Jogador 2
                 if not vs_ai_mode and p2.is_alive and round_winner is None and round_start_timer <= 0:
@@ -729,7 +757,7 @@ def run_game():
                         execute_fighter_secondary(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p1, game_map=game_map, banners=banners)
                     elif ctrl_mgr.is_event_action(event, 1, "dash"):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
-                        execute_fighter_roll(p2, p2_dwx, p2_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
+                        execute_fighter_roll(p2, p2_dwx, p2_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p1, banners=banners)
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
@@ -900,21 +928,34 @@ def run_game():
                 if isinstance(f, Rifleman):
                     f.check_powder_pickup(powder_pouches, particles)
                 if isinstance(f, PirateSwordswoman):
-                    f.update(dt, game_map, particles, opponent=opp)
+                    f.update(dt, game_map, particles, opponent=opp, banners=banners)
                 elif isinstance(f, SaitouSamurai):
                     f.update(dt, game_map, particles)
-                elif isinstance(f, (Rifleman, Kabuki, Musketeer)):
+                elif isinstance(f, (Rifleman, Kabuki, Musketeer, GrayNinja)):
                     f.update(dt, game_map, particles)
                 elif isinstance(f, KyudoArcher):
                     f.update(dt, game_map, particles, projectiles)
                 else:
                     f.update(dt, game_map)
 
+                # Item 17: Indicador visual e decremento de lentidão (fuligem de pólvora escorrendo aos pés)
+                if f.is_alive and getattr(f, "slow_timer", 0) > 0:
+                    f.slow_timer -= dt
+                    if random.random() < 0.40:
+                        particles.append(SmokeParticle(
+                            f.wx + random.uniform(-0.16, 0.16),
+                            f.wy + random.uniform(-0.16, 0.16),
+                            wz=random.uniform(0.04, 0.20),
+                            color=(50, 45, 45),
+                            radius=random.uniform(0.12, 0.20),
+                            lifetime=random.uniform(0.35, 0.60)
+                        ))
+
         # Atualizar Diretor Cinematográfico (Temporizadores e Corpos Voxel)
         cinematic_director.update(dt, game_map, particles)
 
         # Processar Combate & Projéteis
-        winner = combat_system.process_combat(p1, p2, game_map, particles, banners, camera, projectiles, dt, cinematic_director=cinematic_director, decoys=decoys)
+        winner = combat_system.process_combat(p1, p2, game_map, particles, banners, camera, projectiles, dt, cinematic_director=cinematic_director, decoys=decoys, ctrl_mgr=ctrl_mgr)
         if winner and round_winner is None:
             round_winner = winner
             ctrl_mgr.rumble_player(0, 0.7, 1.0, 260)
@@ -1187,7 +1228,7 @@ def run_game():
         if getattr(p1, "is_poisoned", False) and p1.is_alive:
             p1_p_time = max(0.0, getattr(p1, "poison_timer", 0.0))
             try:
-                p1_badge = font_small.render(f"☠ {p1_p_time:.1f}s", True, (80, 245, 120))
+                p1_badge = font_small.render(f"☠ FRENZY {p1_p_time:.1f}s", True, (80, 245, 120))
             except Exception:
                 p1_badge = font_small.render(f"POISON {p1_p_time:.1f}s", True, (80, 245, 120))
             screen.blit(p1_badge, (panel_rect.x + p1_title.get_width() + 28, panel_rect.y + 12))
@@ -1195,7 +1236,7 @@ def run_game():
         if getattr(p2, "is_poisoned", False) and p2.is_alive:
             p2_p_time = max(0.0, getattr(p2, "poison_timer", 0.0))
             try:
-                p2_badge = font_small.render(f"☠ {p2_p_time:.1f}s", True, (80, 245, 120))
+                p2_badge = font_small.render(f"☠ FRENZY {p2_p_time:.1f}s", True, (80, 245, 120))
             except Exception:
                 p2_badge = font_small.render(f"POISON {p2_p_time:.1f}s", True, (80, 245, 120))
             screen.blit(p2_badge, (panel_rect.right - p2_title.get_width() - p2_badge.get_width() - 28, panel_rect.y + 12))

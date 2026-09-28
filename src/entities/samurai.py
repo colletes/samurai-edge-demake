@@ -62,9 +62,15 @@ class Samurai:
         self.dash_recovery_timer = 0.0
         self.dash_recovery_duration = 0.15
 
-    def apply_slow(self, duration: float = 2.5):
+    def apply_slow(self, duration: float = 2.5, banners: list = None):
         """Aplica desaceleração de 65% na velocidade de movimentação."""
+        if getattr(self, "is_poisoned", False):
+            return  # Veneno agora concede adrenalina/frenzy e anula efeitos de lentidão
+        was_slow = self.slow_timer > 0
         self.slow_timer = max(self.slow_timer, duration)
+        if not was_slow and banners is not None:
+            from src.effects.particles import FloatingBanner
+            banners.append(FloatingBanner("SLOW!", self.wx, self.wy, wz=1.7, color=(190, 180, 170), duration=1.2))
 
     def set_facing(self, target_wx: float, target_wy: float):
         """Vira o samurai para encarar o alvo."""
@@ -185,11 +191,12 @@ class Samurai:
         self.state = STATE_WALK
         self.walk_cycle += dt * 10.0
 
-        # Velocidade base reduzida se estiver pisando em água ou sob efeito de fumaça (slow)
+        # Velocidade base: veneno confere adrenalina (+25% velocidade); slow ou água reduzem
         current_speed = self.speed
-        if self.slow_timer > 0:
+        if getattr(self, "is_poisoned", False):
+            current_speed *= 1.25
+        elif self.slow_timer > 0:
             current_speed *= 0.35
-            self.slow_timer -= dt
 
         if game_map.is_water(self.wx, self.wy):
             current_speed *= 0.55

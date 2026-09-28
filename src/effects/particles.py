@@ -44,6 +44,38 @@ class SparkParticle:
             pygame.draw.rect(surface, (255, 255, 255), (sx - s // 2, sy - s // 2, max(1, s), max(1, s)))
 
 
+class SmokeParticle:
+    """Partículas de fumaça e fuligem para evasão ninja furtiva, névoa e pólvora."""
+    def __init__(self, wx: float, wy: float, wz: float = 0.4, color: tuple = (165, 170, 180), size: int = 5, radius: float = None, lifetime: float = None):
+        self.wx = wx + random.uniform(-0.15, 0.15)
+        self.wy = wy + random.uniform(-0.15, 0.15)
+        self.wz = wz + random.uniform(-0.05, 0.10)
+        self.vx = random.uniform(-0.5, 0.5)
+        self.vy = random.uniform(-0.5, 0.5)
+        self.vz = random.uniform(0.35, 0.85)  # Flutua suavemente para cima
+        self.lifetime = lifetime if lifetime is not None else random.uniform(0.45, 0.70)
+        self.age = 0.0
+        self.color = color
+        self.size = int(radius * 20) if radius is not None else size
+
+    def update(self, dt: float) -> bool:
+        self.age += dt
+        self.wx += self.vx * dt
+        self.wy += self.vy * dt
+        self.wz += self.vz * dt
+        return self.age < self.lifetime
+
+    def render(self, surface: pygame.Surface, camera):
+        sx, sy = camera.apply(self.wx, self.wy, self.wz)
+        progress = max(0.0, min(1.0, self.age / self.lifetime))
+        alpha = max(0, int(150 * (1.0 - progress)))
+        r = max(2, int(self.size + progress * 6))
+        surf = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
+        c = self.color[:3]
+        pygame.draw.circle(surf, (*c, alpha), (r, r), r)
+        surface.blit(surf, (sx - r, sy - r))
+
+
 class BloodParticle:
     """Partículas de impacto sangrento no golpe fatal."""
     def __init__(self, wx: float, wy: float, wz: float = 0.8):

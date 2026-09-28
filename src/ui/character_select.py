@@ -643,11 +643,18 @@ class CharacterSelectScreen:
             elif event.key == pygame.K_DOWN:
                 move_cursor("P2", 0, 1)
             elif not self.vs_ai and event.key in (
-                pygame.K_u, pygame.K_i, pygame.K_o,
+                pygame.K_u, pygame.K_o,
                 pygame.K_KP_ENTER, pygame.K_RCTRL, pygame.K_RSHIFT, pygame.K_BACKSLASH
             ):
-                # Ação primária [U], [I], [O] ou teclas direitas confirmam P2 diretamente!
+                # Ação primária [U], [O] ou teclas direitas confirmam P2 diretamente!
                 res = handle_confirm("P2")
+                if res:
+                    return res
+                return False
+
+            elif not self.vs_ai and event.key == pygame.K_i:
+                # Item 5: Tecla [I] é a tecla de Cancelar/Voltar para P2 (como Círculo no gamepad)
+                res = handle_cancel("P2")
                 if res:
                     return res
                 return False
@@ -670,15 +677,17 @@ class CharacterSelectScreen:
                     return res
                 return False
 
-            elif event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
-                if not self.vs_ai and self.p2_ready and event.key == pygame.K_BACKSPACE:
-                    res = handle_cancel("P2")
-                elif not self.vs_ai and self.p2_ready and not self.p1_ready:
-                    res = handle_cancel("P2")
-                elif not self.vs_ai and self.p1_ready and self.p2_ready:
-                    res = handle_cancel("P2")
-                else:
-                    res = handle_cancel("P1")
+            elif event.key == pygame.K_ESCAPE:
+                # Item 5: ESC é o botão Cancelar/Voltar exclusivo de P1 / Menu; não cancela ações de P2
+                res = handle_cancel("P1")
+                if res:
+                    return res
+                return False
+
+            elif event.key == pygame.K_BACKSPACE:
+                # BACKSPACE cancela P2 no modo 2P, ou P1 se vs AI
+                target = "P2" if not self.vs_ai else "P1"
+                res = handle_cancel(target)
                 if res:
                     return res
                 return False

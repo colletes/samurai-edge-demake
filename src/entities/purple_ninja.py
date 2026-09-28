@@ -77,17 +77,28 @@ class PurpleNinja(Samurai):
         self.vx = self.facing_x * 4.5
         self.vy = self.facing_y * 4.5
 
-        # Hitbox calibrada para 1.15m de alcance
+        # Hitbox calibrada para 1.30m de alcance (Item 11)
         self.hitbox_active = False
-        self.hitbox_center = (self.wx + self.facing_x * 0.80, self.wy + self.facing_y * 0.80)
-        self.hitbox_radius = 1.15
+        self.hitbox_center = (self.wx + self.facing_x * 0.85, self.wy + self.facing_y * 0.85)
+        self.hitbox_radius = 1.30
 
         if game_map:
             for b in game_map.bamboos:
-                if not b.is_cut and math.hypot(self.hitbox_center[0] - b.wx, self.hitbox_center[1] - b.wy) < 0.6:
+                if not b.is_cut and math.hypot(self.hitbox_center[0] - b.wx, self.hitbox_center[1] - b.wy) < 0.65:
                     part = b.cut((self.facing_x, self.facing_y))
                     if part and particles is not None:
                         particles.append(part)
+
+    def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
+        """Roll evasivo sombrio: sem faíscas, com névoa violeta (Item 12)."""
+        if not self.is_alive or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK) or self.dash_recovery_timer > 0:
+            return
+
+        super().trigger_roll(dir_x, dir_y, particles=None)  # Sem faíscas
+        if particles is not None:
+            from src.effects.particles import SmokeParticle
+            for _ in range(8):
+                particles.append(SmokeParticle(self.wx, self.wy, 0.35, color=(85, 45, 115), size=5))
 
     def start_chain_shield(self, target_wx: float, target_wy: float):
         """Inicia o escudo giratório de corrente (Hold - Item 24)."""
@@ -209,17 +220,17 @@ class PurpleNinja(Samurai):
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
         if self.is_spinning_chain and self.is_alive:
-            # Efeito visual do giro protetor de corrente em voxel 3D e anéis de energia
-            sx, sy = camera.apply(self.wx, self.wy, 0.45)
-            pygame.draw.circle(surface, COLOR_CHAIN, (sx, sy), 26, 2)
-            pygame.draw.circle(surface, COLOR_PURPLE_AURA, (sx, sy), 20, 1)
+            # Efeito visual do giro protetor frontal de corrente em voxel 3D (Item 10)
+            cx = self.wx + self.facing_x * 0.55
+            cy = self.wy + self.facing_y * 0.55
+            sx, sy = camera.apply(cx, cy, 0.45)
+            pygame.draw.circle(surface, COLOR_CHAIN, (sx, sy), 22, 2)
+            pygame.draw.circle(surface, COLOR_PURPLE_AURA, (sx, sy), 16, 1)
             from src.isometric.voxel_renderer import draw_voxel_box
-            cx = self.wx + self.facing_x * 0.45
-            cy = self.wy + self.facing_y * 0.45
             for i in range(4):
                 ang = self.shield_spin_angle + (i / 4.0) * math.pi * 2
-                ox = math.cos(ang) * 0.42
-                oy = math.sin(ang) * 0.42
+                ox = math.cos(ang) * 0.38
+                oy = math.sin(ang) * 0.38
                 draw_voxel_box(surface, camera, cx + ox - 0.04, cy + oy - 0.04, 0.45, 0.08, 0.08, 0.08, (180, 140, 230), outline=False)
 
         render_voxel_humanoid(

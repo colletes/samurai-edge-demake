@@ -101,7 +101,7 @@ class YellowNinja(Samurai):
         projectiles.append(kunai)
 
     def trigger_midair_throw(self, target_wx: float, target_wy: float, projectiles: list):
-        """Arremessa a kunai de cima para baixo em pleno ar com ângulo descendente (Item 3)."""
+        """Arremessa a kunai de cima para baixo em pleno ar com ângulo descendente íngreme (Item 19)."""
         if self.state != "JUMP" or not self.has_kunai or self.has_thrown_in_jump:
             return
 
@@ -116,7 +116,8 @@ class YellowNinja(Samurai):
             dir_x=self.facing_x,
             dir_y=self.facing_y,
             owner=self,
-            vz=-3.5  # Ângulo ligeiramente descendente em direção ao chão!
+            vz=-6.5,  # Ângulo íngreme descendente em direção ao chão!
+            max_range=2.8
         )
         projectiles.append(kunai)
 

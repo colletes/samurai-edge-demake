@@ -12,7 +12,7 @@ from src.isometric.iso_math import world_distance
 from src.effects.particles import SparkParticle
 
 class KunaiProjectile:
-    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, vz: float = 0.0):
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, vz: float = 0.0, max_range: float = 6.8):
         self.wx = wx
         self.wy = wy
         self.wz = wz
@@ -27,7 +27,7 @@ class KunaiProjectile:
         self.dir_y = dir_y
 
         self.state = "FLYING"  # "FLYING" ou "ON_GROUND"
-        self.max_range = 6.8
+        self.max_range = max_range
         self.dist_traveled = 0.0
         self.angle = math.atan2(dir_y, dir_x)
         self.is_active = True
@@ -43,6 +43,17 @@ class KunaiProjectile:
             self.wx += self.vx * dt
             self.wy += self.vy * dt
             self.dist_traveled += step
+
+            # Item 18: Limites estritos da arena [1.2, cols - 1.2]
+            min_bound = 1.2
+            max_bound_x = (game_map.cols - 1.2) if (game_map and hasattr(game_map, "cols")) else 19.8
+            max_bound_y = (game_map.rows - 1.2) if (game_map and hasattr(game_map, "rows")) else 19.8
+
+            hit_bound = False
+            if self.wx <= min_bound or self.wx >= max_bound_x or self.wy <= min_bound or self.wy >= max_bound_y:
+                self.wx = max(min_bound, min(max_bound_x, self.wx))
+                self.wy = max(min_bound, min(max_bound_y, self.wy))
+                hit_bound = True
 
             if self.vz != 0.0:
                 self.wz += self.vz * dt
@@ -68,7 +79,7 @@ class KunaiProjectile:
             if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
                 hit_obstacle = True
 
-            if hit_obstacle or self.dist_traveled >= self.max_range:
+            if hit_obstacle or hit_bound or self.dist_traveled >= self.max_range:
                 # Crava no chão
                 self.state = "ON_GROUND"
                 self.wz = 0.05
@@ -384,14 +395,29 @@ class RemoteMineEntity:
             from src.effects.particles import FloatingBanner
             banners.append(FloatingBanner("REMOTE DETONATION!", self.wx, self.wy, wz=1.8, color=(255, 120, 40)))
 
-        for f in fighters:
+        target_list = list(fighters) if fighters is not None else []
+        if self.owner and self.owner not in target_list:
+            target_list.append(self.owner)
+
+        for f in target_list:
             if getattr(f, "is_alive", False):
                 dist = world_distance(self.wx, self.wy, f.wx, f.wy)
                 if dist <= (self.radius + getattr(f, "radius", 0.4)):
-                    dmg = 1 if f == self.owner else 2
-                    hit, dead = f.take_hit((0.0, 0.0), damage=dmg)
-                    if dead and cinematic_director:
-                        cinematic_director.trigger_fatal_strike(self.owner, f, "HEADSHOT_EXPLODE", (0, 0))
+                    if f == self.owner:
+                        # Auto-dano garantido contra a própria mina (1 HP de dano, 50% de blindagem)
+                        f.hp -= 1
+                        if f.hp <= 0:
+                            f.hp = 0
+                            f.is_alive = False
+                            f.state = "DEAD"
+                            if cinematic_director:
+                                cinematic_director.trigger_fatal_strike(self.owner, f, "HEADSHOT_EXPLODE", (0, 0))
+                        else:
+                            f.stun(0.35)
+                    else:
+                        hit, dead = f.take_hit((0.0, 0.0), damage=2)
+                        if dead and cinematic_director:
+                            cinematic_director.trigger_fatal_strike(self.owner, f, "HEADSHOT_EXPLODE", (0, 0))
             if hasattr(f, "dog") and f.dog and f.dog.state != "KNOCKED_OUT":
                 if world_distance(self.wx, self.wy, f.dog.wx, f.dog.wy) <= (self.radius + f.dog.radius):
                     f.dog.knock_out(2.0)
@@ -563,8 +589,8 @@ class KusarigamaChainEntity:
 
 
 class MusketBulletProjectile:
-    """Bala de chumbo supersônica disparada pelo Rifleman Tanegashima. 1-Hit Kill."""
-    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner):
+    """Bala de chumbo supersônica disparada pelo Rifleman Tanegashima ou Pederneira da Mosqueteira. 1-Hit Kill."""
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, max_range: float = 18.0):
         self.wx = wx
         self.wy = wy
         self.wz = wz
@@ -576,7 +602,7 @@ class MusketBulletProjectile:
         self.vy = dir_y * speed
         self.is_active = True
         self.dist_traveled = 0.0
-        self.max_range = 18.0
+        self.max_range = max_range
 
     def update(self, dt: float, game_map, particles: list = None) -> bool:
         if not self.is_active:
@@ -609,8 +635,10 @@ class MusketBulletProjectile:
         if hit_obstacle or self.dist_traveled >= self.max_range:
             self.is_active = False
             if particles is not None:
-                for _ in range(6):
+                from src.effects.particles import SmokeParticle
+                for _ in range(4):
                     particles.append(SparkParticle(self.wx, self.wy, 0.4))
+                particles.append(SmokeParticle(self.wx, self.wy, 0.35, color=(160, 160, 170), size=5))
             return False
 
         return True

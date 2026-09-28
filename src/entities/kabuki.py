@@ -20,35 +20,61 @@ from src.effects.particles import SparkParticle, FloatingBanner
 STATE_KABUKI_ROLL = "KABUKI_ROLL"
 
 class PoisonCloud:
-    """Névoa tóxica de Dokukiri soprada por Okuni com seus leques (bruma rasteira e vapores esvoaçantes)."""
-    def __init__(self, wx: float, wy: float, owner):
-        self.wx = wx
-        self.wy = wy
-        self.wz = 0.2
-        self.owner = owner
-        self.lifetime = 2.8
-        self.max_lifetime = 2.8
-        self.age = 0.0
-        self.radius = 1.35
-        self.is_active = True
-        self.exposure: dict[int, float] = {}
+    """
+    Névoa tóxica de Dokukiri soprada por Okuni com seus leques de ferro.
+    Projetada em cone frontal à frente de Okuni com área reduzida.
+    Empurra o oponente para trás com a rajada de vento dos leques.
+    O oponente envenenado ganha adrenalina: fica mais rápido e com cooldowns 20% menores.
+    """
+    def __init__(self, wx: float, wy: float, dir_x_or_owner = 1.0, dir_y: float = 0.0, owner = None):
+        if owner is None and not isinstance(dir_x_or_owner, (int, float)):
+            self.owner = dir_x_or_owner
+            self.dir_x = getattr(self.owner, "facing_x", 1.0)
+            self.dir_y = getattr(self.owner, "facing_y", 0.0)
+        else:
+            self.dir_x = float(dir_x_or_owner)
+            self.dir_y = float(dir_y)
+            self.owner = owner
 
-        # Plumas orgânicas de névoa em vórtice (angle, dist_ratio, z_off, sz_mult, drift_spd, col_type)
+        norm = math.hypot(self.dir_x, self.dir_y)
+        if norm > 0.001:
+            self.dir_x /= norm
+            self.dir_y /= norm
+        else:
+            self.dir_x, self.dir_y = 1.0, 0.0
+
+        self.origin_x = wx
+        self.origin_y = wy
+        self.wx = wx + self.dir_x * 0.85
+        self.wy = wy + self.dir_y * 0.85
+        self.wz = 0.2
+        self.cone_length = 1.85   # Alcance frontal concentrado em cone (área menor)
+        self.cone_half_angle = math.radians(40)  # Abertura de 80° à frente
+        self.cos_cone_half_angle = math.cos(self.cone_half_angle)
+        self.radius = 0.95        # Raio efetivo reduzido (era 1.35)
+        self.lifetime = 1.9       # Rajada concentrada de 1.9s
+        self.max_lifetime = 1.9
+        self.age = 0.0
+        self.is_active = True
+        self.has_pushed: set[int] = set()
+
+        base_ang = math.atan2(self.dir_y, self.dir_x)
+        # Plumas de névoa projetadas estritamente dentro do cone frontal
         self.plumes = [
             (
-                i * (math.pi * 2 / 12) + random.uniform(-0.18, 0.18),
-                random.uniform(0.25, 0.85),
-                random.uniform(0.06, 0.35),
-                random.uniform(0.75, 1.25),
-                random.uniform(0.85, 1.35),
+                base_ang + random.uniform(-self.cone_half_angle * 0.95, self.cone_half_angle * 0.95),
+                random.uniform(0.35, 1.0),
+                random.uniform(0.04, 0.28),
+                random.uniform(0.70, 1.15),
+                random.uniform(0.9, 1.35),
                 i % 3
             )
-            for i in range(13)
+            for i in range(12)
         ]
-        # Vórtices de vapor rasteiro volumétrico em voxel
+        # Vórtices de vapor orientados ao longo do cone
         self.wisps = [
-            (random.uniform(-0.85, 0.85), random.uniform(-0.85, 0.85), random.uniform(0.03, 0.16), random.uniform(0.7, 1.2))
-            for _ in range(7)
+            (random.uniform(0.20, 0.95), random.uniform(-0.35, 0.35), random.uniform(0.03, 0.16), random.uniform(0.65, 1.1))
+            for _ in range(6)
         ]
 
     def update(self, dt: float, fighters: list = None, particles: list = None, banners: list = None, cinematic_director = None) -> bool:
@@ -58,31 +84,69 @@ class PoisonCloud:
             self.is_active = False
             return False
 
-        if particles is not None and random.random() < 0.35:
-            ox = self.wx + random.uniform(-self.radius, self.radius) * 0.75
-            oy = self.wy + random.uniform(-self.radius, self.radius) * 0.75
-            particles.append(SparkParticle(ox, oy, random.uniform(0.15, 0.45), color=random.choice([(140, 50, 180), (70, 210, 120), (185, 75, 225)])))
+        if particles is not None and random.random() < 0.40:
+            cone_dist = random.uniform(0.4, self.cone_length)
+            cone_ang = math.atan2(self.dir_y, self.dir_x) + random.uniform(-self.cone_half_angle, self.cone_half_angle)
+            px = self.origin_x + math.cos(cone_ang) * cone_dist
+            py = self.origin_y + math.sin(cone_ang) * cone_dist
+            particles.append(SparkParticle(px, py, random.uniform(0.15, 0.40), color=random.choice([(140, 50, 180), (70, 210, 120), (185, 75, 225)])))
 
         if fighters:
             for f in fighters:
                 if f is not self.owner and getattr(f, "is_alive", False):
-                    d = math.hypot(f.wx - self.wx, f.wy - self.wy)
-                    if d < (self.radius + f.radius):
-                        if hasattr(f, "apply_slow"):
-                            f.apply_slow(0.8)
+                    dx = f.wx - self.origin_x
+                    dy = f.wy - self.origin_y
+                    dist = math.hypot(dx, dy)
+                    in_cone = False
+                    if dist <= (self.cone_length + f.radius):
+                        if dist < 0.40:
+                            in_cone = True
+                        else:
+                            dot = (dx * self.dir_x + dy * self.dir_y) / dist
+                            if dot >= self.cos_cone_half_angle:
+                                in_cone = True
 
-                        # Infectar com veneno se ainda não estiver
+                    if in_cone:
+                        # 1. Empurrão (Push Back): repele o oponente para trás na direção do sopro
+                        fid = id(f)
+                        if fid not in self.has_pushed:
+                            self.has_pushed.add(fid)
+                            push_dist = 1.35
+                            f.wx += self.dir_x * push_dist
+                            f.wy += self.dir_y * push_dist
+                            f.wx = max(1.0, min(24.0, f.wx))
+                            f.wy = max(1.0, min(24.0, f.wy))
+                            f.slow_timer = 0.0 # Sem lentidão!
+                            if banners is not None:
+                                banners.append(FloatingBanner("BLOWN BACK!", f.wx, f.wy, wz=1.7, color=(140, 245, 170), duration=1.2))
+
+                        # 2. Infectar com veneno (sem slow, concedendo adrenalina de velocidade e cooldowns 20% menores)
                         if not getattr(f, "is_poisoned", False):
                             f.is_poisoned = True
                             f.poison_timer = 6.0
-                            if banners is not None:
-                                banners.append(FloatingBanner("POISONED! 6s TO SURVIVE!", f.wx, f.wy, wz=1.8, color=(80, 225, 120), duration=2.5))
-                        else:
-                            # Respiração contínua na névoa acelera o veneno
-                            f.poison_timer -= dt * 1.5
+                            f.slow_timer = 0.0
+                            # Redução imediata de 20% nos cooldowns já ativos
+                            for cd_attr in (
+                                "ryuu_timer", "dash_recovery_timer", "jump_timer", "jump_cooldown_timer",
+                                "chain_timer", "mine_timer", "bomb_timer", "smoke_timer", "rope_timer",
+                                "arrow_cooldown_timer", "ofuda_cooldown_timer", "cannon_cooldown_timer",
+                                "flintlock_timer", "cape_timer", "trap_timer", "zeroshiki_timer",
+                                "shuriken_timer", "thrust_timer", "kama_timer", "backstep_timer"
+                            ):
+                                val = getattr(f, cd_attr, 0.0)
+                                if val > 0:
+                                    setattr(f, cd_attr, val * 0.80)
+                            if hasattr(f, "dog") and f.dog and getattr(f.dog, "cooldown_timer", 0.0) > 0:
+                                f.dog.cooldown_timer *= 0.80
 
-                        if particles is not None and random.random() < 0.3:
-                            particles.append(SparkParticle(f.wx, f.wy, 0.5, color=(80, 225, 120)))
+                            if banners is not None:
+                                banners.append(FloatingBanner("POISON FRENZY! (+25% SPD & -20% CD)", f.wx, f.wy, wz=1.8, color=(80, 240, 130), duration=2.4))
+                        else:
+                            # Respirar dentro do cone acelera o relógio do veneno
+                            f.poison_timer -= dt * 1.2
+
+                        if particles is not None and random.random() < 0.35:
+                            particles.append(SparkParticle(f.wx, f.wy, 0.45, color=(80, 225, 120)))
 
                         if f.poison_timer <= 0:
                             f.is_poisoned = False
@@ -103,60 +167,66 @@ class PoisonCloud:
             return
 
         progress = min(1.0, max(0.0, self.age / self.max_lifetime))
-        fade_in = min(1.0, self.age / 0.35)
-        fade_out = max(0.0, min(1.0, self.lifetime / 0.70))
+        fade_in = min(1.0, self.age / 0.25)
+        fade_out = max(0.0, min(1.0, self.lifetime / 0.50))
         base_alpha = fade_in * fade_out
         if base_alpha <= 0.01:
             return
 
-        # 1. Manto de Névoa Rasteira no Solo (Creeping Ground Haze em elipse isométrica 2:1)
-        gx, gy = camera.apply(self.wx, self.wy, 0.02)
-        ground_w = int(self.radius * 55 * (0.85 + 0.3 * progress))
+        # 1. Manto de Bruma no Solo ao longo do cone projetado
+        cone_mid_x = self.origin_x + self.dir_x * (self.cone_length * 0.55)
+        cone_mid_y = self.origin_y + self.dir_y * (self.cone_length * 0.55)
+        gx, gy = camera.apply(cone_mid_x, cone_mid_y, 0.02)
+        ground_w = int(self.cone_length * 42 * (0.85 + 0.25 * progress))
         ground_h = max(3, int(ground_w * 0.52))
         ground_surf = pygame.Surface((ground_w * 2, ground_h * 2), pygame.SRCALPHA)
-        g_alpha = int(50 * base_alpha)
+        g_alpha = int(45 * base_alpha)
         pygame.draw.ellipse(ground_surf, (75, 20, 105, g_alpha), (0, 0, ground_w * 2, ground_h * 2))
-        pygame.draw.ellipse(ground_surf, (45, 135, 75, int(g_alpha * 0.65)), (ground_w // 4, ground_h // 4, int(ground_w * 1.5), int(ground_h * 1.5)))
+        pygame.draw.ellipse(ground_surf, (45, 135, 75, int(g_alpha * 0.60)), (ground_w // 4, ground_h // 4, int(ground_w * 1.5), int(ground_h * 1.5)))
         surface.blit(ground_surf, (gx - ground_w, gy - ground_h))
 
-        # 2. Plumas de Névoa Orgânicas Drifting (Brumas volumétricas esvoaçantes)
+        # 2. Plumas de Névoa fanning out dentro do cone
+        base_ang = math.atan2(self.dir_y, self.dir_x)
         for angle, dist_ratio, z_off, sz_mult, drift_spd, col_type in self.plumes:
-            curr_dist = dist_ratio * self.radius * (0.75 + 0.35 * progress)
-            curr_angle = angle + self.age * 0.35 * drift_spd
-            p_wx = self.wx + math.cos(curr_angle) * curr_dist
-            p_wy = self.wy + math.sin(curr_angle) * curr_dist
-            p_wz = self.wz + z_off + math.sin(self.age * 2.0 + angle) * 0.05
+            curr_dist = dist_ratio * self.cone_length * (0.65 + 0.35 * progress)
+            spread_ang = base_ang + (angle - base_ang) * (0.80 + 0.25 * progress)
+            p_wx = self.origin_x + math.cos(spread_ang) * curr_dist
+            p_wy = self.origin_y + math.sin(spread_ang) * curr_dist
+            p_wz = self.wz + z_off + math.sin(self.age * 2.5 + angle) * 0.04
 
             px, py = camera.apply(p_wx, p_wy, p_wz)
-            pw = int(sz_mult * 30 * (0.85 + 0.3 * progress))
+            pw = int(sz_mult * 26 * (0.80 + 0.3 * progress))
             ph = max(3, int(pw * 0.55))
 
             plume_surf = pygame.Surface((pw * 2, ph * 2), pygame.SRCALPHA)
             if col_type == 0:
-                c_outer = (115, 30, 155)   # Púrpura velado
-                c_inner = (155, 55, 200)
+                c_outer = (120, 30, 160)
+                c_inner = (160, 55, 205)
             elif col_type == 1:
-                c_outer = (145, 50, 185)   # Lavanda mística
-                c_inner = (90, 195, 120)   # Núcleo verde-veneno
+                c_outer = (145, 50, 185)
+                c_inner = (80, 205, 125)
             else:
-                c_outer = (45, 125, 75)    # Vapor tóxico esmeralda
-                c_inner = (130, 45, 175)   # Núcleo violeta
+                c_outer = (45, 135, 80)
+                c_inner = (135, 50, 180)
 
-            p_alpha = int(70 * base_alpha)
+            p_alpha = int(72 * base_alpha)
             pygame.draw.ellipse(plume_surf, (*c_outer, p_alpha), (0, 0, pw * 2, ph * 2))
             pygame.draw.ellipse(plume_surf, (*c_inner, int(p_alpha * 0.7)), (pw // 4, ph // 4, int(pw * 1.5), int(ph * 1.5)))
             pygame.draw.ellipse(plume_surf, (170, 245, 185, int(p_alpha * 0.35)), (pw // 2, ph // 2, pw, ph))
             surface.blit(plume_surf, (px - pw, py - ph))
 
-        # 3. Micro-vapores Volumétricos em Voxel 3D (Wisps de fumaça tóxica)
+        # 3. Micro-vapores Volumétricos em Voxel 3D
         from src.isometric.voxel_renderer import draw_voxel_box
-        v_alpha = int(85 * base_alpha)
-        for ox, oy, oz, v_sz in self.wisps:
-            swirl = self.age * 0.45
-            vx = self.wx + (ox * math.cos(swirl) - oy * math.sin(swirl)) * self.radius * 0.75
-            vy = self.wy + (ox * math.sin(swirl) + oy * math.cos(swirl)) * self.radius * 0.75
-            vz = oz + (self.age * 0.09) % 0.38
-            sz = 0.13 * v_sz
+        v_alpha = int(80 * base_alpha)
+        perp_x = -self.dir_y
+        perp_y = self.dir_x
+        for forward_ratio, lateral_ratio, oz, v_sz in self.wisps:
+            dist_f = forward_ratio * self.cone_length * (0.7 + 0.3 * progress)
+            dist_l = lateral_ratio * (dist_f * 0.75)
+            vx = self.origin_x + self.dir_x * dist_f + perp_x * dist_l
+            vy = self.origin_y + self.dir_y * dist_f + perp_y * dist_l
+            vz = oz + (self.age * 0.08) % 0.35
+            sz = 0.12 * v_sz
             draw_voxel_box(surface, camera, vx - sz*0.5, vy - sz*0.5, vz, sz, sz, sz*0.65, (130, 60, 175), outline=False, alpha=v_alpha)
 
 class OkuniDecoy:
@@ -252,7 +322,7 @@ class Kabuki(Samurai):
                 particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.35))
 
     def trigger_dokukiri(self, target_wx: float, target_wy: float, clouds: list = None, particles: list = None):
-        """Ação Secundária: Dokukiri (Sopro Venenoso) — sopro de névoa arroxeada de veneno que causa lentidão e dano fatal."""
+        """Ação Secundária: Dokukiri (Sopro Venenoso) — cone frontal projetado com leques que empurra o adversário."""
         if not self.can_act() or self.poison_cooldown_timer > 0:
             return
 
@@ -261,15 +331,12 @@ class Kabuki(Samurai):
         self.state_timer = 0.20
         self.poison_cooldown_timer = self.poison_cooldown
 
-        cloud_x = self.wx + self.facing_x * 0.95
-        cloud_y = self.wy + self.facing_y * 0.95
-
         if clouds is not None:
-            clouds.append(PoisonCloud(cloud_x, cloud_y, owner=self))
+            clouds.append(PoisonCloud(self.wx, self.wy, self.facing_x, self.facing_y, owner=self))
 
         if particles is not None:
             for _ in range(16):
-                particles.append(SparkParticle(cloud_x, cloud_y, 0.5))
+                particles.append(SparkParticle(self.wx + self.facing_x * 0.8, self.wy + self.facing_y * 0.8, 0.5))
 
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None, decoys: list = None):
         """Terceira Ação: Kawarimi Dash Teatral com manequim de seda, pétalas de sakura e i-frames."""

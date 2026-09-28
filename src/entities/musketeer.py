@@ -75,8 +75,8 @@ class Musketeer(Samurai):
         else:
             dir_x, dir_y = self.facing_x, self.facing_y
 
-        # Cria projétil supersônico de pederneira
-        projectiles.append(MusketBulletProjectile(self.wx, self.wy, 0.45, dir_x, dir_y, owner=self))
+        # Cria projétil veloz de pederneira de curto/médio alcance (Item 20: max_range=5.8)
+        projectiles.append(MusketBulletProjectile(self.wx, self.wy, 0.45, dir_x, dir_y, owner=self, max_range=5.8))
 
         # Recuo sutil do tiro de pederneira
         self.wx -= dir_x * 0.25
@@ -86,56 +86,64 @@ class Musketeer(Samurai):
             for _ in range(16):
                 particles.append(SparkParticle(self.wx + dir_x * 0.5, self.wy + dir_y * 0.5, 0.45, color=(255, 210, 100)))
 
-    def trigger_cape_flourish(self, target_wx: float = None, target_wy: float = None, opponent = None, particles: list = None, banners: list = None, projectiles: list = None):
+    def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None, opponent = None, banners: list = None):
         """
-        Ação Secundária: Cape Flourish & Coup de Pied.
-        Giro teatral da capa de veludo azul que repele rivais a curta distância e deflete projéteis frontais.
-        Se o oponente estiver à média/longa distância (> 2.8m), utiliza a pistola pederneira caso disponível.
+        Terceira Ação / Esquiva: Cape Flourish & Coup de Pied (Repel - Item 7).
+        Esquiva veloz com giro da capa que repele projéteis e oponentes a curta distância.
         """
-        if not self.can_act():
+        if not self.is_alive or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK, "CAPE_FLOURISH") or self.dash_recovery_timer > 0:
             return
 
-        # Se houver mira à distância e pederneira pronta: atira de pederneira!
-        if target_wx is not None and target_wy is not None and projectiles is not None:
-            dist_aim = math.hypot(target_wx - self.wx, target_wy - self.wy)
-            if dist_aim >= 2.8 and self.flintlock_timer <= 0:
-                self.trigger_flintlock_shot(target_wx, target_wy, projectiles, particles)
-                return
+        if dir_x == 0 and dir_y == 0:
+            dir_x, dir_y = -self.facing_x, -self.facing_y
+        else:
+            mag = math.hypot(dir_x, dir_y)
+            if mag > 0.001:
+                dir_x /= mag
+                dir_y /= mag
 
-        if self.cape_timer > 0:
-            return
-
-        if target_wx is not None and target_wy is not None:
-            self.set_facing(target_wx, target_wy)
-
-        self.cape_timer = self.cape_cooldown
+        self.facing_x = dir_x
+        self.facing_y = dir_y
         self.state = "CAPE_FLOURISH"
-        self.state_timer = 0.25
+        self.state_timer = 0.16  # Rápido e responsivo (Item 7)
+        self.is_invulnerable_dodge = True
         self.hitbox_active = False
 
-        # Partículas de tecido azul da capa esvoaçante
+        # Deslocamento ágil de esquiva
+        self.wx += dir_x * 0.45
+        self.wy += dir_y * 0.45
+
         if particles is not None:
-            for i in range(14):
-                angle = (i / 14.0) * math.pi * 2
-                px = self.wx + math.cos(angle) * 0.70
-                py = self.wy + math.sin(angle) * 0.70
+            for i in range(12):
+                angle = (i / 12.0) * math.pi * 2
+                px = self.wx + math.cos(angle) * 0.65
+                py = self.wy + math.sin(angle) * 0.65
                 particles.append(SparkParticle(px, py, 0.4, color=(100, 175, 255)))
 
-        # Efeito de repulsão física e stagger no oponente a curta distância (< 1.85m)
         if opponent is not None and getattr(opponent, "is_alive", False):
             dist = math.hypot(self.wx - opponent.wx, self.wy - opponent.wy)
-            if dist < 1.85:
+            if dist < 1.65:
                 if hasattr(opponent, "stun"):
-                    opponent.stun(0.40)  # Stagger de 0.40s
-                # Knockback de ~2 metros na direção frontal
-                opponent.wx += self.facing_x * 1.85
-                opponent.wy += self.facing_y * 1.85
+                    opponent.stun(0.35)
+                opponent.wx += self.facing_x * 1.5
+                opponent.wy += self.facing_y * 1.5
                 if banners is not None:
                     from src.effects.particles import FloatingBanner
                     banners.append(FloatingBanner("COUP DE PIED! REPEL!", opponent.wx, opponent.wy, wz=1.75, color=(100, 175, 255)))
 
+    def trigger_cape_flourish(self, target_wx: float = None, target_wy: float = None, opponent = None, particles: list = None, banners: list = None, projectiles: list = None):
+        """Redireciona para trigger_roll (Repel de esquiva) ou trigger_flintlock_shot."""
+        dir_x, dir_y = self.facing_x, self.facing_y
+        if target_wx is not None and target_wy is not None:
+            dx = target_wx - self.wx
+            dy = target_wy - self.wy
+            mag = math.hypot(dx, dy)
+            if mag > 0.001:
+                dir_x, dir_y = dx / mag, dy / mag
+        self.trigger_roll(dir_x, dir_y, particles=particles, opponent=opponent, banners=banners)
+
     def trigger_cloak_riposte(self, target_wx: float = None, target_wy: float = None, projectiles: list = None, particles: list = None, opponent = None, banners: list = None):
-        """Compatibilidade para chamadas legadas: redireciona para o floreio de capa ou tiro de pederneira."""
+        """Compatibilidade para chamadas legadas: redireciona para o floreio de capa/esquiva."""
         self.trigger_cape_flourish(target_wx, target_wy, opponent=opponent, particles=particles, banners=banners, projectiles=projectiles)
 
     def update(self, dt: float, game_map, particles: list = None):
@@ -170,6 +178,8 @@ class Musketeer(Samurai):
             self.state_timer -= dt
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
+                self.is_invulnerable_dodge = False
+                self.dash_recovery_timer = self.dash_recovery_duration
 
         elif self.state == STATE_PARRY:
             self.state_timer -= dt

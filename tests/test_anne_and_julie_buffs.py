@@ -111,10 +111,57 @@ def test_julie_pocket_flintlock():
     assert julie.flintlock_timer == 4.5
     print("[PASS] Teste 8: Pocket Flintlock de Julie dispara projétil de chumbo à distância")
 
+def test_julie_cape_deflects_frontal_but_not_rear():
+    """Julie: Cape deflecte projéteis frontais mas NÃO projéteis pelas costas (cone frontal)."""
+    g_map = GameMap()
+    pygame.display.set_mode((800, 600), pygame.NOFRAME)
+    from src.isometric.camera import Camera as IsoCamera
+    cam = IsoCamera(800, 600)
+    combat = CombatSystem()
+
+    # --- Projétil frontal (deve ser defletido) ---
+    julie_front = Musketeer(10.0, 10.0)
+    julie_front.facing_x, julie_front.facing_y = 1.0, 0.0  # Olhando para +X
+    julie_front.state = "CAPE_FLOURISH"
+    julie_front.is_invulnerable_dodge = True
+
+    opponent = RedSamurai(15.0, 10.0)
+    bullet_front = MusketBulletProjectile(
+        wx=10.8, wy=10.0, wz=0.5,
+        dir_x=-1.0, dir_y=0.0,  # Vindo de +X (frontal)
+        owner=opponent
+    )
+    projs_front = [bullet_front]
+    particles, banners = [], []
+    combat.process_combat(julie_front, opponent, g_map, particles, banners, cam, projs_front, 0.016)
+    assert not bullet_front.is_active, "Projétil FRONTAL deve ser defletido pela capa!"
+
+    # --- Projétil pelas costas (NÃO deve ser defletido) ---
+    julie_rear = Musketeer(10.0, 10.0)
+    julie_rear.facing_x, julie_rear.facing_y = 1.0, 0.0  # Olhando para +X
+    julie_rear.state = "CAPE_FLOURISH"
+    julie_rear.is_invulnerable_dodge = True
+
+    opponent2 = RedSamurai(5.0, 10.0)
+    bullet_rear = MusketBulletProjectile(
+        wx=9.2, wy=10.0, wz=0.5,
+        dir_x=1.0, dir_y=0.0,  # Vindo de -X (costas)
+        owner=opponent2
+    )
+    projs_rear = [bullet_rear]
+    particles2, banners2 = [], []
+    combat.process_combat(julie_rear, opponent2, g_map, particles2, banners2, cam, projs_rear, 0.016)
+    assert bullet_rear.is_active, "Projétil pelas COSTAS NÃO deve ser defletido pela capa!"
+
+    print("[PASS] Teste 9: Deflexão frontal de capa: frente defletida, costas passa através")
+
+
 if __name__ == "__main__":
     test_anne_cleave_and_cannon()
     test_anne_dash_and_deflection()
     test_julie_fleche_and_recovery()
     test_julie_cape_deflection_and_coup_de_pied()
     test_julie_pocket_flintlock()
-    print("\nTODOS OS 8 TESTES DE ANNE E JULIE PASSARAM COM SUCESSO!")
+    test_julie_cape_deflects_frontal_but_not_rear()
+    print("\nTODOS OS 9 TESTES DE ANNE E JULIE PASSARAM COM SUCESSO!")
+

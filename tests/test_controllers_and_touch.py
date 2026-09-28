@@ -278,7 +278,7 @@ def test_combat_execution_helpers():
     from src.entities.kyudo_archer import KyudoArcher
     tomoe = KyudoArcher(10.0, 10.0)
     assert tomoe.draw_duration == 0.0
-    assert tomoe.rope_cooldown == 0.0
+    assert tomoe.rope_cooldown == 2.0
     tomoe.trigger_bow_draw(15.0, 10.0, projectiles)
     assert len(projectiles) > 0 # Flecha disparada imediatamente
 

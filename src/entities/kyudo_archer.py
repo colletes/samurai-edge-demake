@@ -41,7 +41,7 @@ class KyudoArcher(Samurai):
         self.rope_max_range = 10.5
         self.target_rope_x = self.wx
         self.target_rope_y = self.wy
-        self.rope_cooldown = 0.0
+        self.rope_cooldown = 2.0
         self.rope_timer = 0.0
 
         # Mecânica de Recarga de Flecha Yumi (Cooldown)
@@ -110,7 +110,7 @@ class KyudoArcher(Samurai):
 
     def start_rope_arrow_charge(self, target_wx: float, target_wy: float, game_map=None):
         """Inicia o tensionamento da corda (Hold)."""
-        if not self.can_act():
+        if not self.can_act() or self.rope_timer > 0:
             return
         self.is_charging_rope = True
         self.rope_charge_time = 0.0
@@ -195,16 +195,16 @@ class KyudoArcher(Samurai):
 
         self.state = STATE_RECOVERY
         self.state_timer = 0.08
+        self.rope_timer = self.rope_cooldown
 
     def trigger_rope_arrow(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None, game_map=None):
         """
         Ação Secundária: Flecha de Corda direta (compatibilidade com IA e testes).
         """
-        if not self.is_alive:
+        if not self.can_act() or self.rope_timer > 0:
             return
 
         self.set_facing(target_wx, target_wy)
-        self.rope_timer = 0.0
         self.is_charging_rope = True
         self.rope_charge_time = self.rope_charge_duration
         self._calculate_rope_target(game_map)

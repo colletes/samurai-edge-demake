@@ -120,11 +120,15 @@ def render_voxel_humanoid(
         draw_voxel_box(surface, camera, wx + 0.16, wy + 0.12, 0.03, 0.08, 0.08, 0.07, SKIN_COLOR, outline=False, alpha=alpha)
         return
 
-    # Sombra dinâmica no chão
+    # Sombra dinâmica no chão com transparência real atenuada para furtividade
     sx, sy = camera.apply(wx, wy, 0.0)
     shadow_w = 42 if not is_female else 38
     shadow_h = 18 if not is_female else 16
-    pygame.draw.ellipse(surface, (14, 18, 16, 135), (sx - shadow_w // 2, sy - shadow_h // 2, shadow_w, shadow_h))
+    shadow_alpha = int(125 * (alpha / 255.0))
+    if shadow_alpha > 0:
+        shadow_surf = pygame.Surface((shadow_w, shadow_h), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow_surf, (14, 18, 16, shadow_alpha), (0, 0, shadow_w, shadow_h))
+        surface.blit(shadow_surf, (sx - shadow_w // 2, sy - shadow_h // 2))
 
     # Vetor de orientação
     fx, fy = facing_x, facing_y
@@ -266,9 +270,39 @@ def render_voxel_humanoid(
 
     sh_span = 0.14 if is_female else 0.17
 
-    # Capa azul para Julie (Mosqueteira)
-    if char_type == "musketeer":
-        draw_voxel_box(surface, camera, base_x - fx * 0.10 - 0.07, base_y - fy * 0.10 - 0.07, torso_z - 0.08, 0.14, 0.14, 0.30, (24, 58, 140), outline=True, alpha=alpha)
+    # Capa azul para Julie (Mosqueteira) com animação dinâmica em CAPE_FLOURISH (Item 8)
+    if char_type in ("musketeer", "julie"):
+        if state == "CAPE_FLOURISH":
+            flourish_t = max(0.0, min(1.0, 1.0 - (state_timer / 0.16)))
+            spin_ang = flourish_t * math.pi * 2.2
+            cape_fx = fx * math.cos(spin_ang) - px * math.sin(spin_ang)
+            cape_fy = fy * math.cos(spin_ang) + py * math.sin(spin_ang)
+            draw_oriented_voxel_box(
+                surface, camera,
+                base_x + cape_fx * 0.22, base_y + cape_fy * 0.22, torso_z + 0.02,
+                cape_fx, cape_fy, -0.15,
+                length=0.48, width=0.18, height=0.32,
+                color=(28, 68, 175), outline=True, alpha=alpha
+            )
+            # Chute frontal Coup de Pied
+            kick_z = pelvis_z - 0.12
+            draw_oriented_voxel_box(
+                surface, camera,
+                base_x + fx * 0.18, base_y + fy * 0.18, kick_z,
+                fx, fy, 0.10,
+                length=0.38, width=0.08, height=0.08,
+                color=(180, 185, 195), outline=True, alpha=alpha
+            )
+            # Bota de couro na ponta do chute
+            draw_oriented_voxel_box(
+                surface, camera,
+                base_x + fx * 0.36, base_y + fy * 0.36, kick_z + 0.02,
+                fx, fy, 0.10,
+                length=0.14, width=0.09, height=0.09,
+                color=(85, 46, 24), outline=True, alpha=alpha
+            )
+        else:
+            draw_voxel_box(surface, camera, base_x - fx * 0.10 - 0.07, base_y - fy * 0.10 - 0.07, torso_z - 0.08, 0.14, 0.14, 0.30, (24, 58, 140), outline=True, alpha=alpha)
 
     # Dragona dourada militar para Anne (Pirata)
     if char_type == "pirate":
@@ -709,8 +743,21 @@ def render_voxel_humanoid(
         kx = arm_r_x + fx * 0.14
         ky = arm_r_y + fy * 0.14
         kz = arm_r_z - 0.06
-        draw_oriented_voxel_box(surface, camera, kx, ky, kz, fx*0.3 - px*0.4, fy*0.3 - py*0.4, 0.8, 0.24, 0.05, 0.05, (80, 50, 30))
-        draw_oriented_voxel_box(surface, camera, kx + fx*0.08, ky + fy*0.08, kz + 0.18, fx*0.8 + px*0.3, fy*0.8 + py*0.3, -0.3, 0.18, 0.06, 0.04, COLOR_STEEL)
+        # Cabo de madeira do Kama
+        draw_oriented_voxel_box(surface, camera, kx, ky, kz, fx*0.3 - px*0.4, fy*0.3 - py*0.4, 0.8, 0.26, 0.048, 0.048, (75, 45, 25), outline=True, alpha=alpha)
+        # Virola de aço unindo o cabo à lâmina
+        draw_oriented_voxel_box(surface, camera, kx + fx*0.07, ky + fy*0.07, kz + 0.19, fx*0.3 - px*0.4, fy*0.3 - py*0.4, 0.8, 0.06, 0.055, 0.055, (120, 120, 130), outline=False, alpha=alpha)
+        # Lâmina curvada estilo Kama (foice marcial japonesa): segmento base
+        blade_base_x = kx + fx * 0.08
+        blade_base_y = ky + fy * 0.08
+        blade_base_z = kz + 0.20
+        draw_oriented_voxel_box(surface, camera, blade_base_x, blade_base_y, blade_base_z, fx*0.85 + px*0.25, fy*0.85 + py*0.25, -0.15, 0.20, 0.055, 0.038, COLOR_STEEL, outline=True, alpha=alpha)
+        # Ponta curvada em gancho (foice recurva)
+        blade_tip_x = blade_base_x + (fx*0.85 + px*0.25) * 0.18
+        blade_tip_y = blade_base_y + (fy*0.85 + py*0.25) * 0.18
+        blade_tip_z = blade_base_z - 0.03
+        draw_oriented_voxel_box(surface, camera, blade_tip_x, blade_tip_y, blade_tip_z, fx*0.35 + px*0.80, fy*0.35 + py*0.80, -0.55, 0.14, 0.042, 0.032, COLOR_STEEL, outline=True, alpha=alpha)
+
         # Corrente pendendo suavemente entre a foice e o braço esquerdo
         ch_mid_x = (arm_r_x + arm_l_x) / 2
         ch_mid_y = (arm_r_y + arm_l_y) / 2
@@ -718,7 +765,9 @@ def render_voxel_humanoid(
         draw_voxel_box(surface, camera, ch_mid_x - 0.02, ch_mid_y - 0.02, ch_mid_z, 0.04, 0.04, 0.04, COLOR_CHAIN, outline=False, alpha=alpha)
         draw_voxel_box(surface, camera, arm_l_x - 0.03, arm_l_y - 0.03, arm_l_z - 0.06, 0.06, 0.06, 0.06, (60, 60, 70), outline=True, alpha=alpha)
         if is_melee:
-            draw_voxel_box(surface, camera, kx + fx*0.15, ky + fy*0.15, kz + 0.08, 0.16, 0.16, 0.16, COLOR_PURPLE_AURA, outline=False, alpha=160)
+            # Rastro elegante de energia roxa translúcida acompanhando a curvatura do golpe
+            draw_oriented_voxel_box(surface, camera, blade_base_x, blade_base_y, blade_base_z, fx*0.85 + px*0.25, fy*0.85 + py*0.25, -0.15, 0.24, 0.08, 0.05, COLOR_PURPLE_AURA, outline=False, alpha=130)
+            draw_oriented_voxel_box(surface, camera, blade_tip_x, blade_tip_y, blade_tip_z, fx*0.35 + px*0.80, fy*0.35 + py*0.80, -0.55, 0.18, 0.06, 0.04, COLOR_PURPLE_AURA, outline=False, alpha=150)
 
     elif char_type in ("rifleman", "teppo"):
         rx = arm_r_x + fx * 0.15
