@@ -121,27 +121,30 @@ Sample Game/
 
 ## 🎯 5. Onde Estamos e Qual a Próxima Ação Imediata
 
-O projeto acabou de consolidar a **Versão 1.3.3** com todos os 20 patches críticos aprovados e testados (commit `42ae791`). O plano de trabalho unificado está registrado no [`ROADMAP.md`](file:///Users/thiagocarvalho/Documents/Sample%20Game/ROADMAP.md).
+* **Fase 1 (Performance & Estabilidade):** ✅ **100% CONCLUÍDA E TESTADA**.
+  - Entregável 1.1 (Surface pooling de `SmokeParticle`): ativo e eliminando alocações contínuas de memória.
+  - Entregável 1.2 (Hitstop anti-cascata e altitude check no Ryuu Tsui Sen): corrigido com `wz <= 0.40`, cooldown de 0.25s e 0.035s de hitstop.
+  - Entregável 1.3 (Y-Sorting estático vs dinâmico): fila estática `build_static_render_queue` implementada no início do round.
+  - Entregável 1.4 (Particle Cap Global): limite rígido de 150 partículas preservando sangue e banners.
+  - Testes: `tests/test_performance_and_particles.py` passando com 100% (4/4 testes).
 
-### 👉 PRÓXIMA TAREFA A EXECUTAR: FASE 1 (Performance & Estabilidade)
+### 👉 PRÓXIMA TAREFA A EXECUTAR: FASE 2 (Arquitetura de Áudio & SFX/BGM)
 
-A IA sucessora deve focar **exclusivamente** na **Fase 1**:
+A IA sucessora deve focar na **Fase 2**:
 
-1. **Entregável 1.1 (`src/effects/particles.py`):**
-   * Implementar pooling de superfícies para `SmokeParticle.render()`.
-   * Criar dicionário de cache pré-alocado `_SMOKE_SURF_POOL` indexado pelo raio `r`.
-2. **Entregável 1.2 (`src/combat/collision.py` e `src/entities/red_samurai.py`):**
-   * Eliminar o slowdown do Ryuu Tsui Sen ao atingir rochas/sólidos.
-   * Adicionar condição `if fighter.wz > 0.4: return` em `_check_obstacle_sparks`.
-   * Adicionar cooldown de hitstop por obstáculo no combatente (`obstacle_spark_timer`).
-   * Reduzir o tempo de hitstop em obstáculos para `0.035s`.
-3. **Entregável 1.3 & 1.4 (`main.py`):**
-   * Separar fila estática e dinâmica de Y-Sorting.
-   * Aplicar cap global de 150 partículas (`MAX_PARTICLES = 150`).
+1. **Entregável 2.1 (`src/audio/sound_manager.py`):**
+   * Criar o singleton `SoundManager` inicializando `pygame.mixer.init(44100, -16, 2, 512)`.
+   * Criar `src/audio/sound_events.py` (enum de constantes para os eventos de som).
+   * Criar `src/audio/procedural_sfx.py` gerando buffers sonoros proceduralmente para que o jogo tenha som mesmo sem arquivos externos baixados.
+2. **Entregável 2.2 (`src/combat/collision.py` e `main.py`):**
+   * Integrar chamadas de SFX nos momentos de impacto: choque de espadas, morte fatal, tiro de pederneira/rifle, canhão, flecha e passos.
+3. **Entregável 2.3 & 2.4 (`main.py` e `src/ui/settings_menu.py`):**
+   * BGM player com crossfade suave entre telas e arenas.
+   * Sliders de volume (Master, SFX, BGM) no menu de configurações.
 4. **Validação:**
-   * Criar o arquivo de teste `tests/test_performance_and_particles.py`.
-   * Executar `./venv/bin/python3 tests/test_performance_and_particles.py` e garantir 100% de sucesso.
-   * Executar os 21 testes de regressão em `./venv/bin/python3 test_game.py`.
+   * Criar `tests/test_audio_system.py` e garantir 100% de sucesso.
+   * Executar a suíte de regressão `./venv/bin/python3 test_game.py` e `./venv/bin/python3 tests/test_performance_and_particles.py`.
+
 
 ---
 

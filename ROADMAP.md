@@ -88,29 +88,30 @@ pie title Status dos Recursos e Frentes do Projeto
 ### 🔴 FASE 1: Performance & Estabilidade (Gargalos de Framerate)
 *Objetivo: Eliminar o stutter do Ryuu Tsui Sen e as alocações contínuas de memória gráfica.*
 
-- [ ] **Entregável 1.1: Surface Object Pooling para `SmokeParticle`**
+- [x] **Entregável 1.1: Surface Object Pooling para `SmokeParticle`**
   - **Problema:** `SmokeParticle.render()` aloca `pygame.Surface(SRCALPHA)` a cada frame por partícula. Em picos de 48+ partículas, gera dezenas de alocações por frame.
-  - **Solução:** Criar pool de superfícies reutilizáveis indexadas por buckets de tamanho (4px a 44px).
+  - **Solução:** Pool de superfícies pré-alocadas reutilizáveis `_SMOKE_SURFACE_POOL` indexadas pelo diâmetro do raio.
   - **Arquivos:** `src/effects/particles.py`
-  - **Teste:** `tests/test_performance_and_particles.py::test_smoke_particle_surface_pooling`
+  - **Teste:** `tests/test_performance_and_particles.py::test_smoke_particle_surface_pooling` (✅ PASS)
 
-- [ ] **Entregável 1.2: Hitstop Anti-Cascata nos Obstáculos (Slowdown Ryuu Tsui Sen)**
-  - **Problema:** A hitbox de 1.45m do Ryuu Tsui Sen sobrepõe rochas e dispara hitstop a cada frame consecutivo.
-  - **Solução:** Ignorar colisões de obstáculo durante a fase aérea (`wz > 0.4`), adicionar cooldown de 0.25s por obstáculo e reduzir hitstop para 0.035s.
-  - **Arquivos:** `src/combat/collision.py`, `src/entities/red_samurai.py`
-  - **Teste:** `tests/test_performance_and_particles.py::test_ryuu_obstacle_hitstop_single_trigger`
+- [x] **Entregável 1.2: Hitstop Anti-Cascata nos Obstáculos (Slowdown Ryuu Tsui Sen)**
+  - **Problema:** A hitbox de 1.45m do Ryuu Tsui Sen sobrepõe rochas e disparava hitstop a cada frame consecutivo.
+  - **Solução:** Altitude check (`wz <= 0.40`), cooldown de impacto em obstáculo (`obstacle_spark_timer = 0.25s`) e hitstop calibrado em `0.035s`.
+  - **Arquivos:** `src/combat/collision.py`, `main.py`
+  - **Teste:** `tests/test_performance_and_particles.py::test_obstacle_sparks_altitude_and_anti_cascade` (✅ PASS)
 
-- [ ] **Entregável 1.3: Y-Sorting Dividido (Estático vs Dinâmico)**
-  - **Problema:** `render_queue.sort()` roda sobre dezenas de itens estáticos e dinâmicos a cada frame.
-  - **Solução:** Separar fila estática pré-ordenada (cenário fixo) da fila dinâmica (lutadores, projéteis, partículas).
+- [x] **Entregável 1.3: Y-Sorting Dividido (Estático vs Dinâmico)**
+  - **Problema:** `render_queue.sort()` rodava sobre dezenas de itens estáticos e dinâmicos a cada frame.
+  - **Solução:** Fila estática `build_static_render_queue(game_map)` gerada no início do round; apenas elementos dinâmicos inseridos no frame.
   - **Arquivos:** `main.py`
-  - **Teste:** `tests/test_performance_and_particles.py::test_ysort_order_consistency`
+  - **Teste:** `tests/test_performance_and_particles.py::test_static_render_queue_efficiency` (✅ PASS)
 
-- [ ] **Entregável 1.4: Particle Cap Global (MAX 150)**
+- [x] **Entregável 1.4: Particle Cap Global (MAX 150)**
   - **Problema:** Acúmulo descontrolado de partículas em partidas longas ou explosões simultâneas.
-  - **Solução:** Limite rígido de 150 partículas; novas partículas cosméticas de fumaça são descartadas quando lotado.
+  - **Solução:** Limite rígido de 150 partículas; cosméticos excedentes podados sem descartar sangue ou banners.
   - **Arquivos:** `main.py`
-  - **Teste:** `tests/test_performance_and_particles.py::test_particle_cap_enforcement`
+  - **Teste:** `tests/test_performance_and_particles.py::test_particle_cap_enforcement` (✅ PASS)
+
 
 ---
 
@@ -241,7 +242,7 @@ pie title Status dos Recursos e Frentes do Projeto
 | **Tomoe Hold/Release (5 Testes)** | `tests/test_tomoe_hold_release.py` | ✅ 100% |
 | **Ações Etapa 2 (6 Testes)** | `tests/test_step2_actions.py` | ✅ 100% |
 | **Fase 3 Controles (4 Testes)** | `tests/test_phase3_controls_and_persistence.py` | ✅ 100% |
-| **Performance & Partículas** | `tests/test_performance_and_particles.py` | ⏳ *A ser criado na Fase 1* |
+| **Performance & Partículas (4 Testes)** | `tests/test_performance_and_particles.py` | ✅ 100% |
 | **Áudio e Mixer** | `tests/test_audio_system.py` | ⏳ *A ser criado na Fase 2* |
 | **Balanceamento Tier D** | `tests/test_tier_d_balance.py` | ⏳ *A ser criado na Fase 4* |
 | **Clash QTE** | `tests/test_clash_qte.py` | ⏳ *A ser criado na Fase 5* |

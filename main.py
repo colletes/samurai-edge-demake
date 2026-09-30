@@ -424,6 +424,30 @@ def get_kyoto_arena_spawns(game_map, min_distance: float = 7.0) -> tuple[tuple[f
                 return (wx1, wy1), (wx2, wy2)
     return (10.5, 6.0), (10.5, 15.0)
 
+
+def build_static_render_queue(current_map):
+    """Constrói a fila ordenada de elementos estáticos do cenário (bambus, rochas, construções)."""
+    queue = []
+    for bamboo in current_map.bamboos:
+        queue.append((bamboo.wx + bamboo.wy, 'bamboo', bamboo))
+    for rock in current_map.rocks:
+        queue.append((rock.wx + rock.wy, 'rock', rock))
+    if current_map.well:
+        queue.append((current_map.well.wx + current_map.well.wy, 'well', current_map.well))
+    for tree in current_map.trees:
+        queue.append((tree.wx + tree.wy, 'tree', tree))
+    if hasattr(current_map, 'torii_gates'):
+        for tg in current_map.torii_gates:
+            queue.append((tg.wx + tg.wy, 'torii', tg))
+    if hasattr(current_map, 'buildings'):
+        for b in current_map.buildings:
+            queue.append((b.wx + b.wy + b.depth * 0.5, 'building', b))
+    if hasattr(current_map, 'lanterns'):
+        for l in current_map.lanterns:
+            queue.append((l.wx + l.wy, 'lantern', l))
+    return queue
+
+
 def run_game():
     pygame.init()
     pygame.font.init()
@@ -502,8 +526,10 @@ def run_game():
     round_start_timer = 1.8
     round_start_shaken = False
 
+    static_render_queue = []
+
     def start_new_match():
-        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, round_winner, round_start_timer, round_start_shaken, powder_pouches, decoys, poison_clouds, powder_traps
+        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, round_winner, round_start_timer, round_start_shaken, powder_pouches, decoys, poison_clouds, powder_traps, static_render_queue
         if selected_arena_id == ARENA_KYOTO:
             game_map = KyotoMap()
             (p1_wx, p1_wy), (p2_wx, p2_wy) = get_kyoto_arena_spawns(game_map, min_distance=7.0)
@@ -531,8 +557,10 @@ def run_game():
         round_start_timer = 1.8
         round_start_shaken = False
         cinematic_director.reset_round()
+        static_render_queue = build_static_render_queue(game_map)
 
     running = True
+
     while running:
         dt = clock.tick(FPS) / 1000.0
         dt = min(dt, 0.05)
@@ -938,6 +966,10 @@ def run_game():
                 else:
                     f.update(dt, game_map)
 
+                # Decremento universal de cooldown de impacto com obstáculos sólidos
+                if getattr(f, "obstacle_spark_timer", 0) > 0:
+                    f.obstacle_spark_timer -= dt
+
                 # Item 17: Indicador visual e decremento de lentidão (fuligem de pólvora escorrendo aos pés)
                 if f.is_alive and getattr(f, "slow_timer", 0) > 0:
                     f.slow_timer -= dt
@@ -986,37 +1018,31 @@ def run_game():
         camera.update(mid_x, mid_y, dt)
 
         particles = [p for p in particles if p.update(dt)]
+        # Entregável 1.4: Particle Cap Global (limite de 150 para prevenir sobrecarga de memória)
+        if len(particles) > 150:
+            cosmetic_idx = [i for i, p in enumerate(particles) if not isinstance(p, (BloodParticle, FloatingBanner))]
+            excess = len(particles) - 150
+            if excess > 0:
+                to_remove = set(cosmetic_idx[:excess])
+                particles = [p for i, p in enumerate(particles) if i not in to_remove]
+
         banners = [b for b in banners if b.update(dt)]
         for leaf in ambient_leaves:
             leaf.update(dt)
 
         # -------------------------------------------------------------
-        # RENDERIZAÇÃO COM Y-SORTING
+        # RENDERIZAÇÃO COM Y-SORTING DIVIDIDO (ESTÁTICO VS DINÂMICO)
         # -------------------------------------------------------------
         bg_col = COLOR_KYOTO_BG if isinstance(game_map, KyotoMap) else COLOR_BG
         screen.fill(bg_col)
         game_map.render_terrain(screen, camera, game_time)
 
-        render_queue = []
-        for bamboo in game_map.bamboos:
-            render_queue.append((bamboo.wx + bamboo.wy, 'bamboo', bamboo))
-        for rock in game_map.rocks:
-            render_queue.append((rock.wx + rock.wy, 'rock', rock))
-        if game_map.well:
-            render_queue.append((game_map.well.wx + game_map.well.wy, 'well', game_map.well))
-        for tree in game_map.trees:
-            render_queue.append((tree.wx + tree.wy, 'tree', tree))
+        # Entregável 1.3: Reutiliza a fila estática pré-calculada do cenário
+        if not static_render_queue:
+            static_render_queue = build_static_render_queue(game_map)
+        render_queue = list(static_render_queue)
 
-        # Adicionar elementos de cenário exclusivos (Torii, Lanternas, Construções de Kyoto)
-        if hasattr(game_map, 'torii_gates'):
-            for tg in game_map.torii_gates:
-                render_queue.append((tg.wx + tg.wy, 'torii', tg))
-        if hasattr(game_map, 'buildings'):
-            for b in game_map.buildings:
-                render_queue.append((b.wx + b.wy + b.depth * 0.5, 'building', b))
-        if hasattr(game_map, 'lanterns'):
-            for l in game_map.lanterns:
-                render_queue.append((l.wx + l.wy, 'lantern', l))
+        # Adicionar elementos dinâmicos exclusivos (Carruagens, Escombros de Kyoto)
         if hasattr(game_map, 'carriages'):
             for c in game_map.carriages:
                 if c.is_active and c.warning_timer <= 0:
@@ -1025,6 +1051,7 @@ def run_game():
             for d in game_map.falling_debris:
                 if d.is_active:
                     render_queue.append((d.target_x + d.target_y, 'debris', d))
+
 
         render_queue.append((p1.wx + p1.wy, 'fighter', p1))
         render_queue.append((p2.wx + p2.wy, 'fighter', p2))

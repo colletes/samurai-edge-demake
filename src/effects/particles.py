@@ -44,6 +44,21 @@ class SparkParticle:
             pygame.draw.rect(surface, (255, 255, 255), (sx - s // 2, sy - s // 2, max(1, s), max(1, s)))
 
 
+_SMOKE_SURFACE_POOL: dict[int, pygame.Surface] = {}
+
+
+def get_pooled_smoke_surface(radius: int) -> pygame.Surface:
+    """Retorna uma superfície pré-alocada reutilizável para partículas de fumaça, eliminando GC stutter."""
+    dim = max(4, radius * 2)
+    surf = _SMOKE_SURFACE_POOL.get(dim)
+    if surf is None:
+        surf = pygame.Surface((dim, dim), pygame.SRCALPHA)
+        _SMOKE_SURFACE_POOL[dim] = surf
+    else:
+        surf.fill((0, 0, 0, 0))
+    return surf
+
+
 class SmokeParticle:
     """Partículas de fumaça e fuligem para evasão ninja furtiva, névoa e pólvora."""
     def __init__(self, wx: float, wy: float, wz: float = 0.4, color: tuple = (165, 170, 180), size: int = 5, radius: float = None, lifetime: float = None):
@@ -70,7 +85,7 @@ class SmokeParticle:
         progress = max(0.0, min(1.0, self.age / self.lifetime))
         alpha = max(0, int(150 * (1.0 - progress)))
         r = max(2, int(self.size + progress * 6))
-        surf = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
+        surf = get_pooled_smoke_surface(r)
         c = self.color[:3]
         pygame.draw.circle(surf, (*c, alpha), (r, r), r)
         surface.blit(surf, (sx - r, sy - r))

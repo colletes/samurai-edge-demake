@@ -772,6 +772,13 @@ class CombatSystem:
     def _check_obstacle_sparks(self, fighter, game_map, particles: list, camera, ctrl_mgr = None, p_idx: int = 0):
         if not fighter.hitbox_active:
             return
+        # Não gera faíscas nem hitstop de obstáculos terrestres se o lutador estiver no ar (ex: descendo no Ryuu Tsui Sen)
+        if getattr(fighter, "wz", 0.0) > 0.40:
+            return
+        # Cooldown para evitar múltiplos hitstops consecutivos no mesmo golpe contra o mesmo obstáculo sólido
+        if getattr(fighter, "obstacle_spark_timer", 0.0) > 0:
+            return
+
         hx, hy = fighter.hitbox_center
         hradius = fighter.hitbox_radius * 0.75
         hit_solid = False
@@ -815,9 +822,11 @@ class CombatSystem:
                         break
 
         if hit_solid:
-            for _ in range(5):
+            fighter.obstacle_spark_timer = 0.25  # Evita re-trigger durante o mesmo golpe
+            for _ in range(4):
                 particles.append(SparkParticle(hx, hy, 0.55))
-            camera.add_shake(2.8)
-            self.hitstop_timer = max(self.hitstop_timer, 0.06)
+            camera.add_shake(2.0)
+            self.hitstop_timer = max(self.hitstop_timer, 0.035)
             if ctrl_mgr:
-                ctrl_mgr.rumble_player(p_idx, 0.35, 0.5, 90)
+                ctrl_mgr.rumble_player(p_idx, 0.30, 0.4, 70)
+
