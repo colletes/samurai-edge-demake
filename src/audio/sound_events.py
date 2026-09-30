@@ -93,6 +93,7 @@ class SoundEvent(str, Enum, metaclass=_SoundEventMeta):
 
 
 class MusicTrack(str, Enum):
-    TITLE_THEME = "bgm_menu"              # Tema da tela de título e seleção
+    TITLE_THEME = "bgm_menu"              # Tema da tela de título (Bakumatsu Theme)
+    CHAR_SELECT_THEME = "bgm_char_select" # Tema da seleção de personagens
     BAMBOO_THEME = "bgm_bamboo"           # Tema da Floresta de Bambu e Lago Zen
     KYOTO_THEME = "bgm_kyoto"             # Tema da Avenida Bakumatsu em chamas

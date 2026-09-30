@@ -95,6 +95,7 @@ class TestSoundManager(unittest.TestCase):
         """O método play_music deve transicionar entre trilhas sem quebrar."""
         try:
             self.mgr.play_music(MusicTrack.TITLE_THEME)
+            self.mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
             self.mgr.play_music(MusicTrack.KYOTO_THEME)
             self.mgr.play_music(MusicTrack.BAMBOO_THEME)
             self.mgr.stop_music()

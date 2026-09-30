@@ -639,6 +639,7 @@ def run_game():
                     if action == "VERSUS":
                         play_sfx(SoundEvent.MENU_SELECT)
                         char_select_screen.reset()
+                        sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
                         game_state = STATE_CHAR_SELECT
                     elif action == "OPTIONS":
                         play_sfx(SoundEvent.MENU_SELECT)
@@ -687,6 +688,7 @@ def run_game():
                     arena_choice = arena_select_screen.handle_event(event)
                     if arena_choice == "BACK":
                         play_sfx(SoundEvent.MENU_SELECT)
+                        sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
                         game_state = STATE_CHAR_SELECT
                     elif arena_choice in (ARENA_BAMBOO, ARENA_KYOTO):
                         play_sfx(SoundEvent.MENU_SELECT)
@@ -769,7 +771,7 @@ def run_game():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     game_state = STATE_ARENA_SELECT
-                    sound_mgr.play_music(MusicTrack.TITLE_THEME)
+                    sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
                 elif event.key == KEY_SETTINGS:
                     settings_menu.open()
                 elif event.key == KEY_RESTART:
@@ -853,7 +855,7 @@ def run_game():
                     select_btn_rect = pygame.Rect(25, 20, 160, 32)
                     if select_btn_rect.collidepoint(mx, my):
                         play_sfx(SoundEvent.MENU_SELECT)
-                        sound_mgr.play_music(MusicTrack.TITLE_THEME)
+                        sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
                         game_state = STATE_ARENA_SELECT
 
         # Comandos de Ação Touchscreen
@@ -861,7 +863,7 @@ def run_game():
             settings_menu.open()
         if touch_controls.is_select_requested():
             play_sfx(SoundEvent.MENU_SELECT)
-            sound_mgr.play_music(MusicTrack.TITLE_THEME)
+            sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
             game_state = STATE_ARENA_SELECT
 
         if p1.is_alive and round_winner is None and round_start_timer <= 0:
