@@ -15,13 +15,18 @@ CONFIG_PATH = os.path.join(BASE_DIR, CONFIG_FILENAME)
 def get_default_config() -> dict:
     """Retorna a estrutura de configuração padrão de fábrica."""
     return {
-        "version": "1.3.3",
+        "version": "1.4.0",
         "keyboard": {k: int(v) for k, v in DEFAULT_CONTROLS.items()},
         "controllers": {
             "P1": {},
             "P2": {},
         },
         "touch_mode": "auto",
+        "audio": {
+            "master": 1.0,
+            "sfx": 0.85,
+            "bgm": 0.65,
+        }
     }
 
 
@@ -52,6 +57,12 @@ def load_controls_config() -> dict:
             data["controllers"] = default_cfg["controllers"]
         if "touch_mode" not in data:
             data["touch_mode"] = default_cfg["touch_mode"]
+        if "audio" not in data or not isinstance(data["audio"], dict):
+            data["audio"] = default_cfg["audio"]
+        else:
+            for k, v in default_cfg["audio"].items():
+                if k not in data["audio"]:
+                    data["audio"][k] = v
 
         return data
     except Exception as e:
@@ -59,19 +70,42 @@ def load_controls_config() -> dict:
         return get_default_config()
 
 
-def save_controls_config(keyboard_controls: dict, controller_mgr=None, touch_mode: str = "auto") -> bool:
+def save_controls_config(keyboard_controls: dict, controller_mgr=None, touch_mode: str = "auto", audio_cfg: dict = None) -> bool:
     """
-    Persiste as configurações de teclado, gamepads e touch em controls_config.json.
+    Persiste as configurações de teclado, gamepads, touch e volumes de áudio em controls_config.json.
     """
     try:
+        default_cfg = get_default_config()
+
+        audio_section = audio_cfg
+        if audio_section is None and "audio" in keyboard_controls and isinstance(keyboard_controls["audio"], dict):
+            audio_section = keyboard_controls["audio"]
+
+        if audio_section is None:
+            audio_section = default_cfg["audio"]
+        else:
+            merged_audio = dict(default_cfg["audio"])
+            merged_audio.update(audio_section)
+            audio_section = merged_audio
+
+        keyboard_section = {}
+        for k, v in keyboard_controls.items():
+            if k == "audio":
+                continue
+            try:
+                keyboard_section[k] = int(v)
+            except (ValueError, TypeError):
+                pass
+
         cfg = {
-            "version": "1.3.3",
-            "keyboard": {k: int(v) for k, v in keyboard_controls.items()},
+            "version": "1.4.0",
+            "keyboard": keyboard_section,
             "controllers": {
                 "P1": {},
                 "P2": {},
             },
             "touch_mode": touch_mode or "auto",
+            "audio": audio_section,
         }
 
         if controller_mgr:
@@ -92,3 +126,4 @@ def save_controls_config(keyboard_controls: dict, controller_mgr=None, touch_mod
     except Exception as e:
         print(f"Erro ao salvar controles em {CONFIG_PATH}: {e}")
         return False
+

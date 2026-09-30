@@ -72,6 +72,7 @@ from src.ui.fonts import get_title_font, get_text_font
 from src.i18n import t
 from src.input import get_controller_manager, TouchControls, DisplayScaler
 from src.input.controls_storage import load_controls_config, save_controls_config
+from src.audio import SoundManager, SoundEvent, MusicTrack
 
 # Estados Globais do Jogo
 STATE_TITLE = "TITLE"
@@ -274,82 +275,116 @@ def get_player_aim_target(fighter, controls, prefix: str, distance: float = 4.0,
         return fighter.wx + dwx * distance, fighter.wy + dwy * distance
     return fighter.wx + fighter.facing_x * distance, fighter.wy + fighter.facing_y * distance
 
+def play_sfx(event: SoundEvent):
+    """Dispara um efeito sonoro feudal através do SoundManager global."""
+    try:
+        SoundManager.get_instance().play(event)
+    except Exception:
+        pass
+
 def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: list, particles: list):
     """Executa a ação primária de ataque do lutador em direção às coordenadas de mira."""
     if isinstance(fighter, RedSamurai):
         fighter.trigger_iai_attack(aim_x, aim_y)
+        play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, BlueSamurai):
         fighter.trigger_combo_attack(aim_x, aim_y)
+        play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, YellowNinja):
         if fighter.has_kunai:
             if fighter.state == "JUMP":
                 fighter.trigger_midair_throw(aim_x, aim_y, projectiles)
             else:
                 fighter.trigger_standing_throw(aim_x, aim_y, projectiles)
+            play_sfx(SoundEvent.KUNAI_THROW)
         else:
             fighter.trigger_thrust_attack(aim_x, aim_y)
+            play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, AmericanNinja):
         fighter.trigger_shuriken(aim_x, aim_y, projectiles)
+        play_sfx(SoundEvent.KUNAI_THROW)
     elif isinstance(fighter, GrayNinja):
         fighter.trigger_throw_bomb(aim_x, aim_y, projectiles)
+        play_sfx(SoundEvent.BOMB_FUSE)
     elif isinstance(fighter, PurpleNinja):
         fighter.trigger_kama_strike(aim_x, aim_y)
+        play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, SaitouSamurai):
         fighter.trigger_gatotsu_thrust(aim_x, aim_y)
+        play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, Rifleman):
         if fighter.has_ammo:
             fighter.trigger_shoot(aim_x, aim_y, projectiles, particles)
+            play_sfx(SoundEvent.GUNSHOT)
         else:
             fighter.trigger_rifle_butt(aim_x, aim_y, particles)
+            play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, Kabuki):
         fighter.trigger_fan_strike(aim_x, aim_y, particles)
+        play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, KyudoArcher):
         fighter.trigger_bow_draw(aim_x, aim_y, projectiles)
+        play_sfx(SoundEvent.BOW_RELEASE)
     elif isinstance(fighter, PirateSwordswoman):
         fighter.trigger_cutlass_cleave(aim_x, aim_y)
+        play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, Musketeer):
         fighter.trigger_fleche_thrust(aim_x, aim_y)
+        play_sfx(SoundEvent.SWORD_SLASH)
 
 def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, poison_clouds: list, powder_traps: list, opponent=None, game_map=None, banners: list = None):
     """Executa a Ação Secundária (Técnica Especial / Defesa / Contra-ataque) do combatente."""
     if isinstance(fighter, RedSamurai):
         # Kenshi: Ryuu Tsui Sen (Salto vertical e corte descendente devastador)
         fighter.trigger_ryuu_tsui_sen(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent)
+        play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, BlueSamurai):
         fighter.set_facing(aim_x, aim_y)
         fighter.trigger_parry()
+        play_sfx(SoundEvent.PARRY)
     elif isinstance(fighter, YellowNinja):
         if fighter.state == "JUMP" and fighter.has_kunai:
             fighter.trigger_midair_throw(aim_x, aim_y, projectiles)
+            play_sfx(SoundEvent.KUNAI_THROW)
         else:
             fighter.trigger_jump(aim_x, aim_y, projectiles)
+            play_sfx(SoundEvent.DASH_ROLL)
     elif isinstance(fighter, AmericanNinja):
         fighter.trigger_dog_attack(aim_x, aim_y)
+        play_sfx(SoundEvent.DOG_BARK)
     elif isinstance(fighter, GrayNinja):
         all_f = [fighter, opponent] if opponent else [fighter]
         fighter.trigger_remote_mine(aim_x, aim_y, projectiles, fighters=all_f, particles=particles, banners=banners)
+        play_sfx(SoundEvent.BOMB_FUSE)
     elif isinstance(fighter, PurpleNinja):
         fighter.start_chain_shield(aim_x, aim_y)
+        play_sfx(SoundEvent.CHAIN_SPIN)
     elif isinstance(fighter, SaitouSamurai):
         fighter.trigger_zeroshiki(aim_x, aim_y)
+        play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, Rifleman):
         # Teppo: Black Powder Ground Trap (Trilha de pólvora inflamável no solo)
         fighter.trigger_powder_trap(aim_x, aim_y, powder_traps, particles)
+        play_sfx(SoundEvent.BOMB_FUSE)
     elif isinstance(fighter, Kabuki):
         # Okuni: Dokukiri (Sopro de névoa venenosa com leques de ferro)
         fighter.trigger_dokukiri(aim_x, aim_y, poison_clouds)
+        play_sfx(SoundEvent.POISON_BREATH)
     elif isinstance(fighter, KyudoArcher):
         # Tomoe: Barreira dos Ventos Kami (3 Ofudas defensivos em órbita)
         fighter.trigger_ofuda_barrier()
+        play_sfx(SoundEvent.BOW_RELEASE)
     elif isinstance(fighter, PirateSwordswoman):
         # Anne Bonny: Naval Artillery Strike (Hold & release orbital cannonball)
         fighter.start_cannon_strike(aim_x, aim_y)
     elif isinstance(fighter, Musketeer):
         # Julie: Disparo veloz de pederneira (Pocket Flintlock de curto alcance - Item 7 e 20)
         fighter.trigger_flintlock_shot(aim_x, aim_y, projectiles, particles=particles)
+        play_sfx(SoundEvent.FLINTLOCK_FIRE)
 
 def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None, opponent=None, banners=None):
     """Executa a Terceira Ação (Roll / Dash dedicado) com invulnerabilidade temporária (i-frames)."""
+    play_sfx(SoundEvent.DASH_ROLL)
     if isinstance(fighter, RedSamurai):
         fighter.trigger_dash(dwx, dwy)
     elif isinstance(fighter, Kabuki):
@@ -558,6 +593,17 @@ def run_game():
         round_start_shaken = False
         cinematic_director.reset_round()
         static_render_queue = build_static_render_queue(game_map)
+        if selected_arena_id == ARENA_KYOTO:
+            sound_mgr.play_music(MusicTrack.KYOTO_THEME)
+        else:
+            sound_mgr.play_music(MusicTrack.BAMBOO_THEME)
+
+    sound_mgr = SoundManager.get_instance()
+    audio_cfg = saved_cfg.get("audio", {})
+    sound_mgr.set_master_volume(audio_cfg.get("master", 1.0))
+    sound_mgr.set_sfx_volume(audio_cfg.get("sfx", 1.0))
+    sound_mgr.set_bgm_volume(audio_cfg.get("bgm", 0.7))
+    sound_mgr.play_music(MusicTrack.TITLE_THEME)
 
     running = True
 
@@ -591,9 +637,11 @@ def run_game():
                 else:
                     action = title_screen.handle_event(event)
                     if action == "VERSUS":
+                        play_sfx(SoundEvent.MENU_SELECT)
                         char_select_screen.reset()
                         game_state = STATE_CHAR_SELECT
                     elif action == "OPTIONS":
+                        play_sfx(SoundEvent.MENU_SELECT)
                         settings_menu.open()
                     elif action == "QUIT":
                         running = False
@@ -614,8 +662,11 @@ def run_game():
                 else:
                     start_match = char_select_screen.handle_event(event)
                     if start_match == "BACK":
+                        play_sfx(SoundEvent.MENU_SELECT)
+                        sound_mgr.play_music(MusicTrack.TITLE_THEME)
                         game_state = STATE_TITLE
                     elif start_match:
+                        play_sfx(SoundEvent.MENU_SELECT)
                         p1_char_id, p2_char_id, vs_ai_mode = char_select_screen.get_selected_characters()
                         game_state = STATE_ARENA_SELECT
 
@@ -635,8 +686,10 @@ def run_game():
                 else:
                     arena_choice = arena_select_screen.handle_event(event)
                     if arena_choice == "BACK":
+                        play_sfx(SoundEvent.MENU_SELECT)
                         game_state = STATE_CHAR_SELECT
                     elif arena_choice in (ARENA_BAMBOO, ARENA_KYOTO):
+                        play_sfx(SoundEvent.MENU_SELECT)
                         selected_arena_id = arena_choice
                         start_new_match()
                         game_state = STATE_DUEL_PLAYING
@@ -699,6 +752,7 @@ def run_game():
                 camera.add_shake(4.5)
                 ctrl_mgr.rumble_player(0, 0.4, 0.6, 120)
                 ctrl_mgr.rumble_player(1, 0.4, 0.6, 120)
+                play_sfx(SoundEvent.ROUND_START)
                 round_start_shaken = True
 
         # Bloqueio de movimentação durante abertura do round (Item 10)
@@ -715,6 +769,7 @@ def run_game():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     game_state = STATE_ARENA_SELECT
+                    sound_mgr.play_music(MusicTrack.TITLE_THEME)
                 elif event.key == KEY_SETTINGS:
                     settings_menu.open()
                 elif event.key == KEY_RESTART:
@@ -797,12 +852,16 @@ def run_game():
                         settings_menu.open()
                     select_btn_rect = pygame.Rect(25, 20, 160, 32)
                     if select_btn_rect.collidepoint(mx, my):
+                        play_sfx(SoundEvent.MENU_SELECT)
+                        sound_mgr.play_music(MusicTrack.TITLE_THEME)
                         game_state = STATE_ARENA_SELECT
 
         # Comandos de Ação Touchscreen
         if touch_controls.is_menu_requested():
             settings_menu.open()
         if touch_controls.is_select_requested():
+            play_sfx(SoundEvent.MENU_SELECT)
+            sound_mgr.play_music(MusicTrack.TITLE_THEME)
             game_state = STATE_ARENA_SELECT
 
         if p1.is_alive and round_winner is None and round_start_timer <= 0:
@@ -992,6 +1051,7 @@ def run_game():
             round_winner = winner
             ctrl_mgr.rumble_player(0, 0.7, 1.0, 260)
             ctrl_mgr.rumble_player(1, 0.7, 1.0, 260)
+            play_sfx(SoundEvent.ROUND_WIN)
             if winner == "P1_WINS":
                 score_p1 += 1
             elif winner == "P2_WINS":
@@ -1004,13 +1064,16 @@ def run_game():
                 score_p2 += 1
                 ctrl_mgr.rumble_player(0, 0.7, 1.0, 260)
                 ctrl_mgr.rumble_player(1, 0.7, 1.0, 260)
+                play_sfx(SoundEvent.ROUND_WIN)
             elif not p2.is_alive and p1.is_alive:
                 round_winner = "P1_WINS"
                 score_p1 += 1
                 ctrl_mgr.rumble_player(0, 0.7, 1.0, 260)
                 ctrl_mgr.rumble_player(1, 0.7, 1.0, 260)
+                play_sfx(SoundEvent.ROUND_WIN)
             elif not p1.is_alive and not p2.is_alive:
                 round_winner = "DRAW"
+                play_sfx(SoundEvent.ROUND_WIN)
 
         # Câmera segue o ponto médio
         mid_x = (p1.wx + p2.wx) / 2.0

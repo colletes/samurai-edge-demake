@@ -39,6 +39,15 @@ class CombatSystem:
     def __init__(self):
         self.hitstop_timer = 0.0
 
+    def _play_sound(self, event, volume: float = 1.0):
+        """Helper seguro para disparo de efeitos sonoros em combate."""
+        try:
+            from src.audio import get_sound_manager, SoundEvent
+            ev = getattr(SoundEvent, event.upper(), event) if isinstance(event, str) else event
+            get_sound_manager().play(ev, volume_scale=volume)
+        except Exception:
+            pass
+
     def process_combat(self, p1, p2, game_map, particles: list, banners: list, camera, projectiles: list, dt: float = 0.016, cinematic_director = None, decoys: list = None, ctrl_mgr = None) -> str | None:
         """
         Processa interações de combate: corpo a corpo, projéteis e ataques de cães.
@@ -69,6 +78,7 @@ class CombatSystem:
                                 particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
                             banners.append(FloatingBanner("SLASH DEFLECTION!", proj.wx, proj.wy, wz=1.7, color=(255, 230, 80)))
                             camera.add_shake(5.0)
+                            self._play_sound("sword_clash")
 
             # 2. Murasaki: Giro Protetor de Corrente da Kusarigama (Apenas Frente - Item 10)
             elif getattr(def_fighter, "is_spinning_chain", False):
@@ -86,6 +96,7 @@ class CombatSystem:
                                     particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
                                 banners.append(FloatingBanner("FRONTAL CHAIN DEFLECTION!", proj.wx, proj.wy, wz=1.7, color=(220, 140, 255)))
                                 camera.add_shake(5.0)
+                                self._play_sound("chain_whip")
 
             # 3. Anne: Corte em Meia-Lua do Alfanje (Cutlass Cleave Deflection ampliado)
             elif char_t == "pirate" and def_fighter.hitbox_active:
@@ -99,6 +110,7 @@ class CombatSystem:
                                 particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
                             banners.append(FloatingBanner("CUTLASS DEFLECTION!", proj.wx, proj.wy, wz=1.7, color=(255, 215, 80)))
                             camera.add_shake(5.0)
+                            self._play_sound("sword_clash")
 
             # 4. Tomoe: Barreira dos Ventos Kami (Ofuda Ward Deflection)
             elif getattr(def_fighter, "is_ofuda_active", None) and def_fighter.is_ofuda_active():
@@ -110,6 +122,7 @@ class CombatSystem:
                                 particles.append(SparkParticle(proj.wx, proj.wy, 0.5))
                             banners.append(FloatingBanner("OFUDA WARD!", proj.wx, proj.wy, wz=1.7, color=(120, 220, 160)))
                             camera.add_shake(4.0)
+                            self._play_sound("parry")
 
             # 5. Julie: Floreio de Capa Defensivo (Cape Deflection - Cone Frontal de ~120°)
             elif char_t == "musketeer" and def_fighter.state == "CAPE_FLOURISH":
@@ -127,6 +140,8 @@ class CombatSystem:
                                     particles.append(SparkParticle(proj.wx, proj.wy, 0.55, color=(100, 180, 255)))
                                 banners.append(FloatingBanner("CAPE DEFLECTION!", def_fighter.wx, def_fighter.wy, wz=1.75, color=(100, 180, 255)))
                                 camera.add_shake(4.5)
+                                self._play_sound("dodge_whoosh")
+
 
 
         active_projectiles = []
@@ -181,6 +196,7 @@ class CombatSystem:
                             particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
                         banners.append(FloatingBanner("PARRY KUNAI!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
                         camera.add_shake(5.0)
+                        self._play_sound("parry")
                         proj.state = "ON_GROUND"
                         proj.wz = 0.05
                     else:
@@ -193,6 +209,7 @@ class CombatSystem:
                             self.hitstop_timer = 0.12
                             winner = winner_id
                             proj.is_active = False
+                            self._play_sound("fatal_strike")
                             if cinematic_director:
                                 death_style = _get_death_style_for_attacker(proj.owner)
                                 cinematic_director.trigger_fatal_strike(proj.owner, target, death_style, (proj.dir_x, proj.dir_y))
@@ -206,13 +223,16 @@ class CombatSystem:
                         for _ in range(8):
                             particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
                         banners.append(FloatingBanner("PARRY!", target.wx, target.wy, wz=1.6, color=(100, 200, 255)))
+                        self._play_sound("parry")
                     else:
                         target.stun(0.24)  # Atordoamento tático calibrado!
                         camera.add_shake(4.0)
                         banners.append(FloatingBanner("STUNNED!", target.wx, target.wy, wz=1.7, color=(200, 220, 255)))
                         for _ in range(8):
                             particles.append(SparkParticle(target.wx, target.wy, 0.6))
+                        self._play_sound("obstacle_hit")
                     proj.is_active = False
+
 
             # Se for BOMBA NORMAL EM ARCO (TimedBombEntity)
             elif isinstance(proj, TimedBombEntity):
@@ -227,6 +247,7 @@ class CombatSystem:
                     proj.is_active = False
                     camera.add_shake(18.0)
                     banners.append(FloatingBanner("BOOM! - BOMB DETONATION!", proj.wx, proj.wy, wz=1.8, color=(255, 140, 20)))
+                    self._play_sound("bomb_explode")
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(0, 0.9, 0.7, 280)
                         ctrl_mgr.rumble_player(1, 0.9, 0.7, 280)
@@ -271,6 +292,9 @@ class CombatSystem:
                         if p2_dead and cinematic_director:
                             cinematic_director.trigger_fatal_strike(proj.owner, p2, "KASUMI_EXPLODE", (0, 0))
 
+                    if p1_dead or p2_dead:
+                        self._play_sound("fatal_strike")
+
                     if p1_dead and p2_dead:
                         winner = "DRAW"
                     elif p1_dead:
@@ -304,6 +328,7 @@ class CombatSystem:
                             banners.append(FloatingBanner("PARRY BULLET!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
                             for _ in range(14):
                                 particles.append(SparkParticle(proj.wx, proj.wy, 0.7))
+                            self._play_sound("parry")
                         else:
                             hit, dead = target.take_hit((proj.vx, proj.vy), damage=2)
                             if dead:
@@ -320,9 +345,9 @@ class CombatSystem:
                                     particles.append(BloodParticle(target.wx, target.wy, 0.6))
                                 self.hitstop_timer = 0.14
                                 winner = winner_id
+                                self._play_sound("fatal_strike")
                                 if cinematic_director:
                                     cinematic_director.trigger_fatal_strike(proj.owner, target, "HEADSHOT_EXPLODE", (proj.vx, proj.vy))
-
 
             # Se for NUVEM DE VENENO (PoisonCloudProjectile)
             elif isinstance(proj, PoisonCloudProjectile) and proj.is_active:
@@ -339,6 +364,7 @@ class CombatSystem:
                         banners.append(FloatingBanner("POISONED! 6s TO SURVIVE!", target.wx, target.wy, wz=1.8, color=(80, 225, 120), duration=2.5))
                         for _ in range(16):
                             particles.append(SparkParticle(target.wx, target.wy, 0.5))
+                        self._play_sound("poison_breath")
 
             # Se for FLECHA DE KYUDO (KyudoArrowProjectile)
             elif isinstance(proj, KyudoArrowProjectile) and proj.is_active:
@@ -350,6 +376,7 @@ class CombatSystem:
                         banners.append(FloatingBanner("PARRY ARROW!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
                         for _ in range(10):
                             particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
+                        self._play_sound("parry")
                     else:
                         hit, dead = target.take_hit((proj.vx, proj.vy), damage=2)
                         if dead:
@@ -359,6 +386,7 @@ class CombatSystem:
                                 particles.append(BloodParticle(target.wx, target.wy, 0.6))
                             self.hitstop_timer = 0.12
                             winner = winner_id
+                            self._play_sound("fatal_strike")
                             if cinematic_director:
                                 cinematic_director.trigger_fatal_strike(proj.owner, target, "SAITOU_IMPALE", (proj.vx, proj.vy))
 
@@ -379,6 +407,7 @@ class CombatSystem:
                             banners.append(FloatingBanner("PARRY CHAIN!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
                             camera.add_shake(5.0)
                             proj.state = "RETRACTING"
+                            self._play_sound("parry")
                         else:
                             proj.state = "HOOKED_PULLING"
                             proj.target = target
@@ -387,10 +416,12 @@ class CombatSystem:
                             banners.append(FloatingBanner("KUSARIGAMA HOOK!", target.wx, target.wy, wz=1.8, color=(195, 120, 255)))
                             for _ in range(12):
                                 particles.append(SparkParticle(target.wx, target.wy, 0.4))
+                            self._play_sound("chain_whip")
 
             # Se for BALA DE CANHÃO NAVAL (CannonballProjectile)
             elif isinstance(proj, CannonballProjectile) and proj.is_active:
                 if proj.has_exploded:
+                    self._play_sound("cannon_fire")
                     # Explodir e atingir adversários no solo
                     for target, win_id in ((p1, "P2_WINS"), (p2, "P1_WINS")):
                         if target.is_alive and target != proj.owner:
@@ -404,8 +435,10 @@ class CombatSystem:
                                     self.hitstop_timer = 0.16
                                     if winner is None:
                                         winner = win_id
+                                    self._play_sound("fatal_strike")
                                     if cinematic_director:
                                         cinematic_director.trigger_fatal_strike(proj.owner, target, "KASUMI_EXPLODE", (0, 0))
+
 
             if proj.is_active:
                 active_projectiles.append(proj)
@@ -553,6 +586,7 @@ class CombatSystem:
                     for _ in range(25):
                         particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                     self.hitstop_timer = 0.14
+                    self._play_sound("fatal_strike")
                     if cinematic_director:
                         cinematic_director.trigger_fatal_strike(p1, p2, "MURASAKI_DECAP", p1.slash_dir)
                     return "P1_WINS"
@@ -566,6 +600,7 @@ class CombatSystem:
                     for _ in range(25):
                         particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                     self.hitstop_timer = 0.14
+                    self._play_sound("fatal_strike")
                     if cinematic_director:
                         cinematic_director.trigger_fatal_strike(p2, p1, "MURASAKI_DECAP", p2.slash_dir)
                     return "P2_WINS"
@@ -580,10 +615,12 @@ class CombatSystem:
                     camera.add_shake(7.0)
                     p1.stun(0.4)
                     p2.stun(0.4)
+                    self._play_sound("sword_clash")
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(0, 0.6, 0.8, 180)
                         ctrl_mgr.rumble_player(1, 0.6, 0.8, 180)
                     return None
+
 
         # -------------------------------------------------------------
         # 5. ATAQUE MELEE: P1 CONTRA DECOYS OU P2
@@ -609,6 +646,7 @@ class CombatSystem:
                     banners.append(FloatingBanner(parry_msg, p2.wx, p2.wy, wz=1.7, color=(100, 200, 255)))
                     camera.add_shake(8.0)
                     p1.stun(0.85)
+                    self._play_sound("parry")
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(0, 0.5, 0.8, 200)
                         ctrl_mgr.rumble_player(1, 0.6, 0.8, 180)
@@ -622,8 +660,10 @@ class CombatSystem:
                     banners.append(FloatingBanner("RIFLE BUTT - 1 DMG!", p2.wx, p2.wy, wz=1.7, color=(210, 210, 230)))
                     for _ in range(12):
                         particles.append(SparkParticle(p2.wx, p2.wy, 0.5))
+                    self._play_sound("obstacle_hit")
                     if dead:
                         winner = "P1_WINS"
+                        self._play_sound("fatal_strike")
                         if cinematic_director:
                             cinematic_director.trigger_fatal_strike(p1, p2, "HEADSHOT_EXPLODE", p1.slash_dir)
                 else:
@@ -656,6 +696,7 @@ class CombatSystem:
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                         self.hitstop_timer = 0.12
                         winner = "P1_WINS"
+                        self._play_sound("fatal_strike")
                         if cinematic_director:
                             death_style = _get_death_style_for_attacker(p1)
                             cinematic_director.trigger_fatal_strike(p1, p2, death_style, p1.slash_dir)
@@ -664,6 +705,8 @@ class CombatSystem:
                         banners.append(FloatingBanner("TANTO STAB (1/2)!", p2.wx, p2.wy, wz=1.7, color=(255, 200, 50)))
                         for _ in range(12):
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
+                        self._play_sound("sword_slash")
+
 
         # -------------------------------------------------------------
         # 6. ATAQUE MELEE: P2 CONTRA DECOYS OU P1
@@ -689,6 +732,7 @@ class CombatSystem:
                     banners.append(FloatingBanner(parry_msg, p1.wx, p1.wy, wz=1.7, color=(100, 200, 255)))
                     camera.add_shake(8.0)
                     p2.stun(0.85)
+                    self._play_sound("parry")
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(1, 0.5, 0.8, 200)
                         ctrl_mgr.rumble_player(0, 0.6, 0.8, 180)
@@ -702,8 +746,10 @@ class CombatSystem:
                     banners.append(FloatingBanner("RIFLE BUTT - 1 DMG!", p1.wx, p1.wy, wz=1.7, color=(210, 210, 230)))
                     for _ in range(12):
                         particles.append(SparkParticle(p1.wx, p1.wy, 0.5))
+                    self._play_sound("obstacle_hit")
                     if dead:
                         winner = "P2_WINS"
+                        self._play_sound("fatal_strike")
                         if cinematic_director:
                             cinematic_director.trigger_fatal_strike(p2, p1, "HEADSHOT_EXPLODE", p2.slash_dir)
                 else:
@@ -735,6 +781,7 @@ class CombatSystem:
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                         self.hitstop_timer = 0.12
                         winner = "P2_WINS"
+                        self._play_sound("fatal_strike")
                         if cinematic_director:
                             death_style = _get_death_style_for_attacker(p2)
                             cinematic_director.trigger_fatal_strike(p2, p1, death_style, p2.slash_dir)
@@ -743,6 +790,8 @@ class CombatSystem:
                         banners.append(FloatingBanner("TANTO STAB (1/2)!", p1.wx, p1.wy, wz=1.7, color=(255, 200, 50)))
                         for _ in range(12):
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
+                        self._play_sound("sword_slash")
+
 
         # -------------------------------------------------------------
         # 7. ATUALIZAR E REMOVER DECOYS EXPIRADOS
@@ -768,6 +817,7 @@ class CombatSystem:
                         particles.append(slice_part)
                         for _ in range(5):
                             particles.append(SparkParticle(bamboo.wx, bamboo.wy, bamboo.stump_height))
+                        self._play_sound("sword_slash")
 
     def _check_obstacle_sparks(self, fighter, game_map, particles: list, camera, ctrl_mgr = None, p_idx: int = 0):
         if not fighter.hitbox_active:
@@ -827,6 +877,8 @@ class CombatSystem:
                 particles.append(SparkParticle(hx, hy, 0.55))
             camera.add_shake(2.0)
             self.hitstop_timer = max(self.hitstop_timer, 0.035)
+            self._play_sound("obstacle_hit")
             if ctrl_mgr:
                 ctrl_mgr.rumble_player(p_idx, 0.30, 0.4, 70)
+
 

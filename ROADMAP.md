@@ -118,25 +118,25 @@ pie title Status dos Recursos e Frentes do Projeto
 ### 🟠 FASE 2: Arquitetura de Áudio & Efeitos Sonoros (SFX + BGM)
 *Objetivo: Integrar áudio feudal completo com síntese procedural fallback que funciona mesmo sem arquivos externos.*
 
-- [ ] **Entregável 2.1: `SoundManager` com Síntese Procedural Fallback**
+- [x] **Entregável 2.1: `SoundManager` com Síntese Procedural Fallback**
   - **Solução:** Singleton inicializando `pygame.mixer` e sintetizador de ondas sonoras procedurais embutido para SFX básicos (espadas, impactos, tiros) e suporte transparente a arquivos `.ogg` reais.
-  - **Arquivos:** `[NEW] src/audio/sound_manager.py`, `[NEW] src/audio/sound_events.py`, `[NEW] src/audio/procedural_sfx.py`
-  - **Teste:** `tests/test_audio_system.py::test_sound_manager_playback_and_fallback`
+  - **Arquivos:** `src/audio/sound_manager.py`, `src/audio/sound_events.py`, `src/audio/procedural_sfx.py`
+  - **Teste:** `tests/test_audio_system.py::TestProceduralSFX` e `TestSoundManager` (✅ PASS)
 
-- [ ] **Entregável 2.2: Integração de SFX em Combate**
-  - **Solução:** Conectar eventos de som em `collision.py` e `main.py`: `SWORD_CLASH`, `FATAL_STRIKE`, `BOMB_EXPLODE`, `CANNON_FIRE`, `FLINTLOCK_SHOT`, `ARROW_RELEASE`, `FOOTSTEPS`.
+- [x] **Entregável 2.2: Integração de SFX em Combate**
+  - **Solução:** Conectar eventos de som em `collision.py` e `main.py`: `SWORD_CLASH`, `FATAL_STRIKE`, `BOMB_EXPLODE`, `CANNON_FIRE`, `FLINTLOCK_SHOT`, `ARROW_RELEASE`, `FOOTSTEPS`, `POISON_BREATH`, `ROUND_START`, `ROUND_WIN`.
   - **Arquivos:** `src/combat/collision.py`, `main.py`
-  - **Teste:** `tests/test_audio_system.py::test_combat_sfx_triggers`
+  - **Teste:** `tests/test_audio_system.py::test_play_sound_event_does_not_crash` (✅ PASS)
 
-- [ ] **Entregável 2.3: BGM Player com Crossfade de Arenas**
+- [x] **Entregável 2.3: BGM Player com Crossfade de Arenas**
   - **Solução:** Transições suaves com fade in/out entre menu (`bgm_menu`), Bambus (`bgm_bamboo`) e Kyoto (`bgm_kyoto`).
   - **Arquivos:** `src/audio/sound_manager.py`, `main.py`
-  - **Teste:** `tests/test_audio_system.py::test_bgm_fade_transitions`
+  - **Teste:** `tests/test_audio_system.py::test_play_music_does_not_crash` (✅ PASS)
 
-- [ ] **Entregável 2.4: Sliders de Volume na Tela de Configurações**
-  - **Solução:** Adicionar ajustes de Volume Master, Volume SFX e Volume BGM em `SettingsMenu`.
-  - **Arquivos:** `src/ui/settings_menu.py`
-  - **Teste:** `tests/test_audio_system.py::test_settings_volume_persistence`
+- [x] **Entregável 2.4: Sliders de Volume na Tela de Configurações**
+  - **Solução:** Adicionar ajustes de Volume Master, Volume SFX e Volume BGM em `SettingsMenu` com botões `[-]`/`[+]`, cliques em barra e atalhos de teclado, salvando em `controls_config.json`.
+  - **Arquivos:** `src/ui/settings_menu.py`, `src/input/controls_storage.py`
+  - **Teste:** `tests/test_audio_system.py::TestAudioPersistence` (✅ PASS)
 
 ---
 

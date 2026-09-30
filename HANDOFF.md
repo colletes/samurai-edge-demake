@@ -46,8 +46,14 @@ Todos os testes são desenvolvidos para rodar tanto em modo gráfico quanto em m
 # 4. Suíte de Controles e Touchscreen (7 testes)
 ./venv/bin/python3 tests/test_controllers_and_touch.py
 
-# 5. Execução em cadeia de todos os testes principais
-./venv/bin/python3 test_game.py && ./venv/bin/python3 tests/test_patches_and_improvements.py && ./venv/bin/python3 tests/test_anne_and_julie_buffs.py
+# 5. Suíte de Performance e Partículas da Fase 1 (4 testes)
+./venv/bin/python3 tests/test_performance_and_particles.py
+
+# 6. Suíte de Arquitetura de Áudio e SFX Feudal da Fase 2 (6 testes)
+./venv/bin/python3 tests/test_audio_system.py
+
+# 7. Execução em cadeia de todos os testes principais
+./venv/bin/python3 test_game.py && ./venv/bin/python3 tests/test_performance_and_particles.py && ./venv/bin/python3 tests/test_audio_system.py
 ```
 
 ---
@@ -65,13 +71,16 @@ Sample Game/
 │   ├── icons/playstation/           # Vetores SVG dos botões PS5/PS4
 │   └── portraits/                   # Retratos 2D dos 12 lutadores
 ├── src/
-│   ├── audio/                       # [A SER CRIADO NA FASE 2] SoundManager e sintetizador procedural
+│   ├── audio/                       # SoundManager Singleton, sintetizador procedural PCM e enums
+│   │   ├── sound_events.py          # Identificadores de 24 SFX e 3 trilhas BGM
+│   │   ├── procedural_sfx.py        # Sintetizador procedural puro 16-bit 44.1kHz em memória
+│   │   └── sound_manager.py         # Cache, canais, controle de volume Master/SFX/BGM e crossfade
 │   ├── combat/
 │   │   ├── collision.py             # CombatSystem: detecção de hit, parry, deflexão e faíscas em obstáculos
 │   │   └── clash_system.py          # [A SER CRIADO NA FASE 5] Disputa de espadas QTE STRIKE
 │   ├── effects/
 │   │   ├── cinematic_director.py    # Fatal strike em câmera lenta, P&B e desmembramento
-│   │   ├── particles.py             # SparkParticle, SmokeParticle, BloodParticle, FloatingBanner
+│   │   ├── particles.py             # SparkParticle, SmokeParticle (com Surface Pooling), BloodParticle
 │   │   └── lighting.py              # [A SER CRIADO NA FASE 6] Iluminação 2.5D dinâmica
 │   ├── entities/
 │   │   ├── samurai.py               # Classe-base com estados: IDLE, ATTACK, PARRY, RECOVERY, ROLL, DEAD
@@ -128,22 +137,27 @@ Sample Game/
   - Entregável 1.4 (Particle Cap Global): limite rígido de 150 partículas preservando sangue e banners.
   - Testes: `tests/test_performance_and_particles.py` passando com 100% (4/4 testes).
 
-### 👉 PRÓXIMA TAREFA A EXECUTAR: FASE 2 (Arquitetura de Áudio & SFX/BGM)
+* **Fase 2 (Arquitetura de Áudio & SFX Feudal):** ✅ **100% CONCLUÍDA E TESTADA**.
+  - Entregável 2.1 (`SoundManager` & Síntese Procedural Fallback): síntese pura PCM 16-bit 44.1kHz em memória gerando 24 sons feudais sem assets externos obrigatórios.
+  - Entregável 2.2 (Integração de SFX em Combate): choques de lâmina, deflexões, parry, fatal strikes, tiros de arcabuz/pederneira, canhão, veneno Dokukiri, passos e abertura/vitória de round conectados.
+  - Entregável 2.3 (BGM Player com Crossfade): transições musicais suaves entre título/seleção (`TITLE_THEME`), Floresta de Bambu (`BAMBOO_THEME`) e Kyoto Bakumatsu (`KYOTO_THEME`).
+  - Entregável 2.4 (Controles de Volume na UI & Persistência): sliders interativos de SFX e BGM em `SettingsMenu` com botões `[-]`/`[+]`, barras clicáveis e atalhos de teclado, salvos em `controls_config.json`.
+  - Testes: `tests/test_audio_system.py` passando com 100% (6/6 testes).
 
-A IA sucessora deve focar na **Fase 2**:
+### 👉 PRÓXIMA TAREFA A EXECUTAR: FASE 3 (Saneamento de Testes Legados & Ação Secundária de Tomoe)
 
-1. **Entregável 2.1 (`src/audio/sound_manager.py`):**
-   * Criar o singleton `SoundManager` inicializando `pygame.mixer.init(44100, -16, 2, 512)`.
-   * Criar `src/audio/sound_events.py` (enum de constantes para os eventos de som).
-   * Criar `src/audio/procedural_sfx.py` gerando buffers sonoros proceduralmente para que o jogo tenha som mesmo sem arquivos externos baixados.
-2. **Entregável 2.2 (`src/combat/collision.py` e `main.py`):**
-   * Integrar chamadas de SFX nos momentos de impacto: choque de espadas, morte fatal, tiro de pederneira/rifle, canhão, flecha e passos.
-3. **Entregável 2.3 & 2.4 (`main.py` e `src/ui/settings_menu.py`):**
-   * BGM player com crossfade suave entre telas e arenas.
-   * Sliders de volume (Master, SFX, BGM) no menu de configurações.
+A IA sucessora ou desenvolvedor deve focar na **Fase 3**:
+
+1. **Entregável 3.1: Tomoe — Ação Secundária Sagrada (*Hamaya*):**
+   * Flecha ritual perfurante de luz sagrada (*Hamaya* / 破魔矢) com rastro dourado, capaz de atravessar obstáculos sólidos e anular projéteis inimigos em voo.
+   * Arquivos: `src/entities/kyudo_archer.py`, `src/entities/projectile.py`, `main.py`.
+2. **Entregável 3.2: Kanjis Kurosawa no Flash Cinematográfico:**
+   * Renderizar caligrafia Sumi-E kanji sobre o golpe final fatal (*一刀両断*, *決闘終焉*) com a fonte estilizada.
+   * Arquivo: `src/effects/cinematic_director.py`.
+3. **Entregável 3.3: Saneamento das 5 Suítes Legadas de Testes:**
+   * Atualizar asserts legados que ainda procuravam atributos antigos em `tests/test_phase1_fighters.py`, `test_kawarimi_and_poison.py`, `test_modifications_review.py`, `test_settings_and_hanzo_jump.py` e `test_controller_commands_and_selection.py`.
 4. **Validação:**
-   * Criar `tests/test_audio_system.py` e garantir 100% de sucesso.
-   * Executar a suíte de regressão `./venv/bin/python3 test_game.py` e `./venv/bin/python3 tests/test_performance_and_particles.py`.
+   * Garantir que todas as suítes em `tests/` rodem com 100% de sucesso.
 
 
 ---

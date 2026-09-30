@@ -64,13 +64,44 @@ class SettingsMenu:
         # Áreas clicáveis na tela (atualizadas durante o render)
         self.button_rects: list[tuple[pygame.Rect, int]] = []
         self.touch_toggle_rect = pygame.Rect(0, 0, 0, 0)
+        self.sfx_minus_rect = pygame.Rect(0, 0, 0, 0)
+        self.sfx_plus_rect = pygame.Rect(0, 0, 0, 0)
+        self.sfx_bar_rect = pygame.Rect(0, 0, 0, 0)
+        self.bgm_minus_rect = pygame.Rect(0, 0, 0, 0)
+        self.bgm_plus_rect = pygame.Rect(0, 0, 0, 0)
+        self.bgm_bar_rect = pygame.Rect(0, 0, 0, 0)
+
+    def adjust_sfx_volume(self, delta: float):
+        """Ajusta o volume dos efeitos sonoros em passos discretos."""
+        from src.audio.sound_manager import SoundManager
+        from src.audio.sound_events import SoundEvent
+        mgr = SoundManager.get_instance()
+        new_vol = round(max(0.0, min(1.0, mgr.sfx_volume + delta)), 2)
+        mgr.set_sfx_volume(new_vol)
+        mgr.play(SoundEvent.MENU_SELECT)
+        self.save_settings()
+
+    def adjust_bgm_volume(self, delta: float):
+        """Ajusta o volume da trilha musical de fundo em passos discretos."""
+        from src.audio.sound_manager import SoundManager
+        mgr = SoundManager.get_instance()
+        new_vol = round(max(0.0, min(1.0, mgr.bgm_volume + delta)), 2)
+        mgr.set_bgm_volume(new_vol)
+        self.save_settings()
 
     def save_settings(self):
         """Salva as configurações atuais no arquivo controls_config.json."""
         from src.input.controller_manager import get_controller_manager
         from src.input.controls_storage import save_controls_config
+        from src.audio.sound_manager import SoundManager
         ctrl_mgr = get_controller_manager()
         t_mode = getattr(self.touch_controls, "mode", "auto") if self.touch_controls else "auto"
+        mgr = SoundManager.get_instance()
+        self.controls["audio"] = {
+            "master": mgr.master_volume,
+            "sfx": mgr.sfx_volume,
+            "bgm": mgr.bgm_volume
+        }
         save_controls_config(self.controls, ctrl_mgr, t_mode)
 
     def open(self):
@@ -207,7 +238,35 @@ class SettingsMenu:
         elif event.type == pygame.FINGERDOWN:
             vx = event.x * SCREEN_WIDTH
             vy = event.y * SCREEN_HEIGHT
-            if self.touch_toggle_rect.collidepoint(vx, vy):
+            if self.sfx_minus_rect.collidepoint(vx, vy):
+                self.adjust_sfx_volume(-0.1)
+                return True
+            elif self.sfx_plus_rect.collidepoint(vx, vy):
+                self.adjust_sfx_volume(+0.1)
+                return True
+            elif self.sfx_bar_rect.collidepoint(vx, vy):
+                pct = max(0.0, min(1.0, (vx - self.sfx_bar_rect.x) / max(1, self.sfx_bar_rect.width)))
+                from src.audio.sound_manager import SoundManager
+                from src.audio.sound_events import SoundEvent
+                mgr = SoundManager.get_instance()
+                mgr.set_sfx_volume(round(pct, 2))
+                mgr.play(SoundEvent.MENU_SELECT)
+                self.save_settings()
+                return True
+            elif self.bgm_minus_rect.collidepoint(vx, vy):
+                self.adjust_bgm_volume(-0.1)
+                return True
+            elif self.bgm_plus_rect.collidepoint(vx, vy):
+                self.adjust_bgm_volume(+0.1)
+                return True
+            elif self.bgm_bar_rect.collidepoint(vx, vy):
+                pct = max(0.0, min(1.0, (vx - self.bgm_bar_rect.x) / max(1, self.bgm_bar_rect.width)))
+                from src.audio.sound_manager import SoundManager
+                mgr = SoundManager.get_instance()
+                mgr.set_bgm_volume(round(pct, 2))
+                self.save_settings()
+                return True
+            elif self.touch_toggle_rect.collidepoint(vx, vy):
                 self.cycle_touch_mode()
                 return True
             for rect, idx in self.button_rects:
@@ -216,11 +275,11 @@ class SettingsMenu:
                     action_key, _, _ = self.items[idx]
                     self.waiting_for_key_action = action_key
                     return True
-            close_btn = pygame.Rect(SCREEN_WIDTH // 2 - 130, SCREEN_HEIGHT - 90, 260, 36)
+            close_btn = pygame.Rect(SCREEN_WIDTH // 2 - 130, SCREEN_HEIGHT - 65, 260, 36)
             if close_btn.collidepoint(vx, vy):
                 self.close()
                 return True
-            reset_btn = pygame.Rect(SCREEN_WIDTH // 2 - 130, SCREEN_HEIGHT - 135, 260, 32)
+            reset_btn = pygame.Rect(SCREEN_WIDTH // 2 - 130, SCREEN_HEIGHT - 105, 260, 32)
             if reset_btn.collidepoint(vx, vy):
                 self.reset_to_defaults()
                 return True
@@ -229,6 +288,18 @@ class SettingsMenu:
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_ESCAPE, pygame.K_c):
                 self.close()
+                return True
+            elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+                self.adjust_sfx_volume(-0.1)
+                return True
+            elif event.key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
+                self.adjust_sfx_volume(+0.1)
+                return True
+            elif event.key == pygame.K_LEFTBRACKET:
+                self.adjust_bgm_volume(-0.1)
+                return True
+            elif event.key == pygame.K_RIGHTBRACKET:
+                self.adjust_bgm_volume(+0.1)
                 return True
             elif event.key == pygame.K_UP:
                 self.selected_index = (self.selected_index - 1) % len(self.items)
@@ -246,7 +317,35 @@ class SettingsMenu:
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
-            if self.touch_toggle_rect.collidepoint(mx, my):
+            if self.sfx_minus_rect.collidepoint(mx, my):
+                self.adjust_sfx_volume(-0.1)
+                return True
+            elif self.sfx_plus_rect.collidepoint(mx, my):
+                self.adjust_sfx_volume(+0.1)
+                return True
+            elif self.sfx_bar_rect.collidepoint(mx, my):
+                pct = max(0.0, min(1.0, (mx - self.sfx_bar_rect.x) / max(1, self.sfx_bar_rect.width)))
+                from src.audio.sound_manager import SoundManager
+                from src.audio.sound_events import SoundEvent
+                mgr = SoundManager.get_instance()
+                mgr.set_sfx_volume(round(pct, 2))
+                mgr.play(SoundEvent.MENU_SELECT)
+                self.save_settings()
+                return True
+            elif self.bgm_minus_rect.collidepoint(mx, my):
+                self.adjust_bgm_volume(-0.1)
+                return True
+            elif self.bgm_plus_rect.collidepoint(mx, my):
+                self.adjust_bgm_volume(+0.1)
+                return True
+            elif self.bgm_bar_rect.collidepoint(mx, my):
+                pct = max(0.0, min(1.0, (mx - self.bgm_bar_rect.x) / max(1, self.bgm_bar_rect.width)))
+                from src.audio.sound_manager import SoundManager
+                mgr = SoundManager.get_instance()
+                mgr.set_bgm_volume(round(pct, 2))
+                self.save_settings()
+                return True
+            elif self.touch_toggle_rect.collidepoint(mx, my):
                 self.cycle_touch_mode()
                 return True
             for rect, idx in self.button_rects:
@@ -257,13 +356,13 @@ class SettingsMenu:
                     return True
 
             # Botão Fechar / Voltar
-            close_btn = pygame.Rect(SCREEN_WIDTH // 2 - 130, SCREEN_HEIGHT - 90, 260, 36)
+            close_btn = pygame.Rect(SCREEN_WIDTH // 2 - 130, SCREEN_HEIGHT - 65, 260, 36)
             if close_btn.collidepoint(mx, my):
                 self.close()
                 return True
 
             # Botão Restaurar Padrões
-            reset_btn = pygame.Rect(SCREEN_WIDTH // 2 - 130, SCREEN_HEIGHT - 135, 260, 32)
+            reset_btn = pygame.Rect(SCREEN_WIDTH // 2 - 130, SCREEN_HEIGHT - 105, 260, 32)
             if reset_btn.collidepoint(mx, my):
                 self.reset_to_defaults()
                 return True
@@ -284,9 +383,9 @@ class SettingsMenu:
         surface.blit(overlay, (0, 0))
 
         # 2. Painel Central Estilizado
-        panel_w, panel_h = 920, 580
+        panel_w, panel_h = 940, 630
         panel_x = (SCREEN_WIDTH - panel_w) // 2
-        panel_y = (SCREEN_HEIGHT - panel_h) // 2 - 10
+        panel_y = (SCREEN_HEIGHT - panel_h) // 2 - 5
         panel_rect = pygame.Rect(panel_x, panel_y, panel_w, panel_h)
 
         pygame.draw.rect(surface, (22, 28, 25), panel_rect, border_radius=12)
@@ -294,24 +393,24 @@ class SettingsMenu:
         pygame.draw.rect(surface, (50, 65, 58), panel_rect.inflate(-8, -8), 1, border_radius=8)
 
         # 3. Título do Menu
-        title_surf = font_large.render("CONFIGURAÇÃO DE CONTROLES", True, COLOR_GOLD)
-        surface.blit(title_surf, (panel_rect.centerx - title_surf.get_width() // 2, panel_y + 24))
+        title_surf = font_large.render("CONFIGURAÇÃO DE CONTROLES & ÁUDIO", True, COLOR_GOLD)
+        surface.blit(title_surf, (panel_rect.centerx - title_surf.get_width() // 2, panel_y + 18))
 
-        sub_surf = font_small.render("Clique em uma ação ou use as setas + ENTER para remapear a tecla", True, (180, 190, 185))
-        surface.blit(sub_surf, (panel_rect.centerx - sub_surf.get_width() // 2, panel_y + 68))
+        sub_surf = font_small.render("Clique em uma ação para remapear teclas | Ajuste os volumes com [ - / + ] e [ [ / ] ]", True, (180, 190, 185))
+        surface.blit(sub_surf, (panel_rect.centerx - sub_surf.get_width() // 2, panel_y + 54))
 
         # 4. Duas Colunas: Vermelho à Esquerda e Azul à Direita
-        col_w = 410
+        col_w = 420
         col_left_x = panel_x + 35
         col_right_x = panel_x + panel_w - col_w - 35
-        start_y = panel_y + 110
-        row_h = 44
+        start_y = panel_y + 88
+        row_h = 38
 
         # Cabeçalhos das Colunas
         h1 = font_mid.render("PLAYER 1 (VERMELHO)", True, COLOR_RED_AURA)
         h2 = font_mid.render("PLAYER 2 (AZUL)", True, COLOR_BLUE_AURA)
-        surface.blit(h1, (col_left_x + 10, start_y - 28))
-        surface.blit(h2, (col_right_x + 10, start_y - 28))
+        surface.blit(h1, (col_left_x + 10, start_y - 24))
+        surface.blit(h2, (col_right_x + 10, start_y - 24))
 
         self.button_rects.clear()
 
@@ -325,7 +424,7 @@ class SettingsMenu:
             row_index = idx if is_red else (idx - 7)
             cur_y = start_y + row_index * row_h
 
-            btn_rect = pygame.Rect(item_col_x, cur_y, col_w, 34)
+            btn_rect = pygame.Rect(item_col_x, cur_y, col_w, 32)
             self.button_rects.append((btn_rect, idx))
 
             is_selected = (self.selected_index == idx)
@@ -333,7 +432,6 @@ class SettingsMenu:
 
             # Fundo do Botão
             if is_waiting:
-                # Efeito piscante dourado quando está aguardando nova tecla/botão
                 bg_color = (70, 60, 20) if (int(self.blink_timer * 4) % 2 == 0) else (45, 40, 15)
                 border_color = COLOR_GOLD
             elif is_selected:
@@ -349,13 +447,13 @@ class SettingsMenu:
             # Texto da Ação
             txt_color = COLOR_WHITE if not is_waiting else COLOR_GOLD
             action_surf = font_small.render(label, True, txt_color)
-            surface.blit(action_surf, (btn_rect.x + 12, btn_rect.y + 8))
+            surface.blit(action_surf, (btn_rect.x + 10, btn_rect.y + 7))
 
             # Tecla e Botão Atual
             if is_waiting:
                 key_text = "<PRESSIONE TECLA OU BOTÃO>"
                 val_surf = font_small.render(key_text, True, COLOR_GOLD)
-                surface.blit(val_surf, (btn_rect.right - val_surf.get_width() - 12, btn_rect.y + 8))
+                surface.blit(val_surf, (btn_rect.right - val_surf.get_width() - 10, btn_rect.y + 7))
             else:
                 key_code = self.controls.get(action_key, pygame.K_UNKNOWN)
                 key_str = format_key_name(key_code)
@@ -390,7 +488,6 @@ class SettingsMenu:
                         svg_icon_name = ctrl.get_button_svg_icon(act_suffix) if ctrl.is_playstation else None
                         btn_label = ctrl.get_mapped_button_name(act_suffix)
                 else:
-                    # Sem controle conectado: exibe botões PlayStation de referência
                     if act_suffix == "attack":
                         svg_icon_name = "square"
                         btn_label = "▢ / R1"
@@ -403,29 +500,80 @@ class SettingsMenu:
 
                 key_color = (255, 215, 120) if is_selected else (200, 210, 205)
 
-                # Renderiza do canto direito para a esquerda
-                cur_right_x = btn_rect.right - 12
+                cur_right_x = btn_rect.right - 10
                 if svg_icon_name:
-                    icon_surf = get_button_icon_surface(svg_icon_name, 20, 20)
-                    cur_right_x -= 22
+                    icon_surf = get_button_icon_surface(svg_icon_name, 18, 18)
+                    cur_right_x -= 20
                     surface.blit(icon_surf, (cur_right_x, btn_rect.y + 7))
 
                 if btn_label:
                     label_surf = font_small.render(f"[{btn_label}]", True, (160, 205, 185))
-                    cur_right_x -= (label_surf.get_width() + 6)
-                    surface.blit(label_surf, (cur_right_x, btn_rect.y + 8))
+                    cur_right_x -= (label_surf.get_width() + 5)
+                    surface.blit(label_surf, (cur_right_x, btn_rect.y + 7))
 
                 key_surf = font_small.render(f"[{key_str}]", True, key_color)
-                cur_right_x -= (key_surf.get_width() + 6)
-                surface.blit(key_surf, (cur_right_x, btn_rect.y + 8))
+                cur_right_x -= (key_surf.get_width() + 5)
+                surface.blit(key_surf, (cur_right_x, btn_rect.y + 7))
 
-        # 5. Status de Gamepads e Controles Touch
+        # 5. Painel de Volumes (SFX e BGM)
+        from src.audio.sound_manager import SoundManager
+        sound_mgr = SoundManager.get_instance()
+        audio_y = start_y + 7 * row_h + 10
+
+        # Divisor sutil
+        pygame.draw.line(surface, (45, 60, 52), (col_left_x, audio_y - 6), (col_right_x + col_w, audio_y - 6), 1)
+
+        # Coluna SFX
+        sfx_pct = int(sound_mgr.sfx_volume * 100)
+        sfx_lbl = font_small.render(f"Efeitos Sonoros (SFX): {sfx_pct}%", True, (210, 230, 220))
+        surface.blit(sfx_lbl, (col_left_x + 5, audio_y))
+
+        self.sfx_minus_rect = pygame.Rect(col_left_x + 200, audio_y - 2, 28, 24)
+        self.sfx_bar_rect = pygame.Rect(col_left_x + 235, audio_y + 3, 140, 14)
+        self.sfx_plus_rect = pygame.Rect(col_left_x + 382, audio_y - 2, 28, 24)
+
+        for btn_r, symb in ((self.sfx_minus_rect, "-"), (self.sfx_plus_rect, "+")):
+            pygame.draw.rect(surface, (35, 45, 40), btn_r, border_radius=4)
+            pygame.draw.rect(surface, COLOR_GOLD, btn_r, 1, border_radius=4)
+            t_s = font_small.render(symb, True, COLOR_GOLD)
+            surface.blit(t_s, (btn_r.centerx - t_s.get_width() // 2, btn_r.centery - t_s.get_height() // 2))
+
+        pygame.draw.rect(surface, (20, 26, 24), self.sfx_bar_rect, border_radius=3)
+        fill_w = int(self.sfx_bar_rect.width * sound_mgr.sfx_volume)
+        if fill_w > 0:
+            fill_r = pygame.Rect(self.sfx_bar_rect.x, self.sfx_bar_rect.y, fill_w, self.sfx_bar_rect.height)
+            pygame.draw.rect(surface, (180, 140, 60), fill_r, border_radius=3)
+        pygame.draw.rect(surface, (60, 75, 68), self.sfx_bar_rect, 1, border_radius=3)
+
+        # Coluna BGM
+        bgm_pct = int(sound_mgr.bgm_volume * 100)
+        bgm_lbl = font_small.render(f"Música & Ambiência (BGM): {bgm_pct}%", True, (210, 230, 220))
+        surface.blit(bgm_lbl, (col_right_x + 5, audio_y))
+
+        self.bgm_minus_rect = pygame.Rect(col_right_x + 200, audio_y - 2, 28, 24)
+        self.bgm_bar_rect = pygame.Rect(col_right_x + 235, audio_y + 3, 140, 14)
+        self.bgm_plus_rect = pygame.Rect(col_right_x + 382, audio_y - 2, 28, 24)
+
+        for btn_r, symb in ((self.bgm_minus_rect, "-"), (self.bgm_plus_rect, "+")):
+            pygame.draw.rect(surface, (35, 45, 40), btn_r, border_radius=4)
+            pygame.draw.rect(surface, COLOR_GOLD, btn_r, 1, border_radius=4)
+            t_s = font_small.render(symb, True, COLOR_GOLD)
+            surface.blit(t_s, (btn_r.centerx - t_s.get_width() // 2, btn_r.centery - t_s.get_height() // 2))
+
+        pygame.draw.rect(surface, (20, 26, 24), self.bgm_bar_rect, border_radius=3)
+        fill_w = int(self.bgm_bar_rect.width * sound_mgr.bgm_volume)
+        if fill_w > 0:
+            fill_r = pygame.Rect(self.bgm_bar_rect.x, self.bgm_bar_rect.y, fill_w, self.bgm_bar_rect.height)
+            pygame.draw.rect(surface, (90, 140, 110), fill_r, border_radius=3)
+        pygame.draw.rect(surface, (60, 75, 68), self.bgm_bar_rect, 1, border_radius=3)
+
+        # 6. Status de Gamepads e Controles Touch
         badge_p1 = ctrl_mgr.get_badge_text(0) or "Nenhum detectado (Teclado)"
         badge_p2 = ctrl_mgr.get_badge_text(1) or "Nenhum detectado"
 
         status_text = f"P1: {badge_p1}   |   P2: {badge_p2}"
-        status_surf = font_small.render(status_text, True, (190, 220, 210))
-        surface.blit(status_surf, (panel_rect.centerx - status_surf.get_width() // 2, panel_y + panel_h - 165))
+        status_surf = font_small.render(status_text, True, (170, 200, 190))
+        surface.blit(status_surf, (panel_rect.centerx - status_surf.get_width() // 2, audio_y + 36))
 
         # Botão Alternador de Controles Touch
         touch_mode_str = "AUTOMÁTICO"
@@ -436,23 +584,23 @@ class SettingsMenu:
             elif mode == "off":
                 touch_mode_str = "DESATIVADO"
 
-        self.touch_toggle_rect = pygame.Rect(panel_rect.centerx - 175, panel_y + panel_h - 138, 350, 28)
+        self.touch_toggle_rect = pygame.Rect(panel_rect.centerx - 175, audio_y + 60, 350, 26)
         pygame.draw.rect(surface, (28, 36, 32), self.touch_toggle_rect, border_radius=6)
         pygame.draw.rect(surface, COLOR_GOLD, self.touch_toggle_rect, 1, border_radius=6)
         touch_lbl = font_small.render(f"Controles Touch: [ {touch_mode_str} ] (Clique para alternar)", True, COLOR_GOLD)
-        surface.blit(touch_lbl, (self.touch_toggle_rect.centerx - touch_lbl.get_width() // 2, self.touch_toggle_rect.y + 6))
+        surface.blit(touch_lbl, (self.touch_toggle_rect.centerx - touch_lbl.get_width() // 2, self.touch_toggle_rect.y + 5))
 
-        # 6. Botões de Ação no Rodapé do Painel
+        # 7. Botões de Ação no Rodapé do Painel
         # Botão Restaurar Padrões
-        reset_rect = pygame.Rect(SCREEN_WIDTH // 2 - 130, panel_y + panel_h - 100, 260, 30)
+        reset_rect = pygame.Rect(panel_rect.centerx - 130, panel_y + panel_h - 78, 260, 28)
         pygame.draw.rect(surface, (32, 38, 34), reset_rect, border_radius=6)
         pygame.draw.rect(surface, (70, 85, 75), reset_rect, 1, border_radius=6)
         rst_surf = font_small.render("[BACKSPACE] Restaurar Padrões", True, (220, 210, 160))
-        surface.blit(rst_surf, (reset_rect.centerx - rst_surf.get_width() // 2, reset_rect.y + 6))
+        surface.blit(rst_surf, (reset_rect.centerx - rst_surf.get_width() // 2, reset_rect.y + 5))
 
         # Botão Fechar / Voltar
-        close_rect = pygame.Rect(SCREEN_WIDTH // 2 - 130, panel_y + panel_h - 60, 260, 36)
+        close_rect = pygame.Rect(panel_rect.centerx - 140, panel_y + panel_h - 44, 280, 34)
         pygame.draw.rect(surface, (45, 62, 52), close_rect, border_radius=6)
         pygame.draw.rect(surface, COLOR_GOLD, close_rect, 2, border_radius=6)
         cls_surf = font_mid.render("VOLTAR AO JOGO (ESC / ○ / Options)", True, COLOR_GOLD)
-        surface.blit(cls_surf, (close_rect.centerx - cls_surf.get_width() // 2, close_rect.y + 8))
+        surface.blit(cls_surf, (close_rect.centerx - cls_surf.get_width() // 2, close_rect.y + 7))
