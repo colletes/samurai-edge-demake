@@ -2,7 +2,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Pygame-CE](https://img.shields.io/badge/pygame--ce-2.5+-green.svg)](https://pyga.me/)
-[![Releases](https://img.shields.io/badge/releases-v1.2.0-gold.svg)](https://github.com/colletes/samurai-edge-demake/releases)
+[![Releases](https://img.shields.io/badge/releases-v1.3.4-gold.svg)](https://github.com/colletes/samurai-edge-demake/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-lightgrey.svg)](https://github.com/colletes/samurai-edge-demake/releases)
 [![License: Proprietary](https://img.shields.io/badge/license-Personal%20Use-red.svg)](LICENSE)
 

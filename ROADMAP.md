@@ -1,6 +1,6 @@
 # 🗺️ ROADMAP — Samurai Edge Demake
 
-> **Versão atual:** `v1.3.3` → commit `42ae791` | **Branch:** `main`  
+> **Versão atual:** `v1.3.4` | **Branch:** `main`  
 > Última atualização: 30 de Setembro de 2026  
 > Este documento consolida todo o histórico concluído e define a ordem sequencial das **7 Fases de Evolução Mestre**, divididas em entregáveis pequenos, iterativos e testáveis.
 
@@ -247,7 +247,7 @@ pie title Status dos Recursos e Frentes do Projeto
 | **Ações Etapa 2 (6 Testes)** | `tests/test_step2_actions.py` | ✅ 100% |
 | **Fase 3 Controles (4 Testes)** | `tests/test_phase3_controls_and_persistence.py` | ✅ 100% |
 | **Performance & Partículas (4 Testes)** | `tests/test_performance_and_particles.py` | ✅ 100% |
-| **Áudio e Mixer** | `tests/test_audio_system.py` | ⏳ *A ser criado na Fase 2* |
+| **Áudio e Mixer (6 Testes)** | `tests/test_audio_system.py` | ✅ 100% |
 | **Balanceamento Tier D** | `tests/test_tier_d_balance.py` | ⏳ *A ser criado na Fase 4* |
 | **Clash QTE** | `tests/test_clash_qte.py` | ⏳ *A ser criado na Fase 5* |
 | **Arena Telhados** | `tests/test_rooftop_arena.py` | ⏳ *A ser criado na Fase 6* |
