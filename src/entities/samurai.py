@@ -44,6 +44,7 @@ class Samurai:
 
         # Animação
         self.walk_cycle = 0.0
+        self.idle_cycle = 0.0
         self.is_moving = False
 
         # Combate e Vida
@@ -119,6 +120,7 @@ class Samurai:
 
         self.state = STATE_WALK
         self.walk_cycle += dt * 10.0
+        self.idle_cycle = 0.0
 
         # Velocidade base reduzida se estiver pisando em água ou sob efeito de fumaça (slow)
         current_speed = self.speed

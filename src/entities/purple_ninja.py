@@ -91,6 +91,11 @@ class PurpleNinja(Samurai):
 
         self.update_stealth(game_map)
 
+        if self.state == STATE_IDLE and not getattr(self, "is_moving", False):
+            self.idle_cycle = getattr(self, "idle_cycle", 0.0) + dt
+        elif self.state != STATE_IDLE:
+            self.idle_cycle = 0.0
+
         if self.kama_timer > 0:
             self.kama_timer -= dt
         if self.chain_timer > 0:

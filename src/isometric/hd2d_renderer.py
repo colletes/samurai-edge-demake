@@ -64,6 +64,10 @@ class HD2DSpriteRenderer:
                 res = HD2DSpriteRenderer.load_frame(char_key, front_equiv, flip, alpha)
                 if res is not None:
                     return res
+                if "idle_" in frame_name:
+                    res = HD2DSpriteRenderer.load_frame(char_key, "back_idle", flip, alpha)
+                    if res is not None:
+                        return res
                 if frame_name != "back_idle":
                     res = HD2DSpriteRenderer.load_frame(char_key, "back_idle", flip, alpha)
                     if res is not None:
@@ -73,6 +77,10 @@ class HD2DSpriteRenderer:
                 res = HD2DSpriteRenderer.load_frame(char_key, base_equiv, flip, alpha)
                 if res is not None:
                     return res
+                if "idle_" in frame_name:
+                    res = HD2DSpriteRenderer.load_frame(char_key, "front_idle", flip, alpha)
+                    if res is not None:
+                        return res
 
             if frame_name != "idle":
                 return HD2DSpriteRenderer.load_frame(char_key, "idle", flip, alpha)
@@ -182,7 +190,10 @@ class HD2DSpriteRenderer:
             frame_idx = int(walk_timer * 0.8) % 4
             frame_name = f"{dir_prefix}walk_{frame_idx}"
         else:
-            frame_name = f"{dir_prefix}idle"
+            # Animação orgânica de respiração / idle frame a frame (4 FPS suave)
+            idle_timer = getattr(fighter, "idle_cycle", 0.0)
+            idle_idx = int(idle_timer * 4.0) % 4
+            frame_name = f"{dir_prefix}idle_{idle_idx}"
 
         # 3. Carregar o sprite (com fallback automático se necessário)
         sprite = HD2DSpriteRenderer.load_frame(char_key, frame_name, flip=flip, alpha=alpha)

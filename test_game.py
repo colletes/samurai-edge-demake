@@ -564,8 +564,10 @@ def test_complete_roster():
     # Testar carregamento de frames e canais RGBA para ambas as direções
     for c_key in ("kenshi", "murasaki"):
         for f_name in (
-            "front_idle", "front_attack", "front_walk_0", "front_walk_1", "front_walk_2", "front_walk_3",
-            "back_idle", "back_attack", "back_walk_0", "back_walk_1", "back_walk_2", "back_walk_3",
+            "front_idle", "front_idle_0", "front_idle_1", "front_idle_2", "front_idle_3",
+            "front_attack", "front_walk_0", "front_walk_1", "front_walk_2", "front_walk_3",
+            "back_idle", "back_idle_0", "back_idle_1", "back_idle_2", "back_idle_3",
+            "back_attack", "back_walk_0", "back_walk_1", "back_walk_2", "back_walk_3",
             "idle", "attack", "recovery", "stunned", "dead"
         ):
             frame = HD2DSpriteRenderer.load_frame(c_key, f_name)
@@ -582,8 +584,22 @@ def test_complete_roster():
     kenshi.trigger_dash(1.0, 0.0)
     kenshi.render(screen, camera)
 
-    # Testar renderização de Murasaki (IDLE, ATTACK e STUNNED) com flip horizontal
     murasaki = PurpleNinja(wx=12.0, wy=11.0)
+
+    # Testar ciclo de respiração/idle frame a frame (4 frames) para ambos os combatentes
+    assert hasattr(kenshi, "idle_cycle")
+    assert hasattr(murasaki, "idle_cycle")
+    for t_step in (0.0, 0.25, 0.50, 0.75):
+        kenshi.state = "IDLE"
+        kenshi.is_moving = False
+        kenshi.idle_cycle = t_step
+        kenshi.render(screen, camera)
+        murasaki.state = "IDLE"
+        murasaki.is_moving = False
+        murasaki.idle_cycle = t_step
+        murasaki.render(screen, camera)
+
+    # Testar renderização de Murasaki (IDLE, ATTACK e STUNNED) com flip horizontal
     murasaki.facing_x = -1.0 # Encarando à esquerda (deve espelhar)
     murasaki.render(screen, camera)
 

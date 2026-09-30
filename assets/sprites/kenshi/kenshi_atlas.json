@@ -1,0 +1,438 @@
+{
+  "character": "kenshi",
+  "sheet_width": 320,
+  "sheet_height": 588,
+  "cell_width": 64,
+  "cell_height": 84,
+  "foot_baseline_y": 76,
+  "animations": {
+    "idle_front": {
+      "label": "Idle Frente (SE)",
+      "fps": 4.5,
+      "loop": true,
+      "frames": [
+        "front_idle_0",
+        "front_idle_1",
+        "front_idle_2",
+        "front_idle_3"
+      ]
+    },
+    "idle_back": {
+      "label": "Idle Costas (NE)",
+      "fps": 4.5,
+      "loop": true,
+      "frames": [
+        "back_idle_0",
+        "back_idle_1",
+        "back_idle_2",
+        "back_idle_3"
+      ]
+    },
+    "walk_se": {
+      "label": "Walk Frente-Dir (SE)",
+      "fps": 8.0,
+      "loop": true,
+      "frames": [
+        "front_walk_0",
+        "front_walk_1",
+        "front_walk_2",
+        "front_walk_3"
+      ]
+    },
+    "walk_sw": {
+      "label": "Walk Frente-Esq (SW)",
+      "fps": 8.0,
+      "loop": true,
+      "frames": [
+        "front_walk_0_flip",
+        "front_walk_1_flip",
+        "front_walk_2_flip",
+        "front_walk_3_flip"
+      ]
+    },
+    "walk_ne": {
+      "label": "Walk Costas-Dir (NE)",
+      "fps": 8.0,
+      "loop": true,
+      "frames": [
+        "back_walk_0",
+        "back_walk_1",
+        "back_walk_2",
+        "back_walk_3"
+      ]
+    },
+    "walk_nw": {
+      "label": "Walk Costas-Esq (NW)",
+      "fps": 8.0,
+      "loop": true,
+      "frames": [
+        "back_walk_0_flip",
+        "back_walk_1_flip",
+        "back_walk_2_flip",
+        "back_walk_3_flip"
+      ]
+    },
+    "combat": {
+      "label": "Ataque & Reações",
+      "fps": 10.0,
+      "loop": false,
+      "frames": [
+        "front_attack",
+        "back_attack",
+        "recovery",
+        "stunned",
+        "dead"
+      ]
+    }
+  },
+  "frames": {
+    "front_idle_0": {
+      "rect": [
+        9,
+        0,
+        46,
+        76
+      ],
+      "anchor_x": 23,
+      "anchor_y": 76,
+      "row": 0,
+      "col": 0
+    },
+    "front_idle_1": {
+      "rect": [
+        73,
+        0,
+        46,
+        76
+      ],
+      "anchor_x": 23,
+      "anchor_y": 76,
+      "row": 0,
+      "col": 1
+    },
+    "front_idle_2": {
+      "rect": [
+        137,
+        0,
+        46,
+        76
+      ],
+      "anchor_x": 23,
+      "anchor_y": 76,
+      "row": 0,
+      "col": 2
+    },
+    "front_idle_3": {
+      "rect": [
+        201,
+        0,
+        46,
+        76
+      ],
+      "anchor_x": 23,
+      "anchor_y": 76,
+      "row": 0,
+      "col": 3
+    },
+    "back_idle_0": {
+      "rect": [
+        10,
+        84,
+        44,
+        76
+      ],
+      "anchor_x": 22,
+      "anchor_y": 76,
+      "row": 1,
+      "col": 0
+    },
+    "back_idle_1": {
+      "rect": [
+        74,
+        84,
+        44,
+        76
+      ],
+      "anchor_x": 22,
+      "anchor_y": 76,
+      "row": 1,
+      "col": 1
+    },
+    "back_idle_2": {
+      "rect": [
+        138,
+        84,
+        44,
+        76
+      ],
+      "anchor_x": 22,
+      "anchor_y": 76,
+      "row": 1,
+      "col": 2
+    },
+    "back_idle_3": {
+      "rect": [
+        202,
+        84,
+        44,
+        76
+      ],
+      "anchor_x": 22,
+      "anchor_y": 76,
+      "row": 1,
+      "col": 3
+    },
+    "front_walk_0": {
+      "rect": [
+        13,
+        168,
+        38,
+        76
+      ],
+      "anchor_x": 19,
+      "anchor_y": 76,
+      "row": 2,
+      "col": 0
+    },
+    "front_walk_1": {
+      "rect": [
+        78,
+        168,
+        35,
+        76
+      ],
+      "anchor_x": 17,
+      "anchor_y": 76,
+      "row": 2,
+      "col": 1
+    },
+    "front_walk_2": {
+      "rect": [
+        140,
+        168,
+        40,
+        76
+      ],
+      "anchor_x": 20,
+      "anchor_y": 76,
+      "row": 2,
+      "col": 2
+    },
+    "front_walk_3": {
+      "rect": [
+        206,
+        168,
+        35,
+        76
+      ],
+      "anchor_x": 17,
+      "anchor_y": 76,
+      "row": 2,
+      "col": 3
+    },
+    "front_walk_0_flip": {
+      "rect": [
+        13,
+        252,
+        38,
+        76
+      ],
+      "anchor_x": 19,
+      "anchor_y": 76,
+      "row": 3,
+      "col": 0
+    },
+    "front_walk_1_flip": {
+      "rect": [
+        78,
+        252,
+        35,
+        76
+      ],
+      "anchor_x": 17,
+      "anchor_y": 76,
+      "row": 3,
+      "col": 1
+    },
+    "front_walk_2_flip": {
+      "rect": [
+        140,
+        252,
+        40,
+        76
+      ],
+      "anchor_x": 20,
+      "anchor_y": 76,
+      "row": 3,
+      "col": 2
+    },
+    "front_walk_3_flip": {
+      "rect": [
+        206,
+        252,
+        35,
+        76
+      ],
+      "anchor_x": 17,
+      "anchor_y": 76,
+      "row": 3,
+      "col": 3
+    },
+    "back_walk_0": {
+      "rect": [
+        12,
+        336,
+        39,
+        76
+      ],
+      "anchor_x": 19,
+      "anchor_y": 76,
+      "row": 4,
+      "col": 0
+    },
+    "back_walk_1": {
+      "rect": [
+        77,
+        336,
+        38,
+        76
+      ],
+      "anchor_x": 19,
+      "anchor_y": 76,
+      "row": 4,
+      "col": 1
+    },
+    "back_walk_2": {
+      "rect": [
+        140,
+        336,
+        39,
+        76
+      ],
+      "anchor_x": 19,
+      "anchor_y": 76,
+      "row": 4,
+      "col": 2
+    },
+    "back_walk_3": {
+      "rect": [
+        205,
+        336,
+        38,
+        76
+      ],
+      "anchor_x": 19,
+      "anchor_y": 76,
+      "row": 4,
+      "col": 3
+    },
+    "back_walk_0_flip": {
+      "rect": [
+        12,
+        420,
+        39,
+        76
+      ],
+      "anchor_x": 19,
+      "anchor_y": 76,
+      "row": 5,
+      "col": 0
+    },
+    "back_walk_1_flip": {
+      "rect": [
+        77,
+        420,
+        38,
+        76
+      ],
+      "anchor_x": 19,
+      "anchor_y": 76,
+      "row": 5,
+      "col": 1
+    },
+    "back_walk_2_flip": {
+      "rect": [
+        140,
+        420,
+        39,
+        76
+      ],
+      "anchor_x": 19,
+      "anchor_y": 76,
+      "row": 5,
+      "col": 2
+    },
+    "back_walk_3_flip": {
+      "rect": [
+        205,
+        420,
+        38,
+        76
+      ],
+      "anchor_x": 19,
+      "anchor_y": 76,
+      "row": 5,
+      "col": 3
+    },
+    "front_attack": {
+      "rect": [
+        -7,
+        506,
+        77,
+        74
+      ],
+      "anchor_x": 38,
+      "anchor_y": 74,
+      "row": 6,
+      "col": 0
+    },
+    "back_attack": {
+      "rect": [
+        68,
+        498,
+        56,
+        82
+      ],
+      "anchor_x": 28,
+      "anchor_y": 82,
+      "row": 6,
+      "col": 1
+    },
+    "recovery": {
+      "rect": [
+        137,
+        504,
+        46,
+        76
+      ],
+      "anchor_x": 23,
+      "anchor_y": 76,
+      "row": 6,
+      "col": 2
+    },
+    "stunned": {
+      "rect": [
+        193,
+        496,
+        62,
+        84
+      ],
+      "anchor_x": 31,
+      "anchor_y": 84,
+      "row": 6,
+      "col": 3
+    },
+    "dead": {
+      "rect": [
+        250,
+        534,
+        76,
+        46
+      ],
+      "anchor_x": 38,
+      "anchor_y": 46,
+      "row": 6,
+      "col": 4
+    }
+  }
+}
