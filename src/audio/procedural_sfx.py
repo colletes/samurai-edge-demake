@@ -428,6 +428,23 @@ def generate_ui_cancel() -> pygame.mixer.Sound:
     return _samples_to_sound(samples)
 
 
+def generate_dog_bark() -> pygame.mixer.Sound:
+    """Latido rápido e agressivo do cão Yamato."""
+    duration = 0.16
+    num_samples = int(SAMPLE_RATE * duration)
+    samples = []
+
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        decay = math.exp(-22.0 * t)
+        freq = 320.0 - 140.0 * (t / duration)
+        noise = (random.random() * 2.0 - 1.0) * 0.35
+        tone = math.sin(2.0 * math.pi * freq * t) * 0.65
+        samples.append((tone + noise) * decay * 0.85)
+
+    return _samples_to_sound(samples)
+
+
 _GENERATOR_MAP = {
     SoundEvent.SWORD_SLASH: generate_sword_slash,
     SoundEvent.SWORD_CLASH: generate_sword_clash,
@@ -448,6 +465,7 @@ _GENERATOR_MAP = {
     SoundEvent.SMOKE_PUFF: generate_smoke_puff,
     SoundEvent.POISON_BREATH: generate_poison_breath,
     SoundEvent.FOOTSTEP: generate_footstep,
+    SoundEvent.DOG_BARK: generate_dog_bark,
     SoundEvent.ROUND_START: generate_round_start,
     SoundEvent.ROUND_WIN: generate_round_win,
     SoundEvent.UI_SELECT: generate_ui_select,
