@@ -10,6 +10,8 @@ Suíte de testes automatizados headless cobrindo:
 8. Saitou Gatotsu, Murasaki Kusarigama, American Ninja & Doberman, Gray Ninja Fumaça Slow
 """
 import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 import math

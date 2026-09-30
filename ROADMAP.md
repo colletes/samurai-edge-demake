@@ -1,261 +1,249 @@
 # 🗺️ ROADMAP — Samurai Edge Demake
 
-> **Versão atual:** `v1.3.3` → commit `2a53dbb` | **Branch:** `main`  
-> Última atualização: Setembro 2026  
-> Este documento consolida o **Plano Mestre das 9 Frentes** (sessão anterior) com os **20 Patches Críticos** e as melhorias recentes de balanceamento.
+> **Versão atual:** `v1.3.3` → commit `42ae791` | **Branch:** `main`  
+> Última atualização: 30 de Setembro de 2026  
+> Este documento consolida todo o histórico concluído e define a ordem sequencial das **7 Fases de Evolução Mestre**, divididas em entregáveis pequenos, iterativos e testáveis.
 
 ---
 
-## ✅ Concluído
+## 📊 Progresso Global do Projeto
 
-### Fundação — v1.0 a v1.2
-- [x] Motor de combate isométrico voxel 3D com câmera y-sorted
-- [x] 12 guerreiros jogáveis com mecânicas únicas
-- [x] Arena **Floresta de Bambu** (bambus cortáveis, lago Zen)
-- [x] Arena **Kyoto Bakumatsu** (carruagens, escombros, chamas nos telhados, lanternas)
-- [x] Sistema de colisão e hitbox com i-frames e parry
-- [x] Build automatizado com GitHub Actions (macOS / Linux / Windows)
-- [x] Suporte nativo a gamepads (Xbox, DualShock 4, DualSense PS5)
-- [x] Controles touchscreen adaptativos (Android / iOS) com analógico virtual flutuante
-- [x] Manual estratégico in-game (`F1`) com fichas dos 12 guerreiros
-- [x] i18n bilíngue (PT-BR / EN) com alternância instantânea
-- [x] Retratos HD-2D dos guerreiros; tela de carregamento com barra de progresso
-
-### Plano Mestre — Prioridades Imediatas (concluídas)
-- [x] **Ícones PlayStation em SVG** — `assets/icons/playstation/` + `src/ui/svg_icon_renderer.py` + integração em `settings_menu.py` e `controller_manager.py`
-- [x] **3ª Ação Universal (Roll / Dash dedicado)** — `○ Círculo` / `T` (P1) / `O` (P2): esquiva específica por personagem (Kenshi: Iai Slide; Kasumi: Mist Roll; Tomoe: Kagitsuru Rope Hook; etc.)
-- [x] **Novas Ações Secundárias** — Okuni: *Dokukiri* (Veneno em Cone); Anne: *Naval Artillery Strike* (Hold & Release com mobilidade); Teppo: *Black Powder Ground Trap*; Kenshi: *Tsuka-ate*
-
-### Plano Mestre — Frente 1: Animações Idle & Caminhada
-- [x] Respiração senoidal (*idle bob*) em `voxel_models.py`
-- [x] Marcha orgânica (*step bob* com pernas articuladas) para todos os 12 guerreiros
-
-### Plano Mestre — Frente 2: Mortes Renovadas (parcial)
-- [x] Fragmentação voxel do corpo em `src/entities/voxel_corpse.py`
-- [x] Flash de lâmina cinematográfico e hitstop Kurosawa P&B (`CinematicDirector`)
-- [x] Corpo voxel fatiado pós-fatalidade no Y-sorting
-
-### 20 Patches Críticos — v1.3 (todos verificados com testes automatizados)
-- [x] **Kasumi — Mina Remota:** auto-dano garantido (1 HP) mesmo em i-frames de dodge
-- [x] **Kasumi — Bomba de Fumaça (Dash):** 48+ partículas volumétricas, `alpha=15`, `stealth_timer=1.6s`; sombra escala com opacidade; rastro contínuo durante o deslocamento
-- [x] **Kenshi — Ryuu Tsui Sen:** corte descendente vertical (de `wz=2.6m`), invulnerável na subida, pós-imagens *zanzou*
-- [x] **Kenshi — Travamento Iai:** bloco `STATE_ATTACK` restaurado; Shukuchi com pós-imagens translúcidas
-- [x] **Murasaki — Escudo Frontal:** deflexão da Kusarigama em cone de 120° (projéteis pelas costas passam)
-- [x] **Murasaki — Foice Kama:** modelo voxel de lâmina curvada, alcance 1.30m
-- [x] **Murasaki — Dash:** sem faíscas; efeito sombrio de teletransporte ninja
-- [x] **Julie — Cape Flourish:** movido para a esquiva; duração 0.16s; deflexão frontal (180°) com i-frames completos; musket bullet passa através durante dodge
-- [x] **Julie — Animação Coup de Pied:** capa 3D giratória + extensão de perna
-- [x] **Julie — Banner de morte:** `POCKET FLINTLOCK SNIPE!`
-- [x] **Flintlock — Alcance:** limitado a 5.8 tiles
-- [x] **Joe — Cão Yamato:** atordoa apenas em `STATE_DOG_CHARGE` / `STATE_DOG_BARK`
-- [x] **Tomoe — Flecha de Corda:** `rope_cooldown = 2.0s`
-- [x] **Hanzo — Kunai:** clamped nos limites do mapa; ângulo descendente correto no salto
-- [x] **Anne — Indicador de Lentidão:** fuligem preta nos pés
-- [x] **Okuni — Dokukiri:** cone frontal, pushback, frenzy +25% velocidade, -20% cooldown
-- [x] **HUD Cooldowns:** atributos corrigidos para todos os 12 guerreiros
-- [x] **Controles P2:** tecla `I` → "Cancelar"; `ESC` bloqueado durante gameplay
-- [x] **Obstáculos sólidos:** faíscas e hitstop generalizados (rochas, poço, lanternas, Torii, carruagens)
-- [x] **Rumble tátil:** vibração em golpes fatais, clashes, explosões, atordoamentos
-
-### Balanceamento Anne & Julie — v1.3 (buffs pós-simulação de 1.584 lutas)
-- [x] Anne: avanço 0.65m, hitbox alfanje 1.55m, ciclo tap/hold/release do canhão
-- [x] Julie: Fleche hitbox 0.70m, recovery 0.18s; Flintlock secondary exclusivo
-- [x] Deflexão de projéteis com verificação completa de i-frames (dodge, CAPE_FLOURISH, SHUKUCHI)
+```mermaid
+pie title Status dos Recursos e Frentes do Projeto
+    "Concluído (Fundação, Controles, 20 Patches, Balanceamento)" : 65
+    "Fase 1: Performance & Estabilidade" : 7
+    "Fase 2: Arquitetura de Áudio (SFX + BGM)" : 8
+    "Fase 3: Saneamento de Testes & Tomoe" : 5
+    "Fase 4: Balanceamento Tier D" : 5
+    "Fase 5: Combate Avançado & UX (Clash, BO3)" : 4
+    "Fase 6: 3ª Arena & Iluminação FX" : 3
+    "Fase 7: Modo Arcade & Boss Gashadokuro" : 3
+```
 
 ---
 
-## 🔴 Alta Prioridade — v1.4 (Performance)
+## ✅ Concluído (Entregue e Testado)
 
-> [!CAUTION]
-> O slowdown ao atingir obstáculos com o Ryuu Tsui Sen é causado por dois problemas combinados abaixo. Corrigir antes de qualquer feature nova.
+### 1. Fundação e Motor de Combate (v1.0 – v1.2)
+- [x] Motor de combate isométrico voxel 3D com câmera e ordenação Y-Sorting contínua.
+- [x] 12 guerreiros jogáveis com mecânicas, velocidades e arquétipos assimétricos.
+- [x] Arena **Floresta de Bambu** com lago Zen e bambus dinamicamente cortáveis.
+- [x] Arena **Kyoto Bakumatsu** com carruagens cruzadas, escombros caindo e chamas nas cumeeiras.
+- [x] Sistema de colisão com caixas circulares, i-frames e parry direcional.
+- [x] Suporte universal a controles (PlayStation DualSense/DS4, Xbox, Genéricos) com rumble tátil.
+- [x] Controles touchscreen adaptativos para mobile (iOS/Android) com analógico virtual flutuante.
+- [x] Manual estratégico in-game (`F1`) com fichas táticas e visualizador 3D voxel.
+- [x] Suporte bilíngue instantâneo (Português PT-BR / Inglês EN).
+- [x] Tela de título estilo Sumi-E e tela de carregamento com barra de progresso.
 
-### Perf-1 — Surface pool de partículas (principal gargalo de FPS)
-- [ ] `SmokeParticle.render()` cria um `pygame.Surface(SRCALPHA)` novo por partícula a cada frame. Com picos de 48–80 partículas (fumaça Kasumi + impacto Ryuu), são dezenas de alocações por frame → GC stutter.
-- [ ] **Solução:** pool pré-alocada por bucket de tamanho (4px a 44px), reutilizando superfícies. Ou redesenhar com `pygame.draw.circle` diretamente + `BLEND_RGBA_SUB`.
-- [ ] **Arquivo:** `src/effects/particles.py` — `SmokeParticle.render()`
+### 2. Controles Avançados & 3ª Ação Universal (Plano Mestre)
+- [x] Ícones PlayStation em SVG nativo renderizados na tela de configurações (`assets/icons/playstation/`).
+- [x] **3ª Ação Universal (Roll / Dash dedicado):** `○ Círculo` (Gamepad) / `T` (P1) / `O` (P2) para todos os 12 guerreiros.
+- [x] Novas Ações Secundárias específicas:
+  - Okuni: *Dokukiri* (borrifada de névoa venenosa em cone).
+  - Anne: *Naval Artillery Strike* (canhão celestial via Hold & Release mantendo mobilidade).
+  - Teppo: *Black Powder Ground Trap* (trilha de pólvora inflamável).
+  - Kenshi: *Gidan Tsuka-ate* (pancada de quebra de guarda com a empunhadura).
+  - Tomoe: *Kagitsuru Rope Hook* (flecha com corda movida para a esquiva).
 
-### Perf-2 — Hitstop em cascata ao atingir obstáculos (stutter Ryuu Tsui Sen)
-- [ ] Hitbox do Ryuu (raio 1.45m) se sobrepõe à rocha → `_check_obstacle_sparks` seta `hitstop_timer=0.06s` → loop principal faz `continue` e congela tudo. Se a hitbox ainda sobrepõe no próximo frame, repete → stutter de 2–5 frames.
-- [ ] **Soluções:**
-  - Ignorar obstáculos durante descida aérea (`wz > 0.5`); hitstop de obstáculo só ao pousar
-  - Cooldown por obstáculo: não re-triggar se o mesmo sólido causou hitstop nos últimos 0.25s
-  - Reduzir `hitstop_timer` de obstáculo de `0.06s` para `0.04s`
-- [ ] **Arquivo:** `src/combat/collision.py` — `_check_obstacle_sparks()`
+### 3. Animações e Cinemática (Plano Mestre — Frentes 1 e 2)
+- [x] Animação de respiração senoidal (*idle bob*) e caminhada articulada com pernas/braços em contra-fase.
+- [x] Efeito de corte fatal Kurosawa com flash P&B e hitstop dramático (`CinematicDirector`).
+- [x] Desmembramento e fragmentação volumétrica dos corpos voxel pós-morte.
 
-### Perf-3 — Y-sort global a cada frame
-- [ ] `render_queue.sort()` ordena ~80 itens (estáticos + dinâmicos + partículas) a cada frame.
-- [ ] **Solução:** separar fila estática (pré-ordenada, atualizada apenas ao cortar bambu) da fila dinâmica (fighters + partículas). Mesclar com `heapq.merge()`.
-- [ ] **Arquivo:** `main.py` — bloco de render (linhas ~1000–1065)
+### 4. 20 Patches Críticos de Mecânica e Consistência (v1.3)
+- [x] **Kasumi (Mina):** Auto-dano garantido de 1 HP mesmo parada em cima da mina detonada.
+- [x] **Kasumi (Dash de Fumaça):** 48+ partículas volumétricas densas, `alpha = 15` (quase invisível), stealth timer de 1.6s e sombra escalada por opacidade.
+- [x] **Kenshi (Ryuu Tsui Sen):** Queda descendente vertical de `wz = 2.6m`, com zanzou (pós-imagens translúcidas) e invulnerabilidade na subida.
+- [x] **Kenshi (Iai):** Correção do travamento de estado de ataque e unificação de cooldown do Shukuchi.
+- [x] **Murasaki (Escudo Frontal):** Deflexão da Kusarigama restrita a cone frontal de 120° (costas vulneráveis).
+- [x] **Murasaki (Kama):** Lâmina curvada voxel e alcance estendido para 1.30m.
+- [x] **Murasaki (Dash):** Efeito sombrio de teletransporte sem faíscas metálicas.
+- [x] **Julie (Cape Flourish):** Movido para esquiva com i-frames completos, deflexão de projéteis frontais e passagem de balas pelas costas.
+- [x] **Julie (Animação):** Giro 3D de capa de seda e Coup de Pied com stagger.
+- [x] **Julie (Banner):** Exibição de `POCKET FLINTLOCK SNIPE!` em mortes por pederneira.
+- [x] **Flintlock (Alcance):** Limitado a 5.8 tiles como arma secundária de média distância.
+- [x] **Joe (Cão Yamato):** Atordoamento restrito exclusivamente aos estados de ataque (`CHARGE`/`BARK`).
+- [x] **Tomoe (Corda):** Cooldown de 2.0s para evitar fuga infinita.
+- [x] **Hanzo (Kunai):** Limitação estrita dentro das bordas da arena e ângulo descendente no salto.
+- [x] **Anne (Lentidão):** Indicador visual de fuligem preta nos pés do oponente sob efeito slow.
+- [x] **Okuni (Veneno):** Cone frontal com pushback, velocidade de frenzy (+25%) e redução de cooldown (-20%).
+- [x] **HUD Cooldowns:** Mapeamento uniforme dos nomes de atributos de recarga para todos os 12 guerreiros.
+- [x] **Controles P2:** Mapeamento da tecla `I` para cancelar e isolamento da tecla `ESC` no duelo.
+- [x] **Obstáculos Sólidos:** Faíscas e hitstop generalizados para todos os sólidos das duas arenas.
+- [x] **Rumble Tátil:** Vibração nos controles para golpes fatais, clashes, explosões e atordoamentos.
 
-### Perf-4 — Cap global de partículas
-- [ ] Sem limite, rajadas de combate acumulam 200+ partículas. Cap de `MAX_PARTICLES = 150`: novas partículas cosméticas são descartadas; `FloatingBanner` e `BloodParticle` nunca são descartados.
-- [ ] **Arquivo:** `main.py` — linha 988
-
----
-
-## 🟠 Alta Prioridade — v1.4 (Plano Mestre — Frente 3: Áudio)
-
-> [!NOTE]
-> Nenhum código de áudio existe hoje. `pygame.mixer` não é inicializado em nenhum lugar do projeto.
-
-### Sound-1 — SoundManager (arquitetura)
-- [ ] Criar `src/audio/sound_manager.py` — singleton com cache, volume global, canais SFX dedicados
-- [ ] Criar `src/audio/sound_events.py` — enum de todos os eventos sonoros
-- [ ] Criar `assets/sounds/sfx/` e `assets/sounds/music/` com placeholders procedurais (gerados via `numpy` + `pygame.sndarray`) para funcionar sem assets externos desde o primeiro dia
-- [ ] Inicializar `pygame.mixer` em `main.py` (44100 Hz, 16-bit, estéreo)
-
-### Sound-2 — SFX de combate e movimentação
-- [ ] Golpe fatal → `sword_hit.ogg` (grave, lento)
-- [ ] Clash de espadas / parry → `sword_clash.ogg`
-- [ ] Explosão (bomba, canhão) → `bomb_explode.ogg`
-- [ ] Canhão naval Anne → `cannon_fire.ogg`
-- [ ] Pistola Flintlock Julie → `gunshot_flintlock.ogg`
-- [ ] Tanegashima (Teppo) → `tanegashima_shot.ogg`
-- [ ] Flecha Yumi: lançamento + impacto → `arrow_release.ogg` / `arrow_hit.ogg`
-- [ ] Shuriken → `shuriken_throw.ogg`
-- [ ] Ryuu Tsui Sen → `ryuu_tsui_sen_whoosh.ogg`
-- [ ] Bomba de fumaça Kasumi → `smoke_puff.ogg`
-- [ ] Passos (grama / pedra) → `footstep_grass.ogg` / `footstep_stone.ogg` (a cada 0.35s)
-- [ ] Round start / round win → `round_start.ogg` / `round_win.ogg`
-
-### Sound-3 — BGM por arena + menu
-- [ ] Tela de título: `bgm_menu.ogg` — Taiko e Shamisen relaxante
-- [ ] Floresta de Bambu: `bgm_bamboo.ogg` (fade in de 2s)
-- [ ] Kyoto Bakumatsu: `bgm_kyoto.ogg` (fade in de 2s)
-- [ ] Fade out de 0.5s entre rounds; fanfare de vitória
-- [ ] Controles de volume independentes (música vs SFX) no menu de configurações
+### 5. Balanceamento Específico Anne & Julie (v1.3.3)
+- [x] Anne: Avanço vigoroso do corte de 0.65m e hitbox de 1.55m de raio.
+- [x] Anne: Ciclo completo do canhão (Tap rápido vs Hold livre com retículo móvel).
+- [x] Julie: Hitbox do Fleche Thrust ampliada para 0.70m e tempo de recovery reduzido para 0.18s.
+- [x] Julie: Deflexão frontal precisa com passagem de projéteis em i-frames de esquiva.
 
 ---
 
-## 🟡 Média Prioridade — v1.4 / v1.5
-
-### Plano Mestre — Frente 2 (complemento): Kanjis Kurosawa
-- [ ] Kanjis de impacto em nanquim no flash cinematográfico: *一刀両断* (Ittō Ryōdan), *決闘終焉* (Kettō Shūen), etc.
-- [ ] Renderizados com fonte `Zen Antique` sobre o flash P&B do `CinematicDirector`
-- [ ] **Arquivo:** `src/effects/cinematic_director.py`
-
-### Plano Mestre — Frente 4: 3ª Arena — Telhados de Kyoto & Templo em Chamas
-- [ ] Criar `src/world/rooftop_map.py`
-- [ ] Cumeeiras de telhados com pontes suspensas destrutíveis
-- [ ] Flechas flamejantes horizontais periódicas
-- [ ] Rajadas de vento que empurram combatentes para abismos (knockback contextual)
-- [ ] Chamas vivas no templo com iluminação dinâmica
-
-### Plano Mestre — Frente 5: IA Tática e Reativa
-- [ ] Controle de distância (*footsies*): manter distância ótima por arquétipo (curta/média/longa)
-- [ ] Fintas e punição de *whiff*: IA identifica recovery do adversário e pune
-- [ ] Esquiva proativa de perigos do cenário (carruagens, escombros, flechas flamejantes)
-- [ ] Três níveis de dificuldade: Iniciante (30% aleatório) / Normal (atual) / Mestre (prevê posição 0.3s à frente)
-- [ ] **Arquivo:** `src/entities/ai_controller.py`
-
-### Plano Mestre — Frente 6: Clash de Espadas (Tsubazeriai / QTE Arcade)
-- [ ] Criar `src/combat/clash_system.py`
-- [ ] Ao cruzarem lâminas: choque de faíscas contínuas + zoom dramático
-- [ ] Janela curta de QTE no centro superior da tela:
-  - Botão vermelho de arcade: animação física de compressão 3D e pulso iluminado
-  - Texto **"STRIKE!"** em fonte `Shojumaru` do título
-- [ ] Integrar ao sistema de `CLASH!` já existente em `collision.py`
-
-### Plano Mestre — Frente 7: Apresentação Cinematográfica de Round (Sumi-E)
-- [ ] Criar `src/ui/round_intro.py`
-- [ ] Órbita de 45° da câmera em torno dos combatentes antes do round
-- [ ] Pergaminho vertical com nome e título do guerreiro em `Shojumaru` + `Zen Antique`
-- [ ] Estrondo de Taiko sincronizado com o pergaminho
-
-### Balanceamento Tier D (simulação de 1.584 lutas — winrates abaixo de 35%)
-- [ ] **Kenshin (29.6%):** recovery Iai 0.35s → 0.25s ao acertar; Shukuchi com 0.12s i-frame real; IA usa evasão quando encurralado
-- [ ] **Murasaki (29.2%):** velocidade da corrente 8.5 → 11.0 u/s; dano de hook (+1 HP no puxão); hitbox Kama 0.18s → 0.22s
-- [ ] **Kasumi (28.4%):** sem auto-dano com ≤ 2 HP; raio de auto-dano × 0.6; Mina delay 0.40s → 0.28s
-- [ ] **Hanzo (26.9%):** kunai recolhível após 1.5s; IA: salto+kunai a 2.5–4.5m (45%); segundo arremesso no ar
-- [ ] **Joe/Yamato (23.9%):** hesitação do cão 0.4s → 0.15s; velocidade de charge 5.5 → 7.0; shuriken +1 HP; IA: shuriken como abridor a 3–5m
-
-### Tomoe — Ação Secundária (pendente decisão do jogador)
-- [ ] **Opção 1 (Recomendada): Hamaya Sagrada** — flecha ritual que perfura obstáculos e anula projéteis; rastro dourado
-- [ ] Opção 2: Chuva Sagrada de Flechas (Yabusame) — 5 flechas em parábola, chovem após 0.6s
-- [ ] Opção 3: Barreira dos Ventos Kami — 3 talismãs orbitais repelindo ataques por 0.8s
-- [ ] Opção 4: Kyu-jutsu Bo Strike — pancada melee com a haste do arco, stun 0.4s
+## 📋 Próximos Passos em 7 Fases Iterativas
 
 ---
 
-## 🟢 Baixa Prioridade — v1.5
+### 🔴 FASE 1: Performance & Estabilidade (Gargalos de Framerate)
+*Objetivo: Eliminar o stutter do Ryuu Tsui Sen e as alocações contínuas de memória gráfica.*
 
-### Plano Mestre — Frente 8: Iluminação Dinâmica & FX Atmosféricos
-- [ ] Criar `src/effects/lighting.py`
-- [ ] Luz de chamas refletida nas pedras de Kyoto (overlay aditivo laranja pulsante)
-- [ ] Vaga-lumes bioluminescentes sobre o lago da Floresta de Bambu
-- [ ] Relâmpagos noturnos na Arena de Telhados
+- [ ] **Entregável 1.1: Surface Object Pooling para `SmokeParticle`**
+  - **Problema:** `SmokeParticle.render()` aloca `pygame.Surface(SRCALPHA)` a cada frame por partícula. Em picos de 48+ partículas, gera dezenas de alocações por frame.
+  - **Solução:** Criar pool de superfícies reutilizáveis indexadas por buckets de tamanho (4px a 44px).
+  - **Arquivos:** `src/effects/particles.py`
+  - **Teste:** `tests/test_performance_and_particles.py::test_smoke_particle_surface_pooling`
 
-### UX — Tela de Resultados pós-round
-- [ ] Criar `src/ui/round_result.py`: vencedor, golpe fatal, HP restante, tempo
-- [ ] Animação: flash branco → tela preta → fade in; rematch com `Espaço`
+- [ ] **Entregável 1.2: Hitstop Anti-Cascata nos Obstáculos (Slowdown Ryuu Tsui Sen)**
+  - **Problema:** A hitbox de 1.45m do Ryuu Tsui Sen sobrepõe rochas e dispara hitstop a cada frame consecutivo.
+  - **Solução:** Ignorar colisões de obstáculo durante a fase aérea (`wz > 0.4`), adicionar cooldown de 0.25s por obstáculo e reduzir hitstop para 0.035s.
+  - **Arquivos:** `src/combat/collision.py`, `src/entities/red_samurai.py`
+  - **Teste:** `tests/test_performance_and_particles.py::test_ryuu_obstacle_hitstop_single_trigger`
 
-### UX — Contador de Rounds (Best of 3)
-- [ ] `p1_rounds_won` / `p2_rounds_won` no estado do jogo
-- [ ] HUD: ícones de round (katana cruzada) acima das barras de HP
-- [ ] Tela "MATCH WINNER" ao encerrar BO3
+- [ ] **Entregável 1.3: Y-Sorting Dividido (Estático vs Dinâmico)**
+  - **Problema:** `render_queue.sort()` roda sobre dezenas de itens estáticos e dinâmicos a cada frame.
+  - **Solução:** Separar fila estática pré-ordenada (cenário fixo) da fila dinâmica (lutadores, projéteis, partículas).
+  - **Arquivos:** `main.py`
+  - **Teste:** `tests/test_performance_and_particles.py::test_ysort_order_consistency`
 
-### UX — Efeitos cinematográficos do Ryuu Tsui Sen
-- [ ] Zoom suave da câmera (+10%) quando `wz > 2.0`
-- [ ] Overlay de desaturação gradual até o impacto
-
-### UX — Sombras de projéteis no chão
-- [ ] Bomba, flecha do Yumi e canhão projetam sombra diretamente abaixo durante a trajetória balística
-
----
-
-## 🔵 Futuro — v2.0
-
-### Plano Mestre — Frente 9: Modo Arcade & Boss Oni Esqueleto (Gashadokuro)
-- [ ] Criar `src/arcade/arcade_mode.py` — campanha completa com torneio de 8 adversários
-- [ ] Criar `src/entities/boss_oni.py` — **Gashadokuro** com 5 fases de transformação voxel:
-  1. Colosso com Facões Gigantes
-  2. Serpente de Ossos
-  3. Rebatedor Breakout
-  4. Clava de Ossos
-  5. Caveira Flamejante (fase final)
-
-### Feat — Modo Training
-- [ ] Personagens imortais; input exibido frame a frame; dummies com HP infinito
-
-### Feat — Torneio Local (4 / 8 jogadores)
-- [ ] Chaveamento automático de eliminatória simples com árvore na tela
-
-### Feat — Leaderboard & Estatísticas Locais
-- [ ] Histórico das últimas 50 partidas em JSON; tela de winrate por personagem
+- [ ] **Entregável 1.4: Particle Cap Global (MAX 150)**
+  - **Problema:** Acúmulo descontrolado de partículas em partidas longas ou explosões simultâneas.
+  - **Solução:** Limite rígido de 150 partículas; novas partículas cosméticas de fumaça são descartadas quando lotado.
+  - **Arquivos:** `main.py`
+  - **Teste:** `tests/test_performance_and_particles.py::test_particle_cap_enforcement`
 
 ---
 
-## 🧪 Estado das Suítes de Testes
+### 🟠 FASE 2: Arquitetura de Áudio & Efeitos Sonoros (SFX + BGM)
+*Objetivo: Integrar áudio feudal completo com síntese procedural fallback que funciona mesmo sem arquivos externos.*
 
-| Suíte | Testes | Status |
-|---|:---:|:---:|
-| `test_game.py` (sistema geral) | 21 | ✅ 100% |
-| `tests/test_patches_and_improvements.py` | 19 | ✅ 100% |
-| `tests/test_anne_and_julie_buffs.py` | 9 | ✅ 100% |
-| `tests/test_controllers_and_touch.py` | 7 | ✅ 100% |
-| `tests/test_tomoe_hold_release.py` | 5 | ✅ 100% |
-| `tests/test_step2_actions.py` | 6 | ✅ 100% |
-| `tests/test_phase3_controls_and_persistence.py` | 4 | ✅ 100% |
-| `tests/test_phase1_fighters.py` | — | ⚠️ 1 falha (`cape_timer` desatualizado após refactor do Repel) |
-| `tests/test_kawarimi_and_poison.py` | — | ⚠️ 1 falha (banner Okuni com wording desatualizado) |
-| `tests/test_modifications_review.py` | — | ⚠️ 1 falha (`TSUKA_ATE` check desatualizado) |
-| `tests/test_settings_and_hanzo_jump.py` | — | ⚠️ 1 falha (label menu configurações desatualizado) |
-| `tests/test_controller_commands_and_selection.py` | — | ⚠️ 1 falha (glyph PS5 DualSense desatualizado) |
-| `tests/test_phase2_hud_and_round_start.py` | — | ❌ `ModuleNotFoundError: src` (executar da raiz com `./venv/bin/python3`) |
-| `tests/test_idle_walk_animations.py` | — | ❌ `ModuleNotFoundError: src` |
-| `tests/test_p2_character_confirmation.py` | — | ❌ `ModuleNotFoundError: src` |
+- [ ] **Entregável 2.1: `SoundManager` com Síntese Procedural Fallback**
+  - **Solução:** Singleton inicializando `pygame.mixer` e sintetizador de ondas sonoras procedurais embutido para SFX básicos (espadas, impactos, tiros) e suporte transparente a arquivos `.ogg` reais.
+  - **Arquivos:** `[NEW] src/audio/sound_manager.py`, `[NEW] src/audio/sound_events.py`, `[NEW] src/audio/procedural_sfx.py`
+  - **Teste:** `tests/test_audio_system.py::test_sound_manager_playback_and_fallback`
 
-> **71 testes passando com 100%** nas suítes principais.  
-> Suítes ⚠️: assertions legadas desatualizadas após refactors — não refletem bugs reais no jogo.  
-> Suítes ❌: problema de `sys.path` — funcionam corretamente ao executar com `./venv/bin/python3 tests/<nome>.py` da raiz.
+- [ ] **Entregável 2.2: Integração de SFX em Combate**
+  - **Solução:** Conectar eventos de som em `collision.py` e `main.py`: `SWORD_CLASH`, `FATAL_STRIKE`, `BOMB_EXPLODE`, `CANNON_FIRE`, `FLINTLOCK_SHOT`, `ARROW_RELEASE`, `FOOTSTEPS`.
+  - **Arquivos:** `src/combat/collision.py`, `main.py`
+  - **Teste:** `tests/test_audio_system.py::test_combat_sfx_triggers`
+
+- [ ] **Entregável 2.3: BGM Player com Crossfade de Arenas**
+  - **Solução:** Transições suaves com fade in/out entre menu (`bgm_menu`), Bambus (`bgm_bamboo`) e Kyoto (`bgm_kyoto`).
+  - **Arquivos:** `src/audio/sound_manager.py`, `main.py`
+  - **Teste:** `tests/test_audio_system.py::test_bgm_fade_transitions`
+
+- [ ] **Entregável 2.4: Sliders de Volume na Tela de Configurações**
+  - **Solução:** Adicionar ajustes de Volume Master, Volume SFX e Volume BGM em `SettingsMenu`.
+  - **Arquivos:** `src/ui/settings_menu.py`
+  - **Teste:** `tests/test_audio_system.py::test_settings_volume_persistence`
 
 ---
 
-## 📦 Próxima Release: v1.4
+### 🟡 FASE 3: Saneamento de Testes Legados & Ação Secundária de Tomoe
+*Objetivo: Garantir 100% de aprovação em todas as suítes e implementar o especial sagrado de Tomoe.*
 
-**Escopo mínimo:**
-1. `Perf-1` + `Perf-2` — eliminar slowdown do Ryuu Tsui Sen (obrigatório)
-2. `Sound-1` + `Sound-2` — SoundManager com placeholders procedurais
-3. Balanceamento Tier D (Kasumi, Hanzo, Joe prioritários)
-4. Unificação das suítes de testes legadas (⚠️ e ❌)
-5. Decisão e implementação da ação secundária de Tomoe
+- [ ] **Entregável 3.1: Tomoe — Ação Secundária (Hamaya Sagrada)**
+  - **Solução:** Flecha ritual de luz com rastro dourado que perfura sólidos e cancela projéteis inimigos no trajeto.
+  - **Arquivos:** `src/entities/kyudo_archer.py`, `src/entities/projectile.py`, `main.py`
+  - **Teste:** `tests/test_tomoe_hamaya.py::test_hamaya_projectile_pierce_and_deflect`
+
+- [ ] **Entregável 3.2: Kanjis Kurosawa no Flash Cinematográfico**
+  - **Solução:** Renderizar kanjis estilizados sobre o corte final (*一刀両断*, *決闘終焉*) usando a fonte `Zen Antique`.
+  - **Arquivos:** `src/effects/cinematic_director.py`
+  - **Teste:** `tests/test_cinematic_kanji.py::test_kanji_overlay_generation`
+
+- [ ] **Entregável 3.3: Saneamento das 5 Suítes Legadas de Testes**
+  - **Solução:** Atualizar asserts de `cape_timer`, rótulos de menu e ajustar `sys.path` em `test_phase1_fighters.py`, `test_kawarimi_and_poison.py`, `test_modifications_review.py`, `test_settings_and_hanzo_jump.py` e `test_controller_commands_and_selection.py`.
+  - **Arquivos:** `tests/test_*.py`
+  - **Teste:** Execução com 100% de sucesso em toda a pasta `tests/`.
+
+---
+
+### 🟡 FASE 4: Balanceamento Específico de Combatentes Tier D
+*Objetivo: Elevar os 5 combatentes desfavorecidos (winrates de 23% a 29%) para o patamar competitivo.*
+
+- [ ] **Entregável 4.1: Kenshin (29.6% winrate)**
+  - Reduzir recovery do Iai ao acertar (0.35s -> 0.25s); conceder 0.12s de i-frame real pós-Shukuchi.
+  - **Arquivos:** `src/entities/red_samurai.py`
+
+- [ ] **Entregável 4.2: Murasaki (29.2% winrate)**
+  - Aumentar velocidade da corrente Kusarigama (8.5 -> 11.0); dano de 1 HP no impacto do hook ao chão; janela ativa da foice 0.22s.
+  - **Arquivos:** `src/entities/purple_ninja.py`, `src/entities/projectile.py`
+
+- [ ] **Entregável 4.3: Kasumi (28.4% winrate)**
+  - Imunidade a auto-dano se estiver com ≤ 1 HP (previne suicídio em desespero); armamento da mina remota acelerado para 0.28s.
+  - **Arquivos:** `src/entities/gray_ninja.py`, `src/combat/collision.py`
+
+- [ ] **Entregável 4.4: Hanzo & Joe (American Ninja)**
+  - Hanzo: Kunai no solo pode ser recolhida ao passar por cima.
+  - Joe: Reação do cão reduzida para 0.15s e velocidade aumentada em charge; shuriken causa 1 HP em alvos móveis.
+  - **Arquivos:** `src/entities/yellow_ninja.py`, `src/entities/american_ninja.py`, `src/entities/doberman.py`
+
+- **Teste da Fase 4:** `tests/test_tier_d_balance.py` com validação de métricas de todos os lutadores.
+
+---
+
+### 🟢 FASE 5: Combate Avançado & Apresentação de Round
+*Objetivo: Implementar o duelo de lâminas por QTE e apresentação cinematográfica.*
+
+- [ ] **Entregável 5.1: Clash de Espadas Tsubazeriai (QTE "STRIKE!")**
+  - Choque de lâminas simultâneas ativa zoom dramático e botão arcade pulsante com texto "STRIKE!".
+  - **Arquivos:** `[NEW] src/combat/clash_system.py`, `src/combat/collision.py`, `main.py`
+  - **Teste:** `tests/test_clash_qte.py::test_clash_trigger_and_resolution`
+
+- [ ] **Entregável 5.2: Apresentação Cinematográfica de Round (Sumi-E)**
+  - Rotação suave de 30° da câmera antes da luta, com pergaminho vertical exibindo os nomes dos lutadores.
+  - **Arquivos:** `[NEW] src/ui/round_intro.py`, `main.py`
+
+- [ ] **Entregável 5.3: Contador Best of 3 (BO3) e Tela de Resultados**
+  - Sistema de 2 rounds para vencer a partida, HUD com marcadores de round e tela final com rematch rápido (`Espaço`).
+  - **Arquivos:** `[NEW] src/ui/round_result.py`, `main.py`
+  - **Teste:** `tests/test_round_progression.py::test_bo3_match_winner`
+
+---
+
+### 🟢 FASE 6: 3ª Arena Telhados de Kyoto & Iluminação FX
+*Objetivo: Criar a arena de altitude e efeitos de luz 2.5D.*
+
+- [ ] **Entregável 6.1: 3ª Arena — Telhados de Kyoto & Templo em Chamas**
+  - Mapa em cumeeiras de telhados kawara com pontes de madeira destrutíveis e perigo de queda lateral.
+  - **Arquivos:** `[NEW] src/world/rooftop_map.py`, `src/ui/character_select.py`
+  - **Teste:** `tests/test_rooftop_arena.py::test_rooftop_map_generation_and_hazards`
+
+- [ ] **Entregável 6.2: Iluminação 2.5D Dinâmica & Atmosfera**
+  - Overlay de iluminação aditiva sobre tochas, lanternas e relâmpagos; vaga-lumes sobre o lago Zen.
+  - **Arquivos:** `[NEW] src/effects/lighting.py`, `main.py`
+
+---
+
+### 🔵 FASE 7: Modo Arcade & Boss Final Gashadokuro
+*Objetivo: Campanha single-player completa contra o chefe mitológico gigante.*
+
+- [ ] **Entregável 7.1: Modo Torneio Arcade (8 Lutas)**
+  - Progressão sequencial com recuperação parcial de vida entre confrontos.
+  - **Arquivos:** `[NEW] src/arcade/arcade_mode.py`, `main.py`
+
+- [ ] **Entregável 7.2: Boss Final "Oni Gashadokuro" (5 Fases Voxel)**
+  - Esqueleto colossal com 5 transformações volumétricas distintas.
+  - **Arquivos:** `[NEW] src/entities/boss_oni.py`, `src/arcade/arcade_mode.py`
+  - **Teste:** `tests/test_boss_oni.py::test_boss_phase_transitions`
+
+---
+
+## 🧪 Matriz de Testes Automatizados do Projeto
+
+| Suíte de Teste | Arquivo | Status |
+| :--- | :--- | :---: |
+| **Sistema Geral (21 Testes)** | `test_game.py` | ✅ 100% |
+| **20 Patches e Melhorias (19 Testes)** | `tests/test_patches_and_improvements.py` | ✅ 100% |
+| **Buffs Anne & Julie (9 Testes)** | `tests/test_anne_and_julie_buffs.py` | ✅ 100% |
+| **Controles & Touch (7 Testes)** | `tests/test_controllers_and_touch.py` | ✅ 100% |
+| **Tomoe Hold/Release (5 Testes)** | `tests/test_tomoe_hold_release.py` | ✅ 100% |
+| **Ações Etapa 2 (6 Testes)** | `tests/test_step2_actions.py` | ✅ 100% |
+| **Fase 3 Controles (4 Testes)** | `tests/test_phase3_controls_and_persistence.py` | ✅ 100% |
+| **Performance & Partículas** | `tests/test_performance_and_particles.py` | ⏳ *A ser criado na Fase 1* |
+| **Áudio e Mixer** | `tests/test_audio_system.py` | ⏳ *A ser criado na Fase 2* |
+| **Balanceamento Tier D** | `tests/test_tier_d_balance.py` | ⏳ *A ser criado na Fase 4* |
+| **Clash QTE** | `tests/test_clash_qte.py` | ⏳ *A ser criado na Fase 5* |
+| **Arena Telhados** | `tests/test_rooftop_arena.py` | ⏳ *A ser criado na Fase 6* |
+| **Boss Oni Gashadokuro** | `tests/test_boss_oni.py` | ⏳ *A ser criado na Fase 7* |
