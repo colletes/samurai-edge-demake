@@ -138,6 +138,10 @@ pie title Status dos Recursos e Frentes do Projeto
   - **Arquivos:** `src/ui/settings_menu.py`, `src/input/controls_storage.py`
   - **Teste:** `tests/test_audio_system.py::TestAudioPersistence` (✅ PASS)
 
+- [x] **Upgrade de Fidelidade Acústica: 26 Amostras Reais de Foley & Música Feudal**
+  - **Solução:** Adicionados 26 arquivos de áudio gravados reais em `assets/sounds/sfx/` e `assets/sounds/music/` (espadas, bloqueios, canhão, pederneira, Taiko, gongo, passos e temas musicais em escala Hirajōshi), substituindo 100% dos bleeps sintéticos em tempo de execução.
+  - **Arquivos:** `assets/sounds/sfx/*.mp3`, `assets/sounds/sfx/*.wav`, `assets/sounds/music/*.wav`
+
 ---
 
 ### 🟡 FASE 3: Saneamento de Testes Legados & Ação Secundária de Tomoe
