@@ -19,6 +19,10 @@ class BlueSamurai(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Musashi")
         self.speed = 4.0  # Rebalanceamento: aumentado de 3.6 para melhorar aproximação contra zoners
+        
+        # Rebalanceamento B: Musashi com 3 HP (requer 3 acertos em vez de 2)
+        self.max_hp = 3
+        self.hp = 3
 
         # Parâmetros do Combo Manual de 3 Cortes (Item 12)
         # Rebalanceamento: reduzido para aumentar velocidade de ataque (+1: ataque mais rápido)
@@ -63,7 +67,8 @@ class BlueSamurai(Samurai):
             self.state = STATE_ATTACK
             self.state_timer = 0.18
             self.hitbox_active = True
-            self.hitbox_radius = 1.30
+            # Rebalanceamento D: Alcance aumentado em +11% (1.30→1.45)
+            self.hitbox_radius = 1.45
             self.slash_dir = (self.facing_x, self.facing_y)
             self.hitbox_center = (self.wx + self.facing_x * 0.9, self.wy + self.facing_y * 0.9)
         elif self.state == STATE_ATTACK:
@@ -79,7 +84,8 @@ class BlueSamurai(Samurai):
             self.state = STATE_ATTACK
             self.state_timer = 0.18
             self.hitbox_active = True
-            self.hitbox_radius = 1.45 if self.combo_step == 2 else 1.85
+            # Rebalanceamento D: Alcance aumentado em +11% (1.45→1.62, 1.85→2.06)
+            self.hitbox_radius = 1.62 if self.combo_step == 2 else 2.06
             self.slash_dir = (self.facing_x, self.facing_y)
 
     def trigger_parry(self):

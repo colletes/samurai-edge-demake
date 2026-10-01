@@ -20,6 +20,17 @@ STATE_PARRY = "PARRY"
 STATE_STUNNED = "STUNNED"
 STATE_DEAD = "DEAD"
 
+
+def resolve_playable_bounds(game_map) -> tuple[float, float, float, float]:
+    """Retorna (min_x, min_y, max_x, max_y) jogável do mapa atual, respeitando
+    game_map.playable_bounds quando definido (ex: faixa real da rua em Kyoto),
+    ou o grid cheio como fallback para mapas sem essa restrição."""
+    bounds = getattr(game_map, "playable_bounds", None)
+    if bounds is not None:
+        return bounds
+    return 1.0, 1.0, game_map.cols - 1.0, game_map.rows - 1.0
+
+
 class Samurai:
     def __init__(self, wx: float, wy: float, name: str):
         self.wx = wx
@@ -57,10 +68,22 @@ class Samurai:
         self.slash_dir: tuple[float, float] = (0.0, 0.0)
         self.slow_timer = 0.0
         self.is_invulnerable_dodge = False
-        self.roll_speed = 10.5
-        self.roll_duration = 0.22
+        self.is_agile_dodge = False  # False = Padrão/Pesada, True = Especial/Ágil
+        self.roll_speed = 8.5        # Padrão pesada: 8.5 (ágil: 10.5)
+        self.roll_duration = 0.20    # Padrão pesada: 0.20s (~1.7 tiles), ágil: 0.22s (~2.3 tiles)
+        self.roll_recovery_duration = 0.18  # Pós-esquiva imóvel e vulnerável (pesada: 0.18s, ágil: 0.12s)
+        self.roll_recovery_timer = 0.0
+        self.roll_cooldown_duration = 0.38  # Cooldown total de re-esquiva (pesada: 0.38s, ágil: 0.35s)
+        self.roll_cooldown_timer = 0.0
         self.dash_recovery_timer = 0.0
-        self.dash_recovery_duration = 0.15
+
+    @property
+    def dash_recovery_duration(self) -> float:
+        return self.roll_recovery_duration
+
+    @dash_recovery_duration.setter
+    def dash_recovery_duration(self, val: float):
+        self.roll_recovery_duration = val
 
     def apply_slow(self, duration: float = 2.5, banners: list = None):
         """Aplica desaceleração de 65% na velocidade de movimentação."""
@@ -83,15 +106,37 @@ class Samurai:
 
     def can_move(self) -> bool:
         """Determina se o guerreiro pode andar no estado atual."""
+        if self.roll_recovery_timer > 0:
+            return False
         return self.state in (STATE_IDLE, STATE_WALK)
 
     def can_act(self) -> bool:
         """Determina se o guerreiro pode desferir ataques ou técnicas."""
-        return self.is_alive and self.state in (STATE_IDLE, STATE_WALK) and self.dash_recovery_timer <= 0
+        return (
+            self.is_alive
+            and self.state in (STATE_IDLE, STATE_WALK)
+            and self.roll_recovery_timer <= 0
+            and self.dash_recovery_timer <= 0
+        )
+
+    def update_dodge_timers(self, dt: float):
+        """Atualiza cronômetros universais de recuperação pós-esquiva e cooldown de re-esquiva."""
+        if self.roll_recovery_timer > 0:
+            self.roll_recovery_timer = max(0.0, self.roll_recovery_timer - dt)
+        if self.roll_cooldown_timer > 0:
+            self.roll_cooldown_timer = max(0.0, self.roll_cooldown_timer - dt)
+        if self.dash_recovery_timer > 0:
+            self.dash_recovery_timer = max(0.0, self.dash_recovery_timer - dt)
 
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
         """Terceira Ação Universal: Rolamento / Esquiva com frames de invulnerabilidade (i-frames)."""
-        if not self.is_alive or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK) or self.dash_recovery_timer > 0:
+        if (
+            not self.is_alive
+            or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK, STATE_RECOVERY)
+            or self.roll_recovery_timer > 0
+            or self.roll_cooldown_timer > 0
+            or self.dash_recovery_timer > 0
+        ):
             return
 
         if dir_x == 0 and dir_y == 0:
@@ -123,12 +168,19 @@ class Samurai:
         new_wx = self.wx + self.facing_x * step
         new_wy = self.wy + self.facing_y * step
 
-        new_wx = max(1.0, min(game_map.cols - 1.0, new_wx))
-        new_wy = max(1.0, min(game_map.rows - 1.0, new_wy))
+        min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
+        new_wx = max(min_x, min(max_x, new_wx))
+        new_wy = max(min_y, min(max_y, new_wy))
 
         # Testar colisão com rochas
         for rock in game_map.rocks:
             c, px, py = rock.check_collision(new_wx, new_wy, self.radius)
+            if c:
+                new_wx += px; new_wy += py
+
+        # Testar colisão com fachadas de edifícios (ex: machiyas de Kyoto)
+        for building in getattr(game_map, "buildings", []):
+            c, px, py = building.check_collision(new_wx, new_wy, self.radius)
             if c:
                 new_wx += px; new_wy += py
 
@@ -137,7 +189,9 @@ class Samurai:
         if self.state_timer <= 0:
             self.state = STATE_IDLE
             self.is_invulnerable_dodge = False
-            self.dash_recovery_timer = self.dash_recovery_duration
+            self.roll_recovery_timer = self.roll_recovery_duration
+            self.roll_cooldown_timer = self.roll_cooldown_duration
+            self.dash_recovery_timer = self.roll_recovery_duration
 
     def take_hit(self, slash_dir: tuple[float, float], damage: int = 2) -> tuple[bool, bool]:
         """
@@ -210,12 +264,20 @@ class Samurai:
         self.facing_y = move_y
 
         # Colisão com limites do mapa
-        new_wx = max(1.0, min(game_map.cols - 1.0, new_wx))
-        new_wy = max(1.0, min(game_map.rows - 1.0, new_wy))
+        min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
+        new_wx = max(min_x, min(max_x, new_wx))
+        new_wy = max(min_y, min(max_y, new_wy))
 
         # Colisão com rochas
         for rock in game_map.rocks:
             collided, push_x, push_y = rock.check_collision(new_wx, new_wy, self.radius)
+            if collided:
+                new_wx += push_x
+                new_wy += push_y
+
+        # Colisão com fachadas de edifícios (ex: machiyas de Kyoto)
+        for building in getattr(game_map, "buildings", []):
+            collided, push_x, push_y = building.check_collision(new_wx, new_wy, self.radius)
             if collided:
                 new_wx += push_x
                 new_wy += push_y
