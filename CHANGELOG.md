@@ -5,6 +5,42 @@ All notable changes to Samurai Edge Demake are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.6] - 2026-10-01
+
+### Changed - Balance
+
+#### Musashi (Blue Samurai) Phase 2: Aggressive Rebalancing
+- **3 HP System (Musashi-only)**: Requires 3 hits to KO instead of 2
+  - +50% durability advantage vs all other 2-HP characters
+  - Allows surviving initial rushes and trading hits more favorably
+  - Maintains 1-damage projectile vulnerability for balanced high-pressure play
+  
+- **AI Parry Bonus Boost**: Increased from 0.55 to 0.70 (+27% improvement)
+  - Better automated projectile defense against ranged pressure
+  - Effective vs high-tier zoners (Teppo 73.5%, Tomoe 60.6%)
+  - Rewards defensive play while maintaining offensive opportunity
+  
+- **Extended Sword Reach**: +11% on all combo tiers
+  - Combo 1: 1.30 → 1.45 radius
+  - Combo 2: 1.45 → 1.62 radius
+  - Combo 3: 1.85 → 2.06 radius
+  - Improves both offense (better hit confirmation distance) and defense (safer spacing control)
+
+### Result
+- **Winrate Improvement**: +26.2% stable gain (23.0% → 49.2% average)
+- **Tournament Validation**: 51.1%, 47.4%, 49.2% across three independent tournament runs
+- **Rank**: Stable 8th-9th place with healthy roster diversity
+- **Roster Health**: Teppo 73.5% (top), Okuni 16.3% (bottom), no extreme outliers
+
+### Design Rationale
+Triple buffing approach creates synergistic offensive/defensive loop:
+- 3 HP allows Musashi to survive initial pressure and trade hits more favorably
+- Better parry AI punishes projectile spam more effectively at range
+- Extended reach improves both offensive pressure (earlier hit confirms) and defensive safety (better spacing)
+- Design avoids single-point-of-failure that damaged previous iterations (resilience -10.2%, damage boost -6.1%, KI Wave deletions)
+
+---
+
 ## [1.3.5] - 2026-10-01
 
 ### Changed - Balance
