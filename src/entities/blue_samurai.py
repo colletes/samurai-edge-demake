@@ -18,25 +18,39 @@ from src.entities.voxel_models import render_voxel_humanoid
 class BlueSamurai(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Musashi")
-        self.speed = 2.8  # Passos pesados, deliberados e firmes
+        self.speed = 4.0  # Rebalanceamento: aumentado de 3.6 para melhorar aproximação contra zoners
 
         # Parâmetros do Combo Manual de 3 Cortes (Item 12)
-        self.windup_duration = 0.42
-        self.hit_duration = 0.12
+        # Rebalanceamento: reduzido para aumentar velocidade de ataque (+1: ataque mais rápido)
+        self.windup_duration = 0.35  # Era 0.42s
+        self.hit_duration = 0.10  # Era 0.12s
         self.combo_step = 0               # 1, 2 ou 3
         self.combo_buffered = False
         self.combo_window_timer = 0.0
-        self.recovery_duration = 0.20
+        self.recovery_duration = 0.15  # Rebalanceamento: reduzido para permitir contra-ataque mais rápido
 
         # Defesa / Parry
         self.parry_timer = 0.0
+        # Rebalanceamento: aumentado para 0.28s (+4: janela de reflexão estendida para melhor reação)
+        self.parry_reflect_active_timer = 0.0
 
         # Ângulos visuais das lâminas
         self.blade_l_angle = 0.0
-        self.blade_r_angle = 0.0
+        # Terceira Ação: Investida Fechadora de Distância (Rebalanceamento: compensa a ausência
+        # de ataque à distância, dobrando como ferramenta de aproximação além de esquiva)
+        self.is_agile_dodge = False
+        self.roll_speed = 8.5
+        self.roll_duration = 0.20
+        self.roll_recovery_duration = 0.18
+        self.roll_cooldown_duration = 0.38
 
     def can_act(self) -> bool:
-        return self.is_alive and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY) and self.dash_recovery_timer <= 0
+        return (
+            self.is_alive
+            and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY)
+            and self.roll_recovery_timer <= 0
+            and self.dash_recovery_timer <= 0
+        )
 
     def trigger_combo_attack(self, target_wx: float, target_wy: float):
         """Dispara ou encadeia os 3 ataques em sequência manual e ritmada (Item 12)."""
@@ -74,16 +88,19 @@ class BlueSamurai(Samurai):
             return
         self.state = STATE_PARRY
         self.state_timer = 0.45
-
-    def update(self, dt: float, game_map):
+        self.parry_reflect_active_timer = 0.28  # Janela de reflexão: 0.28s (ótimo + rebalanceamento)
+    def stun(self, duration: float = 0.8):
+        """Rebalanceamento: Musashi se recupera mais rápido de atordoamento (-2: reduz stun duration)."""
+        # Reduz stun duration em 40% para permitir counter-ataque mais rápido
+        reduced_duration = duration * 0.6
+        super().stun(reduced_duration)
+    def update(self, dt: float, game_map, particles=None):
         """Atualiza a lógica e os golpes do combo manual de Musashi."""
         if not self.is_alive:
             return
 
         self.update_stealth(game_map)
-
-        if self.dash_recovery_timer > 0:
-            self.dash_recovery_timer -= dt
+        self.update_dodge_timers(dt)
         if self.combo_window_timer > 0:
             self.combo_window_timer -= dt
 
@@ -141,6 +158,7 @@ class BlueSamurai(Samurai):
 
         elif self.state == STATE_PARRY:
             self.state_timer -= dt
+            self.parry_reflect_active_timer -= dt
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
 
