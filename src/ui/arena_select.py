@@ -15,7 +15,8 @@ from src.config import (
     COLOR_KYOTO_STONE, COLOR_KYOTO_FIRE_MID, COLOR_KYOTO_CARRIAGE_WOOD,
     get_asset_path
 )
-from src.i18n import t
+from src.i18n import t, get_lang
+from src.ui.character_select import draw_scroll_frame, draw_brush_divider
 
 class ArenaSelectScreen:
     def __init__(self):
@@ -43,42 +44,55 @@ class ArenaSelectScreen:
                 except Exception:
                     self.preview_surfs[arena_id] = None
 
-        self.arenas = [
+        self._arenas_lang = None
+        self._arenas_cache = []
+        self._axis_x_held = False
+
+    @property
+    def arenas(self):
+        # Reconstrói os textos quando o idioma muda
+        lang = get_lang()
+        if self._arenas_lang != lang:
+            self._arenas_cache = self._build_arenas()
+            self._arenas_lang = lang
+        return self._arenas_cache
+
+    def _build_arenas(self):
+        return [
             {
                 "id": ARENA_BAMBOO,
-                "name": "FLORESTA DE BAMBU",
-                "tag": "[ ESTÁGIO 1 ]",
-                "subtitle": "Santuário Sagrado - Duelo Tradicional",
-                "hazard_level": "BAIXO (Terreno Estável)",
+                "name": t("arena_bamboo_name"),
+                "tag": t("arena_tag_stage1"),
+                "subtitle": t("arena_bamboo_subtitle"),
+                "hazard_level": t("arena_bamboo_hazard"),
                 "hazard_color": (120, 220, 100),
-                "features": "Bambuzal cortável, lago com margens, ponte elevada e poço ancestral.",
-                "tactics": "Emboscadas no bambuzal e controle tático dos gargalos da ponte.",
+                "features": t("arena_bamboo_features"),
+                "tactics": t("arena_bamboo_tactics"),
                 "theme_color": (60, 140, 70),
             },
             {
                 "id": ARENA_KYOTO,
-                "name": "KYOTO: BAKUMATSU",
-                "tag": "[ NOVO ]",
-                "subtitle": "Avenida Imperial sob Cerco e Chamas",
-                "hazard_level": "EXTREMO (Morte Ambiental)",
+                "name": t("arena_kyoto_name"),
+                "tag": t("arena_tag_new"),
+                "subtitle": t("arena_kyoto_subtitle"),
+                "hazard_level": t("arena_kyoto_hazard"),
                 "hazard_color": (255, 75, 45),
-                "features": "Rua espaçosa de mobilidade total, carruagens assassinas e escombros em chamas.",
-                "tactics": "Amplo espaço para dashes e kiting; esquive das carruagens nas calçadas!",
+                "features": t("arena_kyoto_features"),
+                "tactics": t("arena_kyoto_tactics"),
                 "theme_color": (205, 75, 30),
             },
             {
                 "id": ARENA_RANDOM,
-                "name": "ARENA ALEATÓRIA",
-                "tag": "[ SORTEIO ]",
-                "subtitle": "O Destino Decide o Terreno",
-                "hazard_level": "VARIÁVEL",
+                "name": t("arena_random_name"),
+                "tag": t("arena_tag_random"),
+                "subtitle": t("arena_random_subtitle"),
+                "hazard_level": t("arena_random_hazard"),
                 "hazard_color": COLOR_GOLD,
-                "features": "Sorteia imprevisivelmente qualquer arena do jogo para o combate.",
-                "tactics": "Adapte sua estratégia instantaneamente ao cenário sorteado.",
+                "features": t("arena_random_features"),
+                "tactics": t("arena_random_tactics"),
                 "theme_color": (140, 120, 210),
             }
         ]
-        self._axis_x_held = False
 
     def handle_event(self, event) -> str | None:
         """
@@ -172,12 +186,15 @@ class ArenaSelectScreen:
         font_zen_tip = get_text_font(14)
 
         surface.fill(COLOR_BG)
+        
+        # Desenhar moldura decorativa tipo pergaminho
+        draw_scroll_frame(surface, margin_top=100, margin_bottom=90, margin_sides=20)
 
         # 1. Título Superior
-        header_surf = font_oriental_title.render("SELEÇÃO DE ARENA", True, COLOR_GOLD)
+        header_surf = font_oriental_title.render(t("select_arena_title"), True, COLOR_GOLD)
         surface.blit(header_surf, (SCREEN_WIDTH // 2 - header_surf.get_width() // 2, 24))
 
-        sub_surf = font_zen_sub.render("Escolha o campo de honra para o duelo mortal", True, (175, 180, 175))
+        sub_surf = font_zen_sub.render(t("select_arena_subtitle"), True, (175, 180, 175))
         surface.blit(sub_surf, (SCREEN_WIDTH // 2 - sub_surf.get_width() // 2, 68))
 
         # 2. Renderização dos 3 Cards
@@ -236,23 +253,23 @@ class ArenaSelectScreen:
             pygame.draw.line(surface, (50, 60, 55), (draw_rect.x + 18, preview_rect.bottom + 65), (draw_rect.right - 18, preview_rect.bottom + 65), 1)
 
             # Nível de Perigo
-            hz_label = font_zen_body.render("Perigo:", True, (160, 160, 165))
+            hz_label = font_zen_body.render(t("arena_hazard_label"), True, (160, 160, 165))
             hz_val = font_zen_body.render(arena["hazard_level"], True, arena["hazard_color"])
             surface.blit(hz_label, (draw_rect.x + 18, preview_rect.bottom + 76))
             surface.blit(hz_val, (draw_rect.x + 75, preview_rect.bottom + 76))
 
             # Recursos e Táticas
-            ft_label = font_zen_body.render("Cenário:", True, COLOR_GOLD)
+            ft_label = font_zen_body.render(t("arena_features_label"), True, COLOR_GOLD)
             surface.blit(ft_label, (draw_rect.x + 18, preview_rect.bottom + 106))
             self._draw_multiline_text(surface, arena["features"], draw_rect.x + 18, preview_rect.bottom + 128, card_w - 36, font_zen_body, (200, 205, 200))
 
-            tc_label = font_zen_body.render("Dica Tática:", True, (130, 210, 240))
+            tc_label = font_zen_body.render(t("arena_tactics_label"), True, (130, 210, 240))
             surface.blit(tc_label, (draw_rect.x + 18, preview_rect.bottom + 185))
             self._draw_multiline_text(surface, arena["tactics"], draw_rect.x + 18, preview_rect.bottom + 207, card_w - 36, font_zen_body, (175, 185, 180))
 
             # Badge [ SELECIONADO ]
             if is_sel:
-                badge_surf = font_zen_sub.render("◄ SELECIONADO ►", True, COLOR_GOLD)
+                badge_surf = font_zen_sub.render(t("arena_selected_badge"), True, COLOR_GOLD)
                 badge_bg = pygame.Rect(draw_rect.centerx - badge_surf.get_width() // 2 - 10, draw_rect.bottom - 32, badge_surf.get_width() + 20, 22)
                 pygame.draw.rect(surface, (20, 24, 22), badge_bg, border_radius=4)
                 pygame.draw.rect(surface, COLOR_GOLD, badge_bg, 1, border_radius=4)
@@ -262,10 +279,10 @@ class ArenaSelectScreen:
         start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 65, 320, 42)
         pygame.draw.rect(surface, (30, 45, 35), start_btn, border_radius=8)
         pygame.draw.rect(surface, COLOR_GOLD, start_btn, 2, border_radius=8)
-        btn_text = font_oriental_btn.render("INICIAR BATALHA [ENTER]", True, COLOR_GOLD)
+        btn_text = font_oriental_btn.render(t("arena_start_button"), True, COLOR_GOLD)
         surface.blit(btn_text, (start_btn.centerx - btn_text.get_width() // 2, start_btn.centery - btn_text.get_height() // 2))
 
-        tip_s = font_zen_tip.render("[A/D ou Setas] Mudar Arena  |  [ESC] Voltar aos Personagens", True, (160, 165, 160))
+        tip_s = font_zen_tip.render(t("arena_navigation_hint"), True, (160, 165, 160))
         surface.blit(tip_s, (SCREEN_WIDTH // 2 - tip_s.get_width() // 2, SCREEN_HEIGHT - 16))
 
     def _render_arena_mini_preview(self, surface: pygame.Surface, arena_id: str, rect: pygame.Rect):

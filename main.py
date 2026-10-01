@@ -61,11 +61,15 @@ from src.entities.musketeer import Musketeer
 from src.entities.ai_controller import SamuraiAI
 from src.entities.pickups import PowderPouch
 from src.combat.collision import CombatSystem
+from src.combat.clash_system import ClashSystem
 from src.effects.particles import AmbientLeafParticle, SparkParticle, BloodParticle, FloatingBanner, SmokeParticle
 from src.effects.cinematic_director import CinematicDirector
+from src.ui.round_intro import RoundIntroScreen
+from src.ui.round_result import RoundResultScreen, check_match_winner, render_round_pips, MATCH_WINS_NEEDED
 from src.ui.settings_menu import SettingsMenu, format_key_name
 from src.ui.character_select import CharacterSelectScreen
 from src.ui.title_screen import SumieTitleScreen
+from src.ui.opening_video import OpeningVideoScreen
 from src.ui.arena_select import ArenaSelectScreen
 from src.ui.loading_screen import LoadingScreen
 from src.ui.fonts import get_title_font, get_text_font
@@ -74,11 +78,24 @@ from src.input import get_controller_manager, TouchControls, DisplayScaler
 from src.input.controls_storage import load_controls_config, save_controls_config
 from src.audio import SoundManager, SoundEvent, MusicTrack
 
+from enum import Enum
+
 # Estados Globais do Jogo
-STATE_TITLE = "TITLE"
-STATE_CHAR_SELECT = "SELECT"
-STATE_ARENA_SELECT = "ARENA_SELECT"
-STATE_DUEL_PLAYING = "PLAYING"
+class GameState(Enum):
+    """Máquina de estados unificada para o jogo."""
+    OPENING_VIDEO = "opening_video"
+    TITLE = "title"
+    CHARACTER_SELECT = "character_select"
+    ARENA_SELECT = "arena_select"
+    DUEL_PLAYING = "duel_playing"
+    DUEL_RESULT = "duel_result"
+
+# Compatibilidade com código existente
+STATE_OPENING_VIDEO = GameState.OPENING_VIDEO.value
+STATE_TITLE = GameState.TITLE.value
+STATE_CHAR_SELECT = GameState.CHARACTER_SELECT.value
+STATE_ARENA_SELECT = GameState.ARENA_SELECT.value
+STATE_DUEL_PLAYING = GameState.DUEL_PLAYING.value
 
 def create_fighter(char_id: str, wx: float, wy: float):
     """Fábrica de lutadores com base no ID escolhido."""
@@ -158,7 +175,7 @@ def get_fighter_action_labels(fighter):
     elif isinstance(fighter, Kabuki):
         return "Leques de Aço", "Kawarimi Decoy"
     elif isinstance(fighter, KyudoArcher):
-        return "Puxar Yumi", "Flecha Corda"
+        return "Flecha Yumi", "Hamaya Sagrada"
     elif isinstance(fighter, PirateSwordswoman):
         return "Alfanje 180°", "Pólvora nos Olhos"
     elif isinstance(fighter, Musketeer):
@@ -237,6 +254,9 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
         return {"name": "Kawarimi", "timer": timer, "max_cd": cd, "color": (210, 70, 150)}
 
     elif isinstance(fighter, KyudoArcher):
+        h_timer = max(0.0, getattr(fighter, "hamaya_cooldown_timer", 0.0))
+        if h_timer > 0:
+            return {"name": "Hamaya", "timer": h_timer, "max_cd": getattr(fighter, "hamaya_cooldown", 3.6), "color": (255, 215, 60)}
         r_timer = max(0.0, getattr(fighter, "rope_timer", 0.0))
         if r_timer > 0:
             return {"name": "Flecha Corda", "timer": r_timer, "max_cd": getattr(fighter, "rope_cooldown", 2.0), "color": (210, 185, 120)}
@@ -245,7 +265,7 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
             return {"name": "Flecha Yumi", "timer": a_timer, "max_cd": getattr(fighter, "arrow_cooldown", 1.20), "color": (100, 215, 140)}
         timer = max(0.0, getattr(fighter, "ofuda_cooldown_timer", 0.0))
         cd = getattr(fighter, "ofuda_cooldown", 3.2)
-        return {"name": "Barreira Kami", "timer": timer, "max_cd": cd, "color": (130, 230, 180)}
+        return {"name": "Hamaya", "timer": h_timer, "max_cd": getattr(fighter, "hamaya_cooldown", 3.6), "color": (255, 215, 60)}
 
     elif isinstance(fighter, PirateSwordswoman):
         timer = max(0.0, getattr(fighter, "cannon_cooldown_timer", 0.0))
@@ -371,8 +391,8 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
         fighter.trigger_dokukiri(aim_x, aim_y, poison_clouds)
         play_sfx(SoundEvent.POISON_BREATH)
     elif isinstance(fighter, KyudoArcher):
-        # Tomoe: Barreira dos Ventos Kami (3 Ofudas defensivos em órbita)
-        fighter.trigger_ofuda_barrier()
+        # Tomoe: Flecha Ritual Sagrada Hamaya (破魔矢)
+        fighter.trigger_hamaya_shot(aim_x, aim_y, projectiles, particles=particles)
         play_sfx(SoundEvent.BOW_RELEASE)
     elif isinstance(fighter, PirateSwordswoman):
         # Anne Bonny: Naval Artillery Strike (Hold & release orbital cannonball)
@@ -516,20 +536,25 @@ def run_game():
     if touch_controls and "touch_mode" in saved_cfg:
         touch_controls.mode = saved_cfg["touch_mode"]
 
-    settings_menu = SettingsMenu(controls, touch_controls=touch_controls)
+    ai_difficulty = saved_cfg.get("ai_difficulty", "normal")
+    settings_menu = SettingsMenu(controls, touch_controls=touch_controls, ai_difficulty=ai_difficulty)
 
     loading_screen.update(0.50, "Carregando atmosfera Sumi-e e tela inicial...", delay_ms=40)
     title_screen = SumieTitleScreen()
 
     loading_screen.update(0.72, "Carregando retratos e atributos dos 12 guerreiros...", delay_ms=50)
-    char_select_screen = CharacterSelectScreen()
+    char_select_screen = CharacterSelectScreen(ai_difficulty=ai_difficulty)
 
     loading_screen.update(0.90, "Sintonizando arenas e cenários dinâmicos...", delay_ms=40)
     arena_select_screen = ArenaSelectScreen()
 
     loading_screen.update(1.0, "Pronto! Entrando no Bakumatsu...", delay_ms=60)
 
-    game_state = STATE_TITLE
+    opening_screen = OpeningVideoScreen()
+    if not opening_screen.is_finished:
+        game_state = STATE_OPENING_VIDEO
+    else:
+        game_state = STATE_TITLE
     selected_arena_id = ARENA_KYOTO
 
     # Dados da Partida
@@ -545,7 +570,10 @@ def run_game():
     camera = None
     combat_system = CombatSystem()
     cinematic_director = CinematicDirector()
-    ai = SamuraiAI()
+    clash_system = ClashSystem()
+    round_intro = RoundIntroScreen()
+    round_result_screen = RoundResultScreen()
+    ai = SamuraiAI(difficulty=ai_difficulty)
 
     particles = []
     banners = []
@@ -560,11 +588,14 @@ def run_game():
     game_time = 0.0
     round_start_timer = 1.8
     round_start_shaken = False
+    round_intro_timer = 0.0
+    match_winner = None
+    round_number = 1
 
     static_render_queue = []
 
     def start_new_match():
-        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, round_winner, round_start_timer, round_start_shaken, powder_pouches, decoys, poison_clouds, powder_traps, static_render_queue
+        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, round_winner, round_start_timer, round_start_shaken, round_intro_timer, powder_pouches, decoys, poison_clouds, powder_traps, static_render_queue
         if selected_arena_id == ARENA_KYOTO:
             game_map = KyotoMap()
             (p1_wx, p1_wy), (p2_wx, p2_wy) = get_kyoto_arena_spawns(game_map, min_distance=7.0)
@@ -591,25 +622,81 @@ def run_game():
         round_winner = None
         round_start_timer = 1.8
         round_start_shaken = False
+        round_intro_timer = 2.0
         cinematic_director.reset_round()
         static_render_queue = build_static_render_queue(game_map)
+        round_intro.start(
+            p1.name, p2.name,
+            p1_color=get_fighter_color(p1), p2_color=get_fighter_color(p2),
+            round_label=f"RODADA {round_number}"
+        )
         if selected_arena_id == ARENA_KYOTO:
             sound_mgr.play_music(MusicTrack.KYOTO_THEME)
         else:
             sound_mgr.play_music(MusicTrack.BAMBOO_THEME)
+
+    def request_rematch():
+        """Entregável 5.3: reinicia a partida inteira (placar e rounds zerados) após o fim de uma partida Melhor-de-3."""
+        nonlocal score_p1, score_p2, match_winner, round_number
+        score_p1 = 0
+        score_p2 = 0
+        match_winner = None
+        round_number = 1
+        round_result_screen.hide()
+        start_new_match()
+
+    def request_next_round():
+        """Entregável 5.3: avança para o próximo round da mesma partida (placar preservado)."""
+        nonlocal round_number
+        round_number += 1
+        start_new_match()
+
+    def request_restart():
+        """Ponto único de reinício: decide entre revanche completa (partida encerrada) ou próximo round."""
+        if match_winner is not None:
+            if round_result_screen.can_accept_rematch():
+                request_rematch()
+        else:
+            request_next_round()
 
     sound_mgr = SoundManager.get_instance()
     audio_cfg = saved_cfg.get("audio", {})
     sound_mgr.set_master_volume(audio_cfg.get("master", 1.0))
     sound_mgr.set_sfx_volume(audio_cfg.get("sfx", 1.0))
     sound_mgr.set_bgm_volume(audio_cfg.get("bgm", 0.7))
-    sound_mgr.play_music(MusicTrack.TITLE_THEME)
+    if game_state == STATE_TITLE:
+        sound_mgr.play_music(MusicTrack.TITLE_THEME)
 
     running = True
 
     while running:
         dt = clock.tick(FPS) / 1000.0
         dt = min(dt, 0.05)
+
+        # -------------------------------------------------------------
+        # VÍDEO CINEMATOGRÁFICO DE ABERTURA
+        # -------------------------------------------------------------
+        if game_state == STATE_OPENING_VIDEO:
+            for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
+                if event.type == pygame.QUIT:
+                    running = False
+                    opening_screen.stop()
+                else:
+                    if opening_screen.handle_event(event):
+                        game_state = STATE_TITLE
+                        sound_mgr.play_music(MusicTrack.TITLE_THEME)
+                        break
+
+            if game_state == STATE_OPENING_VIDEO:
+                opening_screen.update(dt)
+                if opening_screen.is_finished:
+                    game_state = STATE_TITLE
+                    sound_mgr.play_music(MusicTrack.TITLE_THEME)
+                else:
+                    opening_screen.render(screen)
+                    pygame.display.flip()
+                    continue
 
         # -------------------------------------------------------------
         # TELA DE TÍTULO SUMI-E & SELETOR DE MODOS
@@ -623,6 +710,9 @@ def run_game():
                     else:
                         settings_menu.handle_event(event)
                 settings_menu.update(dt)
+                if not settings_menu.is_open:
+                    char_select_screen.ai_difficulty = settings_menu.ai_difficulty
+                    ai.set_difficulty(settings_menu.ai_difficulty)
                 title_screen.render(screen, font_large, font_mid, font_small)
                 settings_menu.render(screen, font_large, font_mid, font_small)
                 pygame.display.flip()
@@ -669,6 +759,8 @@ def run_game():
                     elif start_match:
                         play_sfx(SoundEvent.MENU_SELECT)
                         p1_char_id, p2_char_id, vs_ai_mode = char_select_screen.get_selected_characters()
+                        ai.set_difficulty(char_select_screen.ai_difficulty)
+                        settings_menu.ai_difficulty = char_select_screen.ai_difficulty
                         game_state = STATE_ARENA_SELECT
 
             char_select_screen.update(dt)
@@ -693,6 +785,11 @@ def run_game():
                     elif arena_choice in (ARENA_BAMBOO, ARENA_KYOTO):
                         play_sfx(SoundEvent.MENU_SELECT)
                         selected_arena_id = arena_choice
+                        score_p1 = 0
+                        score_p2 = 0
+                        match_winner = None
+                        round_number = 1
+                        round_result_screen.hide()
                         start_new_match()
                         game_state = STATE_DUEL_PLAYING
 
@@ -713,6 +810,9 @@ def run_game():
                     settings_menu.handle_event(event)
 
             settings_menu.update(dt)
+            if not settings_menu.is_open:
+                char_select_screen.ai_difficulty = settings_menu.ai_difficulty
+                ai.set_difficulty(settings_menu.ai_difficulty)
             settings_menu.render(screen, font_large, font_mid, font_small)
             pygame.display.flip()
             continue
@@ -747,8 +847,11 @@ def run_game():
         p1_dwx, p1_dwy = input_to_world_direction(p1_active_dir[0], p1_active_dir[1])
         p2_dwx, p2_dwy = input_to_world_direction(p2_active_dir[0], p2_active_dir[1])
 
-        # Atualização do Temporizador de Abertura de Round e Tremor de Tela (Item 10)
-        if round_start_timer > -0.5:
+        # Atualização da Cinemática de Abertura de Round (Entregável 5.2) e do
+        # Temporizador de Abertura de Round com Tremor de Tela (Item 10)
+        if round_intro_timer > 0:
+            round_intro_timer -= dt
+        elif round_start_timer > -0.5:
             round_start_timer -= dt
             if round_start_timer <= 0.6 and not round_start_shaken:
                 camera.add_shake(4.5)
@@ -757,8 +860,8 @@ def run_game():
                 play_sfx(SoundEvent.ROUND_START)
                 round_start_shaken = True
 
-        # Bloqueio de movimentação durante abertura do round (Item 10)
-        if round_start_timer > 0:
+        # Bloqueio de movimentação durante a cinemática de abertura e o início do round (Item 10 / Entregável 5.2)
+        if round_start_timer > 0 or round_intro_timer > 0:
             p1_dwx, p1_dwy = 0.0, 0.0
             p2_dwx, p2_dwy = 0.0, 0.0
 
@@ -776,14 +879,21 @@ def run_game():
                     settings_menu.open()
                 elif event.key == KEY_RESTART:
                     if round_winner is not None:
-                        start_new_match()
+                        request_restart()
                 elif event.key == KEY_TOGGLE_AI:
                     vs_ai_mode = not vs_ai_mode
 
                 # Ao terminar um duelo, permitir que Quadrado / Ação Primária reinicie o duelo (mas nunca com duelo em andamento)
                 if round_winner is not None:
                     if event.key in (KEY_RESTART, controls["P1_ATTACK"], controls["P2_ATTACK"]):
-                        start_new_match()
+                        request_restart()
+
+                # Entregável 5.1: registra o aperto do botão de ataque durante o Choque de Espadas (QTE "STRIKE!")
+                if clash_system.is_frozen():
+                    if event.key == controls["P1_ATTACK"]:
+                        clash_system.register_press(0)
+                    elif event.key == controls["P2_ATTACK"]:
+                        clash_system.register_press(1)
 
                 # Comandos Jogador 1 (Teclado)
                 if p1.is_alive and round_winner is None and round_start_timer <= 0:
@@ -818,7 +928,13 @@ def run_game():
                         ctrl_mgr.is_event_action(event, 0, "attack") or
                         ctrl_mgr.is_event_action(event, 1, "restart") or
                         ctrl_mgr.is_event_action(event, 1, "attack")):
-                        start_new_match()
+                        request_restart()
+                elif clash_system.is_frozen():
+                    # Entregável 5.1: registra o botão de ataque/confirmação durante o Choque de Espadas (QTE "STRIKE!")
+                    if ctrl_mgr.is_event_action(event, 0, "attack"):
+                        clash_system.register_press(0)
+                    if ctrl_mgr.is_event_action(event, 1, "attack"):
+                        clash_system.register_press(1)
                 elif p1.is_alive and round_winner is None and round_start_timer <= 0:
                     if ctrl_mgr.is_event_action(event, 0, "attack"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
@@ -847,7 +963,7 @@ def run_game():
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
                 if round_winner is not None:
-                    start_new_match()
+                    request_restart()
                 else:
                     settings_btn_rect = pygame.Rect(SCREEN_WIDTH - 210, SCREEN_HEIGHT - 44, 180, 28)
                     if settings_btn_rect.collidepoint(mx, my):
@@ -969,10 +1085,11 @@ def run_game():
                     f.is_holding_shield = False
                     f.is_spinning_chain = False
 
-        # Suporte ao congelamento dramático de cinema samurai
+        # Suporte ao congelamento dramático de cinema samurai e ao Choque de Espadas (Entregável 5.1)
         is_cinematic_freeze = cinematic_director.is_frozen()
+        is_clash_freeze = clash_system.is_frozen()
 
-        if not is_cinematic_freeze:
+        if not is_cinematic_freeze and not is_clash_freeze:
             # Movimento Jogador 1
             if hasattr(p1, "apply_gatotsu_steering") and p1.state == "GATOTSU_CHARGE":
                 p1.apply_gatotsu_steering(p1_dwx, p1_dwy, dt)
@@ -990,7 +1107,7 @@ def run_game():
                     p2.apply_movement(p2_dwx, p2_dwy, dt, game_map)
 
         # Atualizações dos combatentes e coletáveis
-        if not is_cinematic_freeze:
+        if not is_cinematic_freeze and not is_clash_freeze:
             # Atualização de perigos da Arena de Kyoto (Carruagens e Escombros)
             if isinstance(game_map, KyotoMap):
                 game_map.update(dt, [p1, p2], camera, particles, banners, cinematic_director)
@@ -1022,6 +1139,8 @@ def run_game():
                     f.update(dt, game_map, particles)
                 elif isinstance(f, (Rifleman, Kabuki, Musketeer, GrayNinja)):
                     f.update(dt, game_map, particles)
+                elif isinstance(f, BlueSamurai):
+                    f.update(dt, game_map, particles, projectiles)
                 elif isinstance(f, KyudoArcher):
                     f.update(dt, game_map, particles, projectiles)
                 else:
@@ -1047,8 +1166,11 @@ def run_game():
         # Atualizar Diretor Cinematográfico (Temporizadores e Corpos Voxel)
         cinematic_director.update(dt, game_map, particles)
 
+        # Atualizar Choque de Espadas Tsubazeriai (Entregável 5.1: QTE "STRIKE!")
+        clash_system.update(dt, camera=camera, particles=particles, banners=banners, ctrl_mgr=ctrl_mgr)
+
         # Processar Combate & Projéteis
-        winner = combat_system.process_combat(p1, p2, game_map, particles, banners, camera, projectiles, dt, cinematic_director=cinematic_director, decoys=decoys, ctrl_mgr=ctrl_mgr)
+        winner = combat_system.process_combat(p1, p2, game_map, particles, banners, camera, projectiles, dt, cinematic_director=cinematic_director, decoys=decoys, ctrl_mgr=ctrl_mgr, clash_system=clash_system)
         if winner and round_winner is None:
             round_winner = winner
             ctrl_mgr.rumble_player(0, 0.7, 1.0, 260)
@@ -1076,6 +1198,16 @@ def run_game():
             elif not p1.is_alive and not p2.is_alive:
                 round_winner = "DRAW"
                 play_sfx(SoundEvent.ROUND_WIN)
+
+        # Entregável 5.3: Contador Best of 3 (BO3) — verifica se a partida terminou
+        if round_winner is not None and match_winner is None:
+            mw = check_match_winner(score_p1, score_p2)
+            if mw is not None:
+                match_winner = mw
+                winner_fighter = p1 if mw == "P1" else p2
+                round_result_screen.show(winner_fighter.name.upper(), get_fighter_color(winner_fighter), score_p1, score_p2)
+
+        round_result_screen.update(dt)
 
         # Câmera segue o ponto médio
         mid_x = (p1.wx + p2.wx) / 2.0
@@ -1204,6 +1336,9 @@ def run_game():
         for banner in banners:
             banner.render(screen, camera, font_mid)
 
+        # Entregável 5.1: Choque de Espadas Tsubazeriai (QTE "STRIKE!")
+        clash_system.render(screen, camera)
+
         # Aplicar filtro Kurosawa Noir (Flash preto e branco de cinema samurai com sangue vívido)
         cinematic_director.apply_cinematic_filter(screen)
 
@@ -1311,6 +1446,9 @@ def run_game():
         p2_title = font_mid.render(f"{score_p2}  {p2_name}", True, p2_color)
         screen.blit(p1_title, (panel_rect.x + 20, panel_rect.y + 10))
         screen.blit(p2_title, (panel_rect.right - p2_title.get_width() - 20, panel_rect.y + 10))
+
+        # Entregável 5.3: Marcadores (pips) de rounds vencidos — Melhor-de-3 (BO3)
+        render_round_pips(screen, score_p1, score_p2, p1_color, p2_color, panel_rect=panel_rect)
 
         mode_text = t("mode_hud_1p") if vs_ai_mode else t("mode_hud_2p")
         mode_surf = font_small.render(mode_text, True, COLOR_GOLD)
@@ -1540,8 +1678,8 @@ def run_game():
 
                 screen.blit(banner_surf, (center_x - card_w // 2, center_y - card_h // 2))
 
-        # Banner de Vitória
-        if round_winner:
+        # Banner de Vitória (oculto quando a partida Melhor-de-3 já foi decidida — ver tela de resultados abaixo)
+        if round_winner and match_winner is None:
             if round_winner == "DRAW":
                 w_msg = t("draw_text")
                 w_color = COLOR_GOLD
@@ -1556,6 +1694,18 @@ def run_game():
             center_y = SCREEN_HEIGHT // 2 - 40
             screen.blit(v_surf, (center_x - v_surf.get_width() // 2, center_y))
             screen.blit(sub_surf, (center_x - sub_surf.get_width() // 2, center_y + 48))
+
+        # Entregável 5.2: Rotação suave de câmera + pergaminho vertical Sumi-E na abertura do round
+        if round_intro_timer > 0:
+            angle = round_intro.get_rotation_angle(round_intro_timer)
+            if abs(angle) >= 0.05:
+                rotated_screen = round_intro.apply_rotation(screen, round_intro_timer)
+                screen.blit(rotated_screen, (0, 0))
+            round_intro.render(screen, round_intro_timer)
+
+        # Entregável 5.3: Tela final de partida Melhor-de-3 (com revanche rápida via Espaço)
+        if match_winner is not None:
+            round_result_screen.render(screen)
 
         pygame.display.flip()
 

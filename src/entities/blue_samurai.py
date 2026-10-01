@@ -10,22 +10,23 @@ from src.config import (
     COLOR_BLUE_AURA, COLOR_STEEL, COLOR_GOLD, COLOR_WHITE, COLOR_BLACK
 )
 from src.entities.samurai import (
-    Samurai, STATE_IDLE, STATE_WALK, STATE_WINDUP,
+    Samurai, STATE_IDLE, STATE_WALK, STATE_WINDUP, STATE_DASH,
     STATE_ATTACK, STATE_RECOVERY, STATE_PARRY, STATE_STUNNED, STATE_DEAD, STATE_ROLL
 )
 from src.entities.voxel_models import render_voxel_humanoid
+from src.entities.projectile import MusashiWaveProjectile
 
 class BlueSamurai(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Musashi")
-        self.speed = 4.0  # Rebalanceamento: aumentado de 3.6 para melhorar aproximação contra zoners
+        self.speed = 4.0  # Mantém velocidade original
         
-        # Rebalanceamento B: Musashi com 3 HP (requer 3 acertos em vez de 2)
+        # Musashi com 3 HP
         self.max_hp = 3
         self.hp = 3
 
         # Parâmetros do Combo Manual de 3 Cortes (Item 12)
-        # Rebalanceamento: reduzido para aumentar velocidade de ataque (+1: ataque mais rápido)
+        # Rebalanceamento: mantido em 0.35s (velocidade otimizada)
         self.windup_duration = 0.35  # Era 0.42s
         self.hit_duration = 0.10  # Era 0.12s
         self.combo_step = 0               # 1, 2 ou 3
@@ -37,6 +38,9 @@ class BlueSamurai(Samurai):
         self.parry_timer = 0.0
         # Rebalanceamento: aumentado para 0.28s (+4: janela de reflexão estendida para melhor reação)
         self.parry_reflect_active_timer = 0.0
+        
+        # Soft Stun (quando acertado por ataque 2-dano): bloqueia ataques mas permite movimento/esquiva
+        self.soft_stun_timer = 0.0
 
         # Ângulos visuais das lâminas
         self.blade_l_angle = 0.0
@@ -54,7 +58,37 @@ class BlueSamurai(Samurai):
             and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY)
             and self.roll_recovery_timer <= 0
             and self.dash_recovery_timer <= 0
+            and self.soft_stun_timer <= 0  # Soft stun impede ataques
         )
+
+    def take_hit(self, slash_dir: tuple[float, float], damage: int = 2) -> tuple[bool, bool]:
+        """Override para aplicar soft stun em lugar de stun normal em acertos de 2-dano."""
+        if not self.is_alive:
+            return False, False
+
+        # Se estiver em esquiva / roll com i-frames ativos
+        if self.state in (STATE_ROLL, STATE_DASH, "SHUKUCHI", "KAWARIMI_ROLL", "DODGE") and (self.is_invulnerable_dodge or getattr(self, "is_invulnerable_dodge", False)):
+            return False, False
+
+        # Se estiver em postura de parry e de frente para o ataque
+        if self.state == STATE_PARRY:
+            dot = self.facing_x * slash_dir[0] + self.facing_y * slash_dir[1]
+            if dot < -0.2: # O ataque veio de frente!
+                return False, False # Defendido com sucesso!
+
+        self.hp -= damage
+        if self.hp <= 0:
+            self.hp = 0
+            self.is_alive = False
+            self.state = STATE_DEAD
+            self.state_timer = 0.0
+            return True, True
+        else:
+            # Dano parcial OU 2-dano completo: aplicar soft stun (bloqueia ataque mas permite movimento/esquiva)
+            self.soft_stun_timer = 0.40  # Janela de soft stun: 0.40s
+            self.hitbox_active = False
+            self.is_invulnerable_dodge = False
+            return True, False
 
     def trigger_combo_attack(self, target_wx: float, target_wy: float):
         """Dispara ou encadeia os 3 ataques em sequência manual e ritmada (Item 12)."""
@@ -95,12 +129,8 @@ class BlueSamurai(Samurai):
         self.state = STATE_PARRY
         self.state_timer = 0.45
         self.parry_reflect_active_timer = 0.28  # Janela de reflexão: 0.28s (ótimo + rebalanceamento)
-    def stun(self, duration: float = 0.8):
-        """Rebalanceamento: Musashi se recupera mais rápido de atordoamento (-2: reduz stun duration)."""
-        # Reduz stun duration em 40% para permitir counter-ataque mais rápido
-        reduced_duration = duration * 0.6
-        super().stun(reduced_duration)
-    def update(self, dt: float, game_map, particles=None):
+
+    def update(self, dt: float, game_map, particles=None, projectiles=None):
         """Atualiza a lógica e os golpes do combo manual de Musashi."""
         if not self.is_alive:
             return
@@ -109,6 +139,8 @@ class BlueSamurai(Samurai):
         self.update_dodge_timers(dt)
         if self.combo_window_timer > 0:
             self.combo_window_timer -= dt
+        if self.soft_stun_timer > 0:
+            self.soft_stun_timer -= dt
 
         if self.state == STATE_ATTACK:
             self.state_timer -= dt
@@ -147,6 +179,18 @@ class BlueSamurai(Samurai):
                     self.state_timer = 0.18
                     self.hitbox_active = True
                     self.hitbox_radius = 1.45 if self.combo_step == 2 else 1.85
+                    
+                    # Dispara onda azul no terceiro ataque
+                    if self.combo_step == 3 and projectiles is not None:
+                        wave = MusashiWaveProjectile(
+                            wx=self.wx + self.facing_x * 0.5,
+                            wy=self.wy + self.facing_y * 0.5,
+                            wz=0.45,
+                            dir_x=self.facing_x,
+                            dir_y=self.facing_y,
+                            owner=self
+                        )
+                        projectiles.append(wave)
                 else:
                     # Se NÃO pressionou consecutivamente, para o combo aqui e entra em recovery
                     self.state = STATE_RECOVERY

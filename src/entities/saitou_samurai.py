@@ -58,10 +58,19 @@ class SaitouSamurai(Samurai):
         self.zeroshiki_recovery = 0.35
         self.zeroshiki_phase = "NONE" # "WINDUP", "ACTIVE", "RECOVERY"
 
+        # Terceira Ação: Esquiva Pesada Tradicional
+        self.is_agile_dodge = False
+        self.roll_speed = 8.5
+        self.roll_duration = 0.20
+        self.roll_recovery_duration = 0.18
+        self.roll_cooldown_duration = 0.38
+
     def can_act(self) -> bool:
         return (
-            self.is_alive and
-            self.state not in (STATE_GATOTSU_CHARGE, STATE_BRAKING, STATE_ZEROSHIKI, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD)
+            self.is_alive
+            and self.state not in (STATE_GATOTSU_CHARGE, STATE_BRAKING, STATE_ZEROSHIKI, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD)
+            and self.roll_recovery_timer <= 0
+            and self.dash_recovery_timer <= 0
         )
 
     def trigger_gatotsu_thrust(self, target_wx: float, target_wy: float):
@@ -158,6 +167,7 @@ class SaitouSamurai(Samurai):
             return
 
         self.update_stealth(game_map)
+        self.update_dodge_timers(dt)
 
         if self.slow_timer > 0:
             self.slow_timer -= dt

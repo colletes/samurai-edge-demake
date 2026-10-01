@@ -17,6 +17,58 @@ class CinematicDirector:
         self.pending_corpse = None
         self.corpses = []  # Lista de corpos voxel persistentes na partida
 
+        # Cache de Kanjis de corte fatal Kurosawa (Entregável 3.2)
+        self.cached_kanji_surf: pygame.Surface | None = None
+        self.current_kanji_text: str = ""
+        self.current_kanji_subtitle: str = ""
+
+    def _build_kanji_overlay(self, attacker=None, victim=None, death_style: str = ""):
+        """Gera e cacheia a textura de caligrafia Sumi-E dos kanjis de corte fatal."""
+        import random
+        from src.ui.fonts import get_text_font
+
+        # Pool de expressões clássicas de cinema samurai
+        phrases = [
+            ("一刀両断", "ITTOU RYOUDAN — CORTE CERTEIRO"),
+            ("決闘終焉", "KETTOU SHUUEN — FIM DO DUELO"),
+            ("神速必殺", "SHINSOKU HISSATSU — GOLPE DIVINO"),
+            ("生死一瞬", "SEISHI ISSHUN — VIDA E MORTE"),
+        ]
+        kanji_str, sub_str = random.choice(phrases)
+        self.current_kanji_text = kanji_str
+        self.current_kanji_subtitle = sub_str
+
+        font_kanji = get_text_font(72)
+        font_sub = get_text_font(18)
+
+        # Renderizar textos
+        kanji_shadow = font_kanji.render(kanji_str, True, (12, 12, 16))
+        kanji_main = font_kanji.render(kanji_str, True, (245, 245, 240))
+        sub_shadow = font_sub.render(sub_str, True, (12, 12, 16))
+        sub_main = font_sub.render(sub_str, True, (225, 60, 50))
+
+        kw = max(kanji_main.get_width() + 40, sub_main.get_width() + 50)
+        kh = kanji_main.get_height() + sub_main.get_height() + 24
+
+        overlay = pygame.Surface((kw, kh), pygame.SRCALPHA)
+
+        # Selo tradicional de nanquim (Inkan estilizado vermelho à esquerda)
+        seal_rect = pygame.Rect(4, 12, 6, kh - 24)
+        pygame.draw.rect(overlay, (190, 40, 40, 220), seal_rect, border_radius=2)
+
+        # Desenhar kanjis com sombra de alto contraste
+        kx = (kw - kanji_main.get_width()) // 2
+        overlay.blit(kanji_shadow, (kx + 3, 6))
+        overlay.blit(kanji_main, (kx, 4))
+
+        # Desenhar subtítulo
+        sx = (kw - sub_main.get_width()) // 2
+        sy = kanji_main.get_height() + 8
+        overlay.blit(sub_shadow, (sx + 2, sy + 2))
+        overlay.blit(sub_main, (sx, sy))
+
+        self.cached_kanji_surf = overlay
+
     def trigger_fatal_strike(self, attacker, victim, death_style: str, slash_dir: tuple[float, float]):
         """Dispara a sequência de cinema samurai no golpe letal."""
         self.is_active = True
@@ -29,6 +81,9 @@ class CinematicDirector:
         victim.state = "DYING_FREEZE"
         victim.state_timer = 0.50
 
+        # Gerar o banner de Kanji Kurosawa Sumi-E em cache
+        self._build_kanji_overlay(attacker, victim, death_style)
+
         # Preparar o corpo voxel que se manifestará após o atraso
         from src.entities.voxel_corpse import VoxelCorpse
         self.pending_corpse = VoxelCorpse(victim, death_style, slash_dir)
@@ -36,13 +91,13 @@ class CinematicDirector:
     def update(self, dt: float, game_map, particles: list = None):
         """Atualiza os temporizadores cinematográficos e a física dos corpos."""
         if self.freeze_timer > 0:
-            self.freeze_timer -= dt
+            self.freeze_timer = max(0.0, self.freeze_timer - dt)
 
         if self.bw_flash_timer > 0:
-            self.bw_flash_timer -= dt
+            self.bw_flash_timer = max(0.0, self.bw_flash_timer - dt)
 
         if self.delayed_death_timer > 0:
-            self.delayed_death_timer -= dt
+            self.delayed_death_timer = max(0.0, self.delayed_death_timer - dt)
             if self.delayed_death_timer <= 0 and self.pending_corpse:
                 # O suspense acabou: O corpo se parte e o geiser explode!
                 if self.pending_corpse.victim:
@@ -82,6 +137,14 @@ class CinematicDirector:
         pygame.draw.rect(vignette, (10, 10, 15, int(alpha * 0.45)), (0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), width=35)
         surface.blit(vignette, (0, 0))
 
+        # Renderizar kanjis Kurosawa Sumi-E sobrepostos no topo central da tela
+        if self.cached_kanji_surf is not None:
+            kanji_alpha = int(min(255, (self.bw_flash_timer / self.bw_flash_duration) * 255))
+            self.cached_kanji_surf.set_alpha(kanji_alpha)
+            kx = (SCREEN_WIDTH - self.cached_kanji_surf.get_width()) // 2
+            ky = 55
+            surface.blit(self.cached_kanji_surf, (kx, ky))
+
     def reset_round(self):
         """Limpa estados transitórios mantendo manchas de sangue se desejado."""
         self.is_active = False
@@ -90,3 +153,6 @@ class CinematicDirector:
         self.delayed_death_timer = 0.0
         self.pending_corpse = None
         self.corpses.clear()
+        self.cached_kanji_surf = None
+        self.current_kanji_text = ""
+        self.current_kanji_subtitle = ""

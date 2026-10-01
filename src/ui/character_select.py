@@ -79,6 +79,149 @@ def draw_brush_divider(surface, x1: int, y: int, x2: int, color = (90, 85, 80)):
         pygame.draw.line(surface, color, (x, y - thickness // 2), (x, y + thickness // 2))
 
 
+def _draw_landscape_left(surface, base_x: int, base_y: int, color: tuple):
+    """Desenha árvore estilizada Sumi-E no lado esquerdo da moldura."""
+    # Tronco principal (linhas verticais paralelas)
+    pygame.draw.line(surface, color, (base_x + 2, base_y), (base_x + 2, base_y + 80), 2)
+    pygame.draw.line(surface, (color[0] - 30, color[1] - 30, color[2] - 30), (base_x + 5, base_y + 2), (base_x + 5, base_y + 78), 1)
+    
+    # Ramos principais (pinceladas angulares)
+    pygame.draw.line(surface, color, (base_x + 2, base_y + 20), (base_x - 8, base_y + 10), 1)
+    pygame.draw.line(surface, color, (base_x + 2, base_y + 35), (base_x - 6, base_y + 28), 1)
+    pygame.draw.line(surface, color, (base_x + 2, base_y + 50), (base_x - 10, base_y + 45), 1)
+    pygame.draw.line(surface, color, (base_x + 2, base_y + 25), (base_x + 12, base_y + 15), 1)
+    pygame.draw.line(surface, color, (base_x + 2, base_y + 45), (base_x + 14, base_y + 38), 1)
+    pygame.draw.line(surface, color, (base_x + 2, base_y + 60), (base_x + 10, base_y + 55), 1)
+    
+    # Folhagem (pinceladas circulares aglomeradas)
+    for ox, oy, r in [(-10, 8, 8), (-8, 22, 7), (-12, 38, 9), (12, 12, 8), (14, 35, 7), (10, 52, 8)]:
+        pygame.draw.circle(surface, (color[0] + 20, color[1] + 20, color[2] + 20), (base_x + ox, base_y + oy), r, 1)
+
+
+def _draw_landscape_right(surface, base_x: int, base_y: int, color: tuple):
+    """Desenha árvore estilizada Sumi-E no lado direito da moldura."""
+    # Tronco principal (linhas verticais paralelas)
+    pygame.draw.line(surface, color, (base_x - 2, base_y), (base_x - 2, base_y + 80), 2)
+    pygame.draw.line(surface, (color[0] - 30, color[1] - 30, color[2] - 30), (base_x - 5, base_y + 2), (base_x - 5, base_y + 78), 1)
+    
+    # Ramos principais (pinceladas angulares, espelhados)
+    pygame.draw.line(surface, color, (base_x - 2, base_y + 20), (base_x + 8, base_y + 10), 1)
+    pygame.draw.line(surface, color, (base_x - 2, base_y + 35), (base_x + 6, base_y + 28), 1)
+    pygame.draw.line(surface, color, (base_x - 2, base_y + 50), (base_x + 10, base_y + 45), 1)
+    pygame.draw.line(surface, color, (base_x - 2, base_y + 25), (base_x - 12, base_y + 15), 1)
+    pygame.draw.line(surface, color, (base_x - 2, base_y + 45), (base_x - 14, base_y + 38), 1)
+    pygame.draw.line(surface, color, (base_x - 2, base_y + 60), (base_x - 10, base_y + 55), 1)
+    
+    # Folhagem (pinceladas circulares aglomeradas)
+    for ox, oy, r in [(10, 8, 8), (8, 22, 7), (12, 38, 9), (-12, 12, 8), (-14, 35, 7), (-10, 52, 8)]:
+        pygame.draw.circle(surface, (color[0] + 20, color[1] + 20, color[2] + 20), (base_x + ox, base_y + oy), r, 1)
+
+
+def format_command_text(command_str: str, max_width: int = 155, font = None) -> str:
+    """
+    Formata texto de comando para caber na caixa de controles.
+    Se necessário, trunca com reticências.
+    Exemplo: "[E] Iai Flash (Ataque)" -> "[E] Iai Flash"
+    """
+    if not command_str or not font:
+        return command_str
+    
+    # Tentar remover a descrição entre parênteses para economizar espaço
+    import re
+    # Remove " (palavra)" no final, e.g., " (Ataque)" ou " (Attack)"
+    simplified = re.sub(r'\s*\([^)]+\)\s*$', '', command_str)
+    
+    # Se ainda for muito longo, truncar com "..."
+    while font.size(simplified)[0] > max_width and len(simplified) > 5:
+        simplified = simplified[:-1]
+    
+    if font.size(simplified)[0] > max_width:
+        simplified = simplified[:20] + "..."
+    
+    return simplified
+
+
+def draw_scroll_frame(surface, margin_top: int = 100, margin_bottom: int = 90, margin_sides: int = 20):
+    """
+    Desenha uma moldura decorativa tipo pergaminho nos lados da tela,
+    com paisagem Sumi-E (árvores) inspirada na imagem de referência.
+    """
+    # Cores inspiradas em pergaminho antigo e ornamentos de madeira
+    scroll_color = (245, 235, 215)
+    scroll_dark = (210, 195, 170)
+    ornament_color = (160, 140, 110)
+    shadow_color = (100, 95, 90)
+    highlight_color = (255, 255, 245)
+    landscape_color = (140, 130, 120)
+    
+    # Função local para desenhar rolete com mais detalhes
+    def draw_rolete_detailed(x, y):
+        pygame.draw.circle(surface, ornament_color, (x, y), 8)
+        pygame.draw.circle(surface, shadow_color, (x, y), 8, 2)
+        pygame.draw.circle(surface, highlight_color, (x - 2, y - 3), 2)  # Realce
+        pygame.draw.circle(surface, (180, 160, 140), (x, y), 5, 1)  # Padrão concêntrico
+    
+    # === COLUNA ESQUERDA ===
+    left_x = margin_sides - 8
+    left_rect = pygame.Rect(left_x, margin_top, 16, SCREEN_HEIGHT - margin_top - margin_bottom)
+    
+    # Fundo principal
+    pygame.draw.rect(surface, scroll_color, left_rect)
+    
+    # Padrão de madeira: linhas verticais paralelas
+    for x_off in [1, 5, 9, 13]:
+        pygame.draw.line(surface, (230, 220, 200), (left_x + x_off, margin_top), (left_x + x_off, SCREEN_HEIGHT - margin_bottom), 1)
+    
+    # Pequenas linhas decorativas (padrão grid sutil)
+    for y in range(margin_top, SCREEN_HEIGHT - margin_bottom, 12):
+        pygame.draw.line(surface, ornament_color, (left_x + 2, y), (left_x + 14, y), 1)
+    
+    # Sombra interna (borda esquerda)
+    pygame.draw.line(surface, shadow_color, (left_x, margin_top), (left_x, SCREEN_HEIGHT - margin_bottom), 2)
+    # Borda direita (highlight)
+    pygame.draw.line(surface, highlight_color, (left_x + 15, margin_top), (left_x + 15, SCREEN_HEIGHT - margin_bottom), 1)
+    
+    # Rolete de madeira no topo e base
+    draw_rolete_detailed(left_x + 8, margin_top - 8)
+    draw_rolete_detailed(left_x + 8, SCREEN_HEIGHT - margin_bottom + 8)
+    
+    # Paisagem Sumi-E (árvore) no lado esquerdo
+    _draw_landscape_left(surface, left_x - 12, margin_top + 50, landscape_color)
+    
+    # === COLUNA DIREITA ===
+    right_x = SCREEN_WIDTH - margin_sides - 8
+    right_rect = pygame.Rect(right_x, margin_top, 16, SCREEN_HEIGHT - margin_top - margin_bottom)
+    
+    # Fundo principal
+    pygame.draw.rect(surface, scroll_color, right_rect)
+    
+    # Padrão de madeira: linhas verticais paralelas
+    for x_off in [1, 5, 9, 13]:
+        pygame.draw.line(surface, (230, 220, 200), (right_x + x_off, margin_top), (right_x + x_off, SCREEN_HEIGHT - margin_bottom), 1)
+    
+    # Pequenas linhas decorativas (padrão grid sutil)
+    for y in range(margin_top, SCREEN_HEIGHT - margin_bottom, 12):
+        pygame.draw.line(surface, ornament_color, (right_x + 2, y), (right_x + 14, y), 1)
+    
+    # Sombra interna (borda direita)
+    pygame.draw.line(surface, shadow_color, (right_x + 16, margin_top), (right_x + 16, SCREEN_HEIGHT - margin_bottom), 2)
+    # Borda esquerda (highlight)
+    pygame.draw.line(surface, highlight_color, (right_x, margin_top), (right_x, SCREEN_HEIGHT - margin_bottom), 1)
+    
+    # Rolete de madeira no topo e base
+    draw_rolete_detailed(right_x + 8, margin_top - 8)
+    draw_rolete_detailed(right_x + 8, SCREEN_HEIGHT - margin_bottom + 8)
+    
+    # Paisagem Sumi-E (árvore) no lado direito
+    _draw_landscape_right(surface, right_x + 24, margin_top + 50, landscape_color)
+    
+    # === LINHAS DECORATIVAS HORIZONTAIS ===
+    # Linha no topo (abaixo do título)
+    draw_brush_divider(surface, margin_sides + 16, margin_top + 35, SCREEN_WIDTH - margin_sides - 16, color=ornament_color)
+    # Linha na base (acima do botão)
+    draw_brush_divider(surface, margin_sides + 16, SCREEN_HEIGHT - margin_bottom - 8, SCREEN_WIDTH - margin_sides - 16, color=ornament_color)
+
+
 def draw_sumie_card(surface, rect: pygame.Rect, is_p1: bool, is_p2: bool, vs_ai: bool, sel_step: str, anim_time: float):
     """Desenha a moldura de um card de guerreiro no estilo pergaminho e nanquim Sumi-E."""
     card_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
@@ -165,12 +308,13 @@ class PreviewCamera:
 
 
 class CharacterSelectScreen:
-    def __init__(self):
+    def __init__(self, ai_difficulty: str = "normal"):
         self.p1_choice_idx = 0  # Kenshin
         self.p2_choice_idx = 1  # Musashi
         self.p1_ready = False
         self.p2_ready = False
         self.vs_ai = True
+        self.ai_difficulty = ai_difficulty if ai_difficulty in ("easy", "normal", "hard") else "normal"
         self.selection_step = "P1"  # "P1" -> "AI" (no modo 1P vs IA)
         self.focus_zone = "GRID"    # "GRID" ou "MODE_BTN"
         self._axis_x_held_p1 = False
@@ -184,6 +328,7 @@ class CharacterSelectScreen:
         self.help_btn_rect = pygame.Rect(SCREEN_WIDTH - 250, 14, 226, 32)
         self.lang_btn_rect = pygame.Rect(SCREEN_WIDTH - 365, 14, 96, 32)
         self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 190, 52, 380, 32)
+        self.difficulty_btn_rect = pygame.Rect(0, 0, 0, 0)
         self.start_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 210, SCREEN_HEIGHT - 64, 420, 44)
         self.card_rects: list[pygame.Rect] = []
         self.info_btn_rects: list[pygame.Rect] = []
@@ -216,154 +361,178 @@ class CharacterSelectScreen:
                 "size": random.uniform(1.5, 3.5),
                 "alpha": random.randint(60, 180)
             })
-        self.characters = [
+        self._characters_lang = None
+        self._characters_cache = []
+
+    @property
+    def characters(self):
+        # Reconstrói os textos quando o idioma muda
+        lang = get_lang()
+        if self._characters_lang != lang:
+            self._characters_cache = self._build_characters()
+            self._characters_lang = lang
+        return self._characters_cache
+
+    def _build_characters(self):
+        return [
             {
                 "id": CHAR_KENSHIN,
-                "name": "KENSHI",
-                "title": "Retalhadora",
-                "style": "Iai & Shukuchi",
+                "name": t("char_kenshi_name"),
+                "title": t("char_kenshi_title"),
+                "style": t("char_kenshi_style"),
                 "color": COLOR_RED_AURA,
-                "speed_stars": "[5/5] MAX",
-                "damage_desc": "1-Hit Kill Instantâneo",
-                "special_desc": "Shukuchi (Relâmpago)",
-                "keys_p1": "[E] Iai | [R] Dash",
-                "keys_p2": "[U] Iai | [I] Dash",
+                "speed_stars": t("char_kenshi_speed"),
+                "damage_desc": t("char_kenshi_damage"),
+                "special_desc": t("char_kenshi_special"),
+                "keys_p1": t("char_kenshi_keys_p1"),
+                "keys_p2": t("char_kenshi_keys_p2"),
             },
             {
                 "id": CHAR_MUSASHI,
-                "name": "MUSASHI",
-                "title": "Duas Lâminas",
-                "style": "Niten Ichi-ryu",
+                "name": t("char_musashi_name"),
+                "title": t("char_musashi_title"),
+                "style": t("char_musashi_style"),
                 "color": COLOR_BLUE_AURA,
-                "speed_stars": "[2/5] Firme",
-                "damage_desc": "Combo 3-Cortes",
-                "special_desc": "Defesa (Parry)",
-                "keys_p1": "[E] Golpe | [R] Parry",
-                "keys_p2": "[U] Golpe | [I] Parry",
+                "speed_stars": t("char_musashi_speed"),
+                "damage_desc": t("char_musashi_damage"),
+                "special_desc": t("char_musashi_special"),
+                "keys_p1": t("char_musashi_keys_p1"),
+                "keys_p2": t("char_musashi_keys_p2"),
             },
             {
                 "id": CHAR_NINJA,
-                "name": "HANZO",
-                "title": "Ninja Mestre",
-                "style": "Ninjutsu & Kunai",
+                "name": t("char_hanzo_name"),
+                "title": t("char_hanzo_title"),
+                "style": t("char_hanzo_style"),
                 "color": COLOR_YELLOW_AURA,
-                "speed_stars": "[5/5] MAX",
-                "damage_desc": "Tanto / Kunai Aérea",
-                "special_desc": "Salto Parabólico",
-                "keys_p1": "[E] Tanto/Kunai | [R] Salto",
-                "keys_p2": "[U] Tanto/Kunai | [I] Salto",
+                "speed_stars": t("char_hanzo_speed"),
+                "damage_desc": t("char_hanzo_damage"),
+                "special_desc": t("char_hanzo_special"),
+                "keys_p1": t("char_hanzo_keys_p1"),
+                "keys_p2": t("char_hanzo_keys_p2"),
             },
             {
                 "id": CHAR_AMERICAN,
-                "name": "JOE",
-                "title": "American Ninja",
-                "style": "Tático & Cão",
+                "name": t("char_joe_name"),
+                "title": t("char_joe_title"),
+                "style": t("char_joe_style"),
                 "color": (255, 130, 45),
-                "speed_stars": "[4/5] Ágil",
-                "damage_desc": "Shuriken (Stun)",
-                "special_desc": "Doberman (1-Hit Kill)",
-                "keys_p1": "[E] Shuriken | [R] Cão",
-                "keys_p2": "[U] Shuriken | [I] Cão",
+                "speed_stars": t("char_joe_speed"),
+                "damage_desc": t("char_joe_damage"),
+                "special_desc": t("char_joe_special"),
+                "keys_p1": t("char_joe_keys_p1"),
+                "keys_p2": t("char_joe_keys_p2"),
             },
             {
                 "id": CHAR_SAITOU,
-                "name": "SAITOU",
-                "title": "Lobo de Mibu",
-                "style": "Gatotsu Shinsen",
+                "name": t("char_saitou_name"),
+                "title": t("char_saitou_title"),
+                "style": t("char_saitou_style"),
                 "color": COLOR_SAITOU_LIGHT_BLUE,
-                "speed_stars": "[5/5] Impulso",
-                "damage_desc": "1-Hit Acelerado",
-                "special_desc": "Zeroshiki (Curto)",
-                "keys_p1": "[E] Gatotsu | [R] Zero",
-                "keys_p2": "[U] Gatotsu | [I] Zero",
+                "speed_stars": t("char_saitou_speed"),
+                "damage_desc": t("char_saitou_damage"),
+                "special_desc": t("char_saitou_special"),
+                "keys_p1": t("char_saitou_keys_p1"),
+                "keys_p2": t("char_saitou_keys_p2"),
             },
             {
                 "id": CHAR_RIFLE,
-                "name": "TEPPO",
-                "title": "Marksman",
-                "style": "Arcabuz Feudal",
+                "name": t("char_teppo_name"),
+                "title": t("char_teppo_title"),
+                "style": t("char_teppo_style"),
                 "color": (225, 170, 100),
-                "speed_stars": "[3/5] Cadência",
-                "damage_desc": "Tiro Fatal (1-Hit)",
-                "special_desc": "Carregar Pólvora",
-                "keys_p1": "[E] Tiro | [R] Recarga",
-                "keys_p2": "[U] Tiro | [I] Recarga",
+                "speed_stars": t("char_teppo_speed"),
+                "damage_desc": t("char_teppo_damage"),
+                "special_desc": t("char_teppo_special"),
+                "keys_p1": t("char_teppo_keys_p1"),
+                "keys_p2": t("char_teppo_keys_p2"),
             },
             {
                 "id": CHAR_PURPLE,
-                "name": "MURASAKI",
-                "title": "Kunoichi Foice",
-                "style": "Kusarigama",
+                "name": t("char_murasaki_name"),
+                "title": t("char_murasaki_title"),
+                "style": t("char_murasaki_style"),
                 "color": COLOR_PURPLE_AURA,
-                "speed_stars": "[4/5] Ágil",
-                "damage_desc": "Precedência Absoluta",
-                "special_desc": "Puxão de Corrente",
-                "keys_p1": "[E] Foice | [R] Puxar",
-                "keys_p2": "[U] Foice | [I] Puxar",
+                "speed_stars": t("char_murasaki_speed"),
+                "damage_desc": t("char_murasaki_damage"),
+                "special_desc": t("char_murasaki_special"),
+                "keys_p1": t("char_murasaki_keys_p1"),
+                "keys_p2": t("char_murasaki_keys_p2"),
             },
             {
                 "id": CHAR_GRAY,
-                "name": "KASUMI",
-                "title": "Kunoichi Névoa",
-                "style": "Pólvora & Fumaça",
+                "name": t("char_kasumi_name"),
+                "title": t("char_kasumi_title"),
+                "style": t("char_kasumi_style"),
                 "color": (165, 180, 190),
-                "speed_stars": "[4/5] Ágil",
-                "damage_desc": "Bomba Arco (Auto)",
-                "special_desc": "Fumaça (Slow + Fuga)",
-                "keys_p1": "[E] Bomba | [R] Fumaça",
-                "keys_p2": "[U] Bomba | [I] Fumaça",
+                "speed_stars": t("char_kasumi_speed"),
+                "damage_desc": t("char_kasumi_damage"),
+                "special_desc": t("char_kasumi_special"),
+                "keys_p1": t("char_kasumi_keys_p1"),
+                "keys_p2": t("char_kasumi_keys_p2"),
             },
             {
                 "id": CHAR_KABUKI,
-                "name": "OKUNI",
-                "title": "Mestra Kabuki",
-                "style": "Sopro Tóxico",
+                "name": t("char_okuni_name"),
+                "title": t("char_okuni_title"),
+                "style": t("char_okuni_style"),
                 "color": (240, 115, 30),
-                "speed_stars": "[4/5] Ágil",
-                "damage_desc": "Veneno (10s Morte)",
-                "special_desc": "Pirueta Evasiva",
-                "keys_p1": "[E] Sopro | [R] Esquiva",
-                "keys_p2": "[U] Sopro | [I] Esquiva",
+                "speed_stars": t("char_okuni_speed"),
+                "damage_desc": t("char_okuni_damage"),
+                "special_desc": t("char_okuni_special"),
+                "keys_p1": t("char_okuni_keys_p1"),
+                "keys_p2": t("char_okuni_keys_p2"),
             },
             {
                 "id": CHAR_ARCHER,
-                "name": "TOMOE",
-                "title": "Arqueira Miko",
-                "style": "Arco Yumi",
+                "name": t("char_tomoe_name"),
+                "title": t("char_tomoe_title"),
+                "style": t("char_tomoe_style"),
                 "color": (110, 195, 135),
-                "speed_stars": "[4/5] Ágil",
-                "damage_desc": "Flecha Letal (1-Hit)",
-                "special_desc": "Flecha de Corda",
-                "keys_p1": "[E] Yumi | [R] Corda",
-                "keys_p2": "[U] Yumi | [I] Corda",
+                "speed_stars": t("char_tomoe_speed"),
+                "damage_desc": t("char_tomoe_damage"),
+                "special_desc": t("char_tomoe_special"),
+                "keys_p1": t("char_tomoe_keys_p1"),
+                "keys_p2": t("char_tomoe_keys_p2"),
             },
             {
                 "id": CHAR_PIRATE,
-                "name": "ANNE",
-                "title": "Espadachim",
-                "style": "Alfanje & Pólvora",
+                "name": t("char_anne_name"),
+                "title": t("char_anne_title"),
+                "style": t("char_anne_style"),
                 "color": COLOR_PIRATE_AURA,
-                "speed_stars": "[4/5] Ágil",
-                "damage_desc": "Corte Amplo 180°",
-                "special_desc": "Pólvora nos Olhos",
-                "keys_p1": "[E] Alfanje | [R] Cegar",
-                "keys_p2": "[U] Alfanje | [I] Cegar",
+                "speed_stars": t("char_anne_speed"),
+                "damage_desc": t("char_anne_damage"),
+                "special_desc": t("char_anne_special"),
+                "keys_p1": t("char_anne_keys_p1"),
+                "keys_p2": t("char_anne_keys_p2"),
             },
             {
                 "id": CHAR_MUSKETEER,
-                "name": "JULIE",
-                "title": "Mosqueteira",
-                "style": "Florete Nobre",
+                "name": t("char_julie_name"),
+                "title": t("char_julie_title"),
+                "style": t("char_julie_style"),
                 "color": COLOR_MUSKETEER_AURA,
-                "speed_stars": "[5/5] Rápida",
-                "damage_desc": "Fleche Longo",
-                "special_desc": "Capa Riposte & Tiro",
-                "keys_p1": "[E] Florete | [R] Riposte",
-                "keys_p2": "[U] Florete | [I] Riposte",
+                "speed_stars": t("char_julie_speed"),
+                "damage_desc": t("char_julie_damage"),
+                "special_desc": t("char_julie_special"),
+                "keys_p1": t("char_julie_keys_p1"),
+                "keys_p2": t("char_julie_keys_p2"),
             }
         ]
 
-        self.card_rects: list[pygame.Rect] = []
+    def cycle_ai_difficulty(self):
+        """Alterna o nível de dificuldade da IA (Fácil -> Normal -> Difícil)."""
+        from src.audio.sound_manager import SoundManager
+        from src.audio.sound_events import SoundEvent
+        from src.input.controls_storage import load_controls_config, save_controls_config
+        from src.input.controller_manager import get_controller_manager
+        order = ["easy", "normal", "hard"]
+        cur_idx = order.index(self.ai_difficulty) if self.ai_difficulty in order else 1
+        self.ai_difficulty = order[(cur_idx + 1) % len(order)]
+        SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+        cfg = load_controls_config()
+        save_controls_config(cfg.get("keyboard", {}), get_controller_manager(), cfg.get("touch_mode", "auto"), audio_cfg=cfg.get("audio", {}), ai_difficulty=self.ai_difficulty)
 
     def reset(self):
         """Reinicia o fluxo de seleção para o início (P1)."""
@@ -616,6 +785,9 @@ class CharacterSelectScreen:
             elif event.key == pygame.K_l:
                 toggle_lang()
                 return False
+            elif event.key == pygame.K_g:
+                self.cycle_ai_difficulty()
+                return False
 
             # Teclado P1 (WASD)
             if event.key == pygame.K_a:
@@ -712,6 +884,9 @@ class CharacterSelectScreen:
                 self.p1_ready = False
                 self.p2_ready = False
                 return False
+            if self.vs_ai and self.difficulty_btn_rect.collidepoint(vx, vy):
+                self.cycle_ai_difficulty()
+                return False
             for idx, rect in enumerate(self.card_rects):
                 if rect.collidepoint(vx, vy):
                     if self.vs_ai:
@@ -756,6 +931,9 @@ class CharacterSelectScreen:
                     self.selection_step = "P1"
                     self.p1_ready = False
                     self.p2_ready = False
+                    return False
+                if self.vs_ai and self.difficulty_btn_rect.collidepoint(mx, my):
+                    self.cycle_ai_difficulty()
                     return False
                 for idx, rect in enumerate(self.card_rects):
                     if rect.collidepoint(mx, my):
@@ -824,6 +1002,9 @@ class CharacterSelectScreen:
         for p in self.particles:
             pygame.draw.circle(surface, (175, 170, 165), (int(p["x"]), int(p["y"])), int(p["size"]))
 
+        # Desenhar moldura decorativa tipo pergaminho
+        draw_scroll_frame(surface, margin_top=100, margin_bottom=90, margin_sides=20)
+
         # 3. TOPO: Título Sumi-E Nobre Centralizado
         header_y = 12
         title_text = t("select_title")
@@ -860,11 +1041,26 @@ class CharacterSelectScreen:
         help_label = "GUIA DO JOGO" if lang == LANG_PT else "GAME GUIDE"
         draw_kanban_menu_button(surface, font_zen_small, help_label, "[ H / ? ]", self.help_btn_rect, False, True, self.anim_timer)
 
-        # 4. Botão Modo de Jogo (Kanban laqueado com encaixes de ferro)
+        # 4. Botão Modo de Jogo & Dificuldade da IA (Kanban laqueado com encaixes de ferro)
         is_mode_focused = (self.focus_zone == "MODE_BTN")
-        self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 190, 52, 380, 32)
-        mode_text = ("MODO: 1P vs IA (TREINO)" if self.vs_ai else "MODO: 1P vs 2P (VERSUS)")
-        draw_kanban_menu_button(surface, font_zen_small, mode_text, "[ CIMA / BAIXO ]", self.mode_btn_rect, is_mode_focused, True, self.anim_timer)
+        if self.vs_ai:
+            self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 250, 52, 310, 32)
+            self.difficulty_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 + 70, 52, 180, 32)
+            mode_text = "MODO: 1P vs IA (TREINO)" if lang == LANG_PT else "MODE: 1P vs AI (TRAIN)"
+            draw_kanban_menu_button(surface, font_zen_small, mode_text, "[ CIMA/BAIXO ]", self.mode_btn_rect, is_mode_focused, True, self.anim_timer)
+
+            diff_names = {
+                "easy": "FÁCIL" if lang == LANG_PT else "EASY",
+                "normal": "NORMAL",
+                "hard": "DIFÍCIL" if lang == LANG_PT else "HARD"
+            }
+            d_name = diff_names.get(self.ai_difficulty, "NORMAL")
+            draw_kanban_menu_button(surface, font_zen_small, f"IA: {d_name}", "[ G ]", self.difficulty_btn_rect, False, True, self.anim_timer)
+        else:
+            self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 190, 52, 380, 32)
+            self.difficulty_btn_rect = pygame.Rect(0, 0, 0, 0)
+            mode_text = "MODO: 1P vs 2P (VERSUS)" if lang == LANG_PT else "MODE: 1P vs 2P (VERSUS)"
+            draw_kanban_menu_button(surface, font_zen_small, mode_text, "[ CIMA/BAIXO ]", self.mode_btn_rect, is_mode_focused, True, self.anim_timer)
 
         # 5. Banner Indicador de Etapa / Instrução
         step_y = 90
@@ -983,9 +1179,9 @@ class CharacterSelectScreen:
 
             # Atributos e Estatísticas
             stats_y = rect.y + 76
-            line_vel = font_zen_tiny.render(f"Vel: {char_info['speed_stars']}", True, COLOR_GOLD)
-            line_dmg = font_zen_tiny.render(f"Dano: {char_info['damage_desc']}", True, (240, 205, 195))
-            line_esp = font_zen_tiny.render(f"Esp: {char_info['special_desc']}", True, (200, 220, 240))
+            line_vel = font_zen_tiny.render(f"{t('char_stat_speed')}: {char_info['speed_stars']}", True, COLOR_GOLD)
+            line_dmg = font_zen_tiny.render(f"{t('char_stat_damage')}: {char_info['damage_desc']}", True, (240, 205, 195))
+            line_esp = font_zen_tiny.render(f"{t('char_stat_special')}: {char_info['special_desc']}", True, (200, 220, 240))
 
             surface.blit(line_vel, (rect.x + 8, stats_y))
             surface.blit(line_dmg, (rect.x + 8, stats_y + 18))
@@ -995,8 +1191,13 @@ class CharacterSelectScreen:
             ctrl_box = pygame.Rect(rect.x + 6, rect.bottom - 46, card_w - 38, 38)
             pygame.draw.rect(surface, COLOR_LACQUER_DARK, ctrl_box, border_radius=4)
             pygame.draw.rect(surface, (55, 50, 48), ctrl_box, 1, border_radius=4)
-            p1_key_label = font_zen_tiny.render(f"P1: {char_info['keys_p1']}", True, (255, 200, 180))
-            p2_key_label = font_zen_tiny.render(f"P2: {char_info['keys_p2']}", True, (180, 220, 255))
+            
+            # Formatar comandos para evitar overflow
+            p1_cmd = format_command_text(char_info['keys_p1'], max_width=ctrl_box.width - 8, font=font_zen_tiny)
+            p2_cmd = format_command_text(char_info['keys_p2'], max_width=ctrl_box.width - 8, font=font_zen_tiny)
+            
+            p1_key_label = font_zen_tiny.render(f"{t('p1_controls_prefix')}: {p1_cmd}", True, (255, 200, 180))
+            p2_key_label = font_zen_tiny.render(f"{t('p2_controls_prefix')}: {p2_cmd}", True, (180, 220, 255))
             surface.blit(p1_key_label, (ctrl_box.x + 4, ctrl_box.y + 3))
             surface.blit(p2_key_label, (ctrl_box.x + 4, ctrl_box.y + 19))
 

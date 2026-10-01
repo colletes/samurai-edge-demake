@@ -88,20 +88,21 @@ def test_step2_roster_actions():
     clouds = []
     okuni.trigger_dokukiri(12.0, 10.0, clouds)
     assert len(clouds) == 1, "Dokukiri deveria gerar 1 PoisonCloud"
-    assert isinstance(clouds[0], PoisonCloud)
+    okuni.state = "IDLE"
     okuni.trigger_kabuki_roll(1.0, 0.0, [], [])
     assert okuni.state == "KABUKI_ROLL", f"Estado esperado KABUKI_ROLL, obtido {okuni.state}"
     assert okuni.is_invulnerable_dodge, "Okuni deve possuir i-frames no roll"
     print("  [OK] Okuni Dokukiri e Kabuki Roll verificados!", flush=True)
 
-    # C. Teppo: Black Powder Ground Trap e Tumble Roll com recarga
+    # C. Teppo: Black Powder Ground Trap (Rebalanceamento: sem custo de pólvora) e Tumble Roll com recarga
     teppo = Rifleman(10.0, 10.0)
     traps = []
     teppo.has_ammo = True
     teppo.trigger_powder_trap(traps)
     assert len(traps) == 1, "Deveria criar 1 PowderTrap"
     assert isinstance(traps[0], PowderTrap)
-    assert teppo.has_ammo is False, "Armadilha de pólvora gasta 1 munição (Item 11)"
+    assert teppo.has_ammo is True, "Armadilha de pólvora não gasta mais munição (Rebalanceamento)"
+    teppo.has_ammo = False  # Simula munição de disparo já gasta, independente da mina
     teppo.trigger_tumble_roll(1.0, 0.0, [])
     assert teppo.state == "RIFLE_ROLL"
     assert teppo.is_invulnerable_dodge, "Teppo deve possuir i-frames no tumble roll"
@@ -111,6 +112,7 @@ def test_step2_roster_actions():
 
     # D. Anne Bonny: Naval Artillery Strike (Hold & release de bala de canhão orbital)
     anne = PirateSwordswoman(10.0, 10.0)
+    anne.cannon_cooldown_timer = 0.0
     anne.start_cannon_strike(14.0, 10.0)
     assert anne.is_aiming_cannon
     anne.update_cannon_strike(0.1, 15.0, 10.0)

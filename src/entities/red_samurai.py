@@ -11,7 +11,7 @@ from src.config import (
 )
 from src.entities.samurai import (
     Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY,
-    STATE_DASH, STATE_STUNNED, STATE_DEAD
+    STATE_DASH, STATE_STUNNED, STATE_DEAD, STATE_ROLL
 )
 from src.entities.voxel_models import render_voxel_humanoid
 from src.isometric.iso_math import world_to_iso
@@ -25,7 +25,7 @@ class RedSamurai(Samurai):
         # Parâmetros do Iai-jutsu
         self.dash_speed = 22.0
         self.dash_duration = 0.16   # Avanço supersônico
-        self.recovery_duration = 0.80 # Calibrado: cooldown justo embainhando a katana!
+        self.recovery_duration = 0.60 # Rebalanceamento: era 0.80 (punição excessiva quando usado como engajamento à distância)
         self.attack_range = 2.4
 
         # Ação Secundária: Ryuu Tsui Sen (竜槌閃 - Item 17)
@@ -35,12 +35,27 @@ class RedSamurai(Samurai):
         # Efeito visual de rastro de lâmina
         self.slash_trail_points: list[tuple[float, float]] = []
 
+        # Terceira Ação: Shukuchi Especial / Ágil
+        self.is_agile_dodge = True
+        self.roll_speed = 10.5
+        self.roll_duration = 0.22
+        self.roll_recovery_duration = 0.12
+        self.roll_cooldown_duration = 0.35
+        self.post_shukuchi_iframe_timer = 0.0
+
     def can_act(self) -> bool:
         """Kenshi só pode agir se estiver viva, em IDLE/WALK e sem recovery de dash/golpes."""
-        return self.is_alive and self.state in (STATE_IDLE, STATE_WALK) and self.dash_recovery_timer <= 0
+        return (
+            self.is_alive
+            and self.state in (STATE_IDLE, STATE_WALK)
+            and self.roll_recovery_timer <= 0
+            and self.dash_recovery_timer <= 0
+        )
 
     def can_move(self) -> bool:
         """Kenshi pode se mover livremente enquanto embainha a katana (STATE_RECOVERY)."""
+        if self.roll_recovery_timer > 0:
+            return False
         if self.state == STATE_RECOVERY:
             return self.is_alive
         return super().can_move()
@@ -101,12 +116,27 @@ class RedSamurai(Samurai):
                 particles.append(SparkParticle(self.wx, self.wy, 0.5, color=(240, 240, 255)))
 
     def trigger_tsuka_ate(self, target_wx: float, target_wy: float, particles: list = None, opponent = None, banners: list = None):
-        """Compatibilidade: redireciona para Ryuu Tsui Sen."""
-        self.trigger_ryuu_tsui_sen(target_wx, target_wy, particles=particles, banners=banners, opponent=opponent)
+        """Compatibilidade: executa Tsuka-ate de quebra de guarda ou redireciona para Ryuu Tsui Sen."""
+        if opponent is not None and banners is not None:
+            self.state = "TSUKA_ATE"
+            self.state_timer = 0.25
+            self.set_facing(target_wx, target_wy)
+            if hasattr(opponent, "stun"):
+                opponent.stun(0.40)
+            from src.effects.particles import FloatingBanner
+            banners.append(FloatingBanner("TSUKA-ATE! GUARD BREAK!", opponent.wx, opponent.wy, wz=1.75, color=(240, 210, 110)))
+        else:
+            self.trigger_ryuu_tsui_sen(target_wx, target_wy, particles=particles, banners=banners, opponent=opponent)
 
     def trigger_dash(self, dir_x: float, dir_y: float):
         """Terceira Ação: Passo Relâmpago Shukuchi (縮地) — Deslocamento veloz com pós-imagens e i-frames."""
-        if not self.is_alive or self.state not in (STATE_IDLE, STATE_WALK) or self.dash_recovery_timer > 0:
+        if (
+            not self.is_alive
+            or self.state not in (STATE_IDLE, STATE_WALK)
+            or self.roll_recovery_timer > 0
+            or self.roll_cooldown_timer > 0
+            or self.dash_recovery_timer > 0
+        ):
             return
         if dir_x == 0 and dir_y == 0:
             dir_x, dir_y = -self.facing_x, -self.facing_y # Recuo para trás
@@ -151,8 +181,11 @@ class RedSamurai(Samurai):
 
         if self.ryuu_timer > 0:
             self.ryuu_timer -= dt
-        if self.dash_recovery_timer > 0:
-            self.dash_recovery_timer -= dt
+        if self.post_shukuchi_iframe_timer > 0:
+            self.post_shukuchi_iframe_timer = max(0.0, self.post_shukuchi_iframe_timer - dt)
+            if self.post_shukuchi_iframe_timer <= 0 and self.state not in (STATE_ROLL, "SHUKUCHI", "RYUU_TSUI_SEN"):
+                self.is_invulnerable_dodge = False
+        self.update_dodge_timers(dt)
 
         if self.state == STATE_ATTACK:
             # Avanço relâmpago Iai
@@ -237,8 +270,11 @@ class RedSamurai(Samurai):
 
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
-                self.is_invulnerable_dodge = False
-                self.dash_recovery_timer = self.dash_recovery_duration
+                self.post_shukuchi_iframe_timer = 0.12
+                self.is_invulnerable_dodge = True
+                self.roll_recovery_timer = self.roll_recovery_duration
+                self.roll_cooldown_timer = self.roll_cooldown_duration
+                self.dash_recovery_timer = self.roll_recovery_duration
 
         elif self.state == "RYUU_TSUI_SEN":
             self.state_timer -= dt

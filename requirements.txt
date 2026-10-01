@@ -1,1 +1,12 @@
 pygame-ce>=2.5.0
+
+# Opcional: reprodução do vídeo de abertura cinematográfico (src/ui/opening_video.py).
+# O jogo funciona normalmente sem isso (a abertura é simplesmente pulada).
+# NÃO instale com "pip install -r requirements.txt" normal: o pacote "opencv-python"
+# (dependência padrão do pyvidplayer2) embute sua própria libSDL2 no macOS, que colide
+# em runtime com a libSDL2 do pygame ("Class X is implemented in both ... This may
+# cause spurious casting failures and mysterious crashes"). Instale manualmente assim,
+# usando a variante headless (sem libSDL2 embutida) e sem deixar o pip reinstalar a
+# variante com GUI:
+#   pip install --no-deps opencv-python-headless==4.10.0.84 sounddevice numpy
+#   pip install --no-deps pyvidplayer2==0.9.37

@@ -21,6 +21,9 @@ class Camera:
         self.shake_offset_x = 0.0
         self.shake_offset_y = 0.0
 
+        # Fator de zoom dramático (Fase 5.1: Clash de Espadas). 1.0 = sem zoom.
+        self.zoom = 1.0
+
     def add_shake(self, intensity: float):
         """Adiciona intensidade de tremor na tela (ex: golpes pesados, clash ou morte)."""
         self.shake_intensity = max(self.shake_intensity, intensity)
@@ -49,6 +52,9 @@ class Camera:
         iso_x, iso_y = world_to_iso(wx, wy, wz)
         cam_iso_x, cam_iso_y = world_to_iso(self.wx, self.wy, 0.0)
 
-        final_x = int(iso_x - cam_iso_x + self.screen_x + self.shake_offset_x)
-        final_y = int(iso_y - cam_iso_y + self.screen_y + self.shake_offset_y)
+        dx = (iso_x - cam_iso_x) * self.zoom
+        dy = (iso_y - cam_iso_y) * self.zoom
+
+        final_x = int(dx + self.screen_x + self.shake_offset_x)
+        final_y = int(dy + self.screen_y + self.shake_offset_y)
         return final_x, final_y

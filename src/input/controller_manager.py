@@ -702,14 +702,14 @@ class ControllerManager:
         if not ctrl:
             return ""
         if ctrl.controller_type == CONTROLLER_TYPE_DUALSENSE:
-            return "[🎮 DualSense PS5]"
+            return "[DualSense PS5]"
         elif ctrl.controller_type == CONTROLLER_TYPE_DUALSHOCK:
-            return "[🎮 DualShock 4 PS4]"
+            return "[DualShock 4 PS4]"
         elif ctrl.controller_type == CONTROLLER_TYPE_XBOX:
-            return "[🎮 Xbox Controller]"
+            return "[Xbox Controller]"
         elif ctrl.controller_type == CONTROLLER_TYPE_NINTENDO:
-            return "[🎮 Switch Pro]"
-        return f"[🎮 Genérico: {ctrl.name[:12]}]"
+            return "[Switch Pro]"
+        return f"[Controle: {ctrl.name[:12]}]"
 
     def get_mapped_button_name(self, player_idx: int, action: str) -> str:
         ctrl = self.get_controller_for_player(player_idx)

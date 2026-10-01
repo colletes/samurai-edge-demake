@@ -105,6 +105,37 @@ class MachiyaFacade:
             shift = rng.uniform(0.0, 10.0)
             self.flame_spots.append(DynamicFlameSpot(rx, ry, period, burn_time, max_h, shift))
 
+    def check_collision(self, px: float, py: float, p_radius: float = 0.3) -> tuple[bool, float, float]:
+        """Colisão de círculo (lutador) contra o retângulo (AABB) da fachada, mesmo padrão de Rock/Well/Tree."""
+        rect_min_x, rect_max_x = self.wx, self.wx + self.width
+        rect_min_y, rect_max_y = self.wy, self.wy + self.depth
+        closest_x = max(rect_min_x, min(px, rect_max_x))
+        closest_y = max(rect_min_y, min(py, rect_max_y))
+        dx = px - closest_x
+        dy = py - closest_y
+        dist = math.hypot(dx, dy)
+        if dist < p_radius:
+            if dist > 0.0001:
+                nx, ny = dx / dist, dy / dist
+                overlap = p_radius - dist
+            else:
+                # Centro já está dentro do retângulo: empurra pelo eixo de menor penetração
+                pen_left = px - rect_min_x
+                pen_right = rect_max_x - px
+                pen_top = py - rect_min_y
+                pen_bottom = rect_max_y - py
+                min_pen = min(pen_left, pen_right, pen_top, pen_bottom)
+                if min_pen == pen_left:
+                    nx, ny, overlap = -1.0, 0.0, pen_left + p_radius
+                elif min_pen == pen_right:
+                    nx, ny, overlap = 1.0, 0.0, pen_right + p_radius
+                elif min_pen == pen_top:
+                    nx, ny, overlap = 0.0, -1.0, pen_top + p_radius
+                else:
+                    nx, ny, overlap = 0.0, 1.0, pen_bottom + p_radius
+            return True, nx * overlap, ny * overlap
+        return False, 0.0, 0.0
+
     def render(self, surface: pygame.Surface, camera, time_val: float):
         alpha = 75 if self.is_transparent else 255
         roof_alpha = 65 if self.is_transparent else 255
@@ -426,6 +457,10 @@ class KyotoMap:
 
         self.carriage_timer = 2.5
         self.debris_timer = 1.2
+
+        # Faixa real caminhável (calçadas + meio-fio + rua), evita atravessar as fachadas
+        # das machiyas (x<=6 a oeste / x>=15 a leste) sem depender só da colisão AABB.
+        self.playable_bounds = (7.0, 1.0, 14.9, self.rows - 1.0)
 
         self._build_terrain()
         self._populate_buildings()

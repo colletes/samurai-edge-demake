@@ -3,6 +3,8 @@ Testes automatizados para validação do fluxo de confirmação do Jogador 2
 na tela de Seleção de Personagens quando o Jogador 1 está com o controle conectado.
 """
 import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 import unittest
 import pygame

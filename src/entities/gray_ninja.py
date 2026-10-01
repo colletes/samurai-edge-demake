@@ -28,8 +28,20 @@ class GrayNinja(Samurai):
         self.planted_mine = None
         self.stealth_timer = 0.0
 
+        # Terceira Ação: Esquiva Ágil Ninja
+        self.is_agile_dodge = True
+        self.roll_speed = 10.5
+        self.roll_duration = 0.22
+        self.roll_recovery_duration = 0.12
+        self.roll_cooldown_duration = 0.35
+
     def can_act(self) -> bool:
-        return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD) and self.dash_recovery_timer <= 0
+        return (
+            self.is_alive
+            and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD)
+            and self.roll_recovery_timer <= 0
+            and self.dash_recovery_timer <= 0
+        )
 
     def trigger_throw_bomb(self, target_wx: float, target_wy: float, projectiles: list):
         """Ataque Primário: Arremessa bomba em arco 3D (até 2 ativas). Detona por contato ou tempo."""
@@ -134,8 +146,7 @@ class GrayNinja(Samurai):
             self.smoke_timer -= dt
         if self.mine_timer > 0:
             self.mine_timer -= dt
-        if self.dash_recovery_timer > 0:
-            self.dash_recovery_timer -= dt
+        self.update_dodge_timers(dt)
 
         # Controle da janela de furtividade da bomba de fumaça
         if self.stealth_timer > 0:

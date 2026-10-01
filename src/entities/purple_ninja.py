@@ -31,9 +31,9 @@ class PurpleNinja(Samurai):
         self.chain_cooldown = 2.5
         self.chain_timer = 0.0
 
-        # Timers da animação de ataque (windup reduzido para 0.04s para resposta fulminante)
+        # Timers da animação de ataque (windup 0.04s, janela ativa ampliada para 0.22s - Entregável 4.2)
         self.windup_time = 0.04
-        self.active_time = 0.14
+        self.active_time = 0.22
         self.recovery_time = 0.28
 
         # Escudo de Corrente Hold & Release (Item 24)
@@ -42,8 +42,20 @@ class PurpleNinja(Samurai):
         self.is_holding_shield = False
         self.shield_spin_angle = 0.0
 
+        # Terceira Ação: Esquiva Ágil Shinobi
+        self.is_agile_dodge = True
+        self.roll_speed = 10.5
+        self.roll_duration = 0.22
+        self.roll_recovery_duration = 0.12
+        self.roll_cooldown_duration = 0.35
+
     def can_act(self) -> bool:
-        return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD) and self.dash_recovery_timer <= 0
+        return (
+            self.is_alive
+            and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD)
+            and self.roll_recovery_timer <= 0
+            and self.dash_recovery_timer <= 0
+        )
 
     def can_move(self) -> bool:
         if self.is_holding_shield:
@@ -159,9 +171,7 @@ class PurpleNinja(Samurai):
             return
 
         self.update_stealth(game_map)
-
-        if self.dash_recovery_timer > 0:
-            self.dash_recovery_timer -= dt
+        self.update_dodge_timers(dt)
 
         if not self.is_holding_shield:
             if self.chain_spin_timer > 0:

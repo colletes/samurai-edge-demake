@@ -28,6 +28,7 @@ from src.isometric.camera import Camera
 from src.combat.collision import CombatSystem
 from src.entities.ai_controller import SamuraiAI
 from src.entities.red_samurai import RedSamurai
+from src.entities.blue_samurai import BlueSamurai
 from src.entities.saitou_samurai import SaitouSamurai
 from src.entities.rifleman import Rifleman
 from src.entities.kabuki import Kabuki
@@ -61,6 +62,8 @@ def update_fighter(f, dt, game_map, particles, projectiles, powder_pouches=None,
         f.check_powder_pickup(powder_pouches, particles)
     if isinstance(f, KyudoArcher):
         f.update(dt, game_map, particles, projectiles)
+    elif isinstance(f, BlueSamurai):
+        f.update(dt, game_map, particles, projectiles)
     elif isinstance(f, PirateSwordswoman):
         f.update(dt, game_map, particles, opponent=opponent)
     elif isinstance(f, (RedSamurai, SaitouSamurai, Rifleman, Kabuki, Musketeer)):
@@ -68,15 +71,15 @@ def update_fighter(f, dt, game_map, particles, projectiles, powder_pouches=None,
     else:
         f.update(dt, game_map)
 
-def simulate_single_battle(c1_id: str, c2_id: str, game_map, max_time: float = 35.0, dt: float = 0.016):
+def simulate_single_battle(c1_id: str, c2_id: str, game_map, max_time: float = 35.0, dt: float = 0.016, difficulty: str = "normal"):
     """
     Simula um duelo headless entre dois personagens controlados por IA.
     Retorna: (winner_char_id, fight_duration, win_reason)
     """
     cam = Camera(11.0, 11.0)
     combat = CombatSystem()
-    ai1 = SamuraiAI()
-    ai2 = SamuraiAI()
+    ai1 = SamuraiAI(difficulty=difficulty)
+    ai2 = SamuraiAI(difficulty=difficulty)
 
     if isinstance(game_map, KyotoMap):
         (s1_x, s1_y), (s2_x, s2_y) = get_kyoto_arena_spawns(game_map, min_distance=7.0)
@@ -150,7 +153,7 @@ def simulate_single_battle(c1_id: str, c2_id: str, game_map, max_time: float = 3
             return c2_id, elapsed, "TIMEOUT_HP"
         return "DRAW", elapsed, "TIMEOUT_DRAW"
 
-def run_matchup(c1_id: str, c2_id: str, game_maps: list, battles_per_match: int = 24):
+def run_matchup(c1_id: str, c2_id: str, game_maps: list, battles_per_match: int = 24, difficulty: str = "normal"):
     """
     Executa uma série de batalhas distribuídas igualmente entre os cenários (game_maps),
     mantendo simetria estrita de posições (metade C1 como P1, metade C2 como P1 em cada arena).
@@ -173,7 +176,7 @@ def run_matchup(c1_id: str, c2_id: str, game_maps: list, battles_per_match: int 
 
         # Rodada 1: C1 como P1
         for _ in range(half):
-            w, t, _ = simulate_single_battle(c1_id, c2_id, g_map)
+            w, t, _ = simulate_single_battle(c1_id, c2_id, g_map, difficulty=difficulty)
             times.append(t)
             if w == c1_id:
                 wins_c1 += 1
@@ -187,7 +190,7 @@ def run_matchup(c1_id: str, c2_id: str, game_maps: list, battles_per_match: int 
 
         # Rodada 2: C2 como P1
         for _ in range(rem):
-            w, t, _ = simulate_single_battle(c2_id, c1_id, g_map)
+            w, t, _ = simulate_single_battle(c2_id, c1_id, g_map, difficulty=difficulty)
             times.append(t)
             if w == c1_id:
                 wins_c1 += 1
@@ -220,11 +223,11 @@ def run_matchup(c1_id: str, c2_id: str, game_maps: list, battles_per_match: int 
         "arena_stats": arena_stats
     }
 
-def run_full_tournament_simulation(battles_per_pair: int = 24):
+def run_full_tournament_simulation(battles_per_pair: int = 24, difficulty: str = "normal"):
     """
     Simula todas as combinações (C(12, 2) = 66 pares) com battles_per_pair batalhas cada,
     repartidas igualmente entre os cenários (Floresta de Bambu e Kyoto Bakumatsu).
-    Total = 66 * 24 = 1.584 batalhas.
+    Total = 66 * 24 = 1.584 batalhas. Ambas as IAs usam o mesmo nível de `difficulty`.
     """
     game_maps = [
         ("Floresta de Bambu", GameMap()),
@@ -243,6 +246,7 @@ def run_full_tournament_simulation(battles_per_pair: int = 24):
     print(f" INICIANDO SIMULAÇÃO DE TORNEIO HEADLESS AUTOMATIZADO MULTI-CENÁRIOS")
     print(f" Roster: {n} Lutadores | Combinações: {total_pairs} | Lutas por Par: {battles_per_pair}")
     print(f" Cenários: {', '.join(name for name, _ in game_maps)}")
+    print(f" Dificuldade da IA: {difficulty.upper()}")
     print(f" Total de Batalhas Simuladas: {total_battles}")
     print("=" * 78)
 
@@ -256,7 +260,7 @@ def run_full_tournament_simulation(battles_per_pair: int = 24):
     start_time = time.time()
     for idx, (c1, c2) in enumerate(pairs, 1):
         pair_key = f"{c1}_vs_{c2}"
-        res = run_matchup(c1, c2, game_maps, battles_per_match=battles_per_pair)
+        res = run_matchup(c1, c2, game_maps, battles_per_match=battles_per_pair, difficulty=difficulty)
         matchups[pair_key] = res
 
         # Registrar na matriz bidirecional global
@@ -337,7 +341,8 @@ def run_full_tournament_simulation(battles_per_pair: int = 24):
         "arena_matrix": arena_matrix,
         "standings": standings,
         "total_battles": total_battles,
-        "sim_time": round(total_sim_time, 2)
+        "sim_time": round(total_sim_time, 2),
+        "difficulty": difficulty
     }
 
 # ==============================================================================
@@ -491,9 +496,12 @@ def generate_balance_report(tournament_data, merge_sorted_roster, output_path: s
             return "C (Desfavorecido / Técnico)"
         return "D (Underpowered / Crítico)"
 
+    difficulty = tournament_data.get("difficulty", "normal")
+
     lines = []
     lines.append("# Relatório Detalhado de Balanceamento & Merge Sort de Duelos Simulados")
     lines.append(f"\n> **Métricas Globais da Simulação**:")
+    lines.append(f"> - Dificuldade da IA (ambos os lutadores): **{difficulty.upper()}**")
     lines.append(f"> - Total de Guerreiros Avaliados: 12")
     lines.append(f"> - Combinações Únicas de Duelos: 66 confrontos $\\binom{{12}}{{2}}$")
     lines.append(f"> - Volume de Lutas por Combinação: 24 batalhas simétricas (12 com P1/P2 alternados)")
@@ -610,23 +618,34 @@ def main():
         except ValueError:
             pass
 
-    tournament_data = run_full_tournament_simulation(battles_per_pair)
+    difficulty = "normal"
+    if len(sys.argv) > 2 and sys.argv[2].lower() in ("easy", "normal", "hard"):
+        difficulty = sys.argv[2].lower()
+
+    tournament_data = run_full_tournament_simulation(battles_per_pair, difficulty=difficulty)
     merge_sorted_roster, merge_logs = run_merge_sort_tournament(tournament_data)
 
     # Exportar JSON bruto para persistência e auditoria
     export_payload = {
+        "difficulty": difficulty,
         "total_battles": tournament_data["total_battles"],
         "sim_time": tournament_data["sim_time"],
         "standings": tournament_data["standings"],
         "merge_sorted_roster": merge_sorted_roster,
         "matchups": tournament_data["matchups"]
     }
-    with open("tournament_results.json", "w", encoding="utf-8") as f:
+    # Preserva os nomes de arquivo originais para a dificuldade padrão (normal);
+    # usa sufixo para easy/hard para não sobrescrever os artefatos canônicos.
+    suffix = "" if difficulty == "normal" else f"_{difficulty}"
+    results_path = f"tournament_results{suffix}.json"
+    report_path = f"BALANCE_REPORT{suffix}.md"
+
+    with open(results_path, "w", encoding="utf-8") as f:
         json.dump(export_payload, f, indent=2, ensure_ascii=False)
-    print("Dados brutos exportados para 'tournament_results.json'!")
+    print(f"Dados brutos exportados para '{results_path}'!")
 
     # Gerar Relatório Markdown
-    generate_balance_report(tournament_data, merge_sorted_roster, "BALANCE_REPORT.md")
+    generate_balance_report(tournament_data, merge_sorted_roster, report_path)
 
 if __name__ == "__main__":
     main()

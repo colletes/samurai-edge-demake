@@ -82,7 +82,7 @@ def test_kawarimi_and_poison():
     cloud.update(0.016, fighters=[victim], particles=particles, banners=banners, cinematic_director=cinematic_director)
     assert getattr(victim, "is_poisoned", False), "Vítima deve ser infectada pelo veneno da nuvem"
     assert victim.poison_timer == 6.0, f"Timer de veneno deve ser iniciado em 6.0s, obtido {victim.poison_timer}"
-    assert any("POISONED! 6s TO SURVIVE!" in b.text for b in banners), "Deveria exibir banner de envenenamento com 6s"
+    assert any("POISON FRENZY!" in b.text for b in banners), "Deveria exibir banner de envenenamento POISON FRENZY!"
     print("  [OK] Vítima infectada pelo veneno com timer de 6.0s e banner informativo.", flush=True)
 
     # Simular expiração do veneno na nuvem (fatalidade)

@@ -26,7 +26,8 @@ def get_default_config() -> dict:
             "master": 1.0,
             "sfx": 0.85,
             "bgm": 0.65,
-        }
+        },
+        "ai_difficulty": "normal"
     }
 
 
@@ -63,6 +64,8 @@ def load_controls_config() -> dict:
             for k, v in default_cfg["audio"].items():
                 if k not in data["audio"]:
                     data["audio"][k] = v
+        if "ai_difficulty" not in data or data["ai_difficulty"] not in ("easy", "normal", "hard"):
+            data["ai_difficulty"] = default_cfg.get("ai_difficulty", "normal")
 
         return data
     except Exception as e:
@@ -70,9 +73,9 @@ def load_controls_config() -> dict:
         return get_default_config()
 
 
-def save_controls_config(keyboard_controls: dict, controller_mgr=None, touch_mode: str = "auto", audio_cfg: dict = None) -> bool:
+def save_controls_config(keyboard_controls: dict, controller_mgr=None, touch_mode: str = "auto", audio_cfg: dict = None, ai_difficulty: str = "normal") -> bool:
     """
-    Persiste as configurações de teclado, gamepads, touch e volumes de áudio em controls_config.json.
+    Persiste as configurações de teclado, gamepads, touch, volumes de áudio e dificuldade da IA em controls_config.json.
     """
     try:
         default_cfg = get_default_config()
@@ -90,12 +93,15 @@ def save_controls_config(keyboard_controls: dict, controller_mgr=None, touch_mod
 
         keyboard_section = {}
         for k, v in keyboard_controls.items():
-            if k == "audio":
+            if k in ("audio", "ai_difficulty"):
                 continue
             try:
                 keyboard_section[k] = int(v)
             except (ValueError, TypeError):
                 pass
+
+        if ai_difficulty not in ("easy", "normal", "hard"):
+            ai_difficulty = "normal"
 
         cfg = {
             "version": "1.4.0",
@@ -106,6 +112,7 @@ def save_controls_config(keyboard_controls: dict, controller_mgr=None, touch_mod
             },
             "touch_mode": touch_mode or "auto",
             "audio": audio_section,
+            "ai_difficulty": ai_difficulty,
         }
 
         if controller_mgr:

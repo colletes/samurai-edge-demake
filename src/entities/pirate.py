@@ -27,21 +27,29 @@ class PirateSwordswoman(Samurai):
 
         # Ação Secundária: Tiro de Canhão Celestial (Tap Rápido ou Hold de Mira)
         self.cannon_cooldown = 4.5
-        self.cannon_cooldown_timer = 0.0
+        self.cannon_cooldown_timer = 4.5  # Inicia com 4.5s no round para evitar nuke instantâneo no spawn
         self.is_aiming_cannon = False
         self.cannon_target_wx = self.wx + 3.0
         self.cannon_target_wy = self.wy
         self.cannon_reticle_pulse = 0.0
 
-        # Terceira Ação: Rolamento com Pólvora Negra (Black Powder Dash)
-        self.roll_speed = 11.5
-        self.roll_duration = 0.22
+        # Terceira Ação: Rolamento com Pólvora Negra (Heavy / Padrão)
+        self.is_agile_dodge = False
+        self.roll_speed = 8.5
+        self.roll_duration = 0.20
+        self.roll_recovery_duration = 0.18
+        self.roll_cooldown_duration = 0.38
         self.roll_dir_x = 1.0
         self.roll_dir_y = 0.0
         self.dash_has_hit = False
 
     def can_act(self) -> bool:
-        return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD) and self.dash_recovery_timer <= 0
+        return (
+            self.is_alive
+            and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD)
+            and self.roll_recovery_timer <= 0
+            and self.dash_recovery_timer <= 0
+        )
 
     def trigger_cutlass_cleave(self, target_wx: float, target_wy: float):
         """Ataque Primário: Golpe horizontal em meia-lua de 180° com o alfanje e avanço frontal vigoroso."""
@@ -109,7 +117,13 @@ class PirateSwordswoman(Samurai):
 
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
         """Terceira Ação: Black Powder Dash — rolamento veloz com rastro de fumaça, mini-stun e lentidão."""
-        if not self.is_alive or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK) or self.dash_recovery_timer > 0:
+        if (
+            not self.is_alive
+            or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK)
+            or self.roll_recovery_timer > 0
+            or self.roll_cooldown_timer > 0
+            or self.dash_recovery_timer > 0
+        ):
             return
 
         if dir_x == 0 and dir_y == 0:
@@ -164,13 +178,12 @@ class PirateSwordswoman(Samurai):
             return
 
         self.update_stealth(game_map)
+        self.update_dodge_timers(dt)
 
         if self.cleave_timer > 0:
             self.cleave_timer -= dt
         if self.cannon_cooldown_timer > 0:
-            self.cannon_cooldown_timer -= dt
-        if self.dash_recovery_timer > 0:
-            self.dash_recovery_timer -= dt
+            self.cannon_cooldown_timer = max(0.0, self.cannon_cooldown_timer - dt)
 
         if self.state == STATE_ATTACK:
             self.state_timer -= dt
@@ -225,7 +238,9 @@ class PirateSwordswoman(Samurai):
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
                 self.is_invulnerable_dodge = False
-                self.dash_recovery_timer = self.dash_recovery_duration
+                self.roll_recovery_timer = self.roll_recovery_duration
+                self.roll_cooldown_timer = self.roll_cooldown_duration
+                self.dash_recovery_timer = self.roll_cooldown_duration
 
         elif self.state == STATE_RECOVERY:
             self.state_timer -= dt

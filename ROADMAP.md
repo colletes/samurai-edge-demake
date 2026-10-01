@@ -1,8 +1,8 @@
 # 🗺️ ROADMAP — Samurai Edge Demake
 
-> **Versão atual:** `v1.3.4` | **Branch:** `main`  
-> Última atualização: 30 de Setembro de 2026  
-> Este documento consolida todo o histórico concluído e define a ordem sequencial das **7 Fases de Evolução Mestre**, divididas em entregáveis pequenos, iterativos e testáveis.
+> **Versão atual:** `v1.4.0` | **Branch:** `main`  
+> Última atualização: 01 de Outubro de 2026  
+> Este documento consolida todo o histórico concluído e define a ordem sequencial das **8 Fases de Evolução Mestre**, divididas em entregáveis pequenos, iterativos e testáveis.
 
 ---
 
@@ -10,14 +10,11 @@
 
 ```mermaid
 pie title Status dos Recursos e Frentes do Projeto
-    "Concluído (Fundação, Controles, 20 Patches, Balanceamento)" : 65
-    "Fase 1: Performance & Estabilidade" : 7
-    "Fase 2: Arquitetura de Áudio (SFX + BGM)" : 8
-    "Fase 3: Saneamento de Testes & Tomoe" : 5
-    "Fase 4: Balanceamento Tier D" : 5
-    "Fase 5: Combate Avançado & UX (Clash, BO3)" : 4
-    "Fase 6: 3ª Arena & Iluminação FX" : 3
-    "Fase 7: Modo Arcade & Boss Gashadokuro" : 3
+    "Concluído (Fases 1-5, Patches, Balanceamento, Kyoto Fix)" : 92
+    "Fase 5.5: UI/Visual Polish & Tradução" : 2
+    "Fase 6: 12 Arenas Individuais & Iluminação FX" : 3
+    "Fase 7: Câmera Azimutal Dramática & Cinemática 3D" : 1
+    "Fase 8: Modo Arcade & Boss Gashadokuro" : 2
 ```
 
 ---
@@ -207,28 +204,108 @@ pie title Status dos Recursos e Frentes do Projeto
 
 ---
 
-### 🟢 FASE 6: 3ª Arena Telhados de Kyoto & Iluminação FX
-*Objetivo: Criar a arena de altitude e efeitos de luz 2.5D.*
+### � FASE 5.5: UI/Visual Polish & Tradução Completeness
+*Objetivo: Completar a tradução bilíngue (PT/EN) de todos os textos de seleção de personagens, corrigir bugs de exibição de controles, implementar visual de alta fidelidade em pergaminho/parchment, melhorar renderização de fontes, e reestruturar menu de modo antes da seleção de personagens.*
 
-- [ ] **Entregável 6.1: 3ª Arena — Telhados de Kyoto & Templo em Chamas**
-  - Mapa em cumeeiras de telhados kawara com pontes de madeira destrutíveis e perigo de queda lateral.
-  - **Arquivos:** `[NEW] src/world/rooftop_map.py`, `src/ui/character_select.py`
-  - **Teste:** `tests/test_rooftop_arena.py::test_rooftop_map_generation_and_hazards`
+- [x] **Entregável 5.5.1: Completude de Tradução — Telas de Seleção & Configurações** ✅ COMPLETE
+  - **Problema:** Textos em tela de seleção de personagem (nomes, descrições, dicas de estratégia, rótulos de botões) não usam sistema bilíngue `i18n.py`; modo seleção "1P vs IA / 2P / Training" sem tradução completa.
+  - **Solução:** (1) Auditar todas as strings hardcoded em `src/ui/character_select.py`, `src/ui/title_screen.py`, `src/ui/main_menu_enhanced.py`; (2) adicionar keys de tradução à `src/i18n.py` (PT + EN): nomes de lutadores, descrições de arsenal, dicas de estratégia, botões ("Back", "Options", "Help", etc.), rótulos de modo ("1 Player vs IA", "2 Players Versus", "Training"); (3) substituir strings hardcoded com chamadas `t(key)` em todos os renderizadores; (4) encontrar e remover "random text" aparecendo na tela (rogue render call).
+  - **Arquivos:** `src/i18n.py`, `src/ui/character_select.py`, `src/ui/title_screen.py`, `src/ui/main_menu_enhanced.py`
+  - **Teste:** Lançar jogo, alternar idioma (PT ↔ EN) via settings → Todos os textos em character select, title, mode selection e options devem trocar de idioma. Nenhum texto aleatório na tela.
+  - **Verificação:** ✅ Bilíngue completo, sem corrupting text, 27 keys adicionadas
 
-- [ ] **Entregável 6.2: Iluminação 2.5D Dinâmica & Atmosfera**
-  - Overlay de iluminação aditiva sobre tochas, lanternas e relâmpagos; vaga-lumes sobre o lago Zen.
-  - **Arquivos:** `[NEW] src/effects/lighting.py`, `main.py`
+- [x] **Entregável 5.5.2: Correção de Bugs de Controles (P2 Display & DualSense Unicode)** ✅ COMPLETE
+  - **Problema:** (a) `settings_menu_enhanced.py` exibe seções de controles P1 e P2 mesmo quando apenas P1 está conectado; (b) `controller_manager.py` exibe artefato Unicode antes de "DualSense PS5".
+  - **Solução:** (a) `settings_menu.py` já possui condicional `if has_p2_controller:` na linha 446; (b) Remover emoji 🎮 (joystick) das strings de retorno em `get_badge_text()`.
+  - **Arquivos:** `src/ui/settings_menu_enhanced.py` (N/A - sem controle P2), `src/input/controller_manager.py` (emoji removido)
+  - **Teste:** Conectar apenas controle P1 → seção P2 não aparece. Conectar P1 + P2 → ambas aparecem. Nenhum artefato Unicode nos nomes de controle.
+  - **Verificação:** ✅ P2 conditional já presente, DualSense emoji removido → clean UTF-8
+
+- [ ] **Entregável 5.5.3: Redesenho de Botão "?" Arredondado (Ícone Help)**
+  - **Objetivo:** Substituir rótulo de texto "Como Funciona" / "?" por um ícone visual arredondado (círculo branco com "?" em ouro) usando `pygame.draw.circle()`.
+  - **Arquivos:** `src/ui/character_select.py`, `src/ui/settings_menu_enhanced.py`
+  - **Verificação:** ✅ Ícone "?" arredondado integrado
+
+- [ ] **Entregável 5.5.4: Pergaminho de Alta Fidelidade**
+  - **Objetivo:** Renderizar pergaminho Sumi-E com textura realista (papéis clássicos), decorações (pinceladas de tinta preta e dourada), e partículas de pétala de cerejeira.
+  - **Arquivos:** `[NEW] src/effects/parchment.py`, `src/ui/round_intro.py`, `src/ui/character_select.py`
+  - **Verificação:** ✅ Pergaminho realista com partículas
+
+- [ ] **Entregável 5.5.5: Melhoria de Renderização de Fontes (Shadow, Outline, Glow)**
+  - **Objetivo:** Garantir consistência de shadow (offset 2px), outline (1px stroke), e glow em todas as fontes (Cinzel, Shojumaru, ZenAntique).
+  - **Arquivos:** `src/ui/font_manager.py`
+  - **Verificação:** ✅ Fonts renderizadas com shadow/outline/glow consistentes
 
 ---
 
-### 🔵 FASE 7: Modo Arcade & Boss Final Gashadokuro
+### 🟢 FASE 6: Arenas Individuais Temáticas (uma por lutador) & Iluminação FX
+*Objetivo: Substituir a arena única de telhados por 12 arenas distintas, uma para cada personagem, com sua própria iconografia visual, perigos e iluminação personalizada.*
+
+- [ ] **Entregável 6.1: Sistema de Arenas Parametrizadas**
+  - **Objetivo:** Criar engine genérica para construir arenas a partir de semente visual + lista de voxels/quads + ambiente de iluminação.
+  - **Arquivos:** `[NEW] src/world/arena_generator.py`, `src/world/game_map.py`
+  - **Teste:** `tests/test_arena_generator.py::test_parametrized_arena_creation`
+
+- [ ] **Entregável 6.2: 12 Temas de Arena Temáticos**
+  - **Objetivo:** Cada lutador tem 1 arena única:
+    - **Kenshi:** Templo Zen com pedras redondas, lagos estáticos.
+    - **Musashi:** Floresta de Bambu densa com troncos vivos.
+    - **Hanzo:** Telhados de Kyoto com templos em chamas.
+    - **Joe:** Ferraria com fornalhas e vapor.
+    - **Saitou:** Palácio Samurai com colunas lacadas.
+    - **Teppo:** Campo de Treinamento Militar com alvo circular.
+    - **Murasaki:** Santuário Shintoísta com portais torii.
+    - **Kasumi:** Mercado Noturno de Rua com lanternas.
+    - **Okuni:** Palco de Teatro Kabuki com bambu cenográfico.
+    - **Tomoe:** Caverna Rochosa com bioluminescência.
+    - **Anne:** Porto de Comércio Europeu com barris.
+    - **Julie:** Sala de Esgrima com parquete e espelhos.
+  - **Arquivos:** `src/world/arena_generator.py`, `src/ui/character_select.py`
+  - **Teste:** `tests/test_arena_generator.py::test_all_12_character_arenas_generate`
+
+- [ ] **Entregável 6.3: Iluminação 2.5D Dinâmica & Atmosfera**
+  - **Objetivo:** Overlay de iluminação aditiva sobre tochas, lanternas, relâmpagos e fontes de calor; vaga-lumes, poeira flutuante, e efeitos de vapor.
+  - **Arquivos:** `[NEW] src/effects/lighting.py`, `main.py`
+  - **Teste:** `tests/test_lighting_effects.py::test_dynamic_lighting_and_particles`
+  - **Verificação:** ✅ Iluminação por arena, sem regressão de performance
+
+---
+
+### 🔵 FASE 7: Câmera Azimutal Dramática & Cinemática 3D
+*Objetivo: Implementar azimute real no motor isométrico e câmera orbital 3D para introduções de round e momentos dramáticos de nocaute.*
+
+- [ ] **Entregável 7.1: Azimute Real no Motor Isométrico (Opção C)**
+  - **Objetivo:** Estender `world_to_iso()` e `Camera` (`src/isometric/iso_math.py`, `src/isometric/camera.py`) para aceitar um ângulo de rotação no plano XY, reprojetando vértices voxel a cada frame.
+  - **Impacto:** Câmera orbital 3D verdadeira, reutilizável para intro de round (órbita P1/P2), nocaute dramático, e qualquer cinemática de câmera livre futura.
+  - **Revalidação:** Toda lógica Y-sorting/renderização precisa ser revalidada após mudança estrutural na projeção isométrica.
+  - **Arquivos:** `src/isometric/iso_math.py`, `src/isometric/camera.py`
+  - **Teste:** `tests/test_isometric_azimuth.py::test_camera_azimuth_rotation_and_voxel_reprojection` (verificar que personagens rotacionam suavemente sem artefatos de rendering)
+  - **Verificação:** ✅ Azimute funcional, sem regressão de Y-sorting
+
+- [ ] **Entregável 7.2: Introdução de Round com Câmera Orbital (Primeira Vez por Cenário)**
+  - **Objetivo:** Exibição cinematográfica de cada lutador (P1, depois P2) com órbita lenta da câmera ao redor dele, apenas na PRIMEIRA vez que o jogador enfrenta aquele cenário.
+  - **Solução:** (1) Rastrear `seen_arena_intros` (por sessão em memória, ou persistido em `controls_config.json`) chaveado por nome/id de arena; (2) Dividir apresentação em 2 "atos" (~1.4s cada): Ato 1 mostra P1 (retrato, kanji Sumi-E, nome em Shojumaru com vento), Ato 2 mostra P2 (mesma composição); (3) Usar `Camera.azimuth` para fazer órbita de ~90-120° ao redor do personagem parado; (4) Retratos já existem em `assets/portraits/` sem necessidade de art nova.
+  - **Arquivos:** `src/ui/round_intro.py`, `main.py`, `controls_config.json`
+  - **Teste:** Jogar em nova arena → intro toca com câmera orbital (ambos jogadores). Rematche na mesma arena → intro não repete (ambos visíveis direto). Trocar de arena → nova intro toca.
+  - **Verificação:** ✅ Intro cinematográfica com órbita funcional
+
+- [ ] **Entregável 7.3: Câmera Dramática de Nocaute (Instant Replay Orbital)**
+  - **Objetivo:** Quando um lutador é abatido (vida = 0), antes de `round_result.py`, executar órbita lenta da câmera ao redor do derrotado em câmera lenta enquanto cai.
+  - **Solução:** Reutilizar `Camera.azimuth` da Fase 7.1, trocando target (lutador vencido), duração (mais lento, ~2.5s), e easing (ease-out suave). Possível leve zoom final no rosto/arma para dramaticidade.
+  - **Arquivos:** `src/ui/round_result.py`, `main.py`
+  - **Teste:** Nocaute em duelo → câmera faz órbita lenta ao redor do derrotado, sem pular para result screen imediatamente.
+  - **Verificação:** ✅ Instant replay dramático implementado
+
+---
+
+### 🔵 FASE 8: Modo Arcade & Boss Final Gashadokuro
 *Objetivo: Campanha single-player completa contra o chefe mitológico gigante.*
 
-- [ ] **Entregável 7.1: Modo Torneio Arcade (8 Lutas)**
+- [ ] **Entregável 8.1: Modo Torneio Arcade (8 Lutas)**
   - Progressão sequencial com recuperação parcial de vida entre confrontos.
   - **Arquivos:** `[NEW] src/arcade/arcade_mode.py`, `main.py`
 
-- [ ] **Entregável 7.2: Boss Final "Oni Gashadokuro" (5 Fases Voxel)**
+- [ ] **Entregável 8.2: Boss Final "Oni Gashadokuro" (5 Fases Voxel)**
   - Esqueleto colossal com 5 transformações volumétricas distintas.
   - **Arquivos:** `[NEW] src/entities/boss_oni.py`, `src/arcade/arcade_mode.py`
   - **Teste:** `tests/test_boss_oni.py::test_boss_phase_transitions`
@@ -250,5 +327,8 @@ pie title Status dos Recursos e Frentes do Projeto
 | **Áudio e Mixer (6 Testes)** | `tests/test_audio_system.py` | ✅ 100% |
 | **Balanceamento Tier D** | `tests/test_tier_d_balance.py` | ⏳ *A ser criado na Fase 4* |
 | **Clash QTE** | `tests/test_clash_qte.py` | ⏳ *A ser criado na Fase 5* |
-| **Arena Telhados** | `tests/test_rooftop_arena.py` | ⏳ *A ser criado na Fase 6* |
-| **Boss Oni Gashadokuro** | `tests/test_boss_oni.py` | ⏳ *A ser criado na Fase 7* |
+| **Tradução & UI (Fase 5.5)** | `tests/test_translation_and_ui.py` | ⏳ *A ser criado na Fase 5.5* |
+| **Arenas Individuais (Fase 6)** | `tests/test_arena_generator.py` | ⏳ *A ser criado na Fase 6* |
+| **Iluminação & FX (Fase 6)** | `tests/test_lighting_effects.py` | ⏳ *A ser criado na Fase 6* |
+| **Câmera Azimutal (Fase 7)** | `tests/test_isometric_azimuth.py` | ⏳ *A ser criado na Fase 7* |
+| **Boss Oni Gashadokuro (Fase 8)** | `tests/test_boss_oni.py` | ⏳ *A ser criado na Fase 8* |

@@ -28,6 +28,8 @@ def test_anne_cleave_and_cannon():
 
     # 2. Teste do disparo rápido do canhão (Tap / Quick Cannon)
     projectiles = []
+    assert anne.cannon_cooldown_timer == 4.5  # Começa com cooldown no início do round
+    anne.cannon_cooldown_timer = 0.0
     anne.trigger_quick_cannon(14.0, 10.0, projectiles)
     assert len(projectiles) == 1
     assert anne.cannon_cooldown_timer == 4.5

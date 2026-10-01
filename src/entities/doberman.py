@@ -32,9 +32,9 @@ class DobermanDog:
         self.cooldown_timer = 0.0
         self.knockout_duration = 2.0
 
-        # Atributos de corrida
+        # Atributos de corrida (Entregável 4.4: charge_speed acelerado para 17.5)
         self.follow_speed = 4.8
-        self.charge_speed = 15.0
+        self.charge_speed = 17.5
         self.charge_range = 5.2
         self.charge_dist = 0.0
 
@@ -62,9 +62,9 @@ class DobermanDog:
             self.facing_x = dx / dist
             self.facing_y = dy / dist
 
-        # Windup de latido (0.20s): alerta sonoro e visual para reação justa
+        # Windup de latido (0.15s - Entregável 4.4): alerta sonoro e visual mais ágil
         self.state = STATE_DOG_BARK
-        self.state_timer = 0.20
+        self.state_timer = 0.15
         self.hitbox_active = False
 
     def knock_out(self, duration: float = 2.0):

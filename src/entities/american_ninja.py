@@ -28,6 +28,21 @@ class AmericanNinja(Samurai):
         self.shuriken_cooldown = 0.55
         self.shuriken_timer = 0.0
 
+        # Terceira Ação: Esquiva Pesada / Padrão
+        self.is_agile_dodge = False
+        self.roll_speed = 8.5
+        self.roll_duration = 0.20
+        self.roll_recovery_duration = 0.18
+        self.roll_cooldown_duration = 0.38
+
+    def can_act(self) -> bool:
+        return (
+            self.is_alive
+            and self.state in (STATE_IDLE, STATE_WALK)
+            and self.roll_recovery_timer <= 0
+            and self.dash_recovery_timer <= 0
+        )
+
     def trigger_shuriken(self, target_wx: float, target_wy: float, projectiles: list):
         """Arremessa uma shuriken atordoante (não mata, mas dá stun de 0.48s)."""
         if not self.can_act() or self.shuriken_timer > 0:
@@ -64,9 +79,7 @@ class AmericanNinja(Samurai):
             return
 
         self.update_stealth(game_map)
-
-        if self.dash_recovery_timer > 0:
-            self.dash_recovery_timer -= dt
+        self.update_dodge_timers(dt)
 
         if self.shuriken_timer > 0:
             self.shuriken_timer -= dt

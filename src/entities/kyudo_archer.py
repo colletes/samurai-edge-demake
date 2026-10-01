@@ -15,7 +15,7 @@ from src.config import (
 from src.entities.samurai import (
     Samurai, STATE_IDLE, STATE_WALK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD
 )
-from src.entities.projectile import KyudoArrowProjectile, RopeArrowProjectile
+from src.entities.projectile import KyudoArrowProjectile, RopeArrowProjectile, HamayaArrowProjectile
 from src.entities.voxel_models import render_voxel_humanoid
 from src.effects.particles import SparkParticle
 
@@ -48,15 +48,55 @@ class KyudoArcher(Samurai):
         self.arrow_cooldown = 1.20
         self.arrow_cooldown_timer = 0.0
 
-        # Ação Secundária: Barreira dos Ventos Kami (Ofuda Barrier)
+        # Ação Secundária: Flecha Ritual Sagrada Hamaya (破魔矢)
+        self.hamaya_cooldown = 3.6
+        self.hamaya_cooldown_timer = 0.0
+
+        # Ação Secundária Retrocompatível: Barreira dos Ventos Kami (Ofuda Barrier)
         self.ofuda_barrier_timer = 0.0
         self.ofuda_barrier_duration = 0.85
         self.ofuda_cooldown = 3.2
         self.ofuda_cooldown_timer = 0.0
-        self.ofuda_orbit_angle = 0.0
+        # Terceira Ação: Esquiva Ágil Miko
+        self.is_agile_dodge = True
+        self.roll_speed = 10.5
+        self.roll_duration = 0.22
+        self.roll_recovery_duration = 0.12
+        self.roll_cooldown_duration = 0.35
 
     def can_act(self) -> bool:
-        return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD) and self.dash_recovery_timer <= 0
+        return (
+            self.is_alive
+            and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD)
+            and self.roll_recovery_timer <= 0
+            and self.dash_recovery_timer <= 0
+        )
+
+    def trigger_hamaya_shot(self, target_wx: float, target_wy: float, projectiles: list = None, particles: list = None):
+        """
+        Ação Secundária Sagrada: Hamaya (破魔矢)
+        Dispara flecha ritual de luz dourada que perfura obstáculos sólidos e anula projéteis inimigos no caminho.
+        """
+        if not self.can_act() or self.hamaya_cooldown_timer > 0:
+            return
+
+        self.set_facing(target_wx, target_wy)
+        self.state = STATE_RECOVERY
+        self.state_timer = 0.22
+        self.hamaya_cooldown_timer = self.hamaya_cooldown
+
+        proj_list = projectiles if projectiles is not None else getattr(self, "projectiles_ref", None)
+        if proj_list is not None:
+            bx = self.wx + self.facing_x * 0.70
+            by = self.wy + self.facing_y * 0.70
+            hamaya = HamayaArrowProjectile(bx, by, wz=0.55, dir_x=self.facing_x, dir_y=self.facing_y, owner=self)
+            proj_list.append(hamaya)
+
+        if particles is not None:
+            for _ in range(12):
+                particles.append(SparkParticle(self.wx + self.facing_x * 0.7, self.wy + self.facing_y * 0.7, 0.45, color=(255, 230, 90)))
+            for _ in range(6):
+                particles.append(SparkParticle(self.wx, self.wy, 0.5, color=(255, 255, 240)))
 
     def trigger_ofuda_barrier(self, particles: list = None):
         """Ação Secundária: Barreira dos Ventos Kami — talismãs sagrados giratórios que repelem projéteis e empurram oponentes."""
@@ -218,12 +258,13 @@ class KyudoArcher(Samurai):
 
         if self.arrow_cooldown_timer > 0:
             self.arrow_cooldown_timer -= dt
-
-        if self.dash_recovery_timer > 0:
-            self.dash_recovery_timer -= dt
+        self.update_dodge_timers(dt)
 
         if self.rope_timer > 0:
             self.rope_timer -= dt
+
+        if self.hamaya_cooldown_timer > 0:
+            self.hamaya_cooldown_timer -= dt
 
         proj_list = projectiles if projectiles is not None else getattr(self, "projectiles_ref", None)
         if self.state == STATE_BOW_DRAW:

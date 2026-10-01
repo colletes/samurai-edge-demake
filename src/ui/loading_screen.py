@@ -213,7 +213,12 @@ class LoadingScreen:
         # 6. Mensagem de Status
         pulse_dots = "." * (int(self.anim_time * 3.5) % 4)
         status_text = f"[ CARREGANDO ]  {self.message}{pulse_dots}"
-        stat_surf = font_status.render(status_text, True, (200, 195, 185))
+        # Use dark nanquim for better contrast against light/gold background
+        stat_surf_shadow = font_status.render(status_text, True, (30, 28, 26))
+        stat_rect = stat_surf_shadow.get_rect(center=(center_x + 1, bar_y + 37))
+        self.screen.blit(stat_surf_shadow, stat_rect)
+        # Render main text in elegant tan/parchment color
+        stat_surf = font_status.render(status_text, True, (220, 210, 195))
         stat_rect = stat_surf.get_rect(center=(center_x, bar_y + 36))
         self.screen.blit(stat_surf, stat_rect)
 

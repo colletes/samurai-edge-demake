@@ -6,7 +6,8 @@ import math
 import random
 import pygame
 from src.config import (
-    COLOR_STEEL, COLOR_BLACK, COLOR_GOLD, COLOR_WHITE, COLOR_YELLOW_AURA
+    COLOR_STEEL, COLOR_BLACK, COLOR_GOLD, COLOR_WHITE, COLOR_YELLOW_AURA,
+    COLOR_BLUE_AURA
 )
 from src.isometric.iso_math import world_distance
 from src.effects.particles import SparkParticle
@@ -32,6 +33,7 @@ class KunaiProjectile:
         self.angle = math.atan2(dir_y, dir_x)
         self.is_active = True
         self.pickup_delay = 0.25 # Pequeno delay antes de poder pegar para evitar auto-pegar no mesmo frame
+        self.has_been_reflected = False  # Anti-spam: previne reflexão infinita
 
     def update(self, dt: float, game_map, particles: list) -> bool:
         """Atualiza a posição da kunai. Retorna False se deve ser removida."""
@@ -90,9 +92,9 @@ class KunaiProjectile:
             if self.pickup_delay > 0:
                 self.pickup_delay -= dt
             else:
-                # Verificar se o dono (Ninja) passou por cima para recuperar a arma
+                # Verificar se o dono (Ninja) passou por cima para recuperar a arma (Entregável 4.4: 0.85m de raio fluido)
                 if self.owner and self.owner.is_alive and not self.owner.has_kunai:
-                    if world_distance(self.wx, self.wy, self.owner.wx, self.owner.wy) < 0.65:
+                    if world_distance(self.wx, self.wy, self.owner.wx, self.owner.wy) < 0.85:
                         self.owner.has_kunai = True
                         self.is_active = False
                         # Efeito visual de coleta
@@ -162,6 +164,7 @@ class ShurikenProjectile:
         self.max_range = 6.5
         self.dist_traveled = 0.0
         self.is_active = True
+        self.has_been_reflected = False  # Anti-spam: previne reflexão infinita
 
     def update(self, dt: float, game_map, particles: list) -> bool:
         if not self.is_active:
@@ -364,7 +367,7 @@ class RemoteMineEntity:
         self.wz = 0.05
         self.owner = owner
         self.radius = 2.2
-        self.arm_delay = 0.40
+        self.arm_delay = 0.28  # Entregável 4.3: Armamento acelerado para 0.28s (era 0.40s)
         self.age = 0.0
         self.is_active = True
         self.is_armed = False
@@ -381,7 +384,7 @@ class RemoteMineEntity:
         return True
 
     def detonate(self, fighters: list, particles: list = None, banners: list = None, cinematic_director = None):
-        """Detona a mina: danifica todos os combatentes no raio de 2.2m (incluindo o próprio dono se estiver no raio - Item 16)."""
+        """Detona a mina: danifica todos os combatentes no raio de 2.2m (com imunidade a auto-suicídio se Kasumi tiver <= 1 HP)."""
         if not self.is_active:
             return
         self.is_active = False
@@ -404,16 +407,12 @@ class RemoteMineEntity:
                 dist = world_distance(self.wx, self.wy, f.wx, f.wy)
                 if dist <= (self.radius + getattr(f, "radius", 0.4)):
                     if f == self.owner:
-                        # Auto-dano garantido contra a própria mina (1 HP de dano, 50% de blindagem)
-                        f.hp -= 1
-                        if f.hp <= 0:
-                            f.hp = 0
-                            f.is_alive = False
-                            f.state = "DEAD"
-                            if cinematic_director:
-                                cinematic_director.trigger_fatal_strike(self.owner, f, "HEADSHOT_EXPLODE", (0, 0))
-                        else:
+                        # Entregável 4.3: Imunidade a auto-dano se estiver com <= 1 HP (previne suicídio em desespero)
+                        if f.hp > 1:
+                            f.hp -= 1
                             f.stun(0.35)
+                        else:
+                            f.stun(0.15)
                     else:
                         hit, dead = f.take_hit((0.0, 0.0), damage=2)
                         if dead and cinematic_director:
@@ -603,6 +602,7 @@ class MusketBulletProjectile:
         self.is_active = True
         self.dist_traveled = 0.0
         self.max_range = max_range
+        self.has_been_reflected = False  # Anti-spam: previne reflexão infinita
 
     def update(self, dt: float, game_map, particles: list = None) -> bool:
         if not self.is_active:
@@ -727,6 +727,7 @@ class KyudoArrowProjectile:
         self.dist_traveled = 0.0
         self.max_range = 16.0
         self.is_active = True
+        self.has_been_reflected = False  # Anti-spam: previne reflexão infinita
 
     def update(self, dt: float, game_map, particles: list = None) -> bool:
         if not self.is_active:
@@ -773,6 +774,97 @@ class KyudoArrowProjectile:
         fx = self.wx - self.dir_x * 0.30
         fy = self.wy - self.dir_y * 0.30
         draw_voxel_box(surface, camera, fx - 0.04, fy - 0.04, self.wz, 0.08, 0.08, 0.08, COLOR_WHITE)
+
+
+class HamayaArrowProjectile:
+    """
+    Flecha ritual sagrada de luz (破魔矢 / Hamaya) do Kyudo.
+    Atravessa obstáculos sólidos e exorciza/anula projéteis inimigos em voo.
+    1-Hit Kill / Lethal Strike.
+    """
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.dir_x = dir_x
+        self.dir_y = dir_y
+        self.owner = owner
+        speed = 30.0
+        self.vx = dir_x * speed
+        self.vy = dir_y * speed
+        self.dist_traveled = 0.0
+        self.max_range = 18.0
+        self.is_active = True
+        self.trail_timer = 0.0
+        self.has_been_reflected = False  # Anti-spam: previne reflexão infinita
+
+    def update(self, dt: float, game_map, particles: list = None, projectiles: list = None) -> bool:
+        if not self.is_active:
+            return False
+        step = math.hypot(self.vx * dt, self.vy * dt)
+        self.wx += self.vx * dt
+        self.wy += self.vy * dt
+        self.dist_traveled += step
+
+        # Rastro cintilante dourado e sagrado (Kami Spark Trail)
+        self.trail_timer += dt
+        if particles is not None and self.trail_timer >= 0.02:
+            self.trail_timer = 0.0
+            particles.append(SparkParticle(self.wx, self.wy, self.wz, color=(255, 235, 110)))
+            particles.append(SparkParticle(self.wx - self.dir_x * 0.15, self.wy - self.dir_y * 0.15, self.wz, color=(255, 255, 240)))
+
+        # Transpassa e corta bambus no caminho sem desacelerar
+        if game_map and hasattr(game_map, "bamboos"):
+            for b in game_map.bamboos:
+                if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.55:
+                    part = b.cut((self.dir_x, self.dir_y))
+                    if part and particles is not None:
+                        particles.append(part)
+
+        # Anular projéteis inimigos interceptados no trajeto
+        if projectiles:
+            for p in projectiles:
+                if p is not self and getattr(p, "is_active", False) and getattr(p, "owner", None) is not self.owner:
+                    if world_distance(self.wx, self.wy, p.wx, p.wy) < 0.85:
+                        p.is_active = False
+                        if particles is not None:
+                            for _ in range(8):
+                                particles.append(SparkParticle(p.wx, p.wy, getattr(p, "wz", 0.4), color=(255, 230, 90)))
+
+        # Perfuração absoluta de rochas e poço (Hamaya atravessa sólidos!)
+        # Para apenas se atingir o alcance máximo ou os limites extremos da arena
+        min_x = 0.5
+        max_x = (game_map.cols - 0.5) if (game_map and hasattr(game_map, "cols")) else 25.0
+        min_y = 0.5
+        max_y = (game_map.rows - 0.5) if (game_map and hasattr(game_map, "rows")) else 25.0
+
+        if (self.dist_traveled >= self.max_range or 
+            self.wx <= min_x or self.wx >= max_x or 
+            self.wy <= min_y or self.wy >= max_y):
+            self.is_active = False
+            if particles is not None:
+                for _ in range(6):
+                    particles.append(SparkParticle(self.wx, self.wy, self.wz, color=(255, 230, 100)))
+            return False
+        return True
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+        from src.isometric.voxel_renderer import draw_voxel_box
+        # Ponta de ouro sagrada purificadora
+        draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.05, self.wz, 0.10, 0.10, 0.10, COLOR_GOLD)
+        # Haste de madeira sagrada xintoísta branca
+        hx = self.wx - self.dir_x * 0.18
+        hy = self.wy - self.dir_y * 0.18
+        draw_voxel_box(surface, camera, hx - 0.035, hy - 0.035, self.wz, 0.07, 0.07, 0.07, (250, 245, 235))
+        # Penas cerimoniais douradas
+        fx = self.wx - self.dir_x * 0.35
+        fy = self.wy - self.dir_y * 0.35
+        draw_voxel_box(surface, camera, fx - 0.05, fy - 0.05, self.wz, 0.10, 0.10, 0.10, (255, 240, 150))
+        # Halo de luz sagrada
+        sx, sy = camera.apply(self.wx, self.wy, self.wz)
+        pygame.draw.circle(surface, (255, 245, 180), (sx, sy), 5, 1)
 
 
 class RopeArrowProjectile:
@@ -914,6 +1006,7 @@ class CannonballProjectile:
         self.is_active = True
         self.has_exploded = False
         self.explosion_timer = 0.35
+        self.has_been_reflected = False  # Anti-spam: previne reflexão infinita
 
     def update(self, dt: float, game_map=None, particles: list = None, camera = None, fighters: list = None) -> bool:
         if not self.is_active:
@@ -998,6 +1091,117 @@ class CannonballProjectile:
                 pygame.draw.ellipse(exp_surf, (255, 255, 200, alpha_val), (exp_w // 2, exp_h // 2, exp_w, exp_h))
                 surface.blit(exp_surf, (sx_g - exp_w, sy_g - exp_h))
 
+
+class MusashiWaveProjectile:
+    """Onda azul semi-transparente disparada pelo Musashi no terceiro ataque.
+    Projétil horizontal que causa 2 de dano ao atingir um oponente."""
+    
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.owner = owner
+        self.dir_x = dir_x
+        self.dir_y = dir_y
+        
+        # Velocidade da onda
+        speed = 14.0
+        self.vx = dir_x * speed
+        self.vy = dir_y * speed
+        
+        # Propriedades da onda
+        self.width = 1.5  # 1.5 tiles de largura
+        self.max_range = 6.5
+        self.dist_traveled = 0.0
+        self.is_active = True
+        self.damage = 2
+        self.has_been_reflected = False
+        
+        # Animação de onda (pulsação visual)
+        self.pulse_timer = 0.0
+        
+    def update(self, dt: float, game_map, particles: list) -> bool:
+        """Atualiza a posição da onda. Retorna False se deve ser removida."""
+        if not self.is_active:
+            return False
+        
+        # Movimento
+        step = math.hypot(self.vx * dt, self.vy * dt)
+        self.wx += self.vx * dt
+        self.wy += self.vy * dt
+        self.dist_traveled += step
+        
+        # Pulsação visual
+        self.pulse_timer += dt
+        
+        # Limites da arena [1.2, cols-1.2]
+        min_bound = 1.2
+        max_bound_x = (game_map.cols - 1.2) if (game_map and hasattr(game_map, "cols")) else 19.8
+        max_bound_y = (game_map.rows - 1.2) if (game_map and hasattr(game_map, "rows")) else 19.8
+        
+        hit_bound = False
+        if self.wx <= min_bound or self.wx >= max_bound_x or self.wy <= min_bound or self.wy >= max_bound_y:
+            self.is_active = False
+            return False
+        
+        # Corte de bambus no caminho
+        for b in game_map.bamboos:
+            if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.6:
+                part = b.cut((self.dir_x, self.dir_y))
+                if part:
+                    particles.append(part)
+        
+        # Colisão com rochas ou poço
+        hit_obstacle = False
+        for r in game_map.rocks:
+            if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
+                hit_obstacle = True
+                break
+        if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
+            hit_obstacle = True
+        
+        if hit_obstacle or self.dist_traveled >= self.max_range:
+            self.is_active = False
+            return False
+        
+        return True
+    
+    def render(self, surface: pygame.Surface, camera):
+        """Renderiza a onda azul semi-transparente."""
+        if not self.is_active:
+            return
+        
+        # Posição isométrica
+        sx, sy = camera.apply(self.wx, self.wy, self.wz)
+        
+        # Pulsação visual (cresce e diminui)
+        pulse = 0.8 + 0.3 * math.sin(self.pulse_timer * 12.0)
+        
+        # Largura e altura da onda
+        wave_w = int(self.width * 20 * pulse)
+        wave_h = int(8 * pulse)
+        
+        # Criar superfície com canal alfa para semi-transparência
+        wave_surf = pygame.Surface((wave_w, wave_h), pygame.SRCALPHA)
+        
+        # Cor azul com alpha semi-transparente
+        alpha = int(150 * pulse)
+        blue_wave = (*COLOR_BLUE_AURA, alpha)
+        
+        # Desenhar onda como elipse horizontal
+        pygame.draw.ellipse(wave_surf, blue_wave, (0, 0, wave_w, wave_h))
+        
+        # Brilho central (mais opaco)
+        bright_alpha = int(200 * pulse)
+        bright_blue = (min(255, COLOR_BLUE_AURA[0] + 50), 
+                      min(255, COLOR_BLUE_AURA[1] + 50), 
+                      min(255, COLOR_BLUE_AURA[2]), 
+                      bright_alpha)
+        pygame.draw.ellipse(wave_surf, bright_blue, 
+                           (wave_w // 4, wave_h // 3, wave_w // 2, wave_h // 3))
+        
+        # Blit no surface principal
+        surface.blit(wave_surf, (sx - wave_w // 2, sy - wave_h // 2))
 
 
 

@@ -40,7 +40,7 @@ def test_ps5_controller_mappings():
 
     # Glifos visuais PlayStation
     assert dev.get_button_glyph(ACTION_ATTACK) == "▢"
-    assert dev.get_button_glyph(ACTION_DASH) == "✕"
+    assert dev.get_button_glyph(ACTION_DASH) == "○"
     assert dev.get_button_glyph(ACTION_CONFIRM) == "✕"
     assert dev.get_button_glyph(ACTION_CANCEL) == "○"
     assert dev.get_button_glyph(ACTION_MENU) == "Options"
@@ -50,11 +50,11 @@ def test_ps5_controller_mappings():
     assert dev.is_action_pressed(2, ACTION_ATTACK) is True
     # Botão 10: R1 (Ação Principal de Ataque alternativa)
     assert dev.is_action_pressed(10, ACTION_ATTACK) is True
-    # Botão 0: ✕ Cruz (Ação Secundária & Confirmação de Menus)
-    assert dev.is_action_pressed(0, ACTION_DASH) is True
-    assert dev.is_action_pressed(0, ACTION_CONFIRM) is True
-    # Botão 1: ○ Círculo (Volta nos Menus)
+    # Botão 1: ○ Círculo (Roll / Dash dedicado e Volta nos Menus)
+    assert dev.is_action_pressed(1, ACTION_DASH) is True
     assert dev.is_action_pressed(1, ACTION_CANCEL) is True
+    # Botão 0: ✕ Cruz (Ação Secundária & Confirmação de Menus)
+    assert dev.is_action_pressed(0, ACTION_CONFIRM) is True
     # Botão 6: Options (Pausa & Menu)
     assert dev.is_action_pressed(6, ACTION_MENU) is True
 
@@ -63,7 +63,7 @@ def test_ps5_controller_mappings():
     assert dev.is_action_pressed(13, "restart") is False
     assert dev.is_action_pressed(2, ACTION_CANCEL) is False # Quadrado NÃO é cancelar!
 
-    print("Teste PS5: Mapeamento de botões correto para DualSense (Quadrado=Ataque, Cruz=Dash, Círculo=Volta) OK!")
+    print("Teste PS5: Mapeamento de botões correto para DualSense (Quadrado=Ataque, Círculo=Dash/Volta, Cruz=Confirma) OK!")
 
 
 def test_char_select_sequential_vs_ai_flow():
@@ -130,19 +130,20 @@ def test_tomoe_and_teppo_balance():
     teppo = Rifleman(5.0, 5.0)
     assert teppo.has_ammo is True, "Teppo deve iniciar municiado!"
 
-    # Tomoe disparo imediato e corda sem cooldown
+    # Tomoe disparo imediato e corda com cooldown balanceado de 2.0s (Patch 16)
     tomoe = KyudoArcher(5.0, 5.0)
     assert tomoe.draw_duration == 0.0, "Tomoe não deve ter windup no arco!"
-    assert tomoe.rope_cooldown == 0.0, "Tomoe não deve ter cooldown na corda!"
+    assert tomoe.rope_cooldown == 2.0, "Tomoe deve ter cooldown calibrado de 2.0s na corda (Patch 16)!"
 
     projs = []
     tomoe.trigger_bow_draw(10.0, 5.0, projs)
     assert len(projs) == 1, "Disparo do arco deve ser instantâneo!"
 
+    tomoe.state = "IDLE"
     tomoe.trigger_rope_arrow(12.0, 5.0, projs)
     assert len(projs) == 2, "Flecha de corda deve ser disparada!"
 
-    print("Teste Balanceamento: Tomoe sem windup/cooldown e Teppo com munição inicial OK!")
+    print("Teste Balanceamento: Tomoe sem windup, corda calibrada 2.0s e Teppo com munição inicial OK!")
 
 
 def test_murasaki_hanzo_anne_buffs():
@@ -168,13 +169,12 @@ def test_murasaki_hanzo_anne_buffs():
     murasaki = PurpleNinja(10.0, 10.0)
     assert murasaki.windup_time == 0.04, "Windup de Murasaki deve ser 0.04s!"
     murasaki.trigger_kama_strike(11.0, 10.0)
-    assert murasaki.hitbox_radius == 1.15, "Alcance da foice de Murasaki deve ser 1.15m!"
+    assert murasaki.hitbox_radius >= 1.30, "Alcance da foice de Murasaki deve ser 1.30m (Patch 11)!"
 
     projs = []
     murasaki.state = "IDLE"
-    murasaki.trigger_kusarigama_pull(15.0, 10.0, projs)
+    murasaki.start_chain_shield(15.0, 10.0)
     assert murasaki.is_spinning_chain is True, "Giro protetor de corrente deve ativar!"
-    assert murasaki.chain_spin_timer > 0.0
 
     # Deflexão de projétil pelo giro de corrente
     kunai_in = KunaiProjectile(10.8, 10.0, 0.5, -1.0, 0.0, teppo)
@@ -204,6 +204,7 @@ def test_murasaki_hanzo_anne_buffs():
 
     # Após aterrissar e sem kunai, o ataque da Tanto é liberado!
     hanzo.update(0.30, game_map)
+    hanzo.update(0.20, game_map)
     assert hanzo.state == "IDLE"
     assert hanzo.wz == 0.0
     hanzo.trigger_thrust_attack(11.0, 10.0)

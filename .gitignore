@@ -27,3 +27,4 @@ bin/
 scratch/
 # User runtime settings
 controls_config.json
+hd2d_edition/

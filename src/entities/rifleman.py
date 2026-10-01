@@ -128,22 +128,28 @@ class Rifleman(Samurai):
         self.backstep_timer = 0.0
         self.backstep_duration = 0.20
 
-        # Ação Secundária: Armadilha de Pólvora
-        self.trap_cooldown = 3.0
+        # Ação Secundária: Armadilha de Pólvora (não gasta pólvora; limitada a 1 mina ativa por vez)
+        self.trap_cooldown = 5.0
         self.trap_timer = 0.0
+        self.active_trap = None
 
-        # Terceira Ação: Rolamento com Recarga (Tumble Roll)
-        self.roll_speed = 10.8
-        self.roll_duration = 0.22
+        # Terceira Ação: Rolamento com Recarga (Tumble Roll - Heavy / Padrão)
+        self.is_agile_dodge = False
+        self.roll_speed = 8.5
+        self.roll_duration = 0.20
+        self.roll_recovery_duration = 0.18
+        self.roll_cooldown_duration = 0.38
         self.roll_dir_x = 1.0
         self.roll_dir_y = 0.0
 
     def trigger_powder_trap(self, target_wx: float = 0.0, target_wy: float = 0.0, traps: list = None, particles: list = None):
-        """Ação Secundária: Black Powder Ground Trap — arma sticky bomb no solo (gasta 1 carga de pólvora - Item 11)."""
-        if not self.can_act() or self.trap_timer > 0 or not self.has_ammo:
+        """Ação Secundária: Black Powder Ground Trap — arma sticky bomb no solo.
+        Não consome pólvora, mas só pode haver 1 mina ativa por vez (cooldown de 5s para redepositar)."""
+        if not self.can_act() or self.trap_timer > 0:
+            return
+        if self.active_trap is not None and getattr(self.active_trap, "is_active", False):
             return
         self.trap_timer = self.trap_cooldown
-        self.has_ammo = False  # Gasta 1 carga de pólvora!
 
         # Suporte a chamada posicional flexível (ex: trigger_powder_trap(traps_list))
         trap_list = traps
@@ -153,14 +159,22 @@ class Rifleman(Samurai):
             trap_list = target_wy
 
         if trap_list is not None:
-            trap_list.append(PowderTrap(self.wx, self.wy, owner=self))
+            new_trap = PowderTrap(self.wx, self.wy, owner=self)
+            self.active_trap = new_trap
+            trap_list.append(new_trap)
         if particles is not None:
             for _ in range(8):
                 particles.append(SparkParticle(self.wx, self.wy, 0.35))
 
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
         """Terceira Ação: Tumble & Reload Roll — rolamento evasivo com recarga tática ao concluir."""
-        if not self.is_alive or self.state in (STATE_RIFLE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK) or self.dash_recovery_timer > 0:
+        if (
+            not self.is_alive
+            or self.state in (STATE_RIFLE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK)
+            or self.roll_recovery_timer > 0
+            or self.roll_cooldown_timer > 0
+            or self.dash_recovery_timer > 0
+        ):
             return
 
         if dir_x == 0 and dir_y == 0:
@@ -207,7 +221,12 @@ class Rifleman(Samurai):
         return False
 
     def can_act(self) -> bool:
-        return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD) and self.dash_recovery_timer <= 0
+        return (
+            self.is_alive
+            and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD)
+            and self.roll_recovery_timer <= 0
+            and self.dash_recovery_timer <= 0
+        )
 
     def trigger_shoot(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None):
         """Ataque Primário: Disparo fatal de arcabuz se tiver munição e engatilhado, ou coronhada defensiva se descarregado."""
@@ -282,9 +301,7 @@ class Rifleman(Samurai):
             return
 
         self.update_stealth(game_map)
-
-        if self.dash_recovery_timer > 0:
-            self.dash_recovery_timer -= dt
+        self.update_dodge_timers(dt)
 
         if self.backstep_timer > 0:
             self.backstep_timer -= dt
@@ -322,7 +339,9 @@ class Rifleman(Samurai):
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
                 self.is_invulnerable_dodge = False
-                self.dash_recovery_timer = self.dash_recovery_duration
+                self.roll_recovery_timer = self.roll_recovery_duration
+                self.roll_cooldown_timer = self.roll_cooldown_duration
+                self.dash_recovery_timer = self.roll_cooldown_duration
                 # Rolamento tático conclui recarga de emergência!
                 if not self.has_ammo:
                     self.has_ammo = True

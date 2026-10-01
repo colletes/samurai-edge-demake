@@ -24,6 +24,8 @@ def test_modifications():
 
     print("=== TESTE 1: Anne Bonny (Bala com Caveira, Voxel Fire, Astrolábio Náutico) ===", flush=True)
     anne = PirateSwordswoman(10.0, 10.0)
+    assert anne.cannon_cooldown_timer == 4.5
+    anne.cannon_cooldown_timer = 0.0
     anne.start_cannon_strike(12.0, 10.0)
     assert anne.is_aiming_cannon, "Anne deve estar mirando o canhão"
     

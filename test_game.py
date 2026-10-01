@@ -147,15 +147,15 @@ def test_complete_roster():
     assert bomb_suicide.is_alive == True and bomb_suicide.hp == 1, "Kasumi deve sobreviver com 1 HP pela blindagem de 50%!"
     assert suicide_target.is_alive == False, "Alvo deve morrer com dano total de 2!"
 
-    # Uma segunda explosão mata Kasumi
+    # Entregável 4.3: Uma segunda explosão NÃO mata Kasumi (imunidade a auto-suicídio quando HP <= 1)
     bomb_suicide.state = "IDLE"
     bomb_suicide.bomb_timer = 0.0
     bomb_suicide.trigger_throw_bomb(10.0, 10.0, projectiles)
     assert len(projectiles) == 1
     projectiles[0].fuse_timer = 0.0
     combat.process_combat(bomb_suicide, suicide_target, game_map, particles, banners, camera, projectiles, 0.016)
-    assert bomb_suicide.is_alive == False, "Segunda explosão deve abater Kasumi!"
-    print("Teste 3: Kasumi Bomba em Arco 3D (Limite de 2, Auto-Dano com 50% Blast Armor) OK!")
+    assert bomb_suicide.is_alive == True and bomb_suicide.hp == 1, "Kasumi não deve morrer por auto-dano com <= 1 HP (Entregável 4.3)!"
+    print("Teste 3: Kasumi Bomba em Arco 3D (Limite de 2, Auto-Dano com 50% Blast Armor e Imunidade a Suicídio) OK!")
 
     # 4. Testar Rifleman (Teppo): Início Carregado, Coleta de Pólvora no Chão, Coronhada e Salto Evasivo
     projectiles.clear()

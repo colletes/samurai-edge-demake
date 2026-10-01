@@ -291,16 +291,24 @@ class Kabuki(Samurai):
         self.poison_cooldown = 3.2
         self.poison_cooldown_timer = 0.0
 
-        # Terceira Ação: Pirueta Teatral Kabuki (Roll)
-        self.roll_speed = 12.0
-        self.roll_duration = 0.20
+        # Terceira Ação: Pirueta Teatral Kabuki (Especial / Ágil)
+        self.is_agile_dodge = True
+        self.roll_speed = 10.5
+        self.roll_duration = 0.22
+        self.roll_recovery_duration = 0.12
+        self.roll_cooldown_duration = 0.35
         self.roll_dir_x = 1.0
         self.roll_dir_y = 0.0
         self.decoy_cooldown = 2.8
         self.decoy_cooldown_timer = 0.0
 
     def can_act(self) -> bool:
-        if not self.is_alive or self.state in (STATE_KABUKI_ROLL, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, "DOKUKIRI"):
+        if (
+            not self.is_alive
+            or self.state in (STATE_KABUKI_ROLL, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, "DOKUKIRI")
+            or self.roll_recovery_timer > 0
+            or self.dash_recovery_timer > 0
+        ):
             return False
         return True
 
@@ -340,7 +348,13 @@ class Kabuki(Samurai):
 
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None, decoys: list = None):
         """Terceira Ação: Kawarimi Dash Teatral com manequim de seda, pétalas de sakura e i-frames."""
-        if not self.is_alive or self.state in (STATE_KABUKI_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK):
+        if (
+            not self.is_alive
+            or self.state in (STATE_KABUKI_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK, "DOKUKIRI")
+            or self.roll_recovery_timer > 0
+            or self.roll_cooldown_timer > 0
+            or self.dash_recovery_timer > 0
+        ):
             return
 
         if dir_x == 0 and dir_y == 0:
@@ -383,6 +397,7 @@ class Kabuki(Samurai):
             return
 
         self.update_stealth(game_map)
+        self.update_dodge_timers(dt)
 
         if self.poison_cooldown_timer > 0:
             self.poison_cooldown_timer -= dt
@@ -438,6 +453,9 @@ class Kabuki(Samurai):
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
                 self.is_invulnerable_dodge = False
+                self.roll_recovery_timer = self.roll_recovery_duration
+                self.roll_cooldown_timer = self.roll_cooldown_duration
+                self.dash_recovery_timer = self.roll_cooldown_duration
 
         elif self.state == "DOKUKIRI":
             self.state_timer -= dt

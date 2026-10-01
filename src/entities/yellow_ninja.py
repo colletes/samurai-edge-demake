@@ -40,8 +40,20 @@ class YellowNinja(Samurai):
         self._throw_target = (0.0, 0.0)
         self._throw_projectiles = None
 
+        # Terceira Ação: Esquiva Pesada / Padrão
+        self.is_agile_dodge = False
+        self.roll_speed = 8.5
+        self.roll_duration = 0.20
+        self.roll_recovery_duration = 0.18
+        self.roll_cooldown_duration = 0.38
+
     def can_act(self) -> bool:
-        return self.is_alive and self.state in (STATE_IDLE, STATE_WALK) and self.dash_recovery_timer <= 0
+        return (
+            self.is_alive
+            and self.state in (STATE_IDLE, STATE_WALK)
+            and self.roll_recovery_timer <= 0
+            and self.dash_recovery_timer <= 0
+        )
 
     def trigger_jump(self, target_wx: float, target_wy: float, projectiles: list | None = None):
         """
@@ -150,7 +162,13 @@ class YellowNinja(Samurai):
 
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
         """Rolamento com i-frames. Se executado durante o salto no ar, preserva a gravidade até o solo (Item 3)."""
-        if not self.is_alive or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK) or self.dash_recovery_timer > 0:
+        if (
+            not self.is_alive
+            or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK)
+            or self.roll_recovery_timer > 0
+            or self.roll_cooldown_timer > 0
+            or self.dash_recovery_timer > 0
+        ):
             return
         was_jumping = (self.state == "JUMP")
         super().trigger_roll(dir_x, dir_y, particles)
@@ -162,11 +180,10 @@ class YellowNinja(Samurai):
             return
 
         self.update_stealth(game_map)
+        self.update_dodge_timers(dt)
 
         if self.jump_cooldown_timer > 0:
             self.jump_cooldown_timer -= dt
-        if self.dash_recovery_timer > 0:
-            self.dash_recovery_timer -= dt
 
         if self.is_midair_dash:
             if self.wz > 0.0:

@@ -132,7 +132,7 @@ class SumieTitleScreen:
     def _activate_current_mode(self) -> str | None:
         if self.selected_mode == MODE_ARCADE:
             self.notice_timer = 2.0
-            self.notice_text = "MODO ARCADE EM DESENVOLVIMENTO (EM BREVE!)"
+            self.notice_text = t("arcade_development_notice")
             return None
         elif self.selected_mode == MODE_VERSUS:
             return "VERSUS"
@@ -188,9 +188,9 @@ class SumieTitleScreen:
 
         # Itens do Menu
         modes = [
-            {"id": MODE_ARCADE, "name": "ARCADE", "sub": "[ EM BREVE ]", "enabled": False},
-            {"id": MODE_VERSUS, "name": "VERSUS (1P / 2P)", "sub": "DUELO IMEDIATO", "enabled": True},
-            {"id": MODE_OPTIONS, "name": "OPTIONS", "sub": "CONFIGURAR CONTROLES", "enabled": True},
+            {"id": MODE_ARCADE, "name": t("mode_arcade"), "sub": t("mode_coming_soon"), "enabled": False},
+            {"id": MODE_VERSUS, "name": t("mode_versus"), "sub": t("mode_immediate_duel"), "enabled": True},
+            {"id": MODE_OPTIONS, "name": t("mode_options"), "sub": t("mode_configure_controls"), "enabled": True},
         ]
 
         self.btn_rects = []
@@ -252,5 +252,5 @@ class SumieTitleScreen:
             surface.blit(notice_surf, (notice_rect.centerx - notice_surf.get_width() // 2, notice_rect.centery - notice_surf.get_height() // 2))
 
         # 5. Rodapé com instruções em Zen Antique
-        tip_text = font_menu_tip.render("[W/S ou Setas] Mover  |  [ENTER / ESPAÇO] Confirmar  |  [ESC] Sair", True, (175, 170, 165))
+        tip_text = font_menu_tip.render(t("title_menu_hint"), True, (175, 170, 165))
         surface.blit(tip_text, (SCREEN_WIDTH // 2 - tip_text.get_width() // 2, SCREEN_HEIGHT - 16))

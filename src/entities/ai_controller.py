@@ -94,9 +94,7 @@ class SamuraiAI:
             return
 
         self.decision_timer -= dt
-        dist = world_distance(ai_fighter.wx, ai_fighter.wy, opponent.wx, opponent.wy)
-
-        # -------------------------------------------------------------
+        dist = world_distance(ai_fighter.wx, ai_fighter.wy, opponent.wx, opponent.wy)        # -------------------------------------------------------------
         # 0. DETECÇÃO E EVASÃO DE PERIGOS DE KYOTO (Carruagens e Escombros)
         # -------------------------------------------------------------
         if game_map and hasattr(game_map, "carriages"):

@@ -3,6 +3,10 @@ Testes automatizados para a Fase 2:
 - Barras Universais de Cooldown (Item 6)
 - Temporizador de Abertura de Round e Kanjis (Item 10)
 """
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 import unittest
 import pygame
 pygame.init()

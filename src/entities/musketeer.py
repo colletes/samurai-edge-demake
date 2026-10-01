@@ -34,8 +34,20 @@ class Musketeer(Samurai):
         self.flintlock_cooldown = 4.5
         self.flintlock_timer = 1.0  # Inicia com 1.0s no round para evitar tiro instantâneo no spawn
 
+        # Terceira Ação: Floreio de Capa & Repel de Esquiva (Especial / Ágil)
+        self.is_agile_dodge = True
+        self.roll_speed = 10.5
+        self.roll_duration = 0.22
+        self.roll_recovery_duration = 0.12
+        self.roll_cooldown_duration = 0.35
+
     def can_act(self) -> bool:
-        return self.is_alive and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, "CAPE_FLOURISH") and self.dash_recovery_timer <= 0
+        return (
+            self.is_alive
+            and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, "CAPE_FLOURISH")
+            and self.roll_recovery_timer <= 0
+            and self.dash_recovery_timer <= 0
+        )
 
     def trigger_fleche_thrust(self, target_wx: float, target_wy: float):
         """
@@ -106,6 +118,7 @@ class Musketeer(Samurai):
         self.facing_y = dir_y
         self.state = "CAPE_FLOURISH"
         self.state_timer = 0.16  # Rápido e responsivo (Item 7)
+        self.cape_timer = self.cape_cooldown
         self.is_invulnerable_dodge = True
         self.hitbox_active = False
 
@@ -125,8 +138,8 @@ class Musketeer(Samurai):
             if dist < 1.65:
                 if hasattr(opponent, "stun"):
                     opponent.stun(0.35)
-                opponent.wx += self.facing_x * 1.5
-                opponent.wy += self.facing_y * 1.5
+                opponent.wx += self.facing_x * 2.0
+                opponent.wy += self.facing_y * 2.0
                 if banners is not None:
                     from src.effects.particles import FloatingBanner
                     banners.append(FloatingBanner("COUP DE PIED! REPEL!", opponent.wx, opponent.wy, wz=1.75, color=(100, 175, 255)))
@@ -158,8 +171,7 @@ class Musketeer(Samurai):
             self.cape_timer -= dt
         if self.flintlock_timer > 0:
             self.flintlock_timer -= dt
-        if self.dash_recovery_timer > 0:
-            self.dash_recovery_timer -= dt
+        self.update_dodge_timers(dt)
 
         if self.state == STATE_ATTACK:
             self.state_timer -= dt

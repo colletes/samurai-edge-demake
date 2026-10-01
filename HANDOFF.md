@@ -144,20 +144,51 @@ Sample Game/
   - Entregável 2.4 (Controles de Volume na UI & Persistência): sliders interativos de SFX e BGM em `SettingsMenu` com botões `[-]`/`[+]`, barras clicáveis e atalhos de teclado, salvos em `controls_config.json`.
   - Testes: `tests/test_audio_system.py` passando com 100% (6/6 testes).
 
-### 👉 PRÓXIMA TAREFA A EXECUTAR: FASE 3 (Saneamento de Testes Legados & Ação Secundária de Tomoe)
+* **Fase 3 (Saneamento de Testes Legados & Ação Secundária de Tomoe):** ✅ **100% CONCLUÍDA E TESTADA**.
+  - Entregável 3.1 (Tomoe — Ação Secundária Sagrada Hamaya): flecha ritual `HamayaArrowProjectile` implementada com rastro de luz dourada, perfuração de sólidos (rochas, poço), anulação de projéteis hostis em voo e cooldown de 3.6s. Testado em `tests/test_tomoe_hamaya.py` (4/4 testes).
+  - Entregável 3.2 (Kanjis Kurosawa no Flash Cinematográfico): caligrafia tradicional Sumi-E (*一刀両断*, *決闘終焉*, *神速必殺*, *生死一瞬*) pré-renderizada e cacheada com zero GC durante o flash P&B e vinheta em `CinematicDirector`. Testado em `tests/test_cinematic_kanji.py` (3/3 testes).
+  - Entregável 3.3 (Saneamento das Suítes Legadas de Testes): 100% das 19 suítes de teste em `tests/` e `test_game.py` saneadas e passando sem qualquer falha ou erro.
 
-A IA sucessora ou desenvolvedor deve focar na **Fase 3**:
+* **Vídeo Cinematográfico de Abertura:** ✅ **CONCLUÍDO E INTEGRADO**.
+  - Vídeo de introdução em alta definição (`assets/Opening Videos/Samurai_Edge_Opening_Final.mp4`) reproduzido antes da tela de título.
+  - Pulo instantâneo com um toque de Start (Options/Menu) ou ✕ (Cross/Confirm/Space/Enter/Clique/Toque).
+  - Áudio integrado via mixer do Pygame, transição limpa para o BGM da tela de título e liberação de recursos.
+  - Fallback headless para testes CI validado em `tests/test_opening_video.py` (6/6 testes).
 
-1. **Entregável 3.1: Tomoe — Ação Secundária Sagrada (*Hamaya*):**
-   * Flecha ritual perfurante de luz sagrada (*Hamaya* / 破魔矢) com rastro dourado, capaz de atravessar obstáculos sólidos e anular projéteis inimigos em voo.
-   * Arquivos: `src/entities/kyudo_archer.py`, `src/entities/projectile.py`, `main.py`.
-2. **Entregável 3.2: Kanjis Kurosawa no Flash Cinematográfico:**
-   * Renderizar caligrafia Sumi-E kanji sobre o golpe final fatal (*一刀両断*, *決闘終焉*) com a fonte estilizada.
-   * Arquivo: `src/effects/cinematic_director.py`.
-3. **Entregável 3.3: Saneamento das 5 Suítes Legadas de Testes:**
-   * Atualizar asserts legados que ainda procuravam atributos antigos em `tests/test_phase1_fighters.py`, `test_kawarimi_and_poison.py`, `test_modifications_review.py`, `test_settings_and_hanzo_jump.py` e `test_controller_commands_and_selection.py`.
-4. **Validação:**
-   * Garantir que todas as suítes em `tests/` rodem com 100% de sucesso.
+* **Fase 4 (Rebalanceamento de Esquiva, IA Humanizada & Buffs Tier D):** ✅ **100% CONCLUÍDA E TESTADA**.
+  - **Prioridade 4.0A (Rebalanceamento da Esquiva & Stun):**
+    - Cooldown de esquiva aumentado levemente (0.35s ágil / 0.38s pesada) para eliminar spam invulnerável (especialmente em Okuni e Kenshi).
+    - Recovery stun obrigatório pós-esquiva (0.12s ágil / 0.18s pesada): combatente fica imóvel e vulnerável a punições antes de agir.
+    - Esquiva Ágil (10.5 vel, 0.22s dur, 0.12s recovery, 0.35s cd) implementada para especialistas: Kenshi, Okuni, Kasumi, Murasaki, Julie e Tomoe.
+    - Esquiva Pesada (8.5 vel, 0.20s dur, 0.18s recovery, 0.38s cd) implementada para os demais lutadores (Musashi, Saitou, Teppo, Joe, Hanzo, Anne).
+  - **Prioridade 4.0B (IA Humanizada & 3 Níveis de Dificuldade):**
+    - Esquiva reativa e perpendicular contra perigos de arena em Kyoto (carruagens desgovernadas e escombros cadentes).
+    - Aproximação não-linear com arcos curvos, eliminando corridas em linha reta direta.
+    - Janela de reação humana calibrada (0.16s a 0.28s) e chance de parry escalonada (30% Fácil, 55% Normal, 85% Difícil), eliminando parry frame-1 instantâneo de Musashi.
+    - Dispersão balística angular na mira ranged (3° a 16°), com penalidade de +50% se o alvo estiver em movimento.
+    - Anne Bonny inicia o round com o canhão naval em cooldown (4.5s), prevenindo o nuke imediato no começo da partida.
+    - Seletor de Dificuldade de IA integrado às telas de `Configurações` e `Seleção de Personagens` (atalho `[G]` ou clique/touch), persistido em `controls_config.json`.
+  - **Entregável 4.1 (Kenshin):** Redução do recovery do Iai ao acertar para 0.25s via callback `on_hit_success()`; 0.12s de i-frame real pós-Shukuchi.
+  - **Entregável 4.2 (Murasaki):** Foice Kama com janela ativa ampliada para 0.22s; impacto da corrente Kusarigama causa 1 HP de dano.
+  - **Entregável 4.3 (Kasumi):** Armamento da mina remota acelerado para 0.28s; imunidade a auto-dano (auto-suicídio) em minas e bombas quando estiver com <= 1 HP.
+  - **Entregável 4.4 (Hanzo & Joe):** Hanzo recolhe kunai do chão fluidamente ao passar por cima (raio 0.85m); Doberman Yamato com reação reduzida para 0.15s e velocidade de investida 17.5; shurikens causam 1 HP de dano se o alvo estiver em movimento.
+  - **Testes da Fase 4:** `tests/test_dodge_and_ai.py` (7/7 testes ✅ PASS) e `tests/test_tier_d_balance.py` (5/5 testes ✅ PASS), com 100% de sucesso em toda a suíte (20 arquivos de teste + `test_game.py`).
+
+### 👉 PRÓXIMA TAREFA A EXECUTAR: FASE 5 (Combate Avançado & Apresentação de Round)
+
+A IA sucessora ou desenvolvedor deve focar na **Fase 5**:
+
+1. **Entregável 5.1: Clash de Espadas Tsubazeriai (QTE "STRIKE!"):**
+   * Choque de lâminas simultâneas ativa zoom dramático e botão arcade pulsante com texto "STRIKE!".
+   * Arquivos: `[NEW] src/combat/clash_system.py`, `src/combat/collision.py`, `main.py`.
+   * Teste: `tests/test_clash_qte.py::test_clash_trigger_and_resolution`.
+2. **Entregável 5.2: Apresentação Cinematográfica de Round (Sumi-E):**
+   * Rotação suave de 30° da câmera antes da luta, com pergaminho vertical exibindo os nomes dos lutadores.
+   * Arquivos: `[NEW] src/ui/round_intro.py`, `main.py`.
+3. **Entregável 5.3: Contador Best of 3 (BO3) e Tela de Resultados:**
+   * Sistema de 2 rounds para vencer a partida, HUD com marcadores de round e tela final com rematch rápido (`Espaço`).
+   * Arquivos: `[NEW] src/ui/round_result.py`, `main.py`.
+   * Teste: `tests/test_round_progression.py::test_bo3_match_winner`.
 
 
 ---

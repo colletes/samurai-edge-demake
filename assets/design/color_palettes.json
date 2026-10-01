@@ -1,0 +1,121 @@
+{
+  "palettes": {
+    "bamboo_forest": {
+      "name": "Bamboo Forest (Cool/Muted)",
+      "description": "Forest greens, stone grays, water blues, bamboo tans, cream accents",
+      "primary": "#2d5a3d",
+      "secondary": "#4a7c59",
+      "accent": "#8ab4a8",
+      "accent_light": "#c4d7d4",
+      "shadow": "#1a3a2a",
+      "highlight": "#f5f8f5",
+      "neutral": "#6b8e84",
+      "danger": "#c94c4c",
+      "success": "#4a9d6f",
+      "warning": "#d4a574",
+      "ui_frame": "#e8ebe8",
+      "ui_frame_dark": "#3d5d51",
+      "ui_text": "#1a1a1a",
+      "ui_text_light": "#f0f0f0",
+      "usage": {
+        "background": "#2d5a3d with layer of #4a7c59",
+        "ui_panels": "#e8ebe8 with #3d5d51 borders",
+        "text": "#1a1a1a on light, #f0f0f0 on dark",
+        "health_bar": "gradient #4a9d6f to #2d5a3d",
+        "cooldown_active": "#d4a574",
+        "cooldown_ready": "#4a9d6f"
+      }
+    },
+    "kyoto_bakumatsu": {
+      "name": "Kyoto Bakumatsu (Warm/Dramatic)",
+      "description": "Deep reds, golds, burnt oranges, charcoal blacks, white highlights",
+      "primary": "#8b2e2e",
+      "secondary": "#d4421d",
+      "accent": "#e89a3c",
+      "accent_light": "#f5c94d",
+      "shadow": "#2a1a1a",
+      "highlight": "#fef8f3",
+      "neutral": "#9e7d6d",
+      "danger": "#ff4444",
+      "success": "#d4a574",
+      "warning": "#ff8c42",
+      "ui_frame": "#fef8f3",
+      "ui_frame_dark": "#5d3a2a",
+      "ui_text": "#2a1a1a",
+      "ui_text_light": "#fef8f3",
+      "usage": {
+        "background": "#8b2e2e with layer of #d4421d",
+        "ui_panels": "#fef8f3 with #5d3a2a borders",
+        "text": "#2a1a1a on light, #fef8f3 on dark",
+        "health_bar": "gradient #d4a574 to #8b2e2e",
+        "cooldown_active": "#ff8c42",
+        "cooldown_ready": "#d4a574"
+      }
+    },
+    "generic_ui": {
+      "name": "Generic UI (Neutral/Elegant)",
+      "description": "Works across all arenas for menus and universal elements",
+      "primary": "#2a2a2a",
+      "secondary": "#4a4a4a",
+      "accent": "#c9a876",
+      "accent_light": "#e8d4b8",
+      "shadow": "#000000",
+      "highlight": "#ffffff",
+      "neutral": "#7a7a7a",
+      "danger": "#d45555",
+      "success": "#6ba589",
+      "warning": "#d4a574",
+      "ui_frame": "#f5f1ed",
+      "ui_frame_dark": "#3a3a3a",
+      "ui_text": "#1a1a1a",
+      "ui_text_light": "#f5f1ed",
+      "usage": {
+        "background": "#2a2a2a with gold accent #c9a876",
+        "ui_panels": "#f5f1ed with #3a3a3a borders",
+        "text": "#1a1a1a on light, #f5f1ed on dark",
+        "button_hover": "#c9a876",
+        "button_active": "#a6854a"
+      }
+    },
+    "hud_critical": {
+      "name": "HUD Critical States",
+      "description": "Emergency/status states (low health, cooldown, etc.)",
+      "low_health": "#ff4444",
+      "low_health_flash": "#ff8888",
+      "cooldown_charging": "#ffcc00",
+      "cooldown_ready": "#44ff44",
+      "status_alert": "#ff6600",
+      "status_buff": "#00ccff",
+      "status_debuff": "#ff00ff"
+    }
+  },
+  "arena_templates": {
+    "warm_palette": {
+      "name": "Warm Palette Template (Temples, Farmland, Markets)",
+      "base": "#8b3a2a",
+      "base_light": "#d4521d",
+      "accent": "#e8a946",
+      "complementary": "#6b5d4d"
+    },
+    "cool_palette": {
+      "name": "Cool Palette Template (Snow, Water, Night)",
+      "base": "#2d4a6d",
+      "base_light": "#4a7db8",
+      "accent": "#6bb8e8",
+      "complementary": "#4a6d8b"
+    },
+    "mixed_palette": {
+      "name": "Mixed Palette Template (Sunset, Dusk, Transition)",
+      "base": "#8b5d3d",
+      "base_light": "#d4893d",
+      "accent": "#e8c94d",
+      "complementary": "#6b5d8b"
+    }
+  },
+  "notes": {
+    "implementation": "Each arena loads its primary palette; UI elements adapt colors based on active arena",
+    "contrast": "Ensure WCAG AA compliance (4.5:1 for text on backgrounds)",
+    "animation": "Use accent colors for highlights, shadows for depth, neutral for text hierarchy",
+    "voxel_rendering": "Apply color tints to voxel textures via shader or overlay blending"
+  }
+}

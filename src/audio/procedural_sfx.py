@@ -5,6 +5,7 @@ que o jogo tenha som completo e autônomo em qualquer plataforma.
 """
 import io
 import math
+import os
 import random
 import struct
 import wave
@@ -13,6 +14,42 @@ from src.audio.sound_events import SoundEvent, MusicTrack
 
 
 SAMPLE_RATE = 44100
+
+
+def _white_noise(n: int) -> list[float]:
+    return [random.uniform(-1.0, 1.0) for _ in range(n)]
+
+
+def _lowpass(samples: list[float], alpha: float) -> list[float]:
+    """Filtro IIR passa-baixa de 1 polo (suaviza/escurece ruído branco em um 'whoosh' de ar)."""
+    out = []
+    prev = 0.0
+    for s in samples:
+        prev += alpha * (s - prev)
+        out.append(prev)
+    return out
+
+
+def _highpass(samples: list[float], alpha: float) -> list[float]:
+    """Filtro IIR passa-alta de 1 polo (realça transientes para um 'shing' metálico brilhante)."""
+    out = []
+    prev_in = 0.0
+    prev_out = 0.0
+    for s in samples:
+        cur = alpha * (prev_out + s - prev_in)
+        out.append(cur)
+        prev_in = s
+        prev_out = cur
+    return out
+
+
+def _metal_ring(t: float, base_freq: float, partials: list[tuple[float, float, float]]) -> float:
+    """Soma de parciais INARMÔNICOS (razões não-inteiras, como barras/sinos reais) com decaimentos
+    independentes por parcial — produz um timbre metálico muito mais realista que harmônicos puros."""
+    val = 0.0
+    for ratio, amp, decay in partials:
+        val += math.sin(2.0 * math.pi * base_freq * ratio * t) * amp * math.exp(-decay * t)
+    return val
 
 
 def _samples_to_sound(samples: list[float], sample_rate: int = SAMPLE_RATE) -> pygame.mixer.Sound:
@@ -36,111 +73,116 @@ def _samples_to_sound(samples: list[float], sample_rate: int = SAMPLE_RATE) -> p
 
 
 def generate_sword_clash() -> pygame.mixer.Sound:
-    """Choque simultâneo de lâminas de aço (ataque metálico rápido + ressonância)."""
-    duration = 0.28
+    """Choque simultâneo de lâminas de aço: transiente brilhante de contato + ressonância
+    metálica inarmônica + um segundo micro-contato levemente defasado (duplo toque real)."""
+    duration = 0.32
     num_samples = int(SAMPLE_RATE * duration)
+    noise = _highpass(_white_noise(num_samples), 0.55)
+    partials = [
+        (1.00, 0.42, 16.0),
+        (2.37, 0.26, 20.0),
+        (3.91, 0.16, 26.0),
+        (5.23, 0.10, 34.0),
+        (6.81, 0.06, 42.0),
+    ]
+    base_freq = 1480.0
     samples = []
-
-    f1, f2, f3 = 1320.0, 2640.0, 3960.0
     for i in range(num_samples):
         t = i / SAMPLE_RATE
-        decay = math.exp(-14.0 * t)
-        noise = (random.random() * 2.0 - 1.0) * math.exp(-40.0 * t) * 0.4
-        tone = (
-            math.sin(2.0 * math.pi * f1 * t) * 0.45 +
-            math.sin(2.0 * math.pi * f2 * t) * 0.30 +
-            math.sin(2.0 * math.pi * f3 * t) * 0.15
-        )
-        samples.append((tone + noise) * decay * 0.9)
+        transient = noise[i] * math.exp(-70.0 * t) * 0.6
+        ring = _metal_ring(t, base_freq, partials)
+        t2 = t - 0.018
+        ring2 = _metal_ring(t2, base_freq * 0.92, partials) * 0.5 if t2 > 0 else 0.0
+        samples.append((transient + ring + ring2) * 0.85)
 
     return _samples_to_sound(samples)
 
 
 def generate_parry() -> pygame.mixer.Sound:
-    """Aparada perfeita frontal com ressonância cristalina."""
-    duration = 0.35
+    """Aparada perfeita frontal: contato único e limpo, mais brilhante e sustentado que o
+    choque mútuo, com ressonância cristalina inarmônica de lâmina bem temperada."""
+    duration = 0.4
     num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
+    partials = [
+        (1.00, 0.50, 9.0),
+        (2.76, 0.28, 12.0),
+        (4.18, 0.14, 16.0),
+        (6.02, 0.08, 22.0),
+    ]
+    base_freq = 1900.0
     samples = []
-
-    f1, f2 = 1850.0, 3700.0
     for i in range(num_samples):
         t = i / SAMPLE_RATE
-        decay = math.exp(-10.0 * t)
-        tone = (
-            math.sin(2.0 * math.pi * f1 * t) * 0.60 +
-            math.sin(2.0 * math.pi * f2 * t) * 0.35
-        )
-        samples.append(tone * decay * 0.85)
+        transient = noise[i] * math.exp(-90.0 * t) * 0.5
+        ring = _metal_ring(t, base_freq, partials)
+        samples.append((transient + ring) * 0.8)
 
     return _samples_to_sound(samples)
 
 
 def generate_sword_slash() -> pygame.mixer.Sound:
-    """Corte de lâmina no ar (whoosh aerodinâmico)."""
-    duration = 0.15
+    """Corte de lâmina no ar (whoosh aerodinâmico): ruído filtrado com varredura de tom
+    descendente, simulando o deslocamento de ar ao redor do aço em movimento rápido."""
+    duration = 0.22
     num_samples = int(SAMPLE_RATE * duration)
+    filtered = _lowpass(_white_noise(num_samples), 0.35)
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
-        # Envelope de sino assimétrico
-        env = math.sin(math.pi * (t / duration)) ** 2.0
-        # Ruído com modulação de tom descendente
-        freq = 700.0 - 400.0 * (t / duration)
-        noise = (random.random() * 2.0 - 1.0) * 0.7
-        sine = math.sin(2.0 * math.pi * freq * t) * 0.3
-        samples.append((noise + sine) * env * 0.65)
+        prog = t / duration
+        env = math.sin(math.pi * prog) ** 1.6
+        sweep_freq = 1400.0 * (1.0 - prog) + 220.0 * prog
+        sweep = math.sin(2.0 * math.pi * sweep_freq * t) * 0.18
+        samples.append((filtered[i] * 0.8 + sweep) * env * 0.75)
 
     return _samples_to_sound(samples)
 
 
 def generate_fatal_strike() -> pygame.mixer.Sound:
-    """Impacto do golpe fatal (1-hit kill): grave visceral profundo + corte agudo."""
-    duration = 0.48
+    """Impacto do golpe fatal (1-hit kill): grave visceral profundo + corte agudo filtrado
+    + breve ressonância metálica da lâmina completando a trajetória através do alvo."""
+    duration = 0.5
     num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
+    partials = [(1.0, 0.30, 18.0), (2.6, 0.14, 24.0)]
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
-        # Sub-grave visceral com queda de pitch
-        freq_low = 85.0 * math.exp(-6.0 * t)
-        sub = math.sin(2.0 * math.pi * freq_low * t) * 0.70
-        # Ruído de corte fatiador
-        slice_noise = (random.random() * 2.0 - 1.0) * math.exp(-18.0 * t) * 0.45
-        # Ressonância de sangue
-        decay = math.exp(-7.5 * t)
-        samples.append((sub + slice_noise) * decay * 0.95)
+        freq_low = 78.0 * math.exp(-5.0 * t)
+        sub = math.sin(2.0 * math.pi * freq_low * t) * math.exp(-6.5 * t) * 0.75
+        slice_noise = noise[i] * math.exp(-22.0 * t) * 0.4
+        ring = _metal_ring(t, 1250.0, partials) * math.exp(-2.0 * t)
+        samples.append((sub + slice_noise + ring) * 0.9)
 
     return _samples_to_sound(samples)
 
 
 def generate_obstacle_hit() -> pygame.mixer.Sound:
-    """Impacto de aço contra rocha ou madeira sólida."""
-    duration = 0.14
+    """Impacto de aço contra rocha ou madeira sólida: thud grave + faísca de atrito + crack seco."""
+    duration = 0.16
     num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
-        decay = math.exp(-22.0 * t)
-        thud = math.sin(2.0 * math.pi * 210.0 * t) * 0.6
-        spark_noise = (random.random() * 2.0 - 1.0) * math.exp(-50.0 * t) * 0.5
-        samples.append((thud + spark_noise) * decay * 0.75)
+        thud = math.sin(2.0 * math.pi * 185.0 * t) * math.exp(-28.0 * t) * 0.55
+        spark = noise[i] * math.exp(-60.0 * t) * 0.5
+        crack = noise[i] * math.exp(-140.0 * t) * 0.4
+        samples.append((thud + spark + crack) * 0.8)
 
     return _samples_to_sound(samples)
 
 
 def generate_flintlock_shot() -> pygame.mixer.Sound:
-    """Tiro de pistola de pederneira (estalo seco de disparo + queima de pólvora)."""
+    """Tiro de pistola de pederneira: estalo seco de alta pressão + corpo grave de queima de pólvora."""
     duration = 0.32
     num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
-        # Estalo de alta pressão inicial
-        crack = (random.random() * 2.0 - 1.0) * math.exp(-45.0 * t) * 0.8
-        # Corpo da explosão
+        crack = noise[i] * math.exp(-50.0 * t) * 0.78
         body = math.sin(2.0 * math.pi * (160.0 * math.exp(-8.0 * t)) * t) * math.exp(-12.0 * t) * 0.6
         samples.append((crack + body) * 0.9)
 
@@ -148,48 +190,49 @@ def generate_flintlock_shot() -> pygame.mixer.Sound:
 
 
 def generate_tanegashima_shot() -> pygame.mixer.Sound:
-    """Tiro encorpado de arcabuz Tanegashima (estrondo maior com eco de vale)."""
-    duration = 0.45
+    """Tiro encorpado de arcabuz Tanegashima: estrondo maior + eco de vale (repetição atenuada e atrasada)."""
+    duration = 0.5
     num_samples = int(SAMPLE_RATE * duration)
-    samples = []
-
+    noise = _white_noise(num_samples)
+    samples = [0.0] * num_samples
     for i in range(num_samples):
         t = i / SAMPLE_RATE
-        crack = (random.random() * 2.0 - 1.0) * math.exp(-25.0 * t) * 0.75
-        sub = math.sin(2.0 * math.pi * (120.0 * math.exp(-5.0 * t)) * t) * math.exp(-8.0 * t) * 0.7
-        samples.append((crack + sub) * 0.95)
+        crack = noise[i] * math.exp(-26.0 * t) * 0.7
+        sub = math.sin(2.0 * math.pi * (110.0 * math.exp(-5.0 * t)) * t) * math.exp(-7.0 * t) * 0.65
+        samples[i] += crack + sub
+    delay = int(0.09 * SAMPLE_RATE)
+    for i in range(num_samples - delay):
+        samples[i + delay] += samples[i] * 0.22
 
-    return _samples_to_sound(samples)
+    return _samples_to_sound([s * 0.85 for s in samples])
 
 
 def generate_bomb_explode() -> pygame.mixer.Sound:
-    """Detonação de bomba de pólvora preta com tremor sub-grave."""
-    duration = 0.55
+    """Detonação de bomba de pólvora preta: tremor sub-grave + ruído de estilhaços filtrado."""
+    duration = 0.6
     num_samples = int(SAMPLE_RATE * duration)
+    rumble = _lowpass(_white_noise(num_samples), 0.25)
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
-        sub = math.sin(2.0 * math.pi * (90.0 * math.exp(-4.0 * t)) * t) * 0.7
-        noise = (random.random() * 2.0 - 1.0) * math.exp(-8.0 * t) * 0.6
+        sub = math.sin(2.0 * math.pi * (85.0 * math.exp(-4.0 * t)) * t) * 0.72
         decay = math.exp(-5.5 * t)
-        samples.append((sub + noise) * decay * 0.95)
+        samples.append((sub + rumble[i] * math.exp(-7.0 * t) * 0.6) * decay * 0.95)
 
     return _samples_to_sound(samples)
 
 
 def generate_cannon_fire() -> pygame.mixer.Sound:
-    """Disparo estrondoso de artilharia naval celestial (Anne)."""
+    """Disparo estrondoso de artilharia naval celestial (Anne): sub-grave profundo + rumble filtrado."""
     duration = 0.70
     num_samples = int(SAMPLE_RATE * duration)
+    rumble = _lowpass(_white_noise(num_samples), 0.2)
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
         sub = math.sin(2.0 * math.pi * (55.0 * math.exp(-3.0 * t)) * t) * 0.85
-        rumble = (random.random() * 2.0 - 1.0) * math.exp(-6.0 * t) * 0.5
         decay = math.exp(-4.2 * t)
-        samples.append((sub + rumble) * decay)
+        samples.append((sub + rumble[i] * math.exp(-6.0 * t) * 0.5) * decay)
 
     return _samples_to_sound(samples)
 
@@ -241,66 +284,68 @@ def generate_shuriken_throw() -> pygame.mixer.Sound:
 
 
 def generate_chain_whip() -> pygame.mixer.Sound:
-    """Ruído metálico rápido da corrente Kusarigama chicoteando."""
-    duration = 0.20
+    """Ruído metálico da corrente Kusarigama: sequência de elos colidindo (múltiplos micro-cliques)."""
+    duration = 0.24
     num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
+    link_times = (0.0, 0.045, 0.085, 0.13)
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
-        env = math.sin(math.pi * (t / duration))
-        clink = math.sin(2.0 * math.pi * (2100.0 + (i % 300)) * t) * 0.5
-        noise = (random.random() * 2.0 - 1.0) * 0.4
-        samples.append((clink + noise) * env * math.exp(-8.0 * t) * 0.7)
+        val = 0.0
+        for lt in link_times:
+            dt = t - lt
+            if dt >= 0.0:
+                freq = 2300.0 + 400.0 * math.sin(dt * 90.0)
+                val += math.sin(2.0 * math.pi * freq * dt) * math.exp(-55.0 * dt) * 0.35
+        val += noise[i] * math.exp(-30.0 * t) * 0.25
+        samples.append(val * 0.85)
 
     return _samples_to_sound(samples)
 
 
 def generate_dodge_whoosh() -> pygame.mixer.Sound:
-    """Deslocamento ágil de ar na esquiva ou rolamento."""
-    duration = 0.14
+    """Deslocamento ágil de ar na esquiva ou rolamento (ruído filtrado, sem bleep tonal)."""
+    duration = 0.16
     num_samples = int(SAMPLE_RATE * duration)
+    filtered = _lowpass(_white_noise(num_samples), 0.3)
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
         env = math.sin(math.pi * (t / duration)) ** 2.0
-        noise = (random.random() * 2.0 - 1.0) * env * 0.55
-        samples.append(noise)
+        samples.append(filtered[i] * env * 0.7)
 
     return _samples_to_sound(samples)
 
 
 def generate_shukuchi() -> pygame.mixer.Sound:
-    """Teletransporte Shukuchi (passo relâmpago veloz de Kenshi)."""
+    """Teletransporte Shukuchi (passo relâmpago veloz de Kenshi): varredura ascendente + ruído brilhante."""
     duration = 0.18
     num_samples = int(SAMPLE_RATE * duration)
+    noise = _highpass(_white_noise(num_samples), 0.6)
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
         env = math.sin(math.pi * (t / duration)) ** 1.8
         freq = 450.0 + 850.0 * (t / duration)
         sine = math.sin(2.0 * math.pi * freq * t) * 0.4
-        noise = (random.random() * 2.0 - 1.0) * 0.5
-        samples.append((sine + noise) * env * 0.75)
+        samples.append((sine + noise[i] * 0.5) * env * 0.75)
 
     return _samples_to_sound(samples)
 
 
 def generate_ryuu_tsui_sen() -> pygame.mixer.Sound:
-    """Vento cortante descendente acelerado do ataque aéreo."""
+    """Vento cortante descendente acelerado do ataque aéreo: ruído filtrado + queda de tom."""
     duration = 0.28
     num_samples = int(SAMPLE_RATE * duration)
+    noise = _lowpass(_white_noise(num_samples), 0.4)
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
         env = (t / duration) ** 2.0
         freq = 300.0 + 700.0 * (1.0 - t / duration)
         sine = math.sin(2.0 * math.pi * freq * t) * 0.4
-        noise = (random.random() * 2.0 - 1.0) * 0.5
-        samples.append((sine + noise) * env * 0.8)
+        samples.append((sine + noise[i] * 0.5) * env * 0.8)
 
     return _samples_to_sound(samples)
 
@@ -336,50 +381,53 @@ def generate_poison_breath() -> pygame.mixer.Sound:
 
 
 def generate_footstep() -> pygame.mixer.Sound:
-    """Passo leve e abafado na grama ou pedra."""
-    duration = 0.05
+    """Passo leve e abafado na grama ou pedra: thud grave + textura de solo filtrada."""
+    duration = 0.06
     num_samples = int(SAMPLE_RATE * duration)
+    noise = _lowpass(_white_noise(num_samples), 0.3)
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
         decay = math.exp(-60.0 * t)
         thud = math.sin(2.0 * math.pi * 140.0 * t) * decay * 0.35
-        samples.append(thud)
+        samples.append(thud + noise[i] * decay * 0.12)
 
     return _samples_to_sound(samples)
 
 
 def generate_round_start() -> pygame.mixer.Sound:
-    """Batida cerimonial de tambor Taiko de início de duelo."""
-    duration = 0.60
+    """Batida cerimonial de tambor Taiko: clique seco de baqueta + corpo grave ressonante."""
+    duration = 0.7
     num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
-        taiko = math.sin(2.0 * math.pi * 72.0 * t) * math.exp(-5.0 * t) * 0.8
-        thud = math.sin(2.0 * math.pi * 144.0 * t) * math.exp(-10.0 * t) * 0.4
-        samples.append((taiko + thud) * 0.95)
+        click = noise[i] * math.exp(-250.0 * t) * 0.5
+        body = math.sin(2.0 * math.pi * 68.0 * t) * math.exp(-6.0 * t) * 0.8
+        overtone = math.sin(2.0 * math.pi * 136.0 * t) * math.exp(-11.0 * t) * 0.35
+        samples.append((click + body + overtone) * 0.95)
 
     return _samples_to_sound(samples)
 
 
 def generate_round_win() -> pygame.mixer.Sound:
-    """Ressonância de sino budista de vitória."""
-    duration = 0.95
+    """Ressonância de sino budista de vitória: parciais inarmônicas de sino real + golpe inicial."""
+    duration = 1.1
     num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
+    partials = [
+        (1.00, 0.45, 2.6),
+        (1.79, 0.26, 3.4),
+        (2.42, 0.16, 4.2),
+        (3.14, 0.10, 5.0),
+        (4.08, 0.06, 6.0),
+    ]
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
-        decay = math.exp(-3.2 * t)
-        gong = (
-            math.sin(2.0 * math.pi * 220.0 * t) * 0.50 +
-            math.sin(2.0 * math.pi * 440.0 * t) * 0.30 +
-            math.sin(2.0 * math.pi * 660.0 * t) * 0.15
-        )
-        samples.append(gong * decay * 0.85)
+        strike_noise = noise[i] * math.exp(-40.0 * t) * 0.3 if t < 0.02 else 0.0
+        samples.append((_metal_ring(t, 210.0, partials) + strike_noise) * 0.85)
 
     return _samples_to_sound(samples)
 
@@ -429,18 +477,17 @@ def generate_ui_cancel() -> pygame.mixer.Sound:
 
 
 def generate_dog_bark() -> pygame.mixer.Sound:
-    """Latido rápido e agressivo do cão Yamato."""
+    """Latido rápido e agressivo do cão Yamato: corpo tonal descendente + ruído áspero de gãnido."""
     duration = 0.16
     num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
     samples = []
-
     for i in range(num_samples):
         t = i / SAMPLE_RATE
         decay = math.exp(-22.0 * t)
         freq = 320.0 - 140.0 * (t / duration)
-        noise = (random.random() * 2.0 - 1.0) * 0.35
         tone = math.sin(2.0 * math.pi * freq * t) * 0.65
-        samples.append((tone + noise) * decay * 0.85)
+        samples.append((tone + noise[i] * 0.35) * decay * 0.85)
 
     return _samples_to_sound(samples)
 
@@ -480,3 +527,33 @@ def generate_procedural_sound(event: SoundEvent) -> pygame.mixer.Sound | None:
     if gen:
         return gen()
     return None
+
+
+def render_all_to_wav_files(output_dir: str) -> list[str]:
+    """Renderiza todos os eventos sonoros procedurais como arquivos .wav reais em disco,
+    substituindo quaisquer placeholders antigos (uso: regenerar assets/sounds/sfx)."""
+    if not pygame.mixer.get_init():
+        pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=2, buffer=512)
+    os.makedirs(output_dir, exist_ok=True)
+    written = []
+    for event, gen in _GENERATOR_MAP.items():
+        sound = gen()
+        raw = sound.get_raw()
+        path = os.path.join(output_dir, f"{event.value}.wav")
+        with wave.open(path, "wb") as wf:
+            wf.setnchannels(2)
+            wf.setsampwidth(2)
+            wf.setframerate(SAMPLE_RATE)
+            wf.writeframes(raw)
+        written.append(path)
+    return written
+
+
+if __name__ == "__main__":
+    import sys
+    _target_dir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
+        os.path.dirname(__file__), "..", "..", "assets", "sounds", "sfx"
+    )
+    _target_dir = os.path.abspath(_target_dir)
+    _paths = render_all_to_wav_files(_target_dir)
+    print(f"Gerados {len(_paths)} arquivos .wav em {_target_dir}")

@@ -300,6 +300,14 @@ source venv/bin/activate  # No Windows: venv\Scripts\activate
 # 3. Instalar dependências
 pip install -r requirements.txt
 
+# 3.1 (Opcional) Vídeo de abertura cinematográfico
+# Sem isso o jogo funciona normalmente — a abertura é apenas pulada.
+# No macOS, use "opencv-python-headless" (NÃO "opencv-python"): a variante com GUI
+# embute sua própria libSDL2, que colide com a do pygame em runtime e pode causar
+# travamentos/erros aleatórios ("Class X is implemented in both ... mysterious crashes").
+pip install --no-deps opencv-python-headless==4.10.0.84 sounddevice numpy
+pip install --no-deps pyvidplayer2==0.9.37
+
 # 4. Executar o jogo
 python3 main.py
 
