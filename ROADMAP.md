@@ -212,19 +212,19 @@ pie title Status dos Recursos e Frentes do Projeto
   - **Solução:** (1) Auditar todas as strings hardcoded em `src/ui/character_select.py`, `src/ui/title_screen.py`, `src/ui/main_menu_enhanced.py`; (2) adicionar keys de tradução à `src/i18n.py` (PT + EN): nomes de lutadores, descrições de arsenal, dicas de estratégia, botões ("Back", "Options", "Help", etc.), rótulos de modo ("1 Player vs IA", "2 Players Versus", "Training"); (3) substituir strings hardcoded com chamadas `t(key)` em todos os renderizadores; (4) encontrar e remover "random text" aparecendo na tela (rogue render call).
   - **Arquivos:** `src/i18n.py`, `src/ui/character_select.py`, `src/ui/title_screen.py`, `src/ui/main_menu_enhanced.py`
   - **Teste:** Lançar jogo, alternar idioma (PT ↔ EN) via settings → Todos os textos em character select, title, mode selection e options devem trocar de idioma. Nenhum texto aleatório na tela.
-  - **Verificação:** ✅ Bilíngue completo, sem corrupting text, 27 keys adicionadas
+  - **Verificação:** ✅ Bilíngue completo, sem corrupting text. Telas de personagem e arena reconstroem os textos ao trocar de idioma; nomes de teclas/botões, rótulos de configurações e rodapé traduzidos.
 
 - [x] **Entregável 5.5.2: Correção de Bugs de Controles (P2 Display & DualSense Unicode)** ✅ COMPLETE
   - **Problema:** (a) `settings_menu_enhanced.py` exibe seções de controles P1 e P2 mesmo quando apenas P1 está conectado; (b) `controller_manager.py` exibe artefato Unicode antes de "DualSense PS5".
-  - **Solução:** (a) `settings_menu.py` já possui condicional `if has_p2_controller:` na linha 446; (b) Remover emoji 🎮 (joystick) das strings de retorno em `get_badge_text()`.
-  - **Arquivos:** `src/ui/settings_menu_enhanced.py` (N/A - sem controle P2), `src/input/controller_manager.py` (emoji removido)
-  - **Teste:** Conectar apenas controle P1 → seção P2 não aparece. Conectar P1 + P2 → ambas aparecem. Nenhum artefato Unicode nos nomes de controle.
-  - **Verificação:** ✅ P2 conditional já presente, DualSense emoji removido → clean UTF-8
+  - **Solução:** (a) Botões de gamepad (ícones/rótulos) só aparecem com um controle conectado, e apenas do tipo correto (PlayStation, Xbox, Switch, genérico); sem controle, mostra só a tecla do teclado. Controles de teclado do P2 sempre visíveis. (b) Remover emoji 🎮 de `get_badge_text()` e símbolos ✕ ○ ▢ △ dos nomes/dicas de botões (fontes não renderizam).
+  - **Arquivos:** `src/ui/settings_menu.py`, `src/input/controller_manager.py`, `src/ui/character_select.py`
+  - **Teste:** Sem controle → nenhum ícone PlayStation. Com DualSense → ícones PS; Xbox/Switch/genérico → rótulos próprios. Nenhum caractere estranho.
+  - **Verificação:** ✅ Validado com controles simulados de cada tipo (PT/EN)
 
-- [ ] **Entregável 5.5.3: Redesenho de Botão "?" Arredondado (Ícone Help)**
-  - **Objetivo:** Substituir rótulo de texto "Como Funciona" / "?" por um ícone visual arredondado (círculo branco com "?" em ouro) usando `pygame.draw.circle()`.
-  - **Arquivos:** `src/ui/character_select.py`, `src/ui/settings_menu_enhanced.py`
-  - **Verificação:** ✅ Ícone "?" arredondado integrado
+- [x] **Entregável 5.5.3: Redesenho de Botão "?" Arredondado (Ícone Help)** ✅ COMPLETE
+  - **Objetivo:** Substituir rótulo de texto "Guia do Jogo" por um ícone circular com "?" dourado (aro dourado, brilho ao passar o mouse), desenhado com `pygame.draw.circle()`.
+  - **Arquivos:** `src/ui/character_select.py` (`draw_round_help_button`)
+  - **Verificação:** ✅ Ícone "?" arredondado integrado; clique e atalho H / ? abrem o guia
 
 - [ ] **Entregável 5.5.4: Pergaminho de Alta Fidelidade**
   - **Objetivo:** Renderizar pergaminho Sumi-E com textura realista (papéis clássicos), decorações (pinceladas de tinta preta e dourada), e partículas de pétala de cerejeira.

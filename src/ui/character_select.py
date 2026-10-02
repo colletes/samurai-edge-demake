@@ -265,6 +265,22 @@ def draw_enso_circle(surface, cx: int, cy: int, radius: int, color, anim_time: f
     pygame.draw.circle(surface, color, (cx + radius - 2, cy - 4), 2)
 
 
+def draw_round_help_button(surface, font, rect: pygame.Rect, anim_time: float):
+    """Ícone de ajuda circular: disco claro, aro dourado e '?' dourado, com brilho ao passar o mouse."""
+    hovered = rect.collidepoint(pygame.mouse.get_pos())
+    center = rect.center
+    radius = rect.width // 2
+    if hovered:
+        glow = pygame.Surface((rect.width + 16, rect.height + 16), pygame.SRCALPHA)
+        pygame.draw.circle(glow, (255, 215, 90, 90), (glow.get_width() // 2, glow.get_height() // 2), radius + 7)
+        surface.blit(glow, (rect.x - 8, rect.y - 8))
+    pygame.draw.circle(surface, (244, 238, 222) if hovered else (226, 218, 198), center, radius)
+    pygame.draw.circle(surface, COLOR_GOLD, center, radius, 3)
+    pygame.draw.circle(surface, (150, 112, 30), center, radius - 5, 1)
+    q = font.render("?", True, (150, 104, 18))
+    surface.blit(q, (center[0] - q.get_width() // 2, center[1] - q.get_height() // 2))
+
+
 def draw_kanban_menu_button(surface, font, text: str, sub: str, rect: pygame.Rect, is_selected: bool, is_enabled: bool, anim_time: float):
     """Desenha um botão de menu no formato tradicional de tabuleta de madeira laqueada (Kanban)."""
     if not is_enabled:
@@ -325,8 +341,8 @@ class CharacterSelectScreen:
 
         # Modal de Ajuda Completa do Jogo e Guia dos 12 Guerreiros
         self.help_modal = GameHelpModal()
-        self.help_btn_rect = pygame.Rect(SCREEN_WIDTH - 250, 14, 226, 32)
-        self.lang_btn_rect = pygame.Rect(SCREEN_WIDTH - 365, 14, 96, 32)
+        self.help_btn_rect = pygame.Rect(SCREEN_WIDTH - 64, 14, 36, 36)
+        self.lang_btn_rect = pygame.Rect(SCREEN_WIDTH - 170, 14, 96, 32)
         self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 190, 52, 380, 32)
         self.difficulty_btn_rect = pygame.Rect(0, 0, 0, 0)
         self.start_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 210, SCREEN_HEIGHT - 64, 420, 44)
@@ -1016,7 +1032,7 @@ class CharacterSelectScreen:
 
         # Botão Seletor Flutuante de Idioma [ PT | EN ] (Hanko / Kanban)
         lang = get_lang()
-        self.lang_btn_rect = pygame.Rect(SCREEN_WIDTH - 365, header_y + 4, 96, 32)
+        self.lang_btn_rect = pygame.Rect(SCREEN_WIDTH - 170, header_y + 4, 96, 32)
         r_pt = pygame.Rect(self.lang_btn_rect.x, self.lang_btn_rect.y, 46, 32)
         r_en = pygame.Rect(self.lang_btn_rect.x + 50, self.lang_btn_rect.y, 46, 32)
 
@@ -1036,10 +1052,9 @@ class CharacterSelectScreen:
         t_en = font_zen_small.render("EN", True, en_text_col)
         surface.blit(t_en, (r_en.centerx - t_en.get_width() // 2, r_en.centery - t_en.get_height() // 2))
 
-        # Botão Superior Guia do Jogo & Ajuda
-        self.help_btn_rect = pygame.Rect(SCREEN_WIDTH - 250, header_y + 4, 226, 32)
-        help_label = "GUIA DO JOGO" if lang == LANG_PT else "GAME GUIDE"
-        draw_kanban_menu_button(surface, font_zen_small, help_label, "[ H / ? ]", self.help_btn_rect, False, True, self.anim_timer)
+        # Botão de Ajuda redondo "?" (atalho H / ?)
+        self.help_btn_rect = pygame.Rect(SCREEN_WIDTH - 64, header_y + 2, 36, 36)
+        draw_round_help_button(surface, font_zen_mid, self.help_btn_rect, self.anim_timer)
 
         # 4. Botão Modo de Jogo & Dificuldade da IA (Kanban laqueado com encaixes de ferro)
         is_mode_focused = (self.focus_zone == "MODE_BTN")
