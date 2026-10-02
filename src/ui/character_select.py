@@ -1044,10 +1044,11 @@ class CharacterSelectScreen:
         # 4. Botão Modo de Jogo & Dificuldade da IA (Kanban laqueado com encaixes de ferro)
         is_mode_focused = (self.focus_zone == "MODE_BTN")
         if self.vs_ai:
-            self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 250, 52, 310, 32)
+            self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 290, 52, 350, 32)
             self.difficulty_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 + 70, 52, 180, 32)
             mode_text = "MODO: 1P vs IA (TREINO)" if lang == LANG_PT else "MODE: 1P vs AI (TRAIN)"
-            draw_kanban_menu_button(surface, font_zen_small, mode_text, "[ CIMA/BAIXO ]", self.mode_btn_rect, is_mode_focused, True, self.anim_timer)
+            mode_hint = "[ CIMA/BAIXO ]" if lang == LANG_PT else "[ UP/DOWN ]"
+            draw_kanban_menu_button(surface, font_zen_small, mode_text, mode_hint, self.mode_btn_rect, is_mode_focused, True, self.anim_timer)
 
             diff_names = {
                 "easy": "FÁCIL" if lang == LANG_PT else "EASY",
@@ -1060,7 +1061,8 @@ class CharacterSelectScreen:
             self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 190, 52, 380, 32)
             self.difficulty_btn_rect = pygame.Rect(0, 0, 0, 0)
             mode_text = "MODO: 1P vs 2P (VERSUS)" if lang == LANG_PT else "MODE: 1P vs 2P (VERSUS)"
-            draw_kanban_menu_button(surface, font_zen_small, mode_text, "[ CIMA/BAIXO ]", self.mode_btn_rect, is_mode_focused, True, self.anim_timer)
+            mode_hint = "[ CIMA/BAIXO ]" if lang == LANG_PT else "[ UP/DOWN ]"
+            draw_kanban_menu_button(surface, font_zen_small, mode_text, mode_hint, self.mode_btn_rect, is_mode_focused, True, self.anim_timer)
 
         # 5. Banner Indicador de Etapa / Instrução
         step_y = 90
@@ -1219,23 +1221,30 @@ class CharacterSelectScreen:
         has_c1 = ctrl_mgr.has_controller(0) if ctrl_mgr else False
         has_c2 = ctrl_mgr.has_controller(1) if ctrl_mgr else False
 
+        c1 = ctrl_mgr.get_controller_for_player(0) if ctrl_mgr else None
+        c2 = ctrl_mgr.get_controller_for_player(1) if ctrl_mgr else None
+        ok1 = c1.get_button_text("confirm").upper() if c1 else ""
+        ok2 = c2.get_button_text("confirm").upper() if c2 else ""
+        enter_space = "ENTER / ESPAÇO" if lang == LANG_PT else "ENTER / SPACE"
+        space_only = "ESPAÇO" if lang == LANG_PT else "SPACE"
+
         if self.vs_ai:
             if self.selection_step == "P1":
                 st_label = "CONFIRMAR P1" if lang == LANG_PT else "CONFIRM P1"
-                hint_label = "[ ✕ / ESPAÇO ]" if has_c1 else ("[ ENTER / ESPAÇO ]" if lang == LANG_PT else "[ ENTER / SPACE ]")
+                hint_label = f"[ {ok1} / {space_only} ]" if has_c1 else f"[ {enter_space} ]"
             else:
                 st_label = "INICIAR DUELO" if lang == LANG_PT else "START DUEL"
-                hint_label = "[ ✕ / ESPAÇO ]" if has_c1 else ("[ ENTER / ESPAÇO ]" if lang == LANG_PT else "[ ENTER / SPACE ]")
+                hint_label = f"[ {ok1} / {space_only} ]" if has_c1 else f"[ {enter_space} ]"
         else:
             if not self.p1_ready:
                 st_label = "CONFIRMAR P1" if lang == LANG_PT else "CONFIRM P1"
-                hint_label = "[ ✕ / ESPAÇO / [E] ]" if has_c1 else ("[ ESPAÇO / [E] ]" if lang == LANG_PT else "[ SPACE / [E] ]")
+                hint_label = f"[ {ok1} / {space_only} / [E] ]" if has_c1 else f"[ {space_only} / [E] ]"
             elif not self.p2_ready:
                 st_label = "CONFIRMAR P2" if lang == LANG_PT else "CONFIRM P2"
-                hint_label = "[ ✕ / ENTER / [U] ]" if has_c2 else "[ ENTER / [U] ]"
+                hint_label = f"[ {ok2} / ENTER / [U] ]" if has_c2 else "[ ENTER / [U] ]"
             else:
                 st_label = "INICIAR DUELO" if lang == LANG_PT else "START DUEL"
-                hint_label = "[ ENTER / ESPAÇO ]" if lang == LANG_PT else "[ ENTER / SPACE ]"
+                hint_label = f"[ {enter_space} ]"
 
         s_title_sh = font_oriental_action.render(st_label, True, (20, 10, 10))
         s_title_tx = font_oriental_action.render(st_label, True, COLOR_GOLD)
@@ -1258,11 +1267,8 @@ class CharacterSelectScreen:
 
         guide_text = t("guide_nav")
         if badge and ctrl:
-            btn_ok = ctrl.get_button_glyph("confirm")
-            btn_back = ctrl.get_button_glyph("cancel")
-            btn_mode = ctrl.get_button_glyph("attack")
-            btn_guide = ctrl.get_button_glyph("special")
-            guide_text = f"{badge}: D-Pad/Analógico = Navegar | [{btn_ok}] = Confirma | [{btn_back}] = Volta | [{btn_mode}] = Alternar Modo | [{btn_guide}] = Guia"
+            guide_text = t("guide_gamepad", badge=badge, ok=ctrl.get_button_text("confirm"), back=ctrl.get_button_text("cancel"),
+                           mode=ctrl.get_button_text("attack"), guide=ctrl.get_button_text("special"))
 
         guide_surf = font_zen_small.render(guide_text, True, (185, 180, 175))
         surface.blit(guide_surf, (SCREEN_WIDTH // 2 - guide_surf.get_width() // 2, SCREEN_HEIGHT - 18))

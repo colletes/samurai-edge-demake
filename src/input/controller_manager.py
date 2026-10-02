@@ -11,6 +11,7 @@ suporte a navegação por menus com analógico/D-Pad, pausa e rumble.
 """
 import math
 import pygame
+from src.i18n import t
 
 # Tipos de Controle
 CONTROLLER_TYPE_XBOX = "xbox"
@@ -184,17 +185,29 @@ class ControllerDevice:
             }
         else: # Genérico
             glyphs = {
-                ACTION_ATTACK: "▢ / X",
-                ACTION_SECONDARY: "△ / Y",
-                ACTION_PARRY: "△ / Y",
-                ACTION_DASH: "○ / B",
-                ACTION_CONFIRM: "✕ / A",
-                ACTION_CANCEL: "○ / B",
-                ACTION_SPECIAL: "△ / Y",
+                ACTION_ATTACK: "X",
+                ACTION_SECONDARY: "Y",
+                ACTION_PARRY: "Y",
+                ACTION_DASH: "B",
+                ACTION_CONFIRM: "A",
+                ACTION_CANCEL: "B",
+                ACTION_SPECIAL: "Y",
                 ACTION_MENU: "Start",
                 ACTION_RESTART: "Select",
             }
         return glyphs.get(action, "?")
+
+    def get_button_text(self, action: str) -> str:
+        """Nome do botão da ação em texto simples (sem símbolos que a fonte não renderiza)."""
+        if self.is_playstation:
+            names = {
+                ACTION_ATTACK: "pad_square", ACTION_SECONDARY: "pad_triangle", ACTION_PARRY: "pad_triangle",
+                ACTION_SPECIAL: "pad_triangle", ACTION_DASH: "pad_circle", ACTION_CANCEL: "pad_circle",
+                ACTION_CONFIRM: "pad_cross",
+            }
+            if action in names:
+                return t(names[action])
+        return self.get_button_glyph(action)
 
     def get_movement(self) -> tuple[float, float]:
         """
@@ -250,13 +263,13 @@ class ControllerDevice:
     def get_button_name(self, button_index: int | None) -> str:
         """Retorna o nome amigável e legível do botão no controle especificado."""
         if button_index is None:
-            return "Nenhum"
+            return t("pad_none")
         if self.is_playstation:
             names = {
-                0: "✕ Cruz",
-                1: "○ Círculo",
-                2: "▢ Quadrado",
-                3: "△ Triângulo",
+                0: t("pad_cross"),
+                1: t("pad_circle"),
+                2: t("pad_square"),
+                3: t("pad_triangle"),
                 4: "Share / Create",
                 5: "PS",
                 6: "Options",
@@ -264,13 +277,13 @@ class ControllerDevice:
                 8: "R3",
                 9: "L1",
                 10: "R1",
-                11: "D-PAD CIMA",
-                12: "D-PAD BAIXO",
-                13: "D-PAD ESQ",
-                14: "D-PAD DIR",
+                11: t("settings_dpad_up"),
+                12: t("settings_dpad_down"),
+                13: t("settings_dpad_left"),
+                14: t("settings_dpad_right"),
                 15: "Touchpad",
             }
-            return names.get(button_index, f"Botão {button_index}")
+            return names.get(button_index, t("pad_button", n=button_index))
         elif self.is_xbox:
             names = {
                 0: "A",
@@ -284,12 +297,12 @@ class ControllerDevice:
                 8: "R-Stick",
                 9: "LB",
                 10: "RB",
-                11: "D-PAD CIMA",
-                12: "D-PAD BAIXO",
-                13: "D-PAD ESQ",
-                14: "D-PAD DIR",
+                11: t("settings_dpad_up"),
+                12: t("settings_dpad_down"),
+                13: t("settings_dpad_left"),
+                14: t("settings_dpad_right"),
             }
-            return names.get(button_index, f"Botão {button_index}")
+            return names.get(button_index, t("pad_button", n=button_index))
         elif self.is_nintendo:
             names = {
                 0: "B",
@@ -303,20 +316,20 @@ class ControllerDevice:
                 8: "R-Stick",
                 9: "L",
                 10: "R",
-                11: "D-PAD CIMA",
-                12: "D-PAD BAIXO",
-                13: "D-PAD ESQ",
-                14: "D-PAD DIR",
+                11: t("settings_dpad_up"),
+                12: t("settings_dpad_down"),
+                13: t("settings_dpad_left"),
+                14: t("settings_dpad_right"),
             }
-            return names.get(button_index, f"Botão {button_index}")
+            return names.get(button_index, t("pad_button", n=button_index))
         else:
             names = {
-                11: "D-PAD CIMA",
-                12: "D-PAD BAIXO",
-                13: "D-PAD ESQ",
-                14: "D-PAD DIR",
+                11: t("settings_dpad_up"),
+                12: t("settings_dpad_down"),
+                13: t("settings_dpad_left"),
+                14: t("settings_dpad_right"),
             }
-            return names.get(button_index, f"Botão {button_index}")
+            return names.get(button_index, t("pad_button", n=button_index))
 
     def get_button_svg_icon(self, action_or_index: str | int) -> str | None:
         """Retorna o identificador do ícone SVG correspondente ao botão ou ação no controle."""

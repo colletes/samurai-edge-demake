@@ -28,3 +28,30 @@ scratch/
 # User runtime settings
 controls_config.json
 hd2d_edition/
+
+# Local clutter
+Song Suggestions/
+settings.json
+src/i18n_backup.py
+assets/Opening Videos/Take*
+/test_musashi_wave.py
+/test_*_musashi_wave*.py
+/test_wave_*.py
+/test_sprint*_*.py
+/test_scroll_frame_*.py
+/test_ui_improvements.py
+/test_i18n_coverage.py
+/test_reflection_*.py
+/*_SUMMARY.md
+/*_REPORT.md
+/RESUMO_*
+/README_MELHORIAS.txt
+/MANIFEST_CHANGES.txt
+/CHECKLIST_FINAL.md
+/CODE_CHANGES_DETAIL.md
+/GUIA_VALIDACAO.md
+/FEEDBACK_FIXES_ROADMAP.md
+/PHASE*.md
+/SPRINT_*.md
+/VISUAL_ENHANCEMENTS.md
+!/BALANCE_REPORT*.md
