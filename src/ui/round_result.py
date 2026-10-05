@@ -11,6 +11,7 @@ import math
 import pygame
 
 from src.config import SCREEN_WIDTH, SCREEN_HEIGHT
+from src.i18n import t
 from src.ui.fonts import get_title_font, get_text_font
 
 MATCH_WINS_NEEDED = 2  # Melhor-de-3: primeiro a vencer 2 rounds fecha a partida

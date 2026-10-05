@@ -27,6 +27,8 @@ class GrayNinja(Samurai):
         self.mine_timer = 0.0
         self.planted_mine = None
         self.stealth_timer = 0.0
+        self.fog_nodes: list[tuple[float, float, float]] = []  # nós de névoa pedidos; o main os entrega ao FogVolume
+        self._last_node = (wx, wy)
 
         # Terceira Ação: Esquiva Ágil Ninja
         self.is_agile_dodge = True
@@ -115,7 +117,9 @@ class GrayNinja(Samurai):
 
         super().trigger_roll(dir_x, dir_y, particles=None)  # Sem faíscas do super
         self.alpha = 15  # Bem mais transparente (~6% de opacidade)
-        self.stealth_timer = 1.6  # Janela de camuflagem duradoura
+        self.stealth_timer = 1.0  # o resto da camuflagem vem de ficar dentro do rastro de névoa
+        self.fog_nodes.append((self.wx, self.wy, 1.5))
+        self._last_node = (self.wx, self.wy)
 
         if particles is not None:
             from src.effects.particles import SmokeParticle
@@ -163,6 +167,9 @@ class GrayNinja(Samurai):
 
         elif self.state == STATE_ROLL:
             self.update_roll(dt, game_map)
+            if math.hypot(self.wx - self._last_node[0], self.wy - self._last_node[1]) >= 0.45 or self.state != STATE_ROLL:
+                self.fog_nodes.append((self.wx, self.wy, 1.2))
+                self._last_node = (self.wx, self.wy)
             # Rastro contínuo de fumaça durante o deslocamento
             if particles is not None:
                 from src.effects.particles import SmokeParticle
@@ -174,6 +181,10 @@ class GrayNinja(Samurai):
             self.state_timer -= dt
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
+
+    def drain_fog_nodes(self) -> list[tuple[float, float, float]]:
+        nodes, self.fog_nodes = self.fog_nodes, []
+        return nodes
 
     def render(self, surface: pygame.Surface, camera):
         """Renderiza o Ninja Cinza no autêntico estilo Voxel 3D Isométrico."""

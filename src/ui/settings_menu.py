@@ -68,6 +68,8 @@ class SettingsMenu:
         self.button_rects: list[tuple[pygame.Rect, int]] = []
         self.touch_toggle_rect = pygame.Rect(0, 0, 0, 0)
         self.difficulty_toggle_rect = pygame.Rect(0, 0, 0, 0)
+        self.quality_toggle_rect = pygame.Rect(0, 0, 0, 0)
+        self.style_toggle_rect = pygame.Rect(0, 0, 0, 0)
         self.sfx_minus_rect = pygame.Rect(0, 0, 0, 0)
         self.sfx_plus_rect = pygame.Rect(0, 0, 0, 0)
         self.sfx_bar_rect = pygame.Rect(0, 0, 0, 0)
@@ -102,6 +104,25 @@ class SettingsMenu:
         self.ai_difficulty = order[(cur_idx + 1) % len(order)]
         SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
         self.save_settings()
+
+    def cycle_effects_quality(self):
+        """Alterna a qualidade dos efeitos (alta/baixa) e grava em settings.json."""
+        from src.audio.sound_manager import SoundManager
+        from src.audio.sound_events import SoundEvent
+        from src.effects import quality
+        quality.set_effects_quality(quality.LOW if quality.is_high() else quality.HIGH)
+        quality.save_video_setting(quality.SETTINGS_PATH, "effects_quality", quality.get_effects_quality())
+        SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+
+    def cycle_character_style(self):
+        """Alterna o estilo dos lutadores com modelo cel-shading (detalhado/cel) e grava em settings.json."""
+        from src.audio.sound_manager import SoundManager
+        from src.audio.sound_events import SoundEvent
+        from src.effects import quality
+        from src.isometric import voxel_renderer
+        voxel_renderer.set_render_style("detailed" if voxel_renderer.get_render_style() == "cel" else "cel")
+        quality.save_video_setting(quality.SETTINGS_PATH, "character_style", voxel_renderer.get_render_style())
+        SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
 
     def save_settings(self):
         """Salva as configurações atuais no arquivo controls_config.json."""
@@ -296,6 +317,12 @@ class SettingsMenu:
             elif self.difficulty_toggle_rect.collidepoint(vx, vy):
                 self.cycle_ai_difficulty()
                 return True
+            elif self.quality_toggle_rect.collidepoint(vx, vy):
+                self.cycle_effects_quality()
+                return True
+            elif self.style_toggle_rect.collidepoint(vx, vy):
+                self.cycle_character_style()
+                return True
             for rect, idx in self.button_rects:
                 if rect.collidepoint(vx, vy):
                     self.selected_index = idx
@@ -318,6 +345,12 @@ class SettingsMenu:
                 return True
             elif event.key == pygame.K_g:
                 self.cycle_ai_difficulty()
+                return True
+            elif event.key == pygame.K_e:
+                self.cycle_effects_quality()
+                return True
+            elif event.key == pygame.K_v:
+                self.cycle_character_style()
                 return True
             elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
                 self.adjust_sfx_volume(-0.1)
@@ -380,6 +413,12 @@ class SettingsMenu:
                 return True
             elif self.difficulty_toggle_rect.collidepoint(mx, my):
                 self.cycle_ai_difficulty()
+                return True
+            elif self.quality_toggle_rect.collidepoint(mx, my):
+                self.cycle_effects_quality()
+                return True
+            elif self.style_toggle_rect.collidepoint(mx, my):
+                self.cycle_character_style()
                 return True
             for rect, idx in self.button_rects:
                 if rect.collidepoint(mx, my):
@@ -623,6 +662,21 @@ class SettingsMenu:
         pygame.draw.rect(surface, d_col, self.difficulty_toggle_rect, 1, border_radius=6)
         diff_lbl = self._fit_text(font_small, t("ai_difficulty_label").format(d_name=d_name), d_col, 376)
         surface.blit(diff_lbl, (self.difficulty_toggle_rect.centerx - diff_lbl.get_width() // 2, self.difficulty_toggle_rect.y + 5))
+
+        # Botões de qualidade dos efeitos e de estilo dos lutadores
+        from src.effects import quality
+        from src.isometric import voxel_renderer
+        high = quality.is_high()
+        cel = voxel_renderer.get_render_style() == "cel"
+        for attr, x_off, label, color in (
+                ("quality_toggle_rect", -345, t("effects_quality_label").format(q_name=t("quality_high") if high else t("quality_low")), (110, 225, 140) if high else (245, 190, 85)),
+                ("style_toggle_rect", 15, t("character_style_label").format(s_name=t("style_cel") if cel else t("style_detailed")), COLOR_GOLD)):
+            rect = pygame.Rect(panel_rect.centerx + x_off, audio_y + 120, 330, 26)
+            setattr(self, attr, rect)
+            pygame.draw.rect(surface, (28, 36, 32), rect, border_radius=6)
+            pygame.draw.rect(surface, color, rect, 1, border_radius=6)
+            lbl = self._fit_text(font_small, label, color, 316)
+            surface.blit(lbl, (rect.centerx - lbl.get_width() // 2, rect.y + 5))
 
         # 7. Botões de Ação no Rodapé do Painel
         # Botão Restaurar Padrões

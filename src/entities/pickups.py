@@ -35,7 +35,7 @@ class PowderPouch:
             ry = round(origin_wy + math.sin(angle) * dist, 1)
             if not (2.0 <= rx <= game_map.cols - 2.0 and 2.0 <= ry <= game_map.rows - 2.0):
                 continue
-            if game_map.is_water(rx, ry):
+            if game_map.is_water(rx, ry) or (hasattr(game_map, "pit_edge_distance") and game_map.pit_edge_distance(rx, ry) < 1.0):
                 continue
             if any(math.hypot(rx - r.wx, ry - r.wy) < (r.radius + 0.6) for r in game_map.rocks):
                 continue
@@ -80,7 +80,7 @@ class PowderPouch:
         for _ in range(100):
             rx = round(random.uniform(3.0, game_map.cols - 3.0), 1)
             ry = round(random.uniform(3.0, game_map.rows - 3.0), 1)
-            if game_map.is_water(rx, ry):
+            if game_map.is_water(rx, ry) or (hasattr(game_map, "pit_edge_distance") and game_map.pit_edge_distance(rx, ry) < 1.0):
                 continue
             if any(math.hypot(rx - r.wx, ry - r.wy) < (r.radius + 0.6) for r in game_map.rocks):
                 continue

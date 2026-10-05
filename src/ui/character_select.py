@@ -18,7 +18,7 @@ from src.config import (
     COLOR_PURPLE_NINJA, COLOR_PURPLE_DARK, COLOR_PURPLE_AURA, COLOR_CHAIN,
     COLOR_SAITOU_LIGHT_BLUE, CHAR_SAITOU,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
-    CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
+    CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER, CHAR_RANDOM,
     COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA, get_asset_path
 )
 
@@ -28,6 +28,8 @@ from src.ui.game_help import GameHelpModal
 from src.i18n import t, get_lang, toggle_lang, LANG_PT, LANG_EN
 from src.ui.portraits import get_portrait
 from src.ui.fonts import get_title_font, get_text_font
+from src.effects import parchment as pm
+from src.roster import ROSTER_ORDER
 
 # Paleta Sumi-E inspirada no conceito artístico do título
 COLOR_SUMI_INK = (18, 18, 20)
@@ -338,6 +340,8 @@ class CharacterSelectScreen:
         self._axis_x_held_p2 = False
         self._axis_y_held_p2 = False
         self.anim_timer = 0.0
+        self._last_col = 2          # coluna lembrada ao subir da carta Aleatório para a grade
+        self.reveal: dict | None = None  # sorteio em andamento (roleta de lutadores antes de iniciar)
 
         # Modal de Ajuda Completa do Jogo e Guia dos 12 Guerreiros
         self.help_modal = GameHelpModal()
@@ -379,6 +383,8 @@ class CharacterSelectScreen:
             })
         self._characters_lang = None
         self._characters_cache = []
+        self.petals = pm.PetalField()
+        pm.prewarm([(194, 200, i * 7 + 3) for i in range(12)])
 
     @property
     def characters(self):
@@ -390,6 +396,38 @@ class CharacterSelectScreen:
         return self._characters_cache
 
     def _build_characters(self):
+        """12 guerreiros na ordem do elenco (src/roster.py) e, por último, a carta Aleatório."""
+        by_id = {c["id"]: c for c in self._build_fighters()}
+        cards = [by_id[char_id] for char_id in ROSTER_ORDER]
+        cards.append({
+            "id": CHAR_RANDOM,
+            "name": t("char_random_name"),
+            "title": t("char_random_title"),
+            "style": t("char_random_style"),
+            "color": (200, 170, 90),
+            "speed_stars": "", "damage_desc": "", "special_desc": "", "keys_p1": "", "keys_p2": "",
+        })
+        return cards
+
+    @property
+    def random_idx(self) -> int:
+        return len(self.characters) - 1
+
+    def _grid_step(self, idx: int, dx: int, dy: int) -> int:
+        """Move o cursor na grade 6x2 de guerreiros mais a carta Aleatório numa terceira linha."""
+        cols, rnd = 6, self.random_idx
+        if idx == rnd:
+            row, col = 2, self._last_col
+        else:
+            row, col = divmod(idx, cols)
+            self._last_col = col
+        if dy:
+            row = (row + dy) % 3
+        if dx and row != 2:
+            col = (col + dx) % cols
+        return rnd if row == 2 else row * cols + col
+
+    def _build_fighters(self):
         return [
             {
                 "id": CHAR_KENSHIN,
@@ -555,6 +593,7 @@ class CharacterSelectScreen:
         self.selection_step = "P1"
         self.p1_ready = False
         self.p2_ready = False
+        self.reveal = None
         self.focus_zone = "GRID"
         self._axis_x_held_p1 = False
         self._axis_y_held_p1 = False
@@ -569,8 +608,54 @@ class CharacterSelectScreen:
         Retorna:
           - True: iniciar partida
           - "BACK": voltar para a tela de título
-          - False: continuar na tela de seleção
+          - False: continuar na tela de seleção (inclusive durante o sorteio; ao terminar, `update` devolve True)
         """
+        if self.reveal is not None:
+            return False
+        result = self._handle_event_inner(event)
+        if result is True and self.random_idx in (self.p1_choice_idx, self.p2_choice_idx):
+            self._start_reveal()
+            return False
+        return result
+
+    def _start_reveal(self):
+        """Inicia a roleta que revela quem o Aleatório sorteou (P1 e/ou oponente)."""
+        n = len(ROSTER_ORDER)
+        targets = {}
+        for player, idx in (("P1", self.p1_choice_idx), ("P2", self.p2_choice_idx)):
+            if idx == self.random_idx:
+                targets[player] = random.randrange(n)
+        self.reveal = {"t": 0.0, "roulette": 1.1, "hold": 0.55, "targets": targets, "last_step": {}}
+
+    def _update_reveal(self, dt: float) -> bool:
+        """Avança a roleta; devolve True quando o sorteio terminou e a partida deve começar."""
+        rv = self.reveal
+        rv["t"] += dt
+        n = len(ROSTER_ORDER)
+        progress = min(1.0, rv["t"] / rv["roulette"])
+        for player, target in rv["targets"].items():
+            total_steps = 2 * n + target
+            idx = int(total_steps * (1.0 - (1.0 - progress) ** 2.4)) % n
+            if progress >= 1.0:
+                idx = target
+            if rv["last_step"].get(player) != idx:
+                rv["last_step"][player] = idx
+                try:
+                    from src.audio.sound_events import SoundEvent
+                    from src.audio.sound_manager import SoundManager
+                    SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+                except Exception:
+                    pass
+            if player == "P1":
+                self.p1_choice_idx = idx
+            else:
+                self.p2_choice_idx = idx
+        if rv["t"] >= rv["roulette"] + rv["hold"]:
+            self.reveal = None
+            return True
+        return False
+
+    def _handle_event_inner(self, event: pygame.event.Event) -> str | bool:
         from src.input.controller_manager import get_controller_manager
         ctrl_mgr = get_controller_manager()
 
@@ -594,16 +679,11 @@ class CharacterSelectScreen:
                     return
 
                 active_idx = self.p1_choice_idx if (not self.vs_ai or self.selection_step == "P1") else self.p2_choice_idx
-                row = active_idx // cols
-                col = active_idx % cols
-
-                if dy < 0 and row == 0:
+                if dy < 0 and active_idx < cols:
                     self.focus_zone = "MODE_BTN"
                     return
 
-                new_col = (col + dx) % cols
-                new_row = (row + dy) % 2
-                new_idx = new_row * cols + new_col
+                new_idx = self._grid_step(active_idx, dx, dy)
 
                 if not self.vs_ai:
                     if not self.p1_ready:
@@ -616,11 +696,7 @@ class CharacterSelectScreen:
 
             elif player == "P2":
                 if not self.vs_ai and not self.p2_ready:
-                    row = self.p2_choice_idx // cols
-                    col = self.p2_choice_idx % cols
-                    new_col = (col + dx) % cols
-                    new_row = (row + dy) % 2
-                    self.p2_choice_idx = new_row * cols + new_col
+                    self.p2_choice_idx = self._grid_step(self.p2_choice_idx, dx, dy)
 
         def handle_confirm(player: str) -> str | bool:
             if self.focus_zone == "MODE_BTN":
@@ -712,7 +788,7 @@ class CharacterSelectScreen:
             # Abrir Guia / Ajuda: Botão 3 (△ Triângulo / Y)
             elif event.button == 3:
                 active_idx = self.p1_choice_idx if (not self.vs_ai or self.selection_step == "P1") else self.p2_choice_idx
-                self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=active_idx)
+                self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=min(active_idx, len(ROSTER_ORDER) - 1))
                 return False
 
         elif event.type == pygame.JOYHATMOTION:
@@ -796,7 +872,7 @@ class CharacterSelectScreen:
                 return False
             elif event.key == pygame.K_f:
                 active_idx = self.p1_choice_idx if (not self.vs_ai or self.selection_step == "P1") else self.p2_choice_idx
-                self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=active_idx)
+                self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=min(active_idx, len(ROSTER_ORDER) - 1))
                 return False
             elif event.key == pygame.K_l:
                 toggle_lang()
@@ -983,20 +1059,61 @@ class CharacterSelectScreen:
 
         return False
 
-    def update(self, dt: float):
+    def update(self, dt: float) -> bool:
+        """Anima a tela; devolve True quando o sorteio do Aleatório termina e a partida pode começar."""
         self.anim_timer += dt
         self.help_modal.update(dt)
+        self.petals.update(dt)
         for p in self.particles:
             p["x"] += p["speed_x"] + 0.3 * math.sin(self.anim_timer + p["y"] * 0.05)
             p["y"] += p["speed_y"]
             if p["y"] < -10:
                 p["y"] = SCREEN_HEIGHT + 10
                 p["x"] = random.uniform(0, SCREEN_WIDTH)
+        if self.reveal is not None:
+            return self._update_reveal(dt)
+        return False
 
     def get_selected_characters(self) -> tuple[str, str, bool]:
-        p1_char = self.characters[self.p1_choice_idx]["id"]
-        p2_char = self.characters[self.p2_choice_idx]["id"]
-        return p1_char, p2_char, self.vs_ai
+        def pick(idx: int) -> str:
+            # Sem a roleta (ex.: chamada direta), o Aleatório ainda resolve para um dos 12 guerreiros
+            return random.choice(ROSTER_ORDER) if idx == self.random_idx else self.characters[idx]["id"]
+        return pick(self.p1_choice_idx), pick(self.p2_choice_idx), self.vs_ai
+
+    def _render_random_card(self, surface, rect, idx, char_info, parch, font_name, font_small, font_tiny, font_stamp):
+        """Faixa do sorteio: círculo com interrogação, nome e dica; durante a roleta pulsa em dourado."""
+        is_p1 = (self.p1_choice_idx == idx)
+        is_p2 = (self.p2_choice_idx == idx)
+        spinning = self.reveal is not None
+        if parch:
+            pm.draw_paper_card(surface, rect, seed=97)
+            if is_p1 or is_p2 or spinning:
+                pulse = 0.5 + 0.5 * math.sin(self.anim_timer * 6.0)
+                border = pm.make_ink_border(rect, COLOR_HANKO_RED if is_p1 else COLOR_HANKO_BLUE, width=2, seed=99)
+                border.set_alpha(int(150 + 105 * pulse))
+                surface.blit(border, rect.topleft)
+        else:
+            draw_sumie_card(surface, rect, is_p1, is_p2, self.vs_ai, self.selection_step, self.anim_timer)
+
+        cx, cy = rect.x + 34, rect.centery
+        ring = COLOR_HANKO_RED if is_p1 else (COLOR_HANKO_BLUE if is_p2 else char_info["color"])
+        draw_enso_circle(surface, cx, cy, 20, ring, self.anim_timer)
+        q_font = get_title_font(26)
+        q = q_font.render("?", True, pm.darken(char_info["color"], 0.55) if parch else char_info["color"])
+        surface.blit(q, q.get_rect(center=(cx, cy + 1)))
+
+        text_left = rect.x + 68
+        name_col = pm.darken(char_info["color"], 0.55) if parch else char_info["color"]
+        name_s = font_name.render(char_info["name"], True, name_col)
+        surface.blit(name_s, (text_left, rect.y + 6))
+        title_col, style_col = (pm.INK_SOFT, pm.INK) if parch else ((185, 180, 175), (220, 215, 210))
+        surface.blit(pm.fit_text(font_small, char_info["title"], title_col, rect.right - text_left - 12), (text_left, rect.y + 24))
+
+        p2_label = "IA" if self.vs_ai else "P2"
+        if is_p1:
+            draw_hanko_stamp(surface, font_stamp, "P1", rect.right - 62, rect.y + 11, size=24, color=COLOR_HANKO_RED, border_w=1)
+        if is_p2:
+            draw_hanko_stamp(surface, font_stamp, p2_label, rect.right - 34, rect.y + 11, size=24, color=COLOR_HANKO_BLUE, border_w=1)
 
     def render(self, surface: pygame.Surface, font_large: pygame.font.Font, font_mid: pygame.font.Font, font_small: pygame.font.Font):
         # 1. Carregar tipografia oriental autêntica
@@ -1008,27 +1125,35 @@ class CharacterSelectScreen:
         font_zen_tiny = get_text_font(12)
         font_zen_stamp = get_text_font(13)
 
-        # 2. Fundo Sumi-E com Vinheta e Partículas Atmosféricas
-        if self.bg_surf:
-            surface.blit(self.bg_surf, (0, 0))
+        # 2. Fundo: pergaminho sumi-e (arte de referência); fallback para o fundo escuro anterior
+        parch = pm.get_backdrop() is not None
+        if parch:
+            pm.draw_backdrop(surface)
         else:
-            surface.fill(COLOR_BG)
-        surface.fill((0, 0, 0, 255), special_flags=pygame.BLEND_RGBA_MAX)
+            if self.bg_surf:
+                surface.blit(self.bg_surf, (0, 0))
+            else:
+                surface.fill(COLOR_BG)
+            surface.fill((0, 0, 0, 255), special_flags=pygame.BLEND_RGBA_MAX)
 
-        for p in self.particles:
-            pygame.draw.circle(surface, (175, 170, 165), (int(p["x"]), int(p["y"])), int(p["size"]))
+            for p in self.particles:
+                pygame.draw.circle(surface, (175, 170, 165), (int(p["x"]), int(p["y"])), int(p["size"]))
 
-        # Desenhar moldura decorativa tipo pergaminho
-        draw_scroll_frame(surface, margin_top=100, margin_bottom=90, margin_sides=20)
+            # Desenhar moldura decorativa tipo pergaminho
+            draw_scroll_frame(surface, margin_top=100, margin_bottom=90, margin_sides=20)
 
         # 3. TOPO: Título Sumi-E Nobre Centralizado
         header_y = 12
         title_text = t("select_title")
-        s_shadow = font_oriental_title.render(title_text, True, (8, 8, 10))
-        s_title = font_oriental_title.render(title_text, True, COLOR_GOLD)
-        title_x = SCREEN_WIDTH // 2 - s_title.get_width() // 2
-        surface.blit(s_shadow, (title_x + 1, header_y + 7))
-        surface.blit(s_title, (title_x, header_y + 6))
+        if parch:
+            s_title = pm.render_ink(font_oriental_title, title_text, pm.INK)
+            surface.blit(s_title, (SCREEN_WIDTH // 2 - s_title.get_width() // 2, header_y + 5))
+        else:
+            s_shadow = font_oriental_title.render(title_text, True, (8, 8, 10))
+            s_title = font_oriental_title.render(title_text, True, COLOR_GOLD)
+            title_x = SCREEN_WIDTH // 2 - s_title.get_width() // 2
+            surface.blit(s_shadow, (title_x + 1, header_y + 7))
+            surface.blit(s_title, (title_x, header_y + 6))
 
         # Botão Seletor Flutuante de Idioma [ PT | EN ] (Hanko / Kanban)
         lang = get_lang()
@@ -1096,7 +1221,10 @@ class CharacterSelectScreen:
             step_color = COLOR_GOLD
             div_color = (160, 130, 50)
 
-        step_s = font_zen_mid.render(step_title, True, step_color)
+        if self.reveal is not None:
+            step_title = "SORTEANDO..." if lang == LANG_PT else "DRAWING..."
+            step_color = COLOR_GOLD
+        step_s = pm.render_ink(font_zen_mid, step_title, pm.darken(step_color, 0.8)) if parch else font_zen_mid.render(step_title, True, step_color)
         step_x = SCREEN_WIDTH // 2 - step_s.get_width() // 2
         surface.blit(step_s, (step_x, step_y))
 
@@ -1106,7 +1234,7 @@ class CharacterSelectScreen:
 
         # 6. Grade Simétrica 6x2 (6 cards na Linha 1, 6 cards na Linha 2)
         card_w = 194
-        card_h = 232
+        card_h = 200
         spacing_x = 12
         spacing_y = 12
 
@@ -1118,6 +1246,14 @@ class CharacterSelectScreen:
         self.info_btn_rects.clear()
 
         for idx, char_info in enumerate(self.characters):
+            if char_info["id"] == CHAR_RANDOM:
+                # Carta Aleatório: faixa estreita na terceira linha, no fim da grade
+                rand_rect = pygame.Rect(SCREEN_WIDTH // 2 - 260, start_y + 2 * (card_h + spacing_y), 520, 48)
+                self.card_rects.append(rand_rect)
+                self.info_btn_rects.append(pygame.Rect(0, 0, 0, 0))
+                self._render_random_card(surface, rand_rect, idx, char_info, parch, font_oriental_name, font_zen_small, font_zen_tiny, font_zen_stamp)
+                continue
+
             row = idx // 6
             col = idx % 6
             cx = start_x + col * (card_w + spacing_x)
@@ -1129,18 +1265,34 @@ class CharacterSelectScreen:
             is_p1 = (self.p1_choice_idx == idx)
             is_p2 = (self.p2_choice_idx == idx)
 
-            draw_sumie_card(surface, rect, is_p1, is_p2, self.vs_ai, self.selection_step, self.anim_timer)
+            if parch:
+                pm.draw_paper_card(surface, rect, seed=idx * 7 + 3)
+                if is_p1 or is_p2:
+                    sel_col = COLOR_HANKO_RED if is_p1 else COLOR_HANKO_BLUE
+                    pm.draw_brush_highlight(surface, pygame.Rect(rect.x + 62, rect.y + 5, card_w - 94, 26),
+                                            pm.SEAL_RED if is_p1 else pm.SEAL_BLUE, seed=idx + 2)
+                    pulse = 0.5 + 0.5 * math.sin(self.anim_timer * 6.0)
+                    border = pm.make_ink_border(rect, sel_col, width=2, seed=idx + 5)
+                    border.set_alpha(int(150 + 105 * pulse))
+                    surface.blit(border, rect.topleft)
+            else:
+                draw_sumie_card(surface, rect, is_p1, is_p2, self.vs_ai, self.selection_step, self.anim_timer)
 
-            # Badges Hanko P1 / IA no topo direito
+            # Badges Hanko P1 / IA (no canto superior esquerdo do cartão no pergaminho, para não cobrir o nome)
+            p2_label = "IA" if self.vs_ai else "P2"
+            if parch:
+                ssz = 22
+                first_x, second_x, sy = rect.x - 5, rect.x + 19, rect.y - 7
+            else:
+                ssz = 24
+                first_x, second_x, sy = rect.right - 58, rect.right - 30, rect.y + 6
             if is_p1 and is_p2:
-                p2_label = "IA" if self.vs_ai else "P2"
-                draw_hanko_stamp(surface, font_zen_stamp, p2_label, rect.right - 30, rect.y + 6, size=24, color=COLOR_HANKO_BLUE, border_w=1)
-                draw_hanko_stamp(surface, font_zen_stamp, "P1", rect.right - 58, rect.y + 6, size=24, color=COLOR_HANKO_RED, border_w=1)
+                draw_hanko_stamp(surface, font_zen_stamp, "P1", first_x, sy, size=ssz, color=COLOR_HANKO_RED, border_w=1)
+                draw_hanko_stamp(surface, font_zen_stamp, p2_label, second_x, sy, size=ssz, color=COLOR_HANKO_BLUE, border_w=1)
             elif is_p1:
-                draw_hanko_stamp(surface, font_zen_stamp, "P1", rect.right - 30, rect.y + 6, size=24, color=COLOR_HANKO_RED, border_w=1)
+                draw_hanko_stamp(surface, font_zen_stamp, "P1", second_x if not parch else first_x, sy, size=ssz, color=COLOR_HANKO_RED, border_w=1)
             elif is_p2:
-                p2_label = "IA" if self.vs_ai else "P2"
-                draw_hanko_stamp(surface, font_zen_stamp, p2_label, rect.right - 30, rect.y + 6, size=24, color=COLOR_HANKO_BLUE, border_w=1)
+                draw_hanko_stamp(surface, font_zen_stamp, p2_label, second_x if not parch else first_x, sy, size=ssz, color=COLOR_HANKO_BLUE, border_w=1)
 
             # Retrato Circular com Anel Ensō
             char_id = char_info["id"]
@@ -1182,23 +1334,32 @@ class CharacterSelectScreen:
 
             # Nome, Título e Estilo ao lado do Retrato
             text_left = rect.x + 68
-            name_surf = font_oriental_name.render(char_info["name"], True, char_info["color"])
+            if parch:
+                name_col = (252, 244, 226) if (is_p1 or is_p2) else pm.darken(char_info["color"], 0.55)
+                title_col, style_col = pm.INK_SOFT, pm.INK
+            else:
+                name_col, title_col, style_col = char_info["color"], (185, 180, 175), (220, 215, 210)
+            name_surf = font_oriental_name.render(char_info["name"], True, name_col)
             surface.blit(name_surf, (text_left, rect.y + 8))
 
-            title_s = font_zen_small.render(char_info["title"], True, (185, 180, 175))
+            title_s = pm.fit_text(font_zen_small, char_info["title"], title_col, rect.right - text_left - 6)
             surface.blit(title_s, (text_left, rect.y + 30))
 
-            style_s = font_zen_tiny.render(char_info["style"], True, (220, 215, 210))
+            style_s = pm.fit_text(font_zen_tiny, char_info["style"], style_col, rect.right - text_left - 6)
             surface.blit(style_s, (text_left, rect.y + 49))
 
             # Pincelada divisória
-            draw_brush_divider(surface, rect.x + 8, rect.y + 70, rect.right - 8, color=(75, 70, 65))
+            draw_brush_divider(surface, rect.x + 8, rect.y + 70, rect.right - 8, color=(120, 100, 78) if parch else (75, 70, 65))
 
             # Atributos e Estatísticas
             stats_y = rect.y + 76
-            line_vel = font_zen_tiny.render(f"{t('char_stat_speed')}: {char_info['speed_stars']}", True, COLOR_GOLD)
-            line_dmg = font_zen_tiny.render(f"{t('char_stat_damage')}: {char_info['damage_desc']}", True, (240, 205, 195))
-            line_esp = font_zen_tiny.render(f"{t('char_stat_special')}: {char_info['special_desc']}", True, (200, 220, 240))
+            if parch:
+                vel_col, dmg_col, esp_col = pm.GOLD_INK, (150, 40, 30), (30, 70, 125)
+            else:
+                vel_col, dmg_col, esp_col = COLOR_GOLD, (240, 205, 195), (200, 220, 240)
+            line_vel = pm.fit_text(font_zen_tiny, f"{t('char_stat_speed')}: {char_info['speed_stars']}", vel_col, card_w - 14)
+            line_dmg = pm.fit_text(font_zen_tiny, f"{t('char_stat_damage')}: {char_info['damage_desc']}", dmg_col, card_w - 14)
+            line_esp = pm.fit_text(font_zen_tiny, f"{t('char_stat_special')}: {char_info['special_desc']}", esp_col, card_w - 14)
 
             surface.blit(line_vel, (rect.x + 8, stats_y))
             surface.blit(line_dmg, (rect.x + 8, stats_y + 18))
@@ -1206,30 +1367,47 @@ class CharacterSelectScreen:
 
             # Caixa de Comandos / Teclas em Laca Negra
             ctrl_box = pygame.Rect(rect.x + 6, rect.bottom - 46, card_w - 38, 38)
-            pygame.draw.rect(surface, COLOR_LACQUER_DARK, ctrl_box, border_radius=4)
-            pygame.draw.rect(surface, (55, 50, 48), ctrl_box, 1, border_radius=4)
-            
+            if parch:
+                strip = pygame.Surface(ctrl_box.size, pygame.SRCALPHA)
+                strip.fill((120, 92, 52, 70))
+                surface.blit(strip, ctrl_box.topleft)
+                pygame.draw.rect(surface, (96, 72, 44), ctrl_box, 1, border_radius=3)
+                p1_ink, p2_ink = (150, 34, 28), (28, 66, 138)
+            else:
+                pygame.draw.rect(surface, COLOR_LACQUER_DARK, ctrl_box, border_radius=4)
+                pygame.draw.rect(surface, (55, 50, 48), ctrl_box, 1, border_radius=4)
+                p1_ink, p2_ink = (255, 200, 180), (180, 220, 255)
+
             # Formatar comandos para evitar overflow
-            p1_cmd = format_command_text(char_info['keys_p1'], max_width=ctrl_box.width - 8, font=font_zen_tiny)
-            p2_cmd = format_command_text(char_info['keys_p2'], max_width=ctrl_box.width - 8, font=font_zen_tiny)
-            
-            p1_key_label = font_zen_tiny.render(f"{t('p1_controls_prefix')}: {p1_cmd}", True, (255, 200, 180))
-            p2_key_label = font_zen_tiny.render(f"{t('p2_controls_prefix')}: {p2_cmd}", True, (180, 220, 255))
+            p1_prefix = f"{t('p1_controls_prefix')}: "
+            p2_prefix = f"{t('p2_controls_prefix')}: "
+            p1_cmd = format_command_text(char_info['keys_p1'], max_width=ctrl_box.width - 10 - font_zen_tiny.size(p1_prefix)[0], font=font_zen_tiny)
+            p2_cmd = format_command_text(char_info['keys_p2'], max_width=ctrl_box.width - 10 - font_zen_tiny.size(p2_prefix)[0], font=font_zen_tiny)
+
+            p1_key_label = font_zen_tiny.render(f"{p1_prefix}{p1_cmd}", True, p1_ink)
+            p2_key_label = font_zen_tiny.render(f"{p2_prefix}{p2_cmd}", True, p2_ink)
             surface.blit(p1_key_label, (ctrl_box.x + 4, ctrl_box.y + 3))
             surface.blit(p2_key_label, (ctrl_box.x + 4, ctrl_box.y + 19))
 
             # Botão [ ? ] como Selo Hanko pequeno
             info_btn = pygame.Rect(rect.right - 28, rect.bottom - 46, 22, 38)
             self.info_btn_rects.append(info_btn)
-            draw_hanko_stamp(surface, font_zen_mid, "?", info_btn.x, info_btn.y + 7, size=24, color=COLOR_GOLD, border_w=1)
+            draw_hanko_stamp(surface, font_zen_mid, "?", info_btn.x, info_btn.y + 7, size=24,
+                             color=COLOR_HANKO_RED if parch else COLOR_GOLD, border_w=1)
 
-        # 7. Botão Grande de Ação em Laca Escarlate
+        # 7. Botão Grande de Ação: pergaminho com vara + pincelada vermelha (ou laca escarlate no fallback)
         start_w = 420
-        self.start_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - start_w // 2, SCREEN_HEIGHT - 64, start_w, 44)
-        pulse = 0.5 + 0.5 * math.sin(self.anim_timer * 4.0)
-        btn_bg = (140 + int(pulse * 25), 28 + int(pulse * 10), 24)
-        pygame.draw.rect(surface, btn_bg, self.start_btn_rect, border_radius=6)
-        pygame.draw.rect(surface, COLOR_GOLD, self.start_btn_rect, 2, border_radius=6)
+        if parch:
+            pm.draw_scroll(surface, pygame.Rect(SCREEN_WIDTH // 2 - 470, 604, 940, 116), seed=21)
+            pm.draw_crest(surface, SCREEN_WIDTH - 126, 622, 0.8)
+            self.start_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - start_w // 2, 629, start_w, 34)
+            pm.draw_brush_highlight(surface, pygame.Rect(self.start_btn_rect.centerx - 260, self.start_btn_rect.y - 6, 520, 46), pm.SEAL_RED, seed=9)
+        else:
+            self.start_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - start_w // 2, SCREEN_HEIGHT - 64, start_w, 44)
+            pulse = 0.5 + 0.5 * math.sin(self.anim_timer * 4.0)
+            btn_bg = (140 + int(pulse * 25), 28 + int(pulse * 10), 24)
+            pygame.draw.rect(surface, btn_bg, self.start_btn_rect, border_radius=6)
+            pygame.draw.rect(surface, COLOR_GOLD, self.start_btn_rect, 2, border_radius=6)
 
         from src.input.controller_manager import get_controller_manager
         ctrl_mgr = get_controller_manager()
@@ -1262,8 +1440,8 @@ class CharacterSelectScreen:
                 hint_label = f"[ {enter_space} ]"
 
         s_title_sh = font_oriental_action.render(st_label, True, (20, 10, 10))
-        s_title_tx = font_oriental_action.render(st_label, True, COLOR_GOLD)
-        s_hint_tx = font_zen_small.render(hint_label, True, (245, 225, 185))
+        s_title_tx = font_oriental_action.render(st_label, True, (252, 244, 226) if parch else COLOR_GOLD)
+        s_hint_tx = font_zen_small.render(hint_label, True, (250, 232, 200) if parch else (245, 225, 185))
 
         total_content_w = s_title_tx.get_width() + 14 + s_hint_tx.get_width()
         content_x = self.start_btn_rect.centerx - total_content_w // 2
@@ -1274,19 +1452,9 @@ class CharacterSelectScreen:
         hint_x = content_x + s_title_tx.get_width() + 14
         surface.blit(s_hint_tx, (hint_x, self.start_btn_rect.centery - s_hint_tx.get_height() // 2))
 
-        # 8. Rodapé com Instruções de Controle em Zen Antique
-        from src.input.controller_manager import get_controller_manager
-        ctrl_mgr = get_controller_manager()
-        ctrl = ctrl_mgr.get_controller_for_player(0) if ctrl_mgr else None
-        badge = ctrl_mgr.get_badge_text(0) if ctrl_mgr else ""
-
-        guide_text = t("guide_nav")
-        if badge and ctrl:
-            guide_text = t("guide_gamepad", badge=badge, ok=ctrl.get_button_text("confirm"), back=ctrl.get_button_text("cancel"),
-                           mode=ctrl.get_button_text("attack"), guide=ctrl.get_button_text("special"))
-
-        guide_surf = font_zen_small.render(guide_text, True, (185, 180, 175))
-        surface.blit(guide_surf, (SCREEN_WIDTH // 2 - guide_surf.get_width() // 2, SCREEN_HEIGHT - 18))
+        # 8. Pétalas decorativas (sem barra de instruções de teclado no rodapé)
+        if parch:
+            self.petals.draw(surface)
 
         # 9. Modal de Ajuda se aberto (sobreposto)
         if self.help_modal.is_open:

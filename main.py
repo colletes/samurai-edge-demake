@@ -40,12 +40,11 @@ from src.config import (
     COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA, COLOR_SAITOU_AURA,
     COLOR_RIFLE_AURA, COLOR_KABUKI_AURA, COLOR_ARCHER_AURA,
     COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA,
-    ARENA_BAMBOO, ARENA_KYOTO, ARENA_RANDOM, COLOR_KYOTO_BG
+    ARENA_BAMBOO, ARENA_KYOTO, ARENA_RANDOM
 )
 from src.isometric.iso_math import input_to_world_direction
 from src.isometric.camera import Camera
-from src.world.map_data import GameMap
-from src.world.kyoto_map import KyotoMap
+from src.world.arenas import create_arena, arena_ids
 from src.entities.red_samurai import RedSamurai
 from src.entities.blue_samurai import BlueSamurai
 from src.entities.yellow_ninja import YellowNinja
@@ -64,8 +63,20 @@ from src.combat.collision import CombatSystem
 from src.combat.clash_system import ClashSystem
 from src.effects.particles import AmbientLeafParticle, SparkParticle, BloodParticle, FloatingBanner, SmokeParticle
 from src.effects.cinematic_director import CinematicDirector
+from src.effects.lighting import ArenaLighting
+from src.effects.terrain_particles import TerrainFX
+from src.effects.fog import FogVolume
+from src.effects.particles import set_wind_source
+from src.effects import quality
+from src.isometric import voxel_renderer
+from src.effects.fall_render import render_falling_fighter
+from src.entities.samurai import STATE_FALL
 from src.ui.round_intro import RoundIntroScreen
 from src.ui.round_result import RoundResultScreen, check_match_winner, render_round_pips, MATCH_WINS_NEEDED
+from src.ui.match_intro import MatchIntro
+from src.ui.pause_menu import (
+    PauseMenu, ACTION_RESUME, ACTION_SETTINGS, ACTION_ARENA, ACTION_FIGHTER, ACTION_MAIN_MENU, ACTION_QUIT
+)
 from src.ui.settings_menu import SettingsMenu, format_key_name
 from src.ui.character_select import CharacterSelectScreen
 from src.ui.title_screen import SumieTitleScreen
@@ -282,16 +293,20 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
 
     return None
 
+# Azimute atual da câmera, lido pelas conversões de entrada (W continua sendo "para cima na tela")
+_view_azimuth = 0.0
+CAMERA_ORBIT_SPEED = math.radians(60.0)
+
 def get_player_aim_target(fighter, controls, prefix: str, distance: float = 4.0, move_dir: tuple[float, float] | None = None) -> tuple[float, float]:
     """Calcula as coordenadas de mira para o ataque com base na entrada direcional ativa ou na orientação do lutador."""
     if move_dir and (move_dir[0] != 0 or move_dir[1] != 0):
-        dwx, dwy = input_to_world_direction(move_dir[0], move_dir[1])
+        dwx, dwy = input_to_world_direction(move_dir[0], move_dir[1], _view_azimuth)
         return fighter.wx + dwx * distance, fighter.wy + dwy * distance
     keys = pygame.key.get_pressed()
     dx = keys[controls[f"{prefix}_RIGHT"]] - keys[controls[f"{prefix}_LEFT"]]
     dy = keys[controls[f"{prefix}_DOWN"]] - keys[controls[f"{prefix}_UP"]]
     if dx != 0 or dy != 0:
-        dwx, dwy = input_to_world_direction(dx, dy)
+        dwx, dwy = input_to_world_direction(dx, dy, _view_azimuth)
         return fighter.wx + dwx * distance, fighter.wy + dwy * distance
     return fighter.wx + fighter.facing_x * distance, fighter.wy + fighter.facing_y * distance
 
@@ -429,55 +444,13 @@ def execute_fighter_dash(fighter, aim_x: float, aim_y: float, dwx: float, dwy: f
     execute_fighter_roll(fighter, dwx, dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
 
 def get_random_arena_spawns(game_map, min_distance: float = 7.0) -> tuple[tuple[float, float], tuple[float, float]]:
-    """
-    Gera duas posições aleatórias válidas (chão firme) no mapa
-    com distância euclidiana mínima garantida (>= min_distance) para evitar acerto melee de início.
-    """
-    for _ in range(250):
-        wx1 = round(random.uniform(3.0, game_map.cols - 3.0), 1)
-        wy1 = round(random.uniform(3.0, game_map.rows - 3.0), 1)
-        if game_map.is_water(wx1, wy1):
-            continue
-        if any(math.hypot(wx1 - r.wx, wy1 - r.wy) < (r.radius + 0.65) for r in game_map.rocks):
-            continue
-        if game_map.well and math.hypot(wx1 - game_map.well.wx, wy1 - game_map.well.wy) < 1.6:
-            continue
-        if any(math.hypot(wx1 - t.wx, wy1 - t.wy) < 1.7 for t in game_map.trees):
-            continue
+    """Duas posições válidas (chão firme) separadas por pelo menos min_distance, segundo a regra de spawn da arena."""
+    return game_map.pick_spawns(min_distance)
 
-        for _ in range(40):
-            wx2 = round(random.uniform(3.0, game_map.cols - 3.0), 1)
-            wy2 = round(random.uniform(3.0, game_map.rows - 3.0), 1)
-            if math.hypot(wx1 - wx2, wy1 - wy2) < min_distance:
-                continue
-            if game_map.is_water(wx2, wy2):
-                continue
-            if any(math.hypot(wx2 - r.wx, wy2 - r.wy) < (r.radius + 0.65) for r in game_map.rocks):
-                continue
-            if game_map.well and math.hypot(wx2 - game_map.well.wx, wy2 - game_map.well.wy) < 1.6:
-                continue
-            if any(math.hypot(wx2 - t.wx, wy2 - t.wy) < 1.7 for t in game_map.trees):
-                continue
-            return (wx1, wy1), (wx2, wy2)
-
-    # Fallback garantido: extremidades norte e sul da ponte de madeira (distância = 8.0 tiles)
-    return (10.5, 7.0), (10.5, 15.0)
 
 def get_kyoto_arena_spawns(game_map, min_distance: float = 7.0) -> tuple[tuple[float, float], tuple[float, float]]:
-    """
-    Gera duas posições de spawn equilibradas na rua estreita diagonal de Kyoto (wx entre 9.5 e 11.5)
-    com distância mínima garantida (>= min_distance).
-    """
-    for _ in range(150):
-        wx1 = round(random.uniform(9.5, 11.5), 1)
-        wy1 = round(random.uniform(4.0, game_map.rows - 4.0), 1)
-
-        for _ in range(30):
-            wx2 = round(random.uniform(9.5, 11.5), 1)
-            wy2 = round(random.uniform(4.0, game_map.rows - 4.0), 1)
-            if math.hypot(wx1 - wx2, wy1 - wy2) >= min_distance:
-                return (wx1, wy1), (wx2, wy2)
-    return (10.5, 6.0), (10.5, 15.0)
+    """Compatibilidade: a regra de spawn de cada arena (ex.: faixa da rua em Kyoto) vem do próprio spec."""
+    return game_map.pick_spawns(min_distance)
 
 
 def build_static_render_queue(current_map):
@@ -503,12 +476,22 @@ def build_static_render_queue(current_map):
     return queue
 
 
+def static_item_center(item_type: str, obj) -> tuple[float, float]:
+    """Ponto de referência para ordenar um item estático quando a câmera está girada."""
+    if item_type == 'building':
+        return obj.wx + obj.width * 0.5, obj.wy + obj.depth * 0.5
+    return obj.wx, obj.wy
+
+
 def run_game():
+    global _view_azimuth
     pygame.init()
     pygame.font.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption(TITLE)
     clock = pygame.time.Clock()
+    voxel_renderer.load_render_style(os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.json"))
+    quality.load_effects_quality(quality.SETTINGS_PATH)
 
     # Tela de Carregamento Estilizada com feedback imediato ao usuário
     loading_screen = LoadingScreen(screen)
@@ -538,6 +521,8 @@ def run_game():
 
     ai_difficulty = saved_cfg.get("ai_difficulty", "normal")
     settings_menu = SettingsMenu(controls, touch_controls=touch_controls, ai_difficulty=ai_difficulty)
+    pause_menu = PauseMenu()
+    match_intro = MatchIntro()
 
     loading_screen.update(0.50, "Carregando atmosfera Sumi-e e tela inicial...", delay_ms=40)
     title_screen = SumieTitleScreen()
@@ -579,6 +564,9 @@ def run_game():
     banners = []
     projectiles = []
     ambient_leaves = []
+    lighting_fx = None
+    terrain_fx = TerrainFX()
+    fog = None
     powder_pouches = []
     decoys = []
     poison_clouds = []
@@ -594,14 +582,10 @@ def run_game():
 
     static_render_queue = []
 
-    def start_new_match():
-        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, round_winner, round_start_timer, round_start_shaken, round_intro_timer, powder_pouches, decoys, poison_clouds, powder_traps, static_render_queue
-        if selected_arena_id == ARENA_KYOTO:
-            game_map = KyotoMap()
-            (p1_wx, p1_wy), (p2_wx, p2_wy) = get_kyoto_arena_spawns(game_map, min_distance=7.0)
-        else:
-            game_map = GameMap()
-            (p1_wx, p1_wy), (p2_wx, p2_wy) = get_random_arena_spawns(game_map, min_distance=7.0)
+    def start_new_match(play_intro: bool = False):
+        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, lighting_fx, terrain_fx, fog, round_winner, round_start_timer, round_start_shaken, round_intro_timer, powder_pouches, decoys, poison_clouds, powder_traps, static_render_queue
+        game_map = create_arena(selected_arena_id)
+        (p1_wx, p1_wy), (p2_wx, p2_wy) = game_map.pick_spawns(min_distance=7.0)
 
         p1 = create_fighter(p1_char_id, wx=p1_wx, wy=p1_wy)
         p2 = create_fighter(p2_char_id, wx=p2_wx, wy=p2_wy)
@@ -610,7 +594,7 @@ def run_game():
         for f in (p1, p2):
             if isinstance(f, Kabuki):
                 f.registered_decoys = decoys
-        camera = Camera(target_wx=(p1_wx + p2_wx) / 2.0, target_wy=(p1_wy + p2_wy) / 2.0)
+        camera = game_map.attach_camera(Camera(target_wx=(p1_wx + p2_wx) / 2.0, target_wy=(p1_wy + p2_wy) / 2.0))
         particles.clear()
         banners.clear()
         projectiles.clear()
@@ -618,7 +602,12 @@ def run_game():
         poison_clouds.clear()
         powder_traps.clear()
         powder_pouches = PowderPouch.create_arena_pouches(game_map, [p1, p2], total_pouches=3)
-        ambient_leaves = [AmbientLeafParticle(game_map.cols, game_map.rows) for _ in range(45)]
+        lighting_fx = ArenaLighting(game_map)
+        terrain_fx = TerrainFX()
+        fog = game_map.fog = FogVolume(game_map)
+        set_wind_source(lambda x, y: game_map.wind_at(x, y, game_time))
+        ambient_leaves = [AmbientLeafParticle(game_map.cols, game_map.rows, game_map.spec.drift_petals)
+                          for _ in range(game_map.spec.drift_count)]
         round_winner = None
         round_start_timer = 1.8
         round_start_shaken = False
@@ -630,10 +619,16 @@ def run_game():
             p1_color=get_fighter_color(p1), p2_color=get_fighter_color(p2),
             round_label=f"RODADA {round_number}"
         )
-        if selected_arena_id == ARENA_KYOTO:
-            sound_mgr.play_music(MusicTrack.KYOTO_THEME)
-        else:
-            sound_mgr.play_music(MusicTrack.BAMBOO_THEME)
+        match_intro.active = False
+        if play_intro:
+            # A introdução orbital substitui o pergaminho do round 1 e só ocorre ao iniciar uma batalha
+            round_intro_timer = 0.0
+            match_intro.start(
+                game_map.intro_stage_point(), ((p1_wx, p1_wy), (p2_wx, p2_wy)),
+                (p1.name, p2.name), (p1_char_id, p2_char_id),
+                (get_fighter_color(p1), get_fighter_color(p2)), vs_ai_mode
+            )
+        sound_mgr.play_music(game_map.music)
 
     def request_rematch():
         """Entregável 5.3: reinicia a partida inteira (placar e rounds zerados) após o fim de uma partida Melhor-de-3."""
@@ -659,6 +654,50 @@ def run_game():
         else:
             request_next_round()
 
+    def draw_world_queue(render_queue):
+        """Ordena (painter's algorithm) e desenha os itens do cenário/entidades já projetados pela câmera."""
+        render_queue.sort(key=lambda item: item[0])
+
+        for _, item_type, obj in render_queue:
+            if item_type in ('bamboo', 'building', 'lantern'):
+                obj.render(screen, camera, game_time)
+            elif item_type == 'fighter' and getattr(obj, 'state', None) == STATE_FALL:
+                render_falling_fighter(screen, obj, camera)
+            elif item_type == 'fighter' and getattr(obj, 'fell_into_pit', False):
+                continue
+            elif item_type == 'fighter' and fog is not None and obj.is_alive and (vis := fog.visibility_at(obj.wx, obj.wy)) < 0.97:
+                saved_alpha = obj.alpha
+                obj.alpha = int(saved_alpha * vis)
+                try:
+                    obj.render(screen, camera)
+                finally:
+                    obj.alpha = saved_alpha
+            elif item_type == 'pouch':
+                obj.render(screen, camera, font_small)
+            elif getattr(obj, 'animated', False):  # rochas animadas (ex.: fonte barroca)
+                obj.render(screen, camera, game_time)
+            else:
+                obj.render(screen, camera)
+
+    def draw_world_ambience():
+        """Folhas ao vento, elementos no ar da arena e, por cima de tudo no mundo, iluminação e atmosfera (6.4)."""
+        for leaf in ambient_leaves:
+            leaf.render(screen, camera)
+
+        game_map.render_overhead(screen, camera, game_time)
+        if lighting_fx is not None:
+            lighting_fx.render(screen, camera, game_time)
+
+    def step_idle_fighter(f, opp, dt_):
+        """Avança só a animação do lutador (introdução cinematográfica), sem física de combate."""
+        if isinstance(f, PirateSwordswoman):
+            f.update(dt_, game_map, particles, opponent=opp, banners=banners)
+        elif isinstance(f, (SaitouSamurai, Rifleman, Kabuki, Musketeer, GrayNinja)):
+            f.update(dt_, game_map, particles)
+        elif isinstance(f, (BlueSamurai, KyudoArcher)):
+            f.update(dt_, game_map, particles, projectiles)
+        else:
+            f.update(dt_, game_map)
     sound_mgr = SoundManager.get_instance()
     audio_cfg = saved_cfg.get("audio", {})
     sound_mgr.set_master_volume(audio_cfg.get("master", 1.0))
@@ -746,24 +785,29 @@ def run_game():
         # TELA DE SELEÇÃO DE PERSONAGENS
         # -------------------------------------------------------------
         if game_state == STATE_CHAR_SELECT:
+            start_match = False
             for event in pygame.event.get():
                 ctrl_mgr.handle_event(event)
                 if event.type == pygame.QUIT:
                     running = False
                 else:
-                    start_match = char_select_screen.handle_event(event)
-                    if start_match == "BACK":
+                    result = char_select_screen.handle_event(event)
+                    if result == "BACK":
                         play_sfx(SoundEvent.MENU_SELECT)
                         sound_mgr.play_music(MusicTrack.TITLE_THEME)
                         game_state = STATE_TITLE
-                    elif start_match:
-                        play_sfx(SoundEvent.MENU_SELECT)
-                        p1_char_id, p2_char_id, vs_ai_mode = char_select_screen.get_selected_characters()
-                        ai.set_difficulty(char_select_screen.ai_difficulty)
-                        settings_menu.ai_difficulty = char_select_screen.ai_difficulty
-                        game_state = STATE_ARENA_SELECT
+                    elif result:
+                        start_match = True
 
-            char_select_screen.update(dt)
+            # O sorteio do Aleatório termina dentro de update(), que também pode iniciar a partida
+            if char_select_screen.update(dt):
+                start_match = True
+            if start_match and game_state == STATE_CHAR_SELECT:
+                play_sfx(SoundEvent.MENU_SELECT)
+                p1_char_id, p2_char_id, vs_ai_mode = char_select_screen.get_selected_characters()
+                ai.set_difficulty(char_select_screen.ai_difficulty)
+                settings_menu.ai_difficulty = char_select_screen.ai_difficulty
+                game_state = STATE_ARENA_SELECT
             char_select_screen.render(screen, font_large, font_mid, font_small)
             pygame.display.flip()
             continue
@@ -782,7 +826,7 @@ def run_game():
                         play_sfx(SoundEvent.MENU_SELECT)
                         sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
                         game_state = STATE_CHAR_SELECT
-                    elif arena_choice in (ARENA_BAMBOO, ARENA_KYOTO):
+                    elif arena_choice in arena_ids():
                         play_sfx(SoundEvent.MENU_SELECT)
                         selected_arena_id = arena_choice
                         score_p1 = 0
@@ -790,7 +834,7 @@ def run_game():
                         match_winner = None
                         round_number = 1
                         round_result_screen.hide()
-                        start_new_match()
+                        start_new_match(play_intro=True)
                         game_state = STATE_DUEL_PLAYING
 
             arena_select_screen.update(dt)
@@ -816,6 +860,117 @@ def run_game():
             settings_menu.render(screen, font_large, font_mid, font_small)
             pygame.display.flip()
             continue
+
+        # -------------------------------------------------------------
+        # MENU DE PAUSA (ESC durante o duelo)
+        # -------------------------------------------------------------
+        if pause_menu.is_open:
+            for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
+                if event.type == pygame.QUIT:
+                    running = False
+                    break
+                action = pause_menu.handle_event(event, ctrl_mgr)
+                if action is None:
+                    continue
+                play_sfx(SoundEvent.MENU_SELECT)
+                if action == ACTION_SETTINGS:
+                    settings_menu.open()
+                elif action == ACTION_QUIT:
+                    running = False
+                else:
+                    pause_menu.close()
+                    if action == ACTION_ARENA:
+                        sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
+                        game_state = STATE_ARENA_SELECT
+                    elif action == ACTION_FIGHTER:
+                        char_select_screen.reset()
+                        sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
+                        game_state = STATE_CHAR_SELECT
+                    elif action == ACTION_MAIN_MENU:
+                        sound_mgr.play_music(MusicTrack.TITLE_THEME)
+                        game_state = STATE_TITLE
+                break
+
+            if pause_menu.is_open:
+                pause_menu.render(screen)
+                pygame.display.flip()
+            continue
+
+        # -------------------------------------------------------------
+        # INTRODUÇÃO CINEMATOGRÁFICA DA BATALHA (câmera orbital, só no início da batalha)
+        # -------------------------------------------------------------
+        if match_intro.active:
+            for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        pause_menu.open(screen)
+                        break
+                    if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                        match_intro.skip()
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    match_intro.skip()
+                elif event.type == pygame.JOYBUTTONDOWN:
+                    if ctrl_mgr.is_event_menu_pause(event, 0) or getattr(event, "button", None) == 6:
+                        pause_menu.open(screen)
+                        break
+                    if ctrl_mgr.is_event_menu_confirm(event) or getattr(event, "button", None) == 0:
+                        match_intro.skip()
+            if pause_menu.is_open or not running:
+                continue
+
+            match_intro.update(dt)
+            game_time += dt
+            spawn_1, spawn_2 = match_intro.spawns
+
+            if match_intro.active:
+                intro_phase, _ = match_intro.phase()
+                visible = match_intro.visible_fighters()
+                stage_x, stage_y = match_intro.stage
+                for idx, (fighter, opponent, spawn) in enumerate(((p1, p2, spawn_1), (p2, p1, spawn_2))):
+                    if intro_phase in ("p1", "p2"):
+                        fighter.wx, fighter.wy = (stage_x, stage_y) if visible[idx] else spawn
+                        fighter.set_facing(stage_x + 1.0, stage_y + 1.0)
+                    else:
+                        fighter.wx, fighter.wy = spawn
+                        fighter.set_facing(*((spawn_2 if idx == 0 else spawn_1)))
+                    if visible[idx]:
+                        step_idle_fighter(fighter, opponent, dt)
+                    on_stage = intro_phase in ("p1", "p2") and visible[idx]
+                    fighter.wz = match_intro.stage_z if on_stage else 0.0
+
+                for leaf in ambient_leaves:
+                    leaf.update(dt, game_map.wind_at(leaf.wx, leaf.wy, game_time))
+                fog.update(dt, game_time)
+                match_intro.apply_camera(camera)
+
+                screen.fill(game_map.bg_color)
+                game_map.render_terrain(screen, camera, game_time)
+                intro_queue = [(camera.depth(*static_item_center(t_, o_)), t_, o_) for _, t_, o_ in static_render_queue]
+                for idx, fighter in enumerate((p1, p2)):
+                    if visible[idx]:
+                        intro_queue.append((camera.depth(fighter.wx, fighter.wy), 'fighter', fighter))
+                intro_queue.extend(fog.queue_items(camera))
+                draw_world_queue(intro_queue)
+                draw_world_ambience()
+                match_intro.render_overlay(screen)
+                pygame.display.flip()
+                continue
+
+            # Fim da introdução: lutadores nas posições iniciais e câmera de volta à vista clássica
+            p1.wx, p1.wy = spawn_1
+            p2.wx, p2.wy = spawn_2
+            p1.wz = p2.wz = 0.0
+            p1.set_facing(*spawn_2)
+            p2.set_facing(*spawn_1)
+            camera.zoom = 1.0
+            camera.ground_z = 0.0
+            camera.screen_y = SCREEN_HEIGHT // 2
+            camera.set_azimuth(0.0)
+            camera.wx, camera.wy = match_intro.mid
 
         # -------------------------------------------------------------
         # DUELO EM ANDAMENTO (GAME LOOP)
@@ -844,13 +999,16 @@ def run_game():
         else:
             p2_active_dir = (float(k2_dx), float(k2_dy))
 
-        p1_dwx, p1_dwy = input_to_world_direction(p1_active_dir[0], p1_active_dir[1])
-        p2_dwx, p2_dwy = input_to_world_direction(p2_active_dir[0], p2_active_dir[1])
+        _view_azimuth = camera.azimuth
+        p1_dwx, p1_dwy = input_to_world_direction(p1_active_dir[0], p1_active_dir[1], _view_azimuth)
+        p2_dwx, p2_dwy = input_to_world_direction(p2_active_dir[0], p2_active_dir[1], _view_azimuth)
 
         # Atualização da Cinemática de Abertura de Round (Entregável 5.2) e do
         # Temporizador de Abertura de Round com Tremor de Tela (Item 10)
         if round_intro_timer > 0:
             round_intro_timer -= dt
+            # A arena gira levemente e para na vista clássica quando o cronômetro acaba (get_rotation_angle devolve 0)
+            camera.set_azimuth(math.radians(round_intro.get_rotation_angle(round_intro_timer)))
         elif round_start_timer > -0.5:
             round_start_timer -= dt
             if round_start_timer <= 0.6 and not round_start_shaken:
@@ -873,8 +1031,8 @@ def run_game():
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    game_state = STATE_ARENA_SELECT
-                    sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
+                    pause_menu.open(screen)
+                    break
                 elif event.key == KEY_SETTINGS:
                     settings_menu.open()
                 elif event.key == KEY_RESTART:
@@ -921,7 +1079,8 @@ def run_game():
 
             elif event.type == pygame.JOYBUTTONDOWN:
                 if ctrl_mgr.is_event_menu_pause(event, 0) or ctrl_mgr.is_event_menu_pause(event, 1) or (getattr(event, "button", None) == 6):
-                    settings_menu.open()
+                    pause_menu.open(screen)
+                    break
                 elif round_winner is not None:
                     # Ao terminar o duelo, tanto restart quanto quadrado/ação primária reiniciam
                     if (ctrl_mgr.is_event_action(event, 0, "restart") or
@@ -949,7 +1108,8 @@ def run_game():
                 # Gamepad Jogador 2
                 if not vs_ai_mode and p2.is_alive and round_winner is None and round_start_timer <= 0:
                     if ctrl_mgr.is_event_menu_pause(event, 1) or (getattr(event, "button", None) == 6):
-                        settings_menu.open()
+                        pause_menu.open(screen)
+                        break
                     elif ctrl_mgr.is_event_action(event, 1, "attack"):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
                         execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles)
@@ -965,9 +1125,6 @@ def run_game():
                 if round_winner is not None:
                     request_restart()
                 else:
-                    settings_btn_rect = pygame.Rect(SCREEN_WIDTH - 210, SCREEN_HEIGHT - 44, 180, 28)
-                    if settings_btn_rect.collidepoint(mx, my):
-                        settings_menu.open()
                     select_btn_rect = pygame.Rect(25, 20, 160, 32)
                     if select_btn_rect.collidepoint(mx, my):
                         play_sfx(SoundEvent.MENU_SELECT)
@@ -976,11 +1133,14 @@ def run_game():
 
         # Comandos de Ação Touchscreen
         if touch_controls.is_menu_requested():
-            settings_menu.open()
+            pause_menu.open(screen)
         if touch_controls.is_select_requested():
             play_sfx(SoundEvent.MENU_SELECT)
             sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
             game_state = STATE_ARENA_SELECT
+
+        if pause_menu.is_open:
+            continue
 
         if p1.is_alive and round_winner is None and round_start_timer <= 0:
             if touch_controls.is_attack_just_pressed():
@@ -1109,8 +1269,16 @@ def run_game():
         # Atualizações dos combatentes e coletáveis
         if not is_cinematic_freeze and not is_clash_freeze:
             # Atualização de perigos da Arena de Kyoto (Carruagens e Escombros)
-            if isinstance(game_map, KyotoMap):
+            if game_map.has_updates:
                 game_map.update(dt, [p1, p2], camera, particles, banners, cinematic_director)
+
+            if game_map.dispel_requested:  # sino do santuário: dissipa a fumaça da Kasumi e o veneno da Okuni
+                game_map.dispel_requested = False
+                poison_clouds.clear()
+                fog.dispel()
+                for pr in projectiles:
+                    if type(pr).__name__ in ("SmokeCloudEntity", "PoisonCloudProjectile"):
+                        pr.is_active = False
 
             for pouch in powder_pouches:
                 pouch.update(dt, game_map, particles)
@@ -1131,6 +1299,9 @@ def run_game():
 
             for f in (p1, p2):
                 opp = p2 if f is p1 else p1
+                if f.state == STATE_FALL:
+                    f.update_pit(dt, game_map, particles, banners)
+                    continue
                 if isinstance(f, Rifleman):
                     f.check_powder_pickup(powder_pouches, particles)
                 if isinstance(f, PirateSwordswoman):
@@ -1163,11 +1334,25 @@ def run_game():
                             lifetime=random.uniform(0.35, 0.60)
                         ))
 
+                # Queda em buracos da arena: toca o som e treme a câmera no frame em que começa
+                if f.update_pit(dt, game_map, particles, banners):
+                    play_sfx(SoundEvent.FALL)
+                    camera.add_shake(3.0)
+
+            for f in (p1, p2):
+                terrain_fx.step(f, game_map, dt)
+                if hasattr(f, "drain_fog_nodes"):
+                    for node in f.drain_fog_nodes():
+                        fog.add_trail(*node)
+
         # Atualizar Diretor Cinematográfico (Temporizadores e Corpos Voxel)
         cinematic_director.update(dt, game_map, particles)
 
         # Atualizar Choque de Espadas Tsubazeriai (Entregável 5.1: QTE "STRIKE!")
-        clash_system.update(dt, camera=camera, particles=particles, banners=banners, ctrl_mgr=ctrl_mgr)
+        clash_system.ai_player = 1 if vs_ai_mode else None
+        clash_system.ai_reaction_fn = ai.get_clash_reaction
+        clash_system.key_hints = (pygame.key.name(controls["P1_ATTACK"]).upper(), "" if vs_ai_mode else pygame.key.name(controls["P2_ATTACK"]).upper())
+        clash_system.update(dt, camera=camera, particles=particles, banners=banners, ctrl_mgr=ctrl_mgr, game_map=game_map)
 
         # Processar Combate & Projéteis
         winner = combat_system.process_combat(p1, p2, game_map, particles, banners, camera, projectiles, dt, cinematic_director=cinematic_director, decoys=decoys, ctrl_mgr=ctrl_mgr, clash_system=clash_system)
@@ -1212,6 +1397,13 @@ def run_game():
         # Câmera segue o ponto médio
         mid_x = (p1.wx + p2.wx) / 2.0
         mid_y = (p1.wy + p2.wy) / 2.0
+        # Atalhos de desenvolvimento do azimute (Entregável 6.1): [ e ] giram a câmera, \ restaura a vista clássica
+        if keys[pygame.K_LEFTBRACKET]:
+            camera.rotate(-CAMERA_ORBIT_SPEED * dt)
+        if keys[pygame.K_RIGHTBRACKET]:
+            camera.rotate(CAMERA_ORBIT_SPEED * dt)
+        if keys[pygame.K_BACKSLASH]:
+            camera.set_azimuth(0.0)
         camera.update(mid_x, mid_y, dt)
 
         particles = [p for p in particles if p.update(dt)]
@@ -1225,113 +1417,77 @@ def run_game():
 
         banners = [b for b in banners if b.update(dt)]
         for leaf in ambient_leaves:
-            leaf.update(dt)
+            leaf.update(dt, game_map.wind_at(leaf.wx, leaf.wy, game_time))
+        terrain_fx.update(dt, game_map, game_time)
+        fog.update(dt, game_time)
 
         # -------------------------------------------------------------
         # RENDERIZAÇÃO COM Y-SORTING DIVIDIDO (ESTÁTICO VS DINÂMICO)
         # -------------------------------------------------------------
-        bg_col = COLOR_KYOTO_BG if isinstance(game_map, KyotoMap) else COLOR_BG
+        bg_col = game_map.bg_color
         screen.fill(bg_col)
         game_map.render_terrain(screen, camera, game_time)
 
         # Entregável 1.3: Reutiliza a fila estática pré-calculada do cenário
         if not static_render_queue:
             static_render_queue = build_static_render_queue(game_map)
-        render_queue = list(static_render_queue)
+        if abs(camera.azimuth) > 1e-6:
+            render_queue = [(camera.depth(*static_item_center(t_, o_)), t_, o_) for _, t_, o_ in static_render_queue]
+        else:
+            render_queue = list(static_render_queue)
 
         # Adicionar elementos dinâmicos exclusivos (Carruagens, Escombros de Kyoto)
         if hasattr(game_map, 'carriages'):
             for c in game_map.carriages:
                 if c.is_active and c.warning_timer <= 0:
-                    render_queue.append((c.wx + c.wy, 'carriage', c))
+                    render_queue.append((camera.depth(c.wx, c.wy), 'carriage', c))
         if hasattr(game_map, 'falling_debris'):
             for d in game_map.falling_debris:
                 if d.is_active:
-                    render_queue.append((d.target_x + d.target_y, 'debris', d))
+                    render_queue.append((camera.depth(d.target_x, d.target_y), 'debris', d))
 
 
-        render_queue.append((p1.wx + p1.wy, 'fighter', p1))
-        render_queue.append((p2.wx + p2.wy, 'fighter', p2))
+        render_queue.append((camera.depth(p1.wx, p1.wy), 'fighter', p1))
+        render_queue.append((camera.depth(p2.wx, p2.wy), 'fighter', p2))
 
         # Adicionar cão Doberman ao Y-sorting se houver American Ninja na partida
         if hasattr(p1, "dog") and p1.dog:
-            render_queue.append((p1.dog.wx + p1.dog.wy, 'dog', p1.dog))
+            render_queue.append((camera.depth(p1.dog.wx, p1.dog.wy), 'dog', p1.dog))
         if hasattr(p2, "dog") and p2.dog:
-            render_queue.append((p2.dog.wx + p2.dog.wy, 'dog', p2.dog))
+            render_queue.append((camera.depth(p2.dog.wx, p2.dog.wy), 'dog', p2.dog))
 
         # Adicionar corpos voxel fatiados ao Y-sorting
         for corpse in cinematic_director.corpses:
-            render_queue.append((corpse.wx + corpse.wy, 'corpse', corpse))
+            render_queue.append((camera.depth(corpse.wx, corpse.wy), 'corpse', corpse))
 
         for pouch in powder_pouches:
             if pouch.is_active:
-                render_queue.append((pouch.wx + pouch.wy, 'pouch', pouch))
+                render_queue.append((camera.depth(pouch.wx, pouch.wy), 'pouch', pouch))
 
         for decoy in decoys:
             if decoy.is_active:
-                render_queue.append((decoy.wx + decoy.wy, 'decoy', decoy))
+                render_queue.append((camera.depth(decoy.wx, decoy.wy), 'decoy', decoy))
 
         for pt in powder_traps:
             if pt.is_active:
-                render_queue.append((pt.wx + pt.wy, 'powder_trap', pt))
+                render_queue.append((camera.depth(pt.wx, pt.wy), 'powder_trap', pt))
 
         for pc in poison_clouds:
             if pc.is_active:
-                render_queue.append((pc.wx + pc.wy, 'poison_cloud', pc))
+                render_queue.append((camera.depth(pc.wx, pc.wy), 'poison_cloud', pc))
 
         for proj in projectiles:
-            render_queue.append((proj.wx + proj.wy, 'projectile', proj))
+            render_queue.append((camera.depth(proj.wx, proj.wy), 'projectile', proj))
 
         for p in particles:
             if hasattr(p, 'wx') and hasattr(p, 'wy'):
-                render_queue.append((p.wx + p.wy, 'particle', p))
+                render_queue.append((camera.depth(p.wx, p.wy), 'particle', p))
+        for p in terrain_fx.particles:
+            render_queue.append((camera.depth(p.wx, p.wy), 'particle', p))
+        render_queue.extend(fog.queue_items(camera))
 
-        render_queue.sort(key=lambda item: item[0])
-
-        for _, item_type, obj in render_queue:
-            if item_type == 'bamboo':
-                obj.render(screen, camera, game_time)
-            elif item_type in ('rock', 'well', 'tree', 'torii'):
-                obj.render(screen, camera)
-            elif item_type == 'building':
-                obj.render(screen, camera, game_time)
-            elif item_type == 'lantern':
-                obj.render(screen, camera, game_time)
-            elif item_type == 'carriage':
-                obj.render(screen, camera)
-            elif item_type == 'debris':
-                obj.render(screen, camera)
-            elif item_type == 'fighter':
-                obj.render(screen, camera)
-            elif item_type == 'dog':
-                obj.render(screen, camera)
-            elif item_type == 'corpse':
-                obj.render(screen, camera)
-            elif item_type == 'pouch':
-                obj.render(screen, camera, font_small)
-            elif item_type == 'decoy':
-                obj.render(screen, camera)
-            elif item_type == 'powder_trap':
-                obj.render(screen, camera)
-            elif item_type == 'poison_cloud':
-                obj.render(screen, camera)
-            elif item_type == 'projectile':
-                obj.render(screen, camera)
-            elif item_type == 'particle':
-                obj.render(screen, camera)
-
-        for leaf in ambient_leaves:
-            leaf.render(screen, camera)
-
-        # Vaga-lumes bioluminescentes sobre o lago zen
-        if hasattr(game_map, 'fireflies'):
-            for fx, fy, fz in game_map.fireflies:
-                w_fx = fx + math.sin(game_time * 2.0 + fy) * 0.12
-                w_fy = fy + math.cos(game_time * 1.8 + fx) * 0.12
-                w_fz = fz + math.sin(game_time * 2.5 + fx * 2.0) * 0.08
-                fsx, fsy = camera.apply(w_fx, w_fy, w_fz)
-                pygame.draw.circle(screen, (180, 255, 80), (fsx, fsy), 3)
-                pygame.draw.circle(screen, (220, 255, 160), (fsx, fsy), 6, 1)
+        draw_world_queue(render_queue)
+        draw_world_ambience()
 
         for banner in banners:
             banner.render(screen, camera, font_mid)
@@ -1582,54 +1738,10 @@ def run_game():
         sel_txt = font_small.render(t("change_warriors"), True, COLOR_GOLD)
         screen.blit(sel_txt, (select_btn.centerx - sel_txt.get_width() // 2, select_btn.y + 7))
 
-        # Guia de Controles no Rodapé (Teclado, Gamepad Dinâmico ou Touch)
-        footer_rect = pygame.Rect(20, SCREEN_HEIGHT - 48, SCREEN_WIDTH - 40, 36)
-        pygame.draw.rect(screen, (16, 20, 18, 200), footer_rect, border_radius=6)
-
-        k_atk = format_key_name(controls["P1_ATTACK"])
-        k_sec = format_key_name(controls["P1_DASH"])
-        m_atk = format_key_name(controls["P2_ATTACK"])
-        m_sec = format_key_name(controls["P2_PARRY"])
-
-        p1_a1, p1_a2 = get_fighter_action_labels(p1)
-        p2_a1, p2_a2 = get_fighter_action_labels(p2)
-
-        # Prompts contextuais para P1
-        if ctrl_mgr.has_controller(0):
-            badge1 = ctrl_mgr.get_badge_text(0)
-            ctrl1 = ctrl_mgr.get_controller_for_player(0)
-            btn_atk1 = ctrl1.get_button_glyph("attack") if ctrl1 else "▢"
-            btn_sec1 = ctrl1.get_button_glyph("dash") if ctrl1 else "✕"
-            btn_menu1 = ctrl1.get_button_glyph("menu") if ctrl1 else "Options"
-            c1 = font_small.render(f"{badge1} P1: Stick | [{btn_atk1}] = {p1_a1} | [{btn_sec1}] = {p1_a2} | [{btn_menu1}] = Menu", True, (245, 205, 205))
-        elif touch_controls.is_visible:
-            c1 = font_small.render(f"[TOUCH] P1 ({p1_name}): Joy = Mover | [ATK] = {p1_a1} | [DASH] = {p1_a2}", True, (245, 205, 205))
-        else:
-            c1 = font_small.render(f"P1 ({p1_name}): W/A/S/D | {k_atk} = {p1_a1} | {k_sec} = {p1_a2}", True, (245, 205, 205))
-
-        # Prompts contextuais para P2
-        if not vs_ai_mode and ctrl_mgr.has_controller(1):
-            badge2 = ctrl_mgr.get_badge_text(1)
-            ctrl2 = ctrl_mgr.get_controller_for_player(1)
-            btn_atk2 = ctrl2.get_button_glyph("attack") if ctrl2 else "▢"
-            btn_sec2 = ctrl2.get_button_glyph("dash") if ctrl2 else "✕"
-            btn_menu2 = ctrl2.get_button_glyph("menu") if ctrl2 else "Options"
-            c2 = font_small.render(f"{badge2} P2: Stick | [{btn_atk2}] = {p2_a1} | [{btn_sec2}] = {p2_a2} | [{btn_menu2}] = Menu", True, (205, 225, 245))
-        else:
-            c2 = font_small.render(f"P2 ({p2_name}): {t('arrows_label')} | {m_atk} = {p2_a1} | {m_sec} = {p2_a2}", True, (205, 225, 245))
-
-        screen.blit(c1, (30, SCREEN_HEIGHT - 40))
-        screen.blit(c2, (SCREEN_WIDTH // 2 - c2.get_width() // 2 - 30, SCREEN_HEIGHT - 40))
-
         # Renderizar Controles Virtuais Touchscreen (se ativos/visíveis)
+        p1_a1, p1_a2 = get_fighter_action_labels(p1)
         touch_controls.set_action_labels(p1_a1, p1_a2)
         touch_controls.render(screen, font_mid, font_small)
-
-        settings_btn_rect = pygame.Rect(SCREEN_WIDTH - 210, SCREEN_HEIGHT - 44, 180, 28)
-        pygame.draw.rect(screen, (40, 52, 45), settings_btn_rect, border_radius=4)
-        pygame.draw.rect(screen, COLOR_GOLD, settings_btn_rect, 1, border_radius=4)
-        c3 = font_small.render(t("settings_btn"), True, COLOR_GOLD)
-        screen.blit(c3, (settings_btn_rect.centerx - c3.get_width() // 2, settings_btn_rect.y + 5))
 
         # Banner Central de Início de Round (Item 10)
         if round_start_timer > -0.45 and round_winner is None:
@@ -1695,12 +1807,8 @@ def run_game():
             screen.blit(v_surf, (center_x - v_surf.get_width() // 2, center_y))
             screen.blit(sub_surf, (center_x - sub_surf.get_width() // 2, center_y + 48))
 
-        # Entregável 5.2: Rotação suave de câmera + pergaminho vertical Sumi-E na abertura do round
+        # Entregável 5.2: pergaminho vertical Sumi-E na abertura do round (a rotação é feita no azimute da câmera)
         if round_intro_timer > 0:
-            angle = round_intro.get_rotation_angle(round_intro_timer)
-            if abs(angle) >= 0.05:
-                rotated_screen = round_intro.apply_rotation(screen, round_intro_timer)
-                screen.blit(rotated_screen, (0, 0))
             round_intro.render(screen, round_intro_timer)
 
         # Entregável 5.3: Tela final de partida Melhor-de-3 (com revanche rápida via Espaço)

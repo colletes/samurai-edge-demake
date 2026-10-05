@@ -43,6 +43,78 @@ class TextAlign(Enum):
 
 
 # ============================================================================
+# Text effects (shadow / outline / glow)
+# ============================================================================
+
+def _blur(surf: pygame.Surface, factor: int = 3) -> pygame.Surface:
+    """Cheap blur: shrink then enlarge with smooth scaling."""
+    w, h = surf.get_size()
+    small = pygame.transform.smoothscale(surf, (max(1, w // factor), max(1, h // factor)))
+    return pygame.transform.smoothscale(small, (w, h))
+
+
+def render_text_fx(
+    font: pygame.font.Font,
+    text: str,
+    color: Tuple[int, int, int] = (255, 255, 255),
+    outline: bool = False,
+    outline_color: Tuple[int, int, int] = (0, 0, 0),
+    outline_width: int = 1,
+    shadow: bool = False,
+    shadow_color: Tuple[int, int, int] = (0, 0, 0),
+    shadow_offset: Tuple[int, int] = (2, 2),
+    glow: bool = False,
+    glow_color: Optional[Tuple[int, int, int]] = None,
+    glow_width: int = 3,
+) -> pygame.Surface:
+    """
+    Render one line of text with consistent effects on a transparent surface.
+
+    Layers (back to front): glow, shadow (of text + outline silhouette), outline, text.
+    The text is rendered once per color; the surface is padded equally on all sides so
+    centering it keeps the glyphs centered.
+    """
+    body = font.render(text, True, color)
+    w, h = body.get_size()
+
+    ow = outline_width if outline else 0
+    sx, sy = shadow_offset if shadow else (0, 0)
+    pad = max(ow + max(abs(sx), abs(sy)), glow_width * 2 if glow else 0, ow) + 1
+    surf = pygame.Surface((w + pad * 2, h + pad * 2), pygame.SRCALPHA)
+
+    # Silhouette of text + outline (shared by shadow and outline layers)
+    ring = []
+    if ow:
+        for dx in range(-ow, ow + 1):
+            for dy in range(-ow, ow + 1):
+                if (dx or dy) and dx * dx + dy * dy <= ow * ow + ow:
+                    ring.append((dx, dy))
+
+    if glow:
+        halo = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+        halo.blit(font.render(text, True, glow_color or color), (pad, pad))
+        halo = _blur(halo, max(2, glow_width))
+        for _ in range(2):
+            surf.blit(halo, (0, 0))
+
+    if shadow:
+        mask = font.render(text, True, shadow_color)
+        shade = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+        for dx, dy in ring + [(0, 0)]:
+            shade.blit(mask, (pad + dx + sx, pad + dy + sy))
+        shade.set_alpha(170)
+        surf.blit(shade, (0, 0))
+
+    if ring:
+        edge = font.render(text, True, outline_color)
+        for dx, dy in ring:
+            surf.blit(edge, (pad + dx, pad + dy))
+
+    surf.blit(body, (pad, pad))
+    return surf
+
+
+# ============================================================================
 # Font Manager (Singleton)
 # ============================================================================
 
@@ -98,8 +170,8 @@ class FontManager:
         assets_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "assets", "fonts")
         
         # Attempt to load custom fonts; fall back to system fonts
-        heading_path = os.path.join(assets_path, "Shojoru.ttf")
-        body_path = os.path.join(assets_path, "Noto_Sans_JP-Regular.ttf")
+        heading_path = os.path.join(assets_path, "Cinzel-Regular.ttf")
+        body_path = os.path.join(assets_path, "ZenAntique-Regular.ttf")
         mono_path = os.path.join(assets_path, "DejaVuSansMono.ttf")
         
         self.font_paths[FontFamily.HEADING] = heading_path if os.path.exists(heading_path) else None
@@ -117,6 +189,11 @@ class FontManager:
         
         if key in self.fonts:
             return self.fonts[key]
+        
+        if not self.font_paths:
+            self.load_fonts()
+            if key in self.fonts:
+                return self.fonts[key]
         
         font_path = self.font_paths.get(family)
         pixel_size = size.value
@@ -184,7 +261,11 @@ class FontManager:
         """
         
         # Check cache
-        cache_key = f"{text}_{size.name}_{family.name}_{color}_{outline}_{shadow}_{glow}"
+        cache_key = (
+            text, size, family, tuple(color), shadow, tuple(shadow_color), tuple(shadow_offset),
+            outline, tuple(outline_color), outline_width, glow,
+            tuple(glow_color) if glow_color else None, glow_width, max_width,
+        )
         if use_cache and cache_key in self.cache:
             return self.cache[cache_key].copy()
         
@@ -239,48 +320,10 @@ class FontManager:
         glow_width: int
     ) -> pygame.Surface:
         """Render a single line with effects."""
-        
-        if glow_color is None:
-            glow_color = color
-        
-        # Start with transparent surface large enough for effects
-        temp_surf = font.render(text, True, color)
-        width = temp_surf.get_width()
-        height = temp_surf.get_height()
-        
-        padding = max(outline_width, glow_width) + max(shadow_offset)
-        surf = pygame.Surface(
-            (width + padding * 2, height + padding * 2),
-            pygame.SRCALPHA
+        return render_text_fx(
+            font, text, color, outline, outline_color, outline_width,
+            shadow, shadow_color, shadow_offset, glow, glow_color, glow_width
         )
-        
-        # Draw glow (if enabled)
-        if glow:
-            for dx in range(-glow_width, glow_width + 1):
-                for dy in range(-glow_width, glow_width + 1):
-                    if dx*dx + dy*dy <= glow_width * glow_width:
-                        glow_surf = font.render(text, True, glow_color)
-                        glow_surf.set_alpha(50)
-                        surf.blit(glow_surf, (padding + dx, padding + dy))
-        
-        # Draw shadow (if enabled)
-        if shadow:
-            shadow_surf = font.render(text, True, shadow_color)
-            shadow_surf.set_alpha(128)
-            surf.blit(shadow_surf, (padding + shadow_offset[0], padding + shadow_offset[1]))
-        
-        # Draw outline (if enabled)
-        if outline:
-            for dx in range(-outline_width, outline_width + 1):
-                for dy in range(-outline_width, outline_width + 1):
-                    if dx != 0 or dy != 0:
-                        outline_surf = font.render(text, True, outline_color)
-                        surf.blit(outline_surf, (padding + dx, padding + dy))
-        
-        # Draw main text
-        surf.blit(temp_surf, (padding, padding))
-        
-        return surf
     
     # ========================================================================
     # Utility Methods

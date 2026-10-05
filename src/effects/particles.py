@@ -10,6 +10,14 @@ from src.config import (
 )
 from src.isometric.iso_math import world_to_iso
 
+# Função (x, y) -> (vx, vy) do vento da arena atual; o main a liga ao carregar a arena.
+WIND_SOURCE = None
+
+
+def set_wind_source(fn):
+    global WIND_SOURCE
+    WIND_SOURCE = fn
+
 class SparkParticle:
     """Faíscas geradas quando uma espada atinge pedras ou em choque de lâminas (clash/parry)."""
     def __init__(self, wx: float, wy: float, wz: float = 0.5, color: tuple | None = None):
@@ -75,6 +83,10 @@ class SmokeParticle:
 
     def update(self, dt: float) -> bool:
         self.age += dt
+        if WIND_SOURCE is not None:
+            wind_x, wind_y = WIND_SOURCE(self.wx, self.wy)
+            self.vx += (wind_x * 1.5 - self.vx) * min(1.0, 1.2 * dt)
+            self.vy += (wind_y * 1.5 - self.vy) * min(1.0, 1.2 * dt)
         self.wx += self.vx * dt
         self.wy += self.vy * dt
         self.wz += self.vz * dt
@@ -171,9 +183,10 @@ class BambooSliceParticle:
 
 class AmbientLeafParticle:
     """Folhas de bambu e pétalas de sakura que caem suavemente com o vento."""
-    def __init__(self, map_cols: int, map_rows: int):
+    def __init__(self, map_cols: int, map_rows: int, petal_ratio: float = 0.25):
         self.map_cols = map_cols
         self.map_rows = map_rows
+        self.petal_ratio = petal_ratio
         self.reset(random_z=True)
 
     def reset(self, random_z: bool = False):
@@ -183,22 +196,56 @@ class AmbientLeafParticle:
         self.vx = random.uniform(0.4, 1.2)
         self.vy = random.uniform(0.2, 0.8)
         self.vz = random.uniform(-0.6, -1.2)
-        self.is_sakura = random.random() < 0.25
+        self.is_sakura = random.random() < self.petal_ratio
         self.color = COLOR_SAKURA_PINK if self.is_sakura else COLOR_BAMBOO_LEAF
         self.size = 3 if self.is_sakura else 4
         self.flutter_time = random.uniform(0, math.pi * 2)
 
-    def update(self, dt: float):
+    def update(self, dt: float, wind: tuple[float, float] = (0.0, 0.0)):
         self.flutter_time += dt * 3.0
-        self.wx += (self.vx + math.sin(self.flutter_time) * 0.4) * dt
-        self.wy += (self.vy + math.cos(self.flutter_time) * 0.3) * dt
+        self.wx += (self.vx + wind[0] + math.sin(self.flutter_time) * 0.4) * dt
+        self.wy += (self.vy + wind[1] + math.cos(self.flutter_time) * 0.3) * dt
         self.wz += self.vz * dt
-        if self.wz <= 0 or self.wx > self.map_cols or self.wy > self.map_rows:
+        if self.wz <= 0 or not (0 <= self.wx <= self.map_cols and 0 <= self.wy <= self.map_rows):
             self.reset(random_z=False)
 
     def render(self, surface: pygame.Surface, camera):
         sx, sy = camera.apply(self.wx, self.wy, self.wz)
         pygame.draw.circle(surface, self.color, (sx, sy), self.size)
+
+
+class CannonShotParticle:
+    """Bala de canhão em voo rasante, em linha reta: sombra no chão, bola de ferro com brilho e rastro de brasa."""
+
+    def __init__(self, wx: float, wy: float, dir_x: float, dir_y: float, speed: float, reach: float, wz: float = 0.55):
+        self.x0, self.y0, self.dir_x, self.dir_y = wx, wy, dir_x, dir_y
+        self.speed = speed
+        self.lifetime = reach / speed
+        self.wz = wz
+        self.age = 0.0
+
+    def position(self, age: float | None = None) -> tuple[float, float]:
+        a = self.age if age is None else age
+        return self.x0 + self.dir_x * self.speed * a, self.y0 + self.dir_y * self.speed * a
+
+    def update(self, dt: float) -> bool:
+        self.age += dt
+        return self.age < self.lifetime
+
+    def render(self, surface: pygame.Surface, camera):
+        x, y = self.position()
+        for k in range(8, 0, -1):  # rastro: posições recentes, esmaecendo
+            tx, ty = self.position(max(0.0, self.age - k * 0.022))
+            sx, sy = camera.apply(tx, ty, self.wz)
+            f = 1.0 - k / 9.0
+            pygame.draw.circle(surface, (int(255 * f), int(150 * f), int(50 * f)), (sx, sy), max(1, int(8 * f)))
+        gx, gy = camera.apply(x, y, 0.0)
+        pygame.draw.ellipse(surface, (10, 10, 12), (gx - 9, gy - 4, 18, 8))
+        sx, sy = camera.apply(x, y, self.wz)
+        r = max(4, int(abs(camera.apply(x, y, self.wz + 0.32)[1] - sy)))
+        pygame.draw.circle(surface, (22, 24, 30), (sx, sy), r)
+        pygame.draw.circle(surface, (56, 62, 74), (sx - 1, sy - 1), max(2, r - 2))
+        pygame.draw.circle(surface, (150, 160, 176), (sx - r // 3, sy - r // 3), max(1, r // 3))
 
 
 class FloatingBanner:

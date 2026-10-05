@@ -51,6 +51,11 @@ def calc_leg_joints(
                 foot_fwd = 0.07 if side == "L" else -0.06
                 knee_fwd = 0.03 if side == "L" else -0.02
                 knee_lift = -0.02
+            elif "musashi" in char_type:
+                # Musashi: base larga e firme de duas espadas, joelhos levemente flexionados
+                foot_fwd = 0.10 if side == "R" else -0.09
+                knee_fwd = 0.05 if side == "R" else -0.04
+                knee_lift = -0.01
             elif "ninja" in char_type or "hanzo" in char_type or "kasumi" in char_type:
                 # Ninja: Postura abaixada e ágil com centro de massa baixo
                 foot_fwd = 0.06 if side == "R" else -0.06
@@ -360,16 +365,9 @@ def calc_character_idle_pose(
     elif char_type in ("okuni", "kabuki"):
         # Okuni (Dançarina Kabuki): Posição teatral graciosa.
         # Ambos os braços dobrados delicadamente à frente da cintura segurando os leques cruzados.
-        arm_l = (
-            base_x + fx * 0.10 + px * 0.06,
-            base_y + fy * 0.10 + py * 0.06,
-            tz + 0.02
-        )
-        arm_r = (
-            base_x + fx * 0.10 - px * 0.06,
-            base_y + fy * 0.10 - py * 0.06,
-            tz + 0.04
-        )
+        # Direita ergue o leque aberto junto ao rosto (como no conceito); esquerda segura o leque fechado baixo e cruzado.
+        arm_r = (base_x + fx * 0.07 - px * 0.14, base_y + fy * 0.07 - py * 0.14, tz + 0.30)
+        arm_l = (base_x + fx * 0.11 + px * 0.07, base_y + fy * 0.11 + py * 0.07, tz - 0.03)
         return arm_l, arm_r, {"pose": "KABUKI_FANS"}
 
     elif char_type in ("rifleman", "teppo"):

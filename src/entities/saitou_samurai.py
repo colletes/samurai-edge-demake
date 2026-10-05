@@ -232,6 +232,13 @@ class SaitouSamurai(Samurai):
             clamped_y = max(min_y, min(max_y, new_y))
             hit_border = (clamped_x != new_x or clamped_y != new_y)
 
+            if getattr(game_map, "has_rails", False):
+                # A investida freia na borda do buraco em vez de despencar nele
+                safe_x, safe_y = self.block_pit_entry(game_map, clamped_x, clamped_y)
+                if (safe_x, safe_y) != (clamped_x, clamped_y):
+                    clamped_x, clamped_y = safe_x, safe_y
+                    hit_border = True
+
             self.wx = clamped_x
             self.wy = clamped_y
             self.hitbox_center = (
@@ -291,6 +298,8 @@ class SaitouSamurai(Samurai):
                     if col: can_slide = False; break
 
             if can_slide:
+                if getattr(game_map, "has_rails", False):
+                    new_x, new_y = self.block_pit_entry(game_map, new_x, new_y)
                 self.wx = new_x
                 self.wy = new_y
             else:

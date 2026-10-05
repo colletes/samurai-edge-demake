@@ -9,6 +9,17 @@ from src.config import get_asset_path
 
 _font_cache: dict[tuple[str, int], pygame.font.Font] = {}
 
+# Zen Antique não tem as vogais com macron (Ū sai em branco); cai para a letra simples.
+_MACRON_TO_PLAIN = str.maketrans("āēīōūĀĒĪŌŪ", "aeiouAEIOU")
+
+
+class _NoMacronFont(pygame.font.Font):
+    def render(self, text, *args, **kwargs):
+        return super().render(text.translate(_MACRON_TO_PLAIN), *args, **kwargs)
+
+    def size(self, text):
+        return super().size(text.translate(_MACRON_TO_PLAIN))
+
 FONT_ORIENTAL_TITLE = "assets/fonts/Shojumaru-Regular.ttf"
 FONT_ORIENTAL_TEXT = "assets/fonts/ZenAntique-Regular.ttf"
 
@@ -22,7 +33,8 @@ def get_font(font_path: str, size: int) -> pygame.font.Font:
     font = None
     if os.path.exists(resolved_path):
         try:
-            font = pygame.font.Font(resolved_path, size)
+            font_cls = _NoMacronFont if font_path == FONT_ORIENTAL_TEXT else pygame.font.Font
+            font = font_cls(resolved_path, size)
         except Exception:
             font = None
 

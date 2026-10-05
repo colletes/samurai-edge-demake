@@ -492,6 +492,69 @@ def generate_dog_bark() -> pygame.mixer.Sound:
     return _samples_to_sound(samples)
 
 
+def generate_fall() -> pygame.mixer.Sound:
+    """Queda em buraco: assobio de vento descendente e, ao final, um baque grave e abafado ao longe."""
+    duration = 1.05
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _lowpass(_white_noise(num_samples), 0.12)
+    samples = []
+    phase = 0.0
+    thud_at = 0.80
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        freq = 900.0 * math.exp(-2.6 * t) + 120.0
+        phase += 2.0 * math.pi * freq / SAMPLE_RATE
+        fade_in = min(1.0, t / 0.04)
+        fade_out = max(0.0, 1.0 - t / thud_at) if t < thud_at else 0.0
+        whistle = math.sin(phase) * 0.35 * fade_in * fade_out
+        wind = noise[i] * 0.9 * fade_in * fade_out
+        thud = 0.0
+        if t >= thud_at:
+            tt = t - thud_at
+            thud = math.sin(2.0 * math.pi * 55.0 * tt) * math.exp(-14.0 * tt) * 0.8 + noise[i] * math.exp(-30.0 * tt) * 0.5
+        samples.append((whistle + wind + thud) * 0.8)
+
+    return _samples_to_sound(samples)
+
+
+def generate_ship_creak() -> pygame.mixer.Sound:
+    """Ranger grave de casco de madeira: serra lenta com vibrato descendente sobre ruído de mar abafado."""
+    duration = 1.5
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _lowpass(_white_noise(num_samples), 0.05)
+    samples = []
+    phase = 0.0
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        freq = 96.0 - 28.0 * (t / duration) + 9.0 * math.sin(2.0 * math.pi * 6.5 * t)
+        phase += freq / SAMPLE_RATE
+        saw = 2.0 * (phase % 1.0) - 1.0
+        env = min(1.0, t / 0.18) * max(0.0, 1.0 - (t / duration) ** 2)
+        samples.append((saw * 0.34 + noise[i] * 1.1) * env * 0.8)
+    return _samples_to_sound(samples)
+
+
+def generate_chain_rattle() -> pygame.mixer.Sound:
+    """Elos de ferro se chocando devagar, cada vez mais rápido: o aviso do peso que vai descer."""
+    duration = 1.3
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
+    link_times = [0.0]
+    while link_times[-1] < duration - 0.1:
+        link_times.append(link_times[-1] + max(0.05, 0.22 - 0.14 * (link_times[-1] / duration)))
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        val = 0.0
+        for lt in link_times:
+            dt = t - lt
+            if 0.0 <= dt < 0.12:
+                freq = 1400.0 + 700.0 * ((lt * 37.0) % 1.0)
+                val += math.sin(2.0 * math.pi * freq * dt) * math.exp(-45.0 * dt) * 0.3 + noise[i] * math.exp(-60.0 * dt) * 0.2
+        samples.append(val * 0.8)
+    return _samples_to_sound(samples)
+
+
 _GENERATOR_MAP = {
     SoundEvent.SWORD_SLASH: generate_sword_slash,
     SoundEvent.SWORD_CLASH: generate_sword_clash,
@@ -513,6 +576,9 @@ _GENERATOR_MAP = {
     SoundEvent.POISON_BREATH: generate_poison_breath,
     SoundEvent.FOOTSTEP: generate_footstep,
     SoundEvent.DOG_BARK: generate_dog_bark,
+    SoundEvent.FALL: generate_fall,
+    SoundEvent.SHIP_CREAK: generate_ship_creak,
+    SoundEvent.CHAIN_RATTLE: generate_chain_rattle,
     SoundEvent.ROUND_START: generate_round_start,
     SoundEvent.ROUND_WIN: generate_round_win,
     SoundEvent.UI_SELECT: generate_ui_select,

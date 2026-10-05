@@ -7,6 +7,7 @@ import pygame
 from src.config import (
     COLOR_WHITE, COLOR_BLACK, COLOR_STEEL, COLOR_GOLD
 )
+from src.world.arena_generator import PIT_EDGE_MARGIN
 
 # Estados da Máquina de Estados Finita (FSM)
 STATE_IDLE = "IDLE"
@@ -19,6 +20,15 @@ STATE_RECOVERY = "RECOVERY"
 STATE_PARRY = "PARRY"
 STATE_STUNNED = "STUNNED"
 STATE_DEAD = "DEAD"
+STATE_FALL = "FALL"
+
+# Estados em que o lutador atravessa buracos (esquivas, saltos e avanços); ao terminarem, o ponto de pouso decide
+PIT_CROSSING_STATES = frozenset({
+    STATE_ROLL, STATE_DASH, "SHUKUCHI", "RYUU_TSUI_SEN", "KABUKI_ROLL", "RIFLE_ROLL", "BACKSTEP", "JUMP",
+    STATE_ATTACK, "TSUKA_ATE", "ZEROSHIKI",  # avanços de golpe: o pouso decide, em vez de cair no meio do ataque
+})
+FALL_DURATION = 0.9
+FALL_GRAVITY = 14.0
 
 
 def resolve_playable_bounds(game_map) -> tuple[float, float, float, float]:
@@ -76,6 +86,12 @@ class Samurai:
         self.roll_cooldown_duration = 0.38  # Cooldown total de re-esquiva (pesada: 0.38s, ágil: 0.35s)
         self.roll_cooldown_timer = 0.0
         self.dash_recovery_timer = 0.0
+
+        # Queda em buracos (arenas com PitZone)
+        self.pit_cross_timer = 0.0     # >0: em travessia induzida por habilidade (ex.: corda da Tomoe)
+        self.fall_timer = 0.0
+        self.fall_pit = None
+        self.fell_into_pit = False
 
     @property
     def dash_recovery_duration(self) -> float:
@@ -193,6 +209,74 @@ class Samurai:
             self.roll_cooldown_timer = self.roll_cooldown_duration
             self.dash_recovery_timer = self.roll_recovery_duration
 
+    def is_crossing_pit(self) -> bool:
+        """Em esquiva, salto ou avanço (ou puxado pela própria habilidade): ainda não pousou."""
+        return self.state in PIT_CROSSING_STATES or self.pit_cross_timer > 0.0 or self.wz > 0.25
+
+    def update_pit(self, dt: float, game_map, particles: list = None, banners: list = None) -> bool:
+        """
+        Checagem central de queda, uma vez por frame. Cai quem não está em travessia e tem o centro dentro de um
+        buraco (empurrão, puxão, esquiva ou salto que não alcançou o outro lado). Também avança a animação de queda.
+        Retorna True no frame em que a queda começa.
+        """
+        if self.state == STATE_FALL:
+            self.fall_timer += dt
+            self.wz = -0.5 * FALL_GRAVITY * self.fall_timer * self.fall_timer
+            if self.fall_timer >= FALL_DURATION:
+                self.state = STATE_DEAD
+                self.fell_into_pit = True
+                self.wz = 0.0
+            return False
+        if not self.is_alive:
+            return False
+        if self.pit_cross_timer > 0.0:
+            self.pit_cross_timer = max(0.0, self.pit_cross_timer - dt)
+        pit_at = getattr(game_map, "pit_at", None)
+        if pit_at is None or self.is_crossing_pit():
+            return False
+        pit = pit_at(self.wx, self.wy)
+        if pit is None:
+            return False
+        self._begin_fall(pit, particles, banners)
+        return True
+
+    def _begin_fall(self, pit, particles: list = None, banners: list = None):
+        self.state = STATE_FALL
+        self.fall_timer = 0.0
+        self.fall_pit = pit
+        self.hp = 0
+        self.is_alive = False
+        self.hitbox_active = False
+        self.is_invulnerable_dodge = False
+        self.roll_recovery_timer = 0.0
+        if particles is not None:
+            import random
+            from src.effects.particles import SmokeParticle
+            for _ in range(10):
+                particles.append(SmokeParticle(
+                    self.wx + random.uniform(-0.3, 0.3), self.wy + random.uniform(-0.3, 0.3),
+                    wz=random.uniform(0.0, 0.25), color=(122, 108, 92),
+                    radius=random.uniform(0.12, 0.24), lifetime=random.uniform(0.45, 0.8)))
+        if banners is not None:
+            from src.effects.particles import FloatingBanner
+            from src.i18n import t
+            banners.append(FloatingBanner(t("banner_fell"), self.wx, self.wy, wz=1.7, color=(235, 205, 150), duration=1.4))
+
+    def apply_forced_displacement(self, dx: float, dy: float, game_map):
+        """Empurrão/puxão externo: respeita limites e sólidos, mas ignora buracos (a queda é decidida em update_pit)."""
+        if not self.is_alive:
+            return
+        new_wx, new_wy = self.wx + dx, self.wy + dy
+        min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
+        new_wx = max(min_x, min(max_x, new_wx))
+        new_wy = max(min_y, min(max_y, new_wy))
+        for obstacle in list(game_map.rocks) + list(getattr(game_map, "buildings", [])):
+            collided, push_x, push_y = obstacle.check_collision(new_wx, new_wy, self.radius)
+            if collided:
+                new_wx += push_x
+                new_wy += push_y
+        self.wx, self.wy = new_wx, new_wy
+
     def take_hit(self, slash_dir: tuple[float, float], damage: int = 2) -> tuple[bool, bool]:
         """
         Aplica dano ao guerreiro.
@@ -252,7 +336,10 @@ class Samurai:
         elif self.slow_timer > 0:
             current_speed *= 0.35
 
-        if game_map.is_water(self.wx, self.wy):
+        speed_mult_at = getattr(game_map, "speed_mult_at", None)
+        if speed_mult_at is not None:
+            current_speed *= speed_mult_at(self.wx, self.wy)
+        elif game_map.is_water(self.wx, self.wy):
             current_speed *= 0.55
 
         # Nova posição proposta
@@ -296,8 +383,27 @@ class Samurai:
                 new_wx += push_x
                 new_wy += push_y
 
+        if getattr(game_map, "has_rails", False):
+            new_wx, new_wy = self.block_pit_entry(game_map, new_wx, new_wy)
+
         self.wx = new_wx
         self.wy = new_wy
+
+    def block_pit_entry(self, game_map, new_wx: float, new_wy: float) -> tuple[float, float]:
+        """Andar não entra na faixa de borda dos buracos protegidos: desliza pelo eixo livre ou fica parado."""
+        current = game_map.rail_edge_distance(self.wx, self.wy)
+
+        def blocked(x: float, y: float) -> bool:
+            d = game_map.rail_edge_distance(x, y)
+            return d < PIT_EDGE_MARGIN and d < current - 1e-9
+
+        if not blocked(new_wx, new_wy):
+            return new_wx, new_wy
+        if not blocked(new_wx, self.wy):
+            return new_wx, self.wy
+        if not blocked(self.wx, new_wy):
+            return self.wx, new_wy
+        return self.wx, self.wy
 
     def update_stealth(self, game_map):
         """Atualiza estado de camuflagem na vegetação de bambu."""

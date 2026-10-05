@@ -93,7 +93,7 @@ class KunaiProjectile:
                 self.pickup_delay -= dt
             else:
                 # Verificar se o dono (Ninja) passou por cima para recuperar a arma (Entregável 4.4: 0.85m de raio fluido)
-                if self.owner and self.owner.is_alive and not self.owner.has_kunai:
+                if self.owner and self.owner.is_alive and not getattr(self.owner, "has_kunai", True):
                     if world_distance(self.wx, self.wy, self.owner.wx, self.owner.wy) < 0.85:
                         self.owner.has_kunai = True
                         self.is_active = False
@@ -958,6 +958,8 @@ class RopeArrowProjectile:
                 step = min(dist, pull_speed * dt)
                 self.owner.wx += (dx / dist) * step
                 self.owner.wy += (dy / dist) * step
+                # A corda leva a arqueira por cima de buracos; ao soltar, o pouso decide (ver Samurai.update_pit)
+                self.owner.pit_cross_timer = 0.10
                 # Garantir que o arqueiro permaneça 100% dentro dos limites do mapa durante o trajeto
                 self.owner.wx = max(min_x, min(max_x, self.owner.wx))
                 self.owner.wy = max(min_y, min(max_y, self.owner.wy))

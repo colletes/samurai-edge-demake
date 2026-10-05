@@ -150,9 +150,10 @@ class OpeningVideoScreen:
             total_height = max(20, prompt_surf.get_height()) + 8
             
             padding = 8
+            margin = 32
             bg_rect = pygame.Rect(
-                SCREEN_WIDTH - total_width - padding * 2,
-                SCREEN_HEIGHT - total_height - padding * 2 - 18,
+                SCREEN_WIDTH - total_width - padding * 2 - margin,
+                SCREEN_HEIGHT - total_height - padding * 2 - margin,
                 total_width + padding * 2,
                 total_height + padding * 2
             )
@@ -191,9 +192,10 @@ class OpeningVideoScreen:
             prompt_surf.set_alpha(alpha)
 
             padding = 8
+            margin = 32
             bg_rect = pygame.Rect(
-                SCREEN_WIDTH - prompt_surf.get_width() - padding * 2 - 24,
-                SCREEN_HEIGHT - prompt_surf.get_height() - padding * 2 - 18,
+                SCREEN_WIDTH - prompt_surf.get_width() - padding * 2 - margin,
+                SCREEN_HEIGHT - prompt_surf.get_height() - padding * 2 - margin,
                 prompt_surf.get_width() + padding * 2,
                 prompt_surf.get_height() + padding * 2
             )

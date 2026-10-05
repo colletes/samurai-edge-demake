@@ -39,7 +39,7 @@ def capture_previews():
 
     # 2. Capturar Tela de Seleção de Arena
     arena_select = ArenaSelectScreen()
-    arena_select.selected_idx = 1 # Kyoto selecionado
+    arena_select.selected_idx = 4 # Kyoto selecionado
     arena_select.update(0.1)
     arena_select.render(screen, font_large, font_mid, font_small)
     p2_path = os.path.join(out_dir, "arena_select_preview.png")

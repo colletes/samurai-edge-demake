@@ -48,7 +48,10 @@ def test_complete_roster():
 
     # 1. Testar Tela de Seleção com 12 Guerreiros e Grade 6x2
     select_screen = CharacterSelectScreen()
-    assert len(select_screen.characters) == 12, f"Esperado 12 lutadores, obtido {len(select_screen.characters)}"
+    # 12 lutadores + a carta Aleatorio ao final (6.3.3)
+    assert len(select_screen.characters) == 13, f"Esperado 12 lutadores + Aleatorio, obtido {len(select_screen.characters)}"
+    from src.config import CHAR_RANDOM
+    assert select_screen.characters[12]["id"] == CHAR_RANDOM
     
     # Testar seleção de P1 e P2 independentes no modo 2 Jogadores
     select_screen.vs_ai = False
@@ -78,7 +81,7 @@ def test_complete_roster():
     assert select_screen.p1_choice_idx == 7  # P1 continua em Kasumi!
 
     # Testar se os 12 personagens podem ser criados
-    for c in select_screen.characters:
+    for c in select_screen.characters[:12]:
         fighter = create_fighter(c["id"], 10.0, 10.0)
         assert fighter is not None
         assert fighter.is_alive == True
@@ -623,20 +626,23 @@ def test_complete_roster():
     from src.ui.arena_select import ArenaSelectScreen
     from src.config import ARENA_BAMBOO, ARENA_KYOTO, ARENA_RANDOM
     arena_sel = ArenaSelectScreen()
-    assert arena_sel.selected_idx == 1  # Kyoto selecionado inicialmente
-    assert arena_sel.get_resolved_arena_id() == ARENA_KYOTO
-
-    # Navegar para a esquerda -> Floresta de Bambu
-    arena_sel.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LEFT))
+    from src.config import ARENA_GANRYU
+    # Ordem do elenco: Kenshi (bambu) primeiro, Musashi (Ganryu) em seguida, Saitou (Kyoto) na 5a posicao, Aleatorio por ultimo
     assert arena_sel.selected_idx == 0
     assert arena_sel.get_resolved_arena_id() == ARENA_BAMBOO
+    arena_sel.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT))
+    assert arena_sel.selected_idx == 1
+    assert arena_sel.get_resolved_arena_id() == ARENA_GANRYU
+    arena_sel.selected_idx = 4
+    assert arena_sel.get_resolved_arena_id() == ARENA_KYOTO
 
-    # Navegar para a direita duas vezes -> Aleatório
-    arena_sel.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT))
-    arena_sel.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT))
-    assert arena_sel.selected_idx == 2
-    rand_res = arena_sel.get_resolved_arena_id()
-    assert rand_res in (ARENA_BAMBOO, ARENA_KYOTO)
+    # Voltar do primeiro card leva ao Aleatorio (ultimo), que sorteia apenas arenas liberadas
+    from src.world.arenas import arena_ids
+    arena_sel.selected_idx = 0
+    arena_sel.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LEFT))
+    assert arena_sel.selected_idx == 12
+    assert arena_sel.arenas[12]["id"] == ARENA_RANDOM
+    assert arena_sel.get_resolved_arena_id() in arena_ids()
 
     # Testar tecla ESC voltando
     esc_res = arena_sel.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE))

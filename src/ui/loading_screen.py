@@ -12,6 +12,7 @@ from src.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_GOLD, COLOR_WHITE, COLOR_RED_AURA, get_asset_path
 )
 from src.ui.fonts import get_title_font, get_text_font
+from src.ui.font_manager import render_text_fx
 
 class LoadingScreen:
     def __init__(self, screen: pygame.Surface):
@@ -52,29 +53,18 @@ class LoadingScreen:
                 "alpha": random.randint(70, 180)
             })
 
-    def draw_enso_symbol(self, cx: int, cy: int, radius: int, anim_time: float):
-        """Desenha o círculo zen Ensō com caligrafia em nanquim e carimbo vermelho tradicional."""
-        num_points = 32
-        points = []
-        pulse = 0.85 + 0.15 * math.sin(anim_time * 3.0)
-        col = (int(175 * pulse), int(145 * pulse), int(75 * pulse))
+    _footer_h = 190
 
-        for i in range(num_points):
-            angle = (i / num_points) * math.pi * 2
-            # Variação orgânica simulando cerdas de pincel
-            r_offset = math.sin(angle * 4.0 + anim_time * 2.0) * 2.5
-            px = cx + int((radius + r_offset) * math.cos(angle))
-            py = cy + int((radius + r_offset) * math.sin(angle))
-            points.append((px, py))
-
-        if len(points) > 2:
-            pygame.draw.polygon(self.screen, col, points, 2)
-
-        # Selo tradicional Hanko vermelho no canto do círculo
-        seal_x = cx + radius - 6
-        seal_y = cy + radius - 14
-        pygame.draw.rect(self.screen, (185, 35, 35), (seal_x, seal_y, 16, 16), border_radius=2)
-        pygame.draw.rect(self.screen, (220, 70, 70), (seal_x + 3, seal_y + 3, 10, 10), 1)
+    def _get_footer_shade(self) -> pygame.Surface:
+        """Gradiente vertical escuro (transparente -> opaco) atrás da barra de progresso."""
+        shade = getattr(self, "_footer_shade", None)
+        if shade is None:
+            shade = pygame.Surface((SCREEN_WIDTH, self._footer_h), pygame.SRCALPHA)
+            for y in range(self._footer_h):
+                a = int(215 * (y / (self._footer_h - 1)) ** 0.8)
+                pygame.draw.line(shade, (8, 7, 10, a), (0, y), (SCREEN_WIDTH, y))
+            self._footer_shade = shade
+        return shade
 
     def update(self, progress: float, message: str, delay_ms: int = 50):
         """
@@ -125,42 +115,19 @@ class LoadingScreen:
             pygame.draw.circle(part_surf, (225, 200, 140, alpha), (int(p["size"]), int(p["size"])), int(p["size"]))
             self.screen.blit(part_surf, (int(p["x"]), int(p["y"])))
 
-        # 3. Ensō e Título
+        # 3. Painel inferior translúcido: o título já vem impresso na arte de fundo,
+        # então apenas a barra e o status ficam sobre um gradiente escuro legível.
         center_x = SCREEN_WIDTH // 2
-        center_y = SCREEN_HEIGHT // 2 - 40
+        self.screen.blit(self._get_footer_shade(), (0, SCREEN_HEIGHT - self._footer_h))
 
-        self.draw_enso_symbol(center_x, center_y - 20, 68, self.anim_time)
-
-        font_title = get_title_font(44)
-        font_sub = get_text_font(18)
         font_status = get_text_font(16)
         font_pct = get_title_font(20)
-
-        # Sombra e Título Principal
-        title_text = "SAMURAI EDGE"
-        shadow_surf = font_title.render(title_text, True, (0, 0, 0))
-        title_surf = font_title.render(title_text, True, COLOR_GOLD)
-        t_rect = title_surf.get_rect(center=(center_x, center_y - 20))
-        self.screen.blit(shadow_surf, (t_rect.x + 3, t_rect.y + 3))
-        self.screen.blit(title_surf, t_rect)
-
-        # Subtítulo
-        sub_text = "B A K U M A T S U   S L I C E"
-        sub_surf = font_sub.render(sub_text, True, (190, 180, 165))
-        sub_rect = sub_surf.get_rect(center=(center_x, center_y + 32))
-        self.screen.blit(sub_surf, sub_rect)
-
-        # Divisor sutil
-        div_w = 260
-        div_y = center_y + 54
-        pygame.draw.line(self.screen, (75, 65, 50), (center_x - div_w // 2, div_y), (center_x + div_w // 2, div_y), 1)
-        pygame.draw.circle(self.screen, COLOR_GOLD, (center_x, div_y), 3)
 
         # 4. Barra de Progresso
         bar_w = 540
         bar_h = 16
         bar_x = (SCREEN_WIDTH - bar_w) // 2
-        bar_y = center_y + 110
+        bar_y = SCREEN_HEIGHT - 112
 
         # Calha de fundo da barra
         bg_rect = pygame.Rect(bar_x, bar_y, bar_w, bar_h)
@@ -206,21 +173,22 @@ class LoadingScreen:
 
         # 5. Indicador de Porcentagem
         pct_text = f"{int(self.progress * 100)}%"
-        pct_surf = font_pct.render(pct_text, True, COLOR_GOLD)
-        pct_rect = pct_surf.get_rect(midleft=(bg_rect.right + 16, bg_rect.centery))
+        pct_surf = render_text_fx(font_pct, pct_text, COLOR_GOLD, outline=True, outline_color=(10, 8, 6), outline_width=1,
+                                  shadow=True, shadow_offset=(2, 2))
+        pct_rect = pct_surf.get_rect(midleft=(bg_rect.right + 12, bg_rect.centery))
         self.screen.blit(pct_surf, pct_rect)
 
-        # 6. Mensagem de Status
+        # 6. Mensagem de Status (sombra 2px + contorno 1px, mesmo padrão do FontManager).
+        # Os pontos animados são desenhados à parte para o texto não "tremer" ao mudar de largura.
         pulse_dots = "." * (int(self.anim_time * 3.5) % 4)
-        status_text = f"[ CARREGANDO ]  {self.message}{pulse_dots}"
-        # Use dark nanquim for better contrast against light/gold background
-        stat_surf_shadow = font_status.render(status_text, True, (30, 28, 26))
-        stat_rect = stat_surf_shadow.get_rect(center=(center_x + 1, bar_y + 37))
-        self.screen.blit(stat_surf_shadow, stat_rect)
-        # Render main text in elegant tan/parchment color
-        stat_surf = font_status.render(status_text, True, (220, 210, 195))
-        stat_rect = stat_surf.get_rect(center=(center_x, bar_y + 36))
+        status_text = f"[ CARREGANDO ]  {self.message}"
+        fx = dict(outline=True, outline_color=(10, 8, 6), outline_width=1, shadow=True, shadow_offset=(2, 2))
+        stat_surf = render_text_fx(font_status, status_text, (232, 222, 205), **fx)
+        stat_rect = stat_surf.get_rect(midtop=(center_x, bar_y + 26))
         self.screen.blit(stat_surf, stat_rect)
+        if pulse_dots:
+            dots_surf = render_text_fx(font_status, pulse_dots, (232, 222, 205), **fx)
+            self.screen.blit(dots_surf, dots_surf.get_rect(midleft=(stat_rect.right - 2, stat_rect.centery)))
 
         if pygame.display.get_surface() is not None:
             pygame.display.flip()

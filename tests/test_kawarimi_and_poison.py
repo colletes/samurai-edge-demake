@@ -74,7 +74,7 @@ def test_kawarimi_and_poison():
     print("  [OK] Atacante punido com STUN ao atingir o manequim Kawarimi!", flush=True)
 
     print("\n=== TESTE 2: Veneno de Okuni (Dokukiri 6s) e Prevenção de Softlock ===", flush=True)
-    victim = BlueSamurai(10.0, 10.0)
+    victim = RedSamurai(10.0, 10.0)  # 2 HP: o veneno final causa 2 de dano; Musashi (3 HP) sobreviveria com 1
     cloud = PoisonCloud(10.0, 10.0, owner=okuni)
     
     # Frame 1: Vítima entra na nuvem de veneno

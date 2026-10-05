@@ -10,6 +10,10 @@ Valida que:
    o oponente.
 4. Se nenhum jogador apertar a tempo, o choque termina em empate (ambos
    levemente atordoados, sem vencedor de round).
+5. Contra a IA, o oponente aperta o botão após o tempo de reação da dificuldade
+   (ou não reage), então o jogador humano não vence o choque por padrão.
+6. Os avisos são localizados (PT/EN), o perdedor é empurrado respeitando os
+   limites do mapa e pode cair em um buraco, e o botão arcade é desenhado.
 """
 import os
 import sys
@@ -113,6 +117,108 @@ def test_clash_trigger_and_resolution():
     print("=== TESTE 5.1 CONCLUÍDO COM SUCESSO ===", flush=True)
 
 
+def _start_clash(game_map, camera, clash_system, x1=10.0, x2=11.4, y=10.0):
+    p1, p2 = RedSamurai(0.0, 0.0), BlueSamurai(0.0, 0.0)
+    _make_mutual_clash(p1, p2)
+    p1.wx, p2.wx = x1, x2
+    p1.wy = p2.wy = y
+    p1.set_facing(p2.wx, p2.wy)
+    p2.set_facing(p1.wx, p1.wy)
+    p1.hitbox_center = (p1.wx + p1.facing_x * 0.7, p1.wy + p1.facing_y * 0.7)
+    p2.hitbox_center = (p2.wx + p2.facing_x * 0.7, p2.wy + p2.facing_y * 0.7)
+    CombatSystem().process_combat(p1, p2, game_map, [], [], camera, [], dt=0.016, clash_system=clash_system)
+    assert clash_system.is_frozen()
+    return p1, p2
+
+
+def _run_until_result(clash_system, game_map=None, camera=None, banners=None):
+    for _ in range(100):
+        result = clash_system.update(dt=0.02, camera=camera, banners=banners, game_map=game_map)
+        if result:
+            return result
+    return None
+
+
+def test_clash_ai_localization_pushback_and_render():
+    from src.i18n import set_lang, get_lang
+    from src.entities.ai_controller import SamuraiAI
+    game_map, camera = GameMap(), Camera()
+
+    # IA aperta depois do tempo de reação: P2 vence, pois P1 não apertou nada
+    cs = ClashSystem()
+    cs.ai_player, cs.ai_reaction_fn = 1, lambda: 0.2
+    p1, p2 = _start_clash(game_map, camera, cs)
+    assert _run_until_result(cs, game_map, camera) == "P2_WINS_CLASH"
+    assert p1.state == STATE_STUNNED and p2.state != STATE_STUNNED
+
+    # IA que não reage a tempo: empate
+    cs = ClashSystem()
+    cs.ai_player, cs.ai_reaction_fn = 1, lambda: None
+    _start_clash(game_map, camera, cs)
+    assert _run_until_result(cs, game_map, camera) == "DRAW_CLASH"
+
+    # Humano aperta antes da IA (reação de 0.5 s): P1 vence
+    cs = ClashSystem()
+    cs.ai_player, cs.ai_reaction_fn = 1, lambda: 0.5
+    _start_clash(game_map, camera, cs)
+    cs.register_press(0)
+    assert _run_until_result(cs, game_map, camera) == "P1_WINS_CLASH"
+
+    # Tempos de reação por dificuldade ficam dentro da janela do QTE; mais fácil = mais lento
+    for difficulty, ceiling in (("easy", 0.60), ("normal", 0.45), ("hard", 0.28)):
+        ai = SamuraiAI(difficulty)
+        delays = [d for d in (ai.get_clash_reaction() for _ in range(300)) if d is not None]
+        assert delays and max(delays) <= ceiling and max(delays) < QTE_WINDOW
+    hard = [ai.get_clash_reaction() is None for ai in [SamuraiAI("hard")] * 400]
+    easy = [ai.get_clash_reaction() is None for ai in [SamuraiAI("easy")] * 400]
+    assert sum(easy) > sum(hard), "a IA fácil perde mais choques por não reagir"
+
+    # Avisos localizados
+    previous = get_lang()
+    texts = {}
+    for lang in ("pt", "en"):
+        set_lang(lang)
+        banners = []
+        cs = ClashSystem()
+        _start_clash(game_map, camera, cs)
+        cs.register_press(0)
+        cs.update(dt=0.02, camera=camera, banners=banners, game_map=game_map)
+        texts[lang] = banners[0].text if hasattr(banners[0], "text") else str(vars(banners[0]))
+    set_lang(previous)
+    assert texts["pt"] != texts["en"] and "VENCE" in texts["pt"] and "WINS" in texts["en"], texts
+
+    # Empurrão do perdedor respeita o limite do mapa (não sai da arena)
+    cs = ClashSystem()
+    p1, p2 = _start_clash(game_map, camera, cs, x1=1.5, x2=1.2, y=10.0)
+    p1.wx, p2.wx = 2.0, 1.2
+    cs.register_press(0)
+    cs.update(dt=0.02, camera=camera, game_map=game_map)
+    assert p2.wx >= 1.0 - 1e-9, f"perdedor empurrado para fora do mapa: x={p2.wx}"
+
+    # Empurrão pode derrubar o perdedor em um buraco
+    from tests.test_arena_engine import _crossing_arena
+    arena = _crossing_arena()
+    pit = arena.pits[1]
+    cs = ClashSystem()
+    p1, p2 = _start_clash(arena, camera, cs, x1=pit.x0 - 1.3, x2=pit.x0 - 0.1, y=11.0)
+    p1.wx, p2.wx = pit.x0 - 1.3, pit.x0 - 0.1
+    cs.register_press(0)
+    cs.update(dt=0.02, camera=camera, game_map=arena)
+    assert p2.update_pit(0.016, arena) is True, "o perdedor do choque cai se for empurrado para dentro do buraco"
+
+    # Botão arcade desenhado com as teclas de cada jogador
+    cs = ClashSystem()
+    cs.key_hints = ("E", "O")
+    p1, p2 = _start_clash(game_map, camera, cs)
+    surf = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+    surf.fill((20, 20, 24))
+    cs.render(surf, camera)
+    painted = SCREEN_WIDTH * SCREEN_HEIGHT - pygame.mask.from_threshold(surf, (20, 20, 24), (2, 2, 2, 255)).count()
+    assert painted > 3000, "o botão STRIKE! deve ser desenhado"
+    print("  [OK] IA aperta pelo tempo de reação, avisos PT/EN, empurrão com limites e queda, botão arcade.", flush=True)
+
+
 if __name__ == "__main__":
     test_clash_trigger_and_resolution()
+    test_clash_ai_localization_pushback_and_render()
     print("\nTODOS OS TESTES DE CLASH QTE PASSARAM!")

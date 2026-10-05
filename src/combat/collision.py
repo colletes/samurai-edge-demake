@@ -307,6 +307,10 @@ class CombatSystem:
                     for _ in range(30):
                         particles.append(SparkParticle(proj.wx, proj.wy, 0.5))
 
+                    # A explosão acende props interativos (barris de pólvora)
+                    for prop in getattr(game_map, "interactives", ()):
+                        prop.ignite(proj.wx, proj.wy, proj.explosion_radius)
+
                     # Destruir bambus ao redor
                     for b in game_map.bamboos:
                         if not b.is_cut and world_distance(proj.wx, proj.wy, b.wx, b.wy) < proj.explosion_radius:
@@ -645,14 +649,19 @@ class CombatSystem:
 
                 if fighter.poison_timer <= 0:
                     fighter.is_poisoned = False
-                    fighter.take_hit((0, 0), damage=99)
-                    banners.append(FloatingBanner("POISON DEATH!", fighter.wx, fighter.wy, wz=1.8, color=(80, 225, 120)))
-                    for _ in range(30):
-                        particles.append(BloodParticle(fighter.wx, fighter.wy, 0.6))
-                    if winner is None:
-                        winner = other_id
-                    if cinematic_director:
-                        cinematic_director.trigger_fatal_strike(None, fighter, "OKUNI_MELT", (0, 0))
+                    _, poison_dead = fighter.take_hit((0, 0), damage=2)
+                    if poison_dead:
+                        banners.append(FloatingBanner("POISON DEATH!", fighter.wx, fighter.wy, wz=1.8, color=(80, 225, 120)))
+                        for _ in range(30):
+                            particles.append(BloodParticle(fighter.wx, fighter.wy, 0.6))
+                        if winner is None:
+                            winner = other_id
+                        if cinematic_director:
+                            cinematic_director.trigger_fatal_strike(None, fighter, "OKUNI_MELT", (0, 0))
+                    else:
+                        banners.append(FloatingBanner("POISON - 2 DMG!", fighter.wx, fighter.wy, wz=1.8, color=(80, 225, 120)))
+                        for _ in range(10):
+                            particles.append(BloodParticle(fighter.wx, fighter.wy, 0.6))
 
         # -------------------------------------------------------------
         # 2. COMBATE DO CÃO DOBERMAN (SE HOUVER AMERICAN NINJA)
@@ -740,6 +749,8 @@ class CombatSystem:
         self._check_bamboo_cuts(p2, game_map, particles)
         self._check_obstacle_sparks(p1, game_map, particles, camera, ctrl_mgr, p_idx=0)
         self._check_obstacle_sparks(p2, game_map, particles, camera, ctrl_mgr, p_idx=1)
+        if getattr(game_map, "interactives", None):
+            self._check_interactives(p1, p2, game_map, projectiles)
 
         if not p1.is_alive or not p2.is_alive:
             return winner
@@ -995,6 +1006,17 @@ class CombatSystem:
             decoys[:] = [d for d in decoys if d.is_active]
 
         return winner
+
+    @staticmethod
+    def _check_interactives(p1, p2, game_map, projectiles: list):
+        """Golpes e projéteis em voo acendem os props interativos da arena (ex.: pavio do canhão)."""
+        for prop in game_map.interactives:
+            for fighter in (p1, p2):
+                if fighter.is_alive and fighter.hitbox_active:
+                    prop.ignite(*fighter.hitbox_center, fighter.hitbox_radius)
+            for proj in projectiles:
+                if getattr(proj, "is_active", True) and hasattr(proj, "dir_x") and hasattr(proj, "wx"):
+                    prop.ignite(proj.wx, proj.wy, 0.25)
 
     def _check_bamboo_cuts(self, fighter, game_map, particles: list):
         if not fighter.hitbox_active:

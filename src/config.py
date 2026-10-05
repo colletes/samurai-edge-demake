@@ -148,6 +148,7 @@ CHAR_ARCHER = "archer"
 CHAR_TOMOE = "archer"
 CHAR_PIRATE = "pirate"
 CHAR_MUSKETEER = "musketeer"
+CHAR_RANDOM = "random_fighter"  # carta de sorteio na seleção de personagens (não é um lutador)
 
 # Mapeamento de Teclas Padrão
 # Jogador 1 (Player 1)
@@ -201,6 +202,16 @@ DEFAULT_TOUCH_MODE = TOUCH_MODE_AUTO
 # Constantes de Arenas
 ARENA_BAMBOO = "bamboo"
 ARENA_KYOTO = "kyoto"
+ARENA_GANRYU = "ganryu_island"
+ARENA_IGA = "iga_rooftops"
+ARENA_FOREST_CAMP = "forest_camp"
+ARENA_NAGASHINO = "nagashino_field"
+ARENA_SHADOW_CAVE = "shadow_cave"
+ARENA_MIST_TEMPLE = "mist_temple"
+ARENA_KABUKI_STAGE = "kabuki_stage"
+ARENA_MOUNTAIN_SHRINE = "mountain_shrine"
+ARENA_PIRATE_DECK = "pirate_deck"
+ARENA_BAROQUE_COURT = "baroque_court"
 ARENA_RANDOM = "random"
 
 # Cores da Arena Kyoto Bakumatsu (Noite de Guerra Civil)

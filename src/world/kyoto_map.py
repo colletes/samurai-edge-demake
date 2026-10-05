@@ -22,6 +22,7 @@ from src.config import (
 from src.isometric.voxel_renderer import draw_voxel_box
 from src.isometric.iso_math import world_to_iso, world_distance
 from src.effects.particles import SparkParticle, BloodParticle, FloatingBanner
+from src.world.arena_generator import ArenaMap
 
 TILE_KYOTO_STREET = 10
 TILE_KYOTO_STREET_ALT = 11
@@ -149,7 +150,7 @@ class MachiyaFacade:
         engawa_d = 0.75
         engawa_h = 0.14
         engawa_col = (48, 36, 28) if not self.is_transparent else COLOR_ENGAWA_WOOD
-        draw_voxel_box(surface, camera, self.wx, self.wy + self.depth - engawa_d, footing_h, self.width, engawa_d, engawa_h, engawa_col, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, self.wx, self.wy + self.depth - engawa_d, footing_h, self.width, engawa_d, engawa_h, engawa_col, outline=True, alpha=alpha, texture="planks")
 
         # 3. Andar 1: Paredes de reboco Shikkui e pilares
         p1_h = 1.35
@@ -157,7 +158,7 @@ class MachiyaFacade:
         wall_col = (65, 52, 45) if not self.is_transparent else COLOR_PLASTER
         beam_col = COLOR_KYOTO_WOOD_BURNT if not self.is_transparent else COLOR_KYOTO_WOOD_DARK
 
-        draw_voxel_box(surface, camera, self.wx + 0.15, self.wy + 0.15, p1_z, self.width - 0.3, self.depth - engawa_d - 0.2, p1_h, wall_col, outline=False, alpha=alpha)
+        draw_voxel_box(surface, camera, self.wx + 0.15, self.wy + 0.15, p1_z, self.width - 0.3, self.depth - engawa_d - 0.2, p1_h, wall_col, outline=False, alpha=alpha, texture="plaster")
 
         # Pilares verticais
         for i in range(4):
@@ -169,18 +170,18 @@ class MachiyaFacade:
 
         # 4. Telhado intermediário (Beiral do 1º andar)
         eave_z = p1_z + p1_h
-        draw_voxel_box(surface, camera, self.wx - 0.20, self.wy - 0.10, eave_z, self.width + 0.40, self.depth + 0.15, 0.20, COLOR_KYOTO_ROOF_TILE, outline=True, alpha=roof_alpha)
+        draw_voxel_box(surface, camera, self.wx - 0.20, self.wy - 0.10, eave_z, self.width + 0.40, self.depth + 0.15, 0.20, COLOR_KYOTO_ROOF_TILE, outline=True, alpha=roof_alpha, texture="roof_tile")
 
         # 5. Andar 2: Balcão com treliça Koushi
         p2_z = eave_z + 0.16
         p2_h = 1.25
-        draw_voxel_box(surface, camera, self.wx + 0.25, self.wy + 0.25, p2_z, self.width - 0.5, self.depth - 0.75, p2_h, wall_col, outline=False, alpha=alpha)
+        draw_voxel_box(surface, camera, self.wx + 0.25, self.wy + 0.25, p2_z, self.width - 0.5, self.depth - 0.75, p2_h, wall_col, outline=False, alpha=alpha, texture="plaster")
         draw_voxel_box(surface, camera, self.wx + 0.35, self.wy + self.depth - 0.60, p2_z + 0.15, self.width - 0.70, 0.10, p2_h - 0.30, COLOR_LATTICE, outline=True, alpha=alpha)
 
         # 6. Telhado Superior Imponente (Telhas Kawara)
         roof_z = p2_z + p2_h
         roof_d = self.depth - 0.25
-        draw_voxel_box(surface, camera, self.wx - 0.25, self.wy - 0.15, roof_z, self.width + 0.50, roof_d, 0.28, COLOR_KYOTO_ROOF_TILE, outline=True, alpha=roof_alpha)
+        draw_voxel_box(surface, camera, self.wx - 0.25, self.wy - 0.15, roof_z, self.width + 0.50, roof_d, 0.28, COLOR_KYOTO_ROOF_TILE, outline=True, alpha=roof_alpha, texture="roof_tile")
         draw_voxel_box(surface, camera, self.wx - 0.10, self.wy + roof_d * 0.32, roof_z + 0.26, self.width + 0.20, 0.30, 0.20, (52, 54, 58), outline=True, alpha=roof_alpha)
 
         # 7. Chamas Dinâmicas nos Telhados (Nascem, crescem, diminuem e somem)
@@ -433,183 +434,114 @@ class FallingDebris:
         )
 
 
-class KyotoMap:
-    """
-    Arena de Kyoto durante a Guerra do Bakumatsu.
-    Estrada estreita diagonal (4 tiles), fachadas geminadas de machiyas em chamas nos dois lados,
-    chamas que nascem e somem organicamente nos telhados e perigos dinâmicos de carruagem e escombros.
-    """
-    def __init__(self):
-        self.cols = MAP_COLS
-        self.rows = MAP_ROWS
-        self.theme_name = "Kyoto: Bakumatsu em Chamas"
-        self.tiles = [[TILE_KYOTO_STREET for _ in range(self.rows)] for _ in range(self.cols)]
+class CarriageTraffic:
+    """Perigo: carruagens desgovernadas cruzando a avenida (às vezes duas, em sentidos opostos)."""
 
-        self.bamboos = []
-        self.rocks = []
-        self.well = None
-        self.trees = []
+    def __init__(self, initial_timer: float = 2.5, interval: tuple[float, float] = (4.0, 6.5), speed: float = 14.0,
+                 double_chance: float = 0.40, lanes_single: tuple[float, ...] = (9.8, 10.5, 11.2),
+                 lanes_double: tuple[float, float] = (9.8, 11.2), margin: float = 4.0,
+                 banner_pos: tuple[float, float] = (10.5, 11.0)):
+        self.timer = initial_timer
+        self.interval = interval
+        self.speed = speed
+        self.double_chance = double_chance
+        self.lanes_single = lanes_single
+        self.lanes_double = lanes_double
+        self.margin = margin
+        self.banner_pos = banner_pos
 
-        self.buildings: list[MachiyaFacade] = []
-        self.lanterns: list[KyotoLantern] = []
-        self.carriages: list[RunawayCarriage] = []
-        self.falling_debris: list[FallingDebris] = []
-
-        self.carriage_timer = 2.5
-        self.debris_timer = 1.2
-
-        # Faixa real caminhável (calçadas + meio-fio + rua), evita atravessar as fachadas
-        # das machiyas (x<=6 a oeste / x>=15 a leste) sem depender só da colisão AABB.
-        self.playable_bounds = (7.0, 1.0, 14.9, self.rows - 1.0)
-
-        self._build_terrain()
-        self._populate_buildings()
-
-    def _build_terrain(self):
-        """
-        Gera uma estrada estreita de 4 tiles de granito ao longo do eixo Y isométrico (9 a 12),
-        meio-fio em 8 e 13, calçadas em 7 e 14 e terrenos sob as estalagens em <= 6 e >= 15.
-        """
-        for x in range(self.cols):
-            for y in range(self.rows):
-                if 9 <= x <= 12:
-                    self.tiles[x][y] = TILE_KYOTO_STREET if (x + y) % 2 == 0 else TILE_KYOTO_STREET_ALT
-                elif x in (8, 13):
-                    self.tiles[x][y] = TILE_KYOTO_CURB
-                elif x in (7, 14):
-                    self.tiles[x][y] = TILE_KYOTO_SIDEWALK
-                else:
-                    self.tiles[x][y] = TILE_KYOTO_BUILDING
-
-    def _populate_buildings(self):
-        """Cria as estalagens densas geminadas ao longo de ambos os lados da via e lanternas de pedra."""
-        # 1. Canto Noroeste (NW - wx = 2.4): 6 Machiyas geminadas em chamas opacas
-        for idx, by in enumerate([0.4, 3.9, 7.4, 10.9, 14.4, 17.9]):
-            self.buildings.append(MachiyaFacade(
-                wx=2.4, wy=by, width=4.4, depth=3.3,
-                is_transparent=False, seed=100 + idx * 37
-            ))
-
-        # 2. Canto Sudeste (SE - wx = 15.0): 6 Machiyas geminadas translúcidas TAMBÉM em chamas
-        for idx, by in enumerate([0.4, 3.9, 7.4, 10.9, 14.4, 17.9]):
-            self.buildings.append(MachiyaFacade(
-                wx=15.0, wy=by, width=4.4, depth=3.3,
-                is_transparent=True, seed=200 + idx * 43
-            ))
-
-        # 3. Lanternas de pedra tradicionais nas calçadas
-        for ly in [3.0, 8.5, 14.0, 19.5]:
-            self.lanterns.append(KyotoLantern(7.30, ly))
-            self.lanterns.append(KyotoLantern(14.25, ly))
-
-    def is_water(self, wx: float, wy: float) -> bool:
-        return False
-
-    def is_hidden_in_bamboo(self, wx: float, wy: float) -> bool:
-        return False
-
-    def update(self, dt: float, fighters: list, camera, particles: list, banners: list, cinematic_director=None):
-        # 1. Carruagens em disparada pela via (frequência elevada com chance de cruzamento duplo)
-        self.carriage_timer -= dt
-        if self.carriage_timer <= 0:
-            # 40% de chance de duas carruagens simultâneas passando em sentidos opostos
-            is_double = random.random() < 0.40
-
-            if is_double:
-                lane1_x = 9.8
-                lane2_x = 11.2
-                if random.random() < 0.5:
-                    # Lane 1 desce (Norte -> Sul), Lane 2 sobe (Sul -> Norte)
-                    c1 = RunawayCarriage((lane1_x, -4.0), (lane1_x, float(self.rows + 4)), speed=14.0)
-                    c2 = RunawayCarriage((lane2_x, float(self.rows + 4)), (lane2_x, -4.0), speed=14.0)
-                else:
-                    # Lane 1 sobe (Sul -> Norte), Lane 2 desce (Norte -> Sul)
-                    c1 = RunawayCarriage((lane1_x, float(self.rows + 4)), (lane1_x, -4.0), speed=14.0)
-                    c2 = RunawayCarriage((lane2_x, -4.0), (lane2_x, float(self.rows + 4)), speed=14.0)
-
-                self.carriages.append(c1)
-                self.carriages.append(c2)
-                banners.append(FloatingBanner("PERIGO DUPLO: CARRUAGENS CRUZADAS!", 10.5, 11.0, wz=2.5, color=(255, 60, 40), duration=2.5))
-                camera.add_shake(7.0)
+    def _spawn(self, arena, camera, banners):
+        rows = float(arena.rows)
+        top, bottom = -self.margin, rows + self.margin
+        if random.random() < self.double_chance:
+            lane1, lane2 = self.lanes_double
+            if random.random() < 0.5:
+                # Lane 1 desce (Norte -> Sul), Lane 2 sobe (Sul -> Norte)
+                c1 = RunawayCarriage((lane1, top), (lane1, bottom), speed=self.speed)
+                c2 = RunawayCarriage((lane2, bottom), (lane2, top), speed=self.speed)
             else:
-                # Carruagem única passando em uma das faixas da avenida
-                lane_x = random.choice([9.8, 10.5, 11.2])
-                if random.random() < 0.5:
-                    start_p = (lane_x, -4.0)
-                    end_p = (lane_x, float(self.rows + 4))
-                else:
-                    start_p = (lane_x, float(self.rows + 4))
-                    end_p = (lane_x, -4.0)
+                c1 = RunawayCarriage((lane1, bottom), (lane1, top), speed=self.speed)
+                c2 = RunawayCarriage((lane2, top), (lane2, bottom), speed=self.speed)
+            arena.carriages.extend((c1, c2))
+            banners.append(FloatingBanner("PERIGO DUPLO: CARRUAGENS CRUZADAS!", *self.banner_pos, wz=2.5, color=(255, 60, 40), duration=2.5))
+            camera.add_shake(7.0)
+        else:
+            lane_x = random.choice(self.lanes_single)
+            if random.random() < 0.5:
+                start_p, end_p = (lane_x, top), (lane_x, bottom)
+            else:
+                start_p, end_p = (lane_x, bottom), (lane_x, top)
+            arena.carriages.append(RunawayCarriage(start_p, end_p, speed=self.speed))
+            banners.append(FloatingBanner("PERIGO: CARRUAGEM!", lane_x, self.banner_pos[1], wz=2.5, color=(255, 190, 40), duration=2.2))
+            camera.add_shake(4.0)
+        self.timer = random.uniform(*self.interval)
 
-                carriage = RunawayCarriage(start_p, end_p, speed=14.0)
-                self.carriages.append(carriage)
-                banners.append(FloatingBanner("PERIGO: CARRUAGEM!", lane_x, 11.0, wz=2.5, color=(255, 190, 40), duration=2.2))
-                camera.add_shake(4.0)
+    def update(self, arena, dt: float, fighters: list, camera, particles: list, banners: list, cinematic_director=None):
+        self.timer -= dt
+        if self.timer <= 0:
+            self._spawn(arena, camera, banners)
 
-            # Nova frequência de carruagens: a cada 4.0 a 6.5s (anteriormente 8.0 a 12.0s)
-            self.carriage_timer = random.uniform(4.0, 6.5)
-
-        for carriage in self.carriages:
+        for carriage in arena.carriages:
             carriage.update(dt, camera, particles)
             for f in fighters:
                 if f:
                     carriage.check_fighter_hit(f, particles, banners, camera, cinematic_director)
 
-        self.carriages = [c for c in self.carriages if c.is_active]
+        arena.carriages = [c for c in arena.carriages if c.is_active]
 
-        # 2. Escombros incandescentes caindo com maior frequência e possibilidade de queda dupla
-        self.debris_timer -= dt
-        if self.debris_timer <= 0:
-            debris_count = 2 if random.random() < 0.35 else 1
-            for _ in range(debris_count):
-                if random.random() < 0.5:
-                    target_x = random.uniform(7.4, 8.6)
-                else:
-                    target_x = random.uniform(12.4, 14.2)
-                target_y = random.uniform(2.0, float(self.rows - 2.0))
-                self.falling_debris.append(FallingDebris(target_x, target_y))
 
-            # Nova frequência de escombros: a cada 1.2 a 2.4s (anteriormente 3.0 a 5.5s)
-            self.debris_timer = random.uniform(1.2, 2.4)
+class DebrisRain:
+    """Perigo: escombros incandescentes caindo nas calçadas, às vezes dois de uma vez."""
 
-        for debris in self.falling_debris:
+    def __init__(self, initial_timer: float = 1.2, interval: tuple[float, float] = (1.2, 2.4), double_chance: float = 0.35,
+                 x_ranges: tuple[tuple[float, float], ...] = ((7.4, 8.6), (12.4, 14.2)), y_margin: float = 2.0):
+        self.timer = initial_timer
+        self.interval = interval
+        self.double_chance = double_chance
+        self.x_ranges = x_ranges
+        self.y_margin = y_margin
+
+    def update(self, arena, dt: float, fighters: list, camera, particles: list, banners: list, cinematic_director=None):
+        self.timer -= dt
+        if self.timer <= 0:
+            count = 2 if random.random() < self.double_chance else 1
+            for _ in range(count):
+                x_lo, x_hi = self.x_ranges[min(int(random.random() * len(self.x_ranges)), len(self.x_ranges) - 1)]
+                target_y = random.uniform(self.y_margin, float(arena.rows - self.y_margin))
+                arena.falling_debris.append(FallingDebris(random.uniform(x_lo, x_hi), target_y))
+            self.timer = random.uniform(*self.interval)
+
+        for debris in arena.falling_debris:
             debris.update(dt, camera, particles, fighters, banners, cinematic_director)
 
-        self.falling_debris = [d for d in self.falling_debris if d.is_active]
+        arena.falling_debris = [d for d in arena.falling_debris if d.is_active]
 
-    def render_terrain(self, surface: pygame.Surface, camera, time_val: float):
-        for x in range(self.cols):
-            for y in range(self.rows):
-                tile = self.tiles[x][y]
 
-                p_top = camera.apply(x, y, 0.0)
-                p_right = camera.apply(x + 1, y, 0.0)
-                p_bottom = camera.apply(x + 1, y + 1, 0.0)
-                p_left = camera.apply(x, y + 1, 0.0)
-                quad = [p_top, p_right, p_bottom, p_left]
+class KyotoMap(ArenaMap):
+    """
+    Arena de Kyoto durante a Guerra do Bakumatsu (spec em `arenas.KYOTO_SPEC`): estrada estreita,
+    fachadas de machiyas em chamas, carruagens desgovernadas e escombros.
+    """
 
-                if p_bottom[1] < -60 or p_top[1] > surface.get_height() + 60 or \
-                   p_right[0] < -60 or p_left[0] > surface.get_width() + 60:
-                    continue
+    def __init__(self):
+        from src.world.arenas import KYOTO_SPEC
+        super().__init__(KYOTO_SPEC)
 
-                if tile == TILE_KYOTO_STREET:
-                    c = COLOR_KYOTO_STONE if (x + y) % 2 == 0 else COLOR_KYOTO_STONE_LIGHT
-                    pygame.draw.polygon(surface, c, quad)
-                    pygame.draw.polygon(surface, COLOR_KYOTO_STONE_DARK, quad, 1)
+    def _hazard(self, cls):
+        return next(h for h in self.hazards if isinstance(h, cls))
 
-                elif tile == TILE_KYOTO_STREET_ALT:
-                    pygame.draw.polygon(surface, (54, 50, 52), quad)
-                    pygame.draw.polygon(surface, COLOR_KYOTO_STONE_DARK, quad, 1)
+    @property
+    def carriage_timer(self) -> float:
+        return self._hazard(CarriageTraffic).timer
 
-                elif tile == TILE_KYOTO_CURB:
-                    draw_voxel_box(surface, camera, x, y, 0.0, 1.0, 1.0, 0.10, COLOR_KYOTO_CURB, outline=True)
+    @carriage_timer.setter
+    def carriage_timer(self, value: float):
+        self._hazard(CarriageTraffic).timer = value
 
-                elif tile == TILE_KYOTO_SIDEWALK:
-                    draw_voxel_box(surface, camera, x, y, 0.0, 1.0, 1.0, 0.08, COLOR_KYOTO_PAVEMENT, outline=False)
-                    pygame.draw.polygon(surface, (38, 34, 36), [
-                        camera.apply(x, y, 0.08), camera.apply(x+1, y, 0.08),
-                        camera.apply(x+1, y+1, 0.08), camera.apply(x, y+1, 0.08)
-                    ], 1)
+    @property
+    def debris_timer(self) -> float:
+        return self._hazard(DebrisRain).timer
 
-                elif tile == TILE_KYOTO_BUILDING:
-                    pygame.draw.polygon(surface, (20, 15, 17), quad)
+    @debris_timer.setter
+    def debris_timer(self, value: float):
+        self._hazard(DebrisRain).timer = value

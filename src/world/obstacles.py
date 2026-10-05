@@ -45,28 +45,28 @@ class Rock:
             surface, camera,
             self.wx - self.radius * 0.7, self.wy - self.radius * 0.7, 0.0,
             self.radius * 1.4, self.radius * 1.4, self.height * 0.42,
-            COLOR_STONE_DARK
+            COLOR_STONE_DARK, texture="stone"
         )
         # 2. Projeção lateral
         draw_voxel_box(
             surface, camera,
             self.wx + self.radius * 0.15, self.wy - self.radius * 0.55, 0.04,
             self.radius * 0.65, self.radius * 0.65, self.height * 0.45,
-            (68, 76, 80)
+            (68, 76, 80), texture="stone"
         )
         # 3. Bloco central maciço
         draw_voxel_box(
             surface, camera,
             self.wx - self.radius * 0.55, self.wy - self.radius * 0.55, self.height * 0.38,
             self.radius * 1.1, self.radius * 1.1, self.height * 0.48,
-            COLOR_STONE
+            COLOR_STONE, texture="stone"
         )
         # 4. Topo chanfrado angulado
         draw_voxel_box(
             surface, camera,
             self.wx - self.radius * 0.32, self.wy - self.radius * 0.32, self.height * 0.82,
             self.radius * 0.64, self.radius * 0.64, self.height * 0.22,
-            (145, 155, 160)
+            (145, 155, 160), texture="stone"
         )
         # 5. Detalhe de musgo feudal no topo da pedra
         draw_voxel_box(
@@ -108,13 +108,13 @@ class Well:
 
         # 1. Estrutura de cantaria do poço (4 paredes de pedra)
         # Parede Norte
-        draw_voxel_box(surface, camera, self.wx - 0.55, self.wy - 0.55, 0.0, 1.10, 0.24, 0.55, COLOR_STONE)
+        draw_voxel_box(surface, camera, self.wx - 0.55, self.wy - 0.55, 0.0, 1.10, 0.24, 0.55, COLOR_STONE, texture="stone")
         # Parede Sul
-        draw_voxel_box(surface, camera, self.wx - 0.55, self.wy + 0.31, 0.0, 1.10, 0.24, 0.55, COLOR_STONE)
+        draw_voxel_box(surface, camera, self.wx - 0.55, self.wy + 0.31, 0.0, 1.10, 0.24, 0.55, COLOR_STONE, texture="stone")
         # Parede Oeste
-        draw_voxel_box(surface, camera, self.wx - 0.55, self.wy - 0.31, 0.0, 0.24, 0.62, 0.55, COLOR_STONE_DARK)
+        draw_voxel_box(surface, camera, self.wx - 0.55, self.wy - 0.31, 0.0, 0.24, 0.62, 0.55, COLOR_STONE_DARK, texture="stone")
         # Parede Leste
-        draw_voxel_box(surface, camera, self.wx + 0.31, self.wy - 0.31, 0.0, 0.24, 0.62, 0.55, COLOR_STONE_DARK)
+        draw_voxel_box(surface, camera, self.wx + 0.31, self.wy - 0.31, 0.0, 0.24, 0.62, 0.55, COLOR_STONE_DARK, texture="stone")
 
         # Água escura e profunda dentro do poço
         draw_voxel_box(surface, camera, self.wx - 0.31, self.wy - 0.31, 0.15, 0.62, 0.62, 0.05, (16, 32, 45), outline=False)
@@ -131,9 +131,9 @@ class Well:
 
         # 3. Telhadinho de madeira tradicional em voxel (camadas chanfradas)
         # Camada inferior do telhado
-        draw_voxel_box(surface, camera, self.wx - 0.68, self.wy - 0.45, 1.28, 1.36, 0.90, 0.08, COLOR_BRIDGE)
+        draw_voxel_box(surface, camera, self.wx - 0.68, self.wy - 0.45, 1.28, 1.36, 0.90, 0.08, COLOR_BRIDGE, texture="roof_tile")
         # Camada superior inclinada
-        draw_voxel_box(surface, camera, self.wx - 0.58, self.wy - 0.32, 1.36, 1.16, 0.64, 0.08, COLOR_BRIDGE_DARK)
+        draw_voxel_box(surface, camera, self.wx - 0.58, self.wy - 0.32, 1.36, 1.16, 0.64, 0.08, COLOR_BRIDGE_DARK, texture="roof_tile")
         # Cumeeira / viga de topo
         draw_voxel_box(surface, camera, self.wx - 0.72, self.wy - 0.08, 1.44, 1.44, 0.16, 0.08, (52, 34, 18))
 
@@ -174,10 +174,10 @@ class AncientTree:
         draw_voxel_box(surface, camera, self.wx + 0.15, self.wy + 0.20, 0.0, 0.35, 0.30, 0.22, (45, 28, 16), outline=True)
 
         # Base central do tronco ancestral
-        draw_voxel_box(surface, camera, self.wx - 0.42, self.wy - 0.42, 0.0, 0.84, 0.84, 0.70, (52, 34, 20), outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.42, self.wy - 0.42, 0.0, 0.84, 0.84, 0.70, (52, 34, 20), outline=True, texture="bark")
 
         # Tronco intermediário com nó de casca
-        draw_voxel_box(surface, camera, self.wx - 0.35, self.wy - 0.32, 0.65, 0.70, 0.64, 0.75, (66, 42, 26), outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.35, self.wy - 0.32, 0.65, 0.70, 0.64, 0.75, (66, 42, 26), outline=True, texture="bark")
         # Detalhe de musgo na casca
         draw_voxel_box(surface, camera, self.wx - 0.38, self.wy - 0.10, 0.80, 0.10, 0.35, 0.40, (48, 75, 42), outline=False)
 
@@ -201,20 +201,20 @@ class AncientTree:
         c_white = (255, 230, 242)
 
         # Nuvem Oeste (baixa e expansiva)
-        draw_voxel_box(surface, camera, self.wx - 1.60, self.wy - 0.75, 1.80, 1.10, 1.00, 0.65, c_deep, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 1.60, self.wy - 0.75, 1.80, 1.10, 1.00, 0.65, c_deep, outline=True, texture="foliage")
         draw_voxel_box(surface, camera, self.wx - 1.45, self.wy - 0.60, 2.35, 0.85, 0.80, 0.50, c_light, outline=True)
 
         # Nuvem Leste (baixa e expansiva)
-        draw_voxel_box(surface, camera, self.wx + 0.55, self.wy - 0.80, 1.80, 1.20, 1.05, 0.65, c_deep, outline=True)
+        draw_voxel_box(surface, camera, self.wx + 0.55, self.wy - 0.80, 1.80, 1.20, 1.05, 0.65, c_deep, outline=True, texture="foliage")
         draw_voxel_box(surface, camera, self.wx + 0.65, self.wy - 0.65, 2.35, 0.90, 0.85, 0.50, c_light, outline=True)
 
         # Nuvem Sul / Frente
-        draw_voxel_box(surface, camera, self.wx - 0.65, self.wy + 0.35, 1.85, 1.05, 0.95, 0.60, c_mid, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.65, self.wy + 0.35, 1.85, 1.05, 0.95, 0.60, c_mid, outline=True, texture="foliage")
         draw_voxel_box(surface, camera, self.wx - 0.45, self.wy + 0.45, 2.35, 0.75, 0.70, 0.45, c_blush, outline=True)
 
         # Copa Central Principal (Maciça e alta)
-        draw_voxel_box(surface, camera, self.wx - 1.05, self.wy - 1.05, 2.10, 2.10, 2.10, 0.85, c_mid, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.85, self.wy - 0.85, 2.85, 1.70, 1.70, 0.70, c_light, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 1.05, self.wy - 1.05, 2.10, 2.10, 2.10, 0.85, c_mid, outline=True, texture="foliage")
+        draw_voxel_box(surface, camera, self.wx - 0.85, self.wy - 0.85, 2.85, 1.70, 1.70, 0.70, c_light, outline=True, texture="foliage")
 
         # Domo superior florido
         draw_voxel_box(surface, camera, self.wx - 0.60, self.wy - 0.60, 3.45, 1.20, 1.20, 0.55, c_blush, outline=True)
@@ -243,7 +243,7 @@ class Tsukubai(Well):
         c_bamboo = (65, 140, 55)
 
         # 1. Base e Bacia de pedra esculpida com musgo
-        draw_voxel_box(surface, camera, self.wx - 0.55, self.wy - 0.55, 0.0, 1.10, 1.10, 0.65, c_stone, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.55, self.wy - 0.55, 0.0, 1.10, 1.10, 0.65, c_stone, outline=True, texture="stone")
         # Musgo viçoso nas laterais
         draw_voxel_box(surface, camera, self.wx - 0.58, self.wy - 0.30, 0.10, 0.12, 0.60, 0.45, c_moss, outline=False)
         draw_voxel_box(surface, camera, self.wx + 0.20, self.wy + 0.50, 0.05, 0.35, 0.12, 0.50, c_moss, outline=False)
@@ -301,8 +301,8 @@ class ToriiGate:
 
         # Colunas principais (Hashira)
         col_h = 3.2
-        draw_voxel_box(surface, camera, self.wx - 1.28, self.wy - 0.18, 0.15, 0.36, 0.36, col_h, c_wood, outline=True)
-        draw_voxel_box(surface, camera, self.wx + 0.92, self.wy - 0.18, 0.15, 0.36, 0.36, col_h, c_wood, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 1.28, self.wy - 0.18, 0.15, 0.36, 0.36, col_h, c_wood, outline=True, texture="bark")
+        draw_voxel_box(surface, camera, self.wx + 0.92, self.wy - 0.18, 0.15, 0.36, 0.36, col_h, c_wood, outline=True, texture="bark")
 
         # Travessa inferior (Nuki)
         draw_voxel_box(surface, camera, self.wx - 1.55, self.wy - 0.12, 2.30, 3.10, 0.24, 0.20, c_wood, outline=True)

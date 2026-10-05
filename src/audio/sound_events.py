@@ -80,6 +80,9 @@ class SoundEvent(str, Enum, metaclass=_SoundEventMeta):
     FOOTSTEP_GRASS = "footstep"            # Alias passos na grama
     FOOTSTEP_STONE = "footstep"            # Alias passos na pedra
     DOG_BARK = "dog_bark"                  # Latido / investida de Yamato (American Ninja)
+    CHAIN_RATTLE = "chain_rattle"          # Corrente de ferro balançando no teto (aviso do pêndulo da gruta)
+    SHIP_CREAK = "ship_creak"              # Ranger de madeira do navio adernando (aviso do balanço)
+    FALL = "fall"                          # Queda em buraco da arena (assobio descendente + baque distante)
 
     # Interface & Apresentação de Partida
     ROUND_START = "round_start"            # Tambor Taiko de início de duelo

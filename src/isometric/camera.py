@@ -1,9 +1,10 @@
 """
 Gerenciador de câmera isométrica com suporte a suavização (lerp) e Screen Shake.
 """
+import math
 import random
 from src.config import SCREEN_WIDTH, SCREEN_HEIGHT
-from src.isometric.iso_math import world_to_iso
+from src.isometric.iso_math import world_to_iso, iso_depth
 
 class Camera:
     def __init__(self, target_wx: float = 11.0, target_wy: float = 11.0):
@@ -23,6 +24,25 @@ class Camera:
 
         # Fator de zoom dramático (Fase 5.1: Clash de Espadas). 1.0 = sem zoom.
         self.zoom = 1.0
+
+        # Altura do piso sob o foco (ex.: tabuleiro da ponte), onde as sombras dos lutadores são desenhadas
+        self.ground_z = 0.0
+        # Azimute (radianos): giro do mundo em torno do alvo da câmera. 0.0 = vista isométrica clássica.
+        self.azimuth = 0.0
+        # Relevo visual do piso (arenas com telhados inclinados): altura extra somada a todo ponto desenhado
+        self.height_fn = None
+
+    def set_azimuth(self, azimuth: float):
+        """Define o azimute normalizado em (-pi, pi]."""
+        self.azimuth = math.atan2(math.sin(azimuth), math.cos(azimuth))
+
+    def rotate(self, delta: float):
+        """Gira a câmera por delta radianos a partir do azimute atual."""
+        self.set_azimuth(self.azimuth + delta)
+
+    def depth(self, wx: float, wy: float) -> float:
+        """Profundidade na tela (maior = mais próximo) para ordenação de renderização com o azimute atual."""
+        return iso_depth(wx, wy, self.azimuth)
 
     def add_shake(self, intensity: float):
         """Adiciona intensidade de tremor na tela (ex: golpes pesados, clash ou morte)."""
@@ -49,11 +69,12 @@ class Camera:
         Converte coordenadas de mundo para as coordenadas finais de renderização
         na janela, considerando a posição da câmera e o screen shake.
         """
-        iso_x, iso_y = world_to_iso(wx, wy, wz)
-        cam_iso_x, cam_iso_y = world_to_iso(self.wx, self.wy, 0.0)
+        if self.height_fn is not None:
+            wz += self.height_fn(wx, wy)
+        iso_x, iso_y = world_to_iso(wx - self.wx, wy - self.wy, wz, self.azimuth)
 
-        dx = (iso_x - cam_iso_x) * self.zoom
-        dy = (iso_y - cam_iso_y) * self.zoom
+        dx = iso_x * self.zoom
+        dy = iso_y * self.zoom
 
         final_x = int(dx + self.screen_x + self.shake_offset_x)
         final_y = int(dy + self.screen_y + self.shake_offset_y)
