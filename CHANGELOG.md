@@ -5,6 +5,29 @@ All notable changes to Samurai Edge Demake are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-10-04
+
+### Added
+- **Phase 6 arenas**: 12 themed arenas with generator, hazards, structures, selection screens, lighting/atmosphere, shared wind, terrain particles and volumetric fog
+- **Phase 6.5 visual refinement**: voxel textures, cloth physics, per-fighter models for all 12 fighters, cel-shading for Kenshi and Murasaki, material textures (latex, silk, velvet, leather, metal)
+- Effects quality (high/low) and character style options, persisted in `settings.json`
+- Opening cinematic video screen before the Sumi-e title screen
+- Round intro/result screens (best-of-3) and clash QTE system
+- Full PT/EN translation, including character and arena screens
+- Round help button icon
+- Sprite sheet and arena gallery tools, music prompts, new tests
+
+### Changed
+- Procedural SFX rewrite with rendered WAV assets
+- Controller-aware button prompts (PlayStation, Xbox, Switch, generic) and translated key/button names
+- Fighter balance and AI difficulty updates
+- Baked opacity for fog/smoke sprites instead of per-frame alpha
+
+### Fixed
+- Kunai pickup crash for projectile owners without `has_kunai`
+- Help modal, settings menu and title screen layout crashes/regressions
+- Settings and character-select labels overflowing their boxes
+
 ## [1.3.6] - 2026-10-01
 
 ### Changed - Balance
