@@ -1,0 +1,47 @@
+name: Deploy v1.4.0 to itch.io
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-itch:
+    name: Upload v1.4.0 to itch.io via Butler
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Butler
+        run: |
+          curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+          unzip butler.zip -d /tmp/butler-bin
+          chmod +x /tmp/butler-bin/butler
+          echo "/tmp/butler-bin" >> $GITHUB_PATH
+
+      - name: Download v1.4.0 Assets from GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download v1.4.0 --dir release_assets
+          ls -la release_assets/
+
+      - name: Push Windows to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          butler push release_assets/Samurai-Edge-Demake-Windows.zip colletes/samurai-edge-demake:windows --userversion "v1.4.0"
+
+      - name: Push macOS to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          butler push release_assets/Samurai-Edge-Demake-macOS.zip colletes/samurai-edge-demake:osx --userversion "v1.4.0"
+
+      - name: Push Linux to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          butler push release_assets/Samurai-Edge-Demake-Linux.tar.gz colletes/samurai-edge-demake:linux --userversion "v1.4.0"
