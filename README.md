@@ -2,8 +2,8 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Pygame-CE](https://img.shields.io/badge/pygame--ce-2.5+-green.svg)](https://pyga.me/)
-[![Releases](https://img.shields.io/badge/releases-v1.4.0-gold.svg)](https://github.com/colletes/samurai-edge-demake/releases)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-lightgrey.svg)](https://github.com/colletes/samurai-edge-demake/releases)
+[![Available on itch.io](https://img.shields.io/badge/itch.io-Play%20on%20itch.io-fa5c5c?logo=itchdotio&logoColor=white)](https://colletes.itch.io/samurai-edge-demake)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-lightgrey.svg)](https://colletes.itch.io/samurai-edge-demake)
 [![License: Proprietary](https://img.shields.io/badge/license-Personal%20Use-red.svg)](LICENSE)
 
 A tactical isometric lethal dueling game in **3D Voxel Art** and **HD-2D**, inspired by the unforgiving realism of classics like *Bushido Blade*, Akira Kurosawa's samurai cinema, and retro demake aesthetics. Featuring volumetric dismemberment physics, dynamic procedural lighting, interactive atmospheric hazards, a blade clash QTE system, cloth physics, and a finely balanced roster of 12 warriors across 12 distinct arenas.
@@ -14,17 +14,21 @@ A tactical isometric lethal dueling game in **3D Voxel Art** and **HD-2D**, insp
 
 ---
 
-## 📦 1. Downloads & Pre-compiled Releases
+## 📦 1. Downloads & Playable Releases
 
-You can download pre-compiled executable packages directly from the **[Official GitHub Releases](https://github.com/colletes/samurai-edge-demake/releases)**:
+Official pre-compiled executable packages and updates for all supported platforms are distributed **exclusively via [itch.io](https://colletes.itch.io/samurai-edge-demake)**:
 
-| Platform | Download Package | How to Run |
+👉 **[Download Samurai Edge Demake on itch.io](https://colletes.itch.io/samurai-edge-demake)**
+
+| Platform | Channel / Package | How to Run |
 | :--- | :--- | :--- |
-| 🍏 **macOS** | [`Samurai-Edge-Demake-macOS.zip`](https://github.com/colletes/samurai-edge-demake/releases/latest) | Unzip and run the executable or use the `iniciar.command` shortcut. If macOS displays an unverified developer warning: right-click $\to$ *Open*, or run in terminal: `xattr -cr SamuraiEdge.app` |
-| 🪟 **Windows** | [`Samurai-Edge-Demake-Windows.zip`](https://github.com/colletes/samurai-edge-demake/releases/latest) | Extract the zip folder and double-click `SamuraiEdge.exe`. |
-| 🐧 **Linux** | [`Samurai-Edge-Demake-Linux.tar.gz`](https://github.com/colletes/samurai-edge-demake/releases/latest) | Extract via `tar -xzvf Samurai-Edge-Demake-Linux.tar.gz` and run `./SamuraiEdge/SamuraiEdge`. |
-| 🤖 **Android** | `SamuraiEdge.apk` | Build guide and instructions in [`deploy/android/README.md`](deploy/android/README.md). |
+| 🍏 **macOS** | `Samurai-Edge-Demake-macOS.zip` (channel: `osx`) | Unzip and run the executable or use the `iniciar.command` shortcut. If macOS displays an unverified developer warning: right-click $\to$ *Open*, or run in terminal: `xattr -cr SamuraiEdge.app` |
+| 🪟 **Windows** | `Samurai-Edge-Demake-Windows.zip` (channel: `windows`) | Extract the zip folder and double-click `SamuraiEdge.exe`. |
+| 🐧 **Linux** | `Samurai-Edge-Demake-Linux.tar.gz` (channel: `linux`) | Extract via `tar -xzvf Samurai-Edge-Demake-Linux.tar.gz` and run `./SamuraiEdge/SamuraiEdge`. |
+| 🤖 **Android** | `SamuraiEdge.apk` (channel: `android`) | Download the APK from itch.io and install on your device, or follow [`deploy/android/README.md`](deploy/android/README.md). |
 | 📱 **iOS** | Native Xcode Project | Configured Xcode project ready for deployment in [`deploy/ios/README.md`](deploy/ios/README.md). |
+
+> **Note**: Official binary packages are no longer hosted on GitHub Releases. All latest releases, patches, and automatic delta updates (via the itch.io app) are distributed solely through itch.io.
 
 ---
 

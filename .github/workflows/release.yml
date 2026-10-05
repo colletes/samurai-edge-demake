@@ -174,7 +174,46 @@ jobs:
         run: |
           ls -la release_assets/
 
-      - name: Create or Update GitHub Release
+      - name: Install Butler
+        if: env.BUTLER_API_KEY != ''
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+          unzip butler.zip -d /tmp/butler-bin
+          chmod +x /tmp/butler-bin/butler
+          echo "/tmp/butler-bin" >> $GITHUB_PATH
+
+      - name: Deploy to itch.io via Butler
+        if: env.BUTLER_API_KEY != ''
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          TAG="${{ steps.release_tag.outputs.tag }}"
+          TARGET="colletes/samurai-edge-demake"
+          
+          if [ -f "release_assets/Samurai-Edge-Demake-Windows.zip" ]; then
+            echo "Pushing Windows build to itch.io ($TARGET:windows)..."
+            butler push release_assets/Samurai-Edge-Demake-Windows.zip "$TARGET:windows" --userversion "$TAG"
+          fi
+          
+          if [ -f "release_assets/Samurai-Edge-Demake-macOS.zip" ]; then
+            echo "Pushing macOS build to itch.io ($TARGET:osx)..."
+            butler push release_assets/Samurai-Edge-Demake-macOS.zip "$TARGET:osx" --userversion "$TAG"
+          fi
+          
+          if [ -f "release_assets/Samurai-Edge-Demake-Linux.tar.gz" ]; then
+            echo "Pushing Linux build to itch.io ($TARGET:linux)..."
+            butler push release_assets/Samurai-Edge-Demake-Linux.tar.gz "$TARGET:linux" --userversion "$TAG"
+          fi
+          
+          APK_FILE=$(find release_assets -name "*.apk" 2>/dev/null | head -n 1 || true)
+          if [ -n "$APK_FILE" ]; then
+            echo "Pushing Android build to itch.io ($TARGET:android)..."
+            butler push "$APK_FILE" "$TARGET:android" --userversion "$TAG"
+          fi
+
+      - name: Create GitHub Release (Notes & Changelog only)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_tag.outputs.tag }}
@@ -182,4 +221,8 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-          files: release_assets/*
+          body: |
+            ### 🎮 Playable Builds & Downloads
+            Official game builds for macOS, Windows, Linux, and Android are distributed **exclusively on itch.io**:
+            👉 **[Download Samurai Edge Demake on itch.io](https://colletes.itch.io/samurai-edge-demake)**
+
