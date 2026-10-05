@@ -174,15 +174,11 @@ jobs:
         run: |
           ls -la release_assets/
 
-      - name: Install Butler
+      - name: Setup Butler
         if: env.BUTLER_API_KEY != ''
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
-        run: |
-          curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
-          unzip butler.zip -d /tmp/butler-bin
-          chmod +x /tmp/butler-bin/butler
-          echo "/tmp/butler-bin" >> $GITHUB_PATH
+        uses: remarkablegames/setup-butler@v1
 
       - name: Deploy to itch.io via Butler
         if: env.BUTLER_API_KEY != ''
