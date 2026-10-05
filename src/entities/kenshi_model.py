@@ -2,14 +2,13 @@
 Kenshi, a espadachim do Iaijutsu (6.5.5): cabelo castanho-ruivo em rabo de cavalo alto com laço vermelho, quimono
 carmim sem mangas com colarinho branco, mangas soltas largas com punho dourado, hakama larga e pregueada, obi com nó
 na frente e a katana na cintura (saya à esquerda, mão direita no cabo).
-Dois estilos saem do mesmo modelo: "detailed" (cores do conceito) e "cel" (cores e rampas de tom amostradas dos sprites
-HD-2D, com contorno de tinta feito por `cel_outline`). Os ganchos são chamados por `render_voxel_humanoid`.
+Os ganchos são chamados por `render_voxel_humanoid`.
 Mudanças só visuais: duração do ataque, alcance e hitboxes não mudam.
 """
 import math
 
 from src.entities import model_kit as mk
-from src.isometric import cloth, voxel_renderer
+from src.isometric import cloth
 from src.isometric.voxel_rig import calc_blade_slash_3d
 
 SKIN = (248, 218, 192)
@@ -27,38 +26,12 @@ DETAILED = {
     "trail": (222, 38, 56), "trail_core": (255, 214, 196),
 }
 
-# Sprites HD-2D (kenshi/front_idle_0): (sombra, tom médio, luz) amostrados por região do corpo.
-_CEL_RAMPS = {
-    "hair": ((78, 44, 38), (122, 70, 54), (160, 98, 70)),
-    "kimono": ((69, 13, 33), (129, 30, 50), (187, 53, 69)),
-    "skin": ((186, 126, 106), (235, 178, 143), (250, 207, 168)),
-    "hakama": ((23, 19, 24), (35, 29, 35), (66, 57, 63)),
-    "gold": ((128, 86, 34), (190, 140, 48), (240, 192, 88)),
-    "sandal": ((115, 83, 70), (144, 104, 81), (180, 138, 104)),
-    "collar": ((190, 186, 200), (238, 236, 242), (255, 255, 255)),
-    "saya": ((16, 14, 20), (30, 26, 32), (66, 58, 70)),
-    "steel": ((122, 130, 150), (200, 208, 222), (246, 250, 255)),
-}
-CEL = {
-    "hair": _CEL_RAMPS["hair"][1], "hair_light": (156, 94, 67), "hair_dark": (65, 31, 31), "ribbon": (200, 36, 52),
-    "skin": _CEL_RAMPS["skin"][1], "skin_shadow": _CEL_RAMPS["skin"][0], "eye": (51, 29, 28), "lip": (190, 92, 98),
-    "kimono": _CEL_RAMPS["kimono"][1], "kimono_dark": _CEL_RAMPS["kimono"][0], "collar": _CEL_RAMPS["collar"][1],
-    "cuff": _CEL_RAMPS["gold"][1], "cuff_dark": _CEL_RAMPS["gold"][0],
-    "hakama": _CEL_RAMPS["hakama"][1], "hakama_dark": _CEL_RAMPS["hakama"][0], "obi": (48, 40, 56),
-    "sandal": _CEL_RAMPS["sandal"][1], "strap": (30, 26, 32),
-    "saya": _CEL_RAMPS["saya"][1], "ito": (44, 36, 40), "ito_light": (200, 190, 170), "gold": _CEL_RAMPS["gold"][1],
-    "steel": _CEL_RAMPS["steel"][1], "edge": (250, 252, 255),
-    "trail": (222, 40, 62), "trail_core": (255, 226, 200),
-}
-for _name, (_shadow, _mid, _light) in _CEL_RAMPS.items():
-    voxel_renderer.register_cel_ramp(_mid, _light, _shadow)
-
 
 MATERIALS = {"kimono": "silk", "kimono_dark": "silk", "obi": "silk", "collar": "silk", "ribbon": "silk", "saya": "lacquer"}  # chave da paleta -> textura de material (6.5.8)
 
 
 def pal() -> dict:
-    return CEL if voxel_renderer.get_render_style() == "cel" else DETAILED
+    return DETAILED
 
 
 def _outward(c, side):
@@ -149,7 +122,7 @@ def _ponytail(c):
                 (root[0] - f[0] * 0.14, root[1] - f[1] * 0.14, root[2] - 0.12), (root[0] - f[0] * 0.15, root[1] - f[1] * 0.15, root[2] - 0.23)]
     pts = [base_pts[0]] + [mk.add(base_pts[i + 1], offs[i]) for i in range(4)]
     widths = (0.078, 0.074, 0.064, 0.052)
-    colors = (P["hair"], P["hair"], P["hair_light"], P["hair_dark"] if voxel_renderer.get_render_style() == "cel" else P["hair"])
+    colors = (P["hair"], P["hair"], P["hair_light"], P["hair"])
     for i in range(4):
         mk.limb(c, pts[i], pts[i + 1], widths[i], colors[i])
     mk.limb(c, pts[3], pts[4], 0.03, P["hair_light"], outline=False)  # mecha clara da ponta

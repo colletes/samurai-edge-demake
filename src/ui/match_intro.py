@@ -18,6 +18,8 @@ import pygame
 from src.config import SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_GOLD
 from src.effects import parchment as pm
 from src.i18n import t
+from src.ui.camera_moves import smooth, lerp
+from src.entities.pose_scripts import INTRO_DURATION
 from src.ui.character_select import draw_enso_circle, COLOR_HANKO_RED, COLOR_HANKO_BLUE
 from src.ui.font_manager import render_text_fx
 from src.ui.fonts import get_title_font, get_text_font
@@ -36,12 +38,11 @@ PHASE_TITLE, PHASE_P1, PHASE_P2, PHASE_OUTRO = "title", "p1", "p2", "outro"
 
 
 def _smooth(x: float) -> float:
-    x = max(0.0, min(1.0, x))
-    return x * x * (3.0 - 2.0 * x)
+    return smooth(x)
 
 
 def _lerp(a: float, b: float, x: float) -> float:
-    return a + (b - a) * x
+    return lerp(a, b, x)
 
 
 def ink_reveal(base: pygame.Surface, progress: float, diagonal: bool = False, edge: int = 50) -> pygame.Surface:
@@ -62,6 +63,55 @@ def ink_reveal(base: pygame.Surface, progress: float, diagonal: bool = False, ed
     alpha[:] = (alpha * mask).astype(np.uint8)
     del alpha
     return out
+
+
+def build_banner_shade() -> pygame.Surface:
+    h = 190
+    shade = pygame.Surface((SCREEN_WIDTH, h), pygame.SRCALPHA)
+    for y in range(h):
+        pygame.draw.line(shade, (6, 6, 8, int(170 * (1 - y / h) ** 1.3)), (0, y), (SCREEN_WIDTH, y))
+    return shade
+
+
+def draw_fighter_banner(surface: pygame.Surface, cache: dict, name: str, color, char_id: str, ring, label: str,
+                        time: float, enter: float, leave: float = 1.0):
+    """Faixa com retrato circular (anel ensō), rótulo e nome do lutador; usada na introdução e na vitória.
+    `enter` (0..1) desliza o banner para dentro e `leave` (0..1) o apaga; `cache` guarda as superfícies de texto."""
+    def cached(key, builder):
+        if key not in cache:
+            cache[key] = builder()
+        return cache[key]
+
+    name_font = get_title_font(46)
+    label_font = get_text_font(22)
+    fx = dict(outline=True, outline_color=(8, 6, 6), outline_width=2, shadow=True, shadow_offset=(2, 2))
+    light = tuple(min(255, int(c * 0.55 + 140)) for c in color)
+    name_surf = cached(("name", name), lambda: render_text_fx(name_font, name, light, **fx))
+    label_surf = cached(("label", label), lambda: render_text_fx(label_font, label, (235, 225, 205), **fx))
+
+    radius = 58
+    gap = 22
+    text_w = max(name_surf.get_width(), label_surf.get_width())
+    total_w = radius * 2 + gap + text_w
+    alpha = int(255 * enter * leave)
+    left = (SCREEN_WIDTH - total_w) // 2 - int((1.0 - enter) * 60)
+    cy = LETTERBOX_H + 18 + radius
+
+    shade = cached(("shade",), build_banner_shade)
+    shade.set_alpha(alpha)
+    surface.blit(shade, (0, LETTERBOX_H))
+
+    layer = pygame.Surface((total_w + 20, radius * 2 + 20), pygame.SRCALPHA)
+    pcx, pcy = radius + 10, radius + 10
+    draw_enso_circle(layer, pcx, pcy, radius, ring, time)
+    portrait = get_portrait(char_id, size=(radius * 2 - 6, radius * 2 - 6), circular=True)
+    if portrait is not None:
+        layer.blit(portrait, (pcx - portrait.get_width() // 2, pcy - portrait.get_height() // 2))
+    tx = radius * 2 + 10 + gap
+    layer.blit(label_surf, (tx, pcy - radius + 10))
+    layer.blit(name_surf, (tx, pcy - 6))
+    layer.set_alpha(alpha)
+    surface.blit(layer, (left - 10, cy - radius - 10))
 
 
 class MatchIntro:
@@ -122,6 +172,18 @@ class MatchIntro:
         phase, _ = self.phase()
         return {PHASE_TITLE: (False, False), PHASE_P1: (True, False),
                 PHASE_P2: (False, True), PHASE_OUTRO: (True, True)}[phase]
+
+    def acting_fighter(self) -> int | None:
+        """Índice (0 = P1, 1 = P2) do lutador que faz a animação de apresentação neste ato; None fora dos atos."""
+        phase, _ = self.phase()
+        return {PHASE_P1: 0, PHASE_P2: 1}.get(phase)
+
+    def fighter_progress(self) -> float:
+        """Progresso 0..1 da animação de apresentação do ato atual (sobra uma pose final parada até o fim do ato)."""
+        phase, lt = self.phase()
+        if phase not in (PHASE_P1, PHASE_P2):
+            return 0.0
+        return max(0.0, min(1.0, lt / INTRO_DURATION))
 
     # ------------------------------------------------------------------ câmera
     def camera_state(self) -> dict:
@@ -229,50 +291,12 @@ class MatchIntro:
         surface.blit(layer, (0, 0))
 
     def _render_fighter_banner(self, surface: pygame.Surface, idx: int, lt: float):
-        name = self.names[idx]
-        color = self.colors[idx]
-        char_id = self.char_ids[idx]
-        ring = COLOR_HANKO_RED if idx == 0 else COLOR_HANKO_BLUE
         label = t("match_intro_p1") if idx == 0 else t("match_intro_ai" if self.vs_ai else "match_intro_p2")
-
-        name_font = get_title_font(46)
-        label_font = get_text_font(22)
-        fx = dict(outline=True, outline_color=(8, 6, 6), outline_width=2, shadow=True, shadow_offset=(2, 2))
-        light = tuple(min(255, int(c * 0.55 + 140)) for c in color)
-        name_surf = self._cached(("name", idx, name), lambda: render_text_fx(name_font, name, light, **fx))
-        label_surf = self._cached(("label", idx, label), lambda: render_text_fx(label_font, label, (235, 225, 205), **fx))
-
-        radius = 58
-        gap = 22
-        text_w = max(name_surf.get_width(), label_surf.get_width())
-        total_w = radius * 2 + gap + text_w
         enter = _smooth(lt / 0.5)
         leave = 1.0 - _smooth((lt - (T_FIGHTER - 0.35)) / 0.35)
-        alpha = int(255 * enter * leave)
-        left = (SCREEN_WIDTH - total_w) // 2 - int((1.0 - enter) * 60)
-        cy = LETTERBOX_H + 18 + radius
-
-        # Faixa escura em degradê atrás do banner
-        shade = self._cached(("shade",), self._build_shade)
-        shade.set_alpha(alpha)
-        surface.blit(shade, (0, LETTERBOX_H))
-
-        layer = pygame.Surface((total_w + 20, radius * 2 + 20), pygame.SRCALPHA)
-        pcx, pcy = radius + 10, radius + 10
-        draw_enso_circle(layer, pcx, pcy, radius, ring, self.time)
-        portrait = get_portrait(char_id, size=(radius * 2 - 6, radius * 2 - 6), circular=True)
-        if portrait is not None:
-            layer.blit(portrait, (pcx - portrait.get_width() // 2, pcy - portrait.get_height() // 2))
-        tx = radius * 2 + 10 + gap
-        layer.blit(label_surf, (tx, pcy - radius + 10))
-        layer.blit(name_surf, (tx, pcy - 6))
-        layer.set_alpha(alpha)
-        surface.blit(layer, (left - 10, cy - radius - 10))
+        draw_fighter_banner(surface, self._cache, self.names[idx], self.colors[idx], self.char_ids[idx],
+                            COLOR_HANKO_RED if idx == 0 else COLOR_HANKO_BLUE, label, self.time, enter, leave)
 
     @staticmethod
     def _build_shade() -> pygame.Surface:
-        h = 190
-        shade = pygame.Surface((SCREEN_WIDTH, h), pygame.SRCALPHA)
-        for y in range(h):
-            pygame.draw.line(shade, (6, 6, 8, int(170 * (1 - y / h) ** 1.3)), (0, y), (SCREEN_WIDTH, y))
-        return shade
+        return build_banner_shade()

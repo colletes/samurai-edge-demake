@@ -314,9 +314,8 @@ When launched on smartphones or tablets (Android & iOS), the engine activates an
 ---
 
 ### Settings & Audio Menu (`C` or `Start`)
-- **Language (i18n)**: Instant dynamic switching between **English (EN)** and **Português do Brasil (PT-BR)**.
+- **Language (i18n)**: Starts in the machine's language (Portuguese or English) and can be switched instantly between **English (EN)** and **Português do Brasil (PT-BR)**.
 - **Visuals & Effects Quality**: Toggle between High (volumetric fog, particle trails, dynamic reflections) and Low performance profiles.
-- **Character Style & Cel-Shading**: Selectable character rendering styles including cel-shading outlines for Kenshi and Murasaki.
 - **Touchscreen Mode**: `Auto` (detects touch input), `On` (always visible), or `Off`.
 - **Audio & Haptics**: Dedicated volume sliders for lossless WAV sound effects, high-fidelity stage BGM, and haptic vibration intensity.
 

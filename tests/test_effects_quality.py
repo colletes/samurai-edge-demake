@@ -154,7 +154,6 @@ def test_lighting_budget_improved():
 def test_settings_menu_toggles():
     from src.i18n import set_lang
     from src.input.controls_storage import load_controls_config
-    from src.isometric import voxel_renderer
     from src.ui.settings_menu import SettingsMenu
     fonts = (pygame.font.Font(None, 48), pygame.font.Font(None, 26), pygame.font.Font(None, 20))
     real_path = quality.SETTINGS_PATH
@@ -167,22 +166,19 @@ def test_settings_menu_toggles():
             for lang in ("pt", "en"):
                 set_lang(lang)
                 menu.render(surf, *fonts)
-            assert menu.quality_toggle_rect.width > 0 and menu.style_toggle_rect.width > 0 and not menu.quality_toggle_rect.colliderect(menu.style_toggle_rect)
+            assert menu.quality_toggle_rect.width > 0
             menu.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_e))
             assert quality.get_effects_quality() == "low"
-            menu.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_v))
-            assert voxel_renderer.get_render_style() == "cel"
             menu.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=menu.quality_toggle_rect.center))
             assert quality.get_effects_quality() == "high"
             with open(quality.SETTINGS_PATH, encoding="utf-8") as f:
                 video = json.load(f)["video"]
-            assert video == {"effects_quality": "high", "character_style": "cel"}, video
+            assert video == {"effects_quality": "high"}, video
         finally:
             quality.SETTINGS_PATH = real_path
             _restore()
-            voxel_renderer.set_render_style("detailed")
             set_lang("pt")
-    print("  [OK] Menu de opções: botões de qualidade e de estilo (teclas E e V, clique), em PT e EN, gravando só a chave do vídeo.", flush=True)
+    print("  [OK] Menu de opções: botão de qualidade (tecla E e clique), em PT e EN, gravando só a chave do vídeo.", flush=True)
 
 
 def test_effects_quality():

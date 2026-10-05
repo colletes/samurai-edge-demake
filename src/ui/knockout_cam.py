@@ -8,6 +8,7 @@ aparece depois do replay. A classe guarda apenas tempo e estado; o laço princip
 import math
 
 from src.config import SCREEN_HEIGHT
+from src.ui.camera_moves import smooth as _smooth, ease_out as _ease_out, lerp as _lerp
 
 T_ORBIT = 2.5            # órbita lenta ao redor do derrotado
 T_RETURN = 0.6           # volta suave à vista clássica
@@ -16,20 +17,6 @@ ORBIT_ZOOM = 1.75
 ORBIT_SHIFT_Y = 40
 SLOWMO_SCALE = 0.3       # fração da velocidade normal no auge do replay
 SLOWMO_HOLD = 1.2        # tempo sustentado em câmera lenta antes de voltar à velocidade normal
-
-
-def _smooth(x: float) -> float:
-    x = max(0.0, min(1.0, x))
-    return x * x * (3.0 - 2.0 * x)
-
-
-def _ease_out(x: float) -> float:
-    x = max(0.0, min(1.0, x))
-    return 1.0 - (1.0 - x) ** 3
-
-
-def _lerp(a: float, b: float, x: float) -> float:
-    return a + (b - a) * x
 
 
 class KnockoutCam:

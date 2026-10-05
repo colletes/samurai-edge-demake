@@ -13,7 +13,6 @@ import numpy as np
 import pygame
 from src.config import COLOR_BLOOD
 from src.isometric.voxel_renderer import draw_voxel_box
-from src.isometric.cel_outline import _LayerCamera
 
 ALPHA_CUT = 200      # descarta sombras e auras translúcidas do recorte
 NECK_Z = 0.88        # altura do pescoço nos modelos
@@ -22,6 +21,22 @@ CHEST_Z = 0.72
 FALL_DEG = 88.0
 
 STUCK_WEAPON = {"SAITOU_IMPALE": "blade", "KUNAI_PIN": "kunai", "ARROW_PIN": "arrow", "STAB_FALL": "kunai"}
+
+
+class _LayerCamera:
+    """Câmera que projeta como a original, mas com a origem deslocada para o canto da camada."""
+
+    def __init__(self, camera, ox: int, oy: int):
+        self._camera = camera
+        self._ox = ox
+        self._oy = oy
+
+    def apply(self, wx, wy, wz=0.0):
+        x, y = self._camera.apply(wx, wy, wz)
+        return x - self._ox, y - self._oy
+
+    def __getattr__(self, name):
+        return getattr(self._camera, name)
 
 
 def layer_geometry(zoom: float) -> tuple[int, int, int]:

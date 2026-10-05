@@ -68,13 +68,13 @@ from src.effects.terrain_particles import TerrainFX
 from src.effects.fog import FogVolume
 from src.effects.particles import set_wind_source
 from src.effects import quality
-from src.isometric import voxel_renderer
 from src.effects.fall_render import render_falling_fighter
-from src.entities.samurai import STATE_FALL
+from src.entities.samurai import STATE_FALL, STATE_IDLE, STATE_INTRO, STATE_VICTORY
+from src.entities.pose_scripts import BeatPlayer
 from src.ui.round_intro import RoundIntroScreen
 from src.ui.round_result import RoundResultScreen, check_match_winner, render_round_pips, render_damage_bars, MATCH_WINS_NEEDED
 from src.ui.match_intro import MatchIntro
-from src.ui.knockout_cam import KnockoutCam
+from src.ui.outcome_sequence import OutcomeSequence
 from src.ui.pause_menu import (
     PauseMenu, ACTION_RESUME, ACTION_SETTINGS, ACTION_ARENA, ACTION_FIGHTER, ACTION_MAIN_MENU, ACTION_QUIT
 )
@@ -491,7 +491,6 @@ def run_game():
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption(TITLE)
     clock = pygame.time.Clock()
-    voxel_renderer.load_render_style(os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.json"))
     quality.load_effects_quality(quality.SETTINGS_PATH)
 
     # Tela de Carregamento Estilizada com feedback imediato ao usuário
@@ -556,7 +555,8 @@ def run_game():
     camera = None
     combat_system = CombatSystem()
     cinematic_director = CinematicDirector()
-    knockout_cam = KnockoutCam()
+    outcome_seq = OutcomeSequence()
+    cine_beats = {}  # batidas de SFX/partículas das animações de apresentação e vitória (7.3/7.4)
     clash_system = ClashSystem()
     round_intro = RoundIntroScreen()
     round_result_screen = RoundResultScreen()
@@ -615,7 +615,8 @@ def run_game():
         round_start_shaken = False
         round_intro_timer = 2.0
         cinematic_director.reset_round()
-        knockout_cam.reset()
+        outcome_seq.reset()
+        cine_beats.clear()
         static_render_queue = build_static_render_queue(game_map)
         round_intro.start(
             p1.name, p2.name,
@@ -652,9 +653,9 @@ def run_game():
     def request_restart():
         """Ponto único de reinício: decide entre revanche completa (partida encerrada) ou próximo round."""
         if match_winner is not None:
-            if knockout_cam.active or knockout_cam.pending:
-                knockout_cam.skip()
-                KnockoutCam.restore_classic(camera)
+            if outcome_seq.active or outcome_seq.pending:
+                outcome_seq.skip()
+                OutcomeSequence.restore_classic(camera)
             elif round_result_screen.can_accept_rematch():
                 request_rematch()
         else:
@@ -693,6 +694,25 @@ def run_game():
         game_map.render_overhead(screen, camera, game_time)
         if lighting_fx is not None:
             lighting_fx.render(screen, camera, game_time)
+
+    def run_cine_beat(name, fighter):
+        """Executa uma batida (SFX ou partículas) de uma animação de apresentação/vitória."""
+        kind, _, arg = name.partition(":")
+        if kind == "sfx":
+            ev = getattr(SoundEvent, arg.upper(), None)
+            if ev is not None:
+                play_sfx(ev)
+        elif kind == "fx" and arg == "smoke":
+            for _ in range(10):
+                particles.append(SmokeParticle(fighter.wx + random.uniform(-0.3, 0.3), fighter.wy + random.uniform(-0.3, 0.3),
+                                               wz=random.uniform(0.1, 0.9), color=(150, 155, 165)))
+        elif kind == "fx" and arg == "petals":
+            for _ in range(14):
+                particles.append(SparkParticle(fighter.wx + random.uniform(-0.5, 0.5), fighter.wy + random.uniform(-0.5, 0.5),
+                                               random.uniform(0.8, 1.6), color=(255, 190, 205)))
+        elif kind == "fx" and arg == "sparks":
+            for _ in range(8):
+                particles.append(SparkParticle(fighter.wx, fighter.wy, random.uniform(0.6, 1.4)))
 
     def step_idle_fighter(f, opp, dt_):
         """Avança só a animação do lutador (introdução cinematográfica), sem física de combate."""
@@ -945,11 +965,29 @@ def run_game():
                         fighter.set_facing(*((spawn_2 if idx == 0 else spawn_1)))
                     if visible[idx]:
                         step_idle_fighter(fighter, opponent, dt)
+                        if intro_phase in ("p1", "p2"):
+                            # Entregável 7.3: roteiro de apresentação do personagem durante o seu ato
+                            ip = match_intro.fighter_progress()
+                            key = ("intro", id(fighter))
+                            if key not in cine_beats:
+                                cine_beats[key] = BeatPlayer((p1_char_id, p2_char_id)[idx], "intro")
+                            for beat in cine_beats[key].advance(ip):
+                                run_cine_beat(beat, fighter)
+                            fighter.state = STATE_INTRO
+                            fighter.state_timer = ip
+                            fighter.hitbox_active = False
+                        elif fighter.state == STATE_INTRO:
+                            fighter.state = STATE_IDLE
+                            fighter.state_timer = 0.0
+                    elif fighter.state == STATE_INTRO:
+                        fighter.state = STATE_IDLE
+                        fighter.state_timer = 0.0
                     on_stage = intro_phase in ("p1", "p2") and visible[idx]
                     fighter.wz = match_intro.stage_z if on_stage else 0.0
 
                 for leaf in ambient_leaves:
                     leaf.update(dt, game_map.wind_at(leaf.wx, leaf.wy, game_time))
+                particles[:] = [pt for pt in particles if pt.update(dt)]
                 fog.update(dt, game_time)
                 match_intro.apply_camera(camera)
 
@@ -959,6 +997,12 @@ def run_game():
                 for idx, fighter in enumerate((p1, p2)):
                     if visible[idx]:
                         intro_queue.append((camera.depth(fighter.wx, fighter.wy), 'fighter', fighter))
+                        if getattr(fighter, "dog", None):
+                            fighter.dog.wx, fighter.dog.wy = fighter.wx - 0.9, fighter.wy + 0.4
+                            intro_queue.append((camera.depth(fighter.dog.wx, fighter.dog.wy), 'dog', fighter.dog))
+                for pt in particles:
+                    if hasattr(pt, 'wx') and hasattr(pt, 'wy'):
+                        intro_queue.append((camera.depth(pt.wx, pt.wy), 'particle', pt))
                 intro_queue.extend(fog.queue_items(camera))
                 draw_world_queue(intro_queue)
                 draw_world_ambience()
@@ -970,6 +1014,11 @@ def run_game():
             p1.wx, p1.wy = spawn_1
             p2.wx, p2.wy = spawn_2
             p1.wz = p2.wz = 0.0
+            for f_ in (p1, p2):
+                if f_.state == STATE_INTRO:
+                    f_.state = STATE_IDLE
+                    f_.state_timer = 0.0
+            cine_beats.clear()
             p1.set_facing(*spawn_2)
             p2.set_facing(*spawn_1)
             camera.zoom = 1.0
@@ -984,7 +1033,7 @@ def run_game():
         touch_controls.reset_frame_triggers()
 
         real_dt = dt
-        dt *= knockout_cam.time_scale()
+        dt *= outcome_seq.time_scale()
 
         # Determinar direções ativas de movimentação/mira prévia
         keys = pygame.key.get_pressed()
@@ -1396,21 +1445,24 @@ def run_game():
         # Entregável 5.3: Contador Best of 3 (BO3) — verifica se a partida terminou
         if round_winner in ("P1_WINS", "P2_WINS"):
             loser = p2 if round_winner == "P1_WINS" else p1
-            knockout_cam.arm((loser.wx, loser.wy))
-        if knockout_cam.pending and not cinematic_director.is_frozen():
-            knockout_cam.begin()
+            victor = p1 if round_winner == "P1_WINS" else p2
+            outcome_seq.arm((loser.wx, loser.wy), winner_idx=0 if victor is p1 else 1,
+                            winner_pos=(victor.wx, victor.wy),
+                            match_end=check_match_winner(score_p1, score_p2) is not None)
+        if outcome_seq.pending and not cinematic_director.is_frozen():
+            outcome_seq.begin()
 
         if round_winner is not None and match_winner is None:
             mw = check_match_winner(score_p1, score_p2)
             if mw is not None:
                 match_winner = mw
                 winner_fighter = p1 if mw == "P1" else p2
-                knockout_cam.deferred_result = (winner_fighter.name.upper(), get_fighter_color(winner_fighter), score_p1, score_p2)
+                outcome_seq.deferred_result = (winner_fighter.name.upper(), get_fighter_color(winner_fighter), score_p1, score_p2)
 
-        # A tela de resultados só aparece depois do replay de nocaute
-        if knockout_cam.deferred_result and not knockout_cam.active and not knockout_cam.pending:
-            round_result_screen.show(*knockout_cam.deferred_result)
-            knockout_cam.deferred_result = None
+        # A tela de resultados só aparece depois do replay de nocaute e da pose de vitória
+        if outcome_seq.deferred_result and not outcome_seq.active and not outcome_seq.pending:
+            round_result_screen.show(*outcome_seq.deferred_result)
+            outcome_seq.deferred_result = None
 
         round_result_screen.update(dt)
 
@@ -1424,14 +1476,30 @@ def run_game():
             camera.rotate(CAMERA_ORBIT_SPEED * dt)
         if keys[pygame.K_BACKSLASH]:
             camera.set_azimuth(0.0)
-        camera_was_replaying = knockout_cam.active
-        knockout_cam.update(real_dt, (mid_x, mid_y))
-        if knockout_cam.active:
-            knockout_cam.apply_camera(camera, real_dt)
+        camera_was_replaying = outcome_seq.active
+        victory_f = None
+        if round_winner in ("P1_WINS", "P2_WINS"):
+            victory_f = p1 if round_winner == "P1_WINS" else p2
+        outcome_seq.update(real_dt, (mid_x, mid_y),
+                           winner_pos=(victory_f.wx, victory_f.wy) if victory_f else None,
+                           winner_alive=victory_f.is_alive if victory_f else True)
+        victory_p = outcome_seq.victory_progress()
+        if victory_f is not None and victory_p is not None:
+            # Entregável 7.4: pose de vitória do vencedor (sem efeito de combate)
+            if victory_f.state != STATE_VICTORY:
+                victory_f.set_facing(victory_f.wx + 1.0, victory_f.wy + 1.0)
+                cine_beats["victory"] = BeatPlayer((p1_char_id, p2_char_id)[0 if victory_f is p1 else 1], "victory")
+            victory_f.state = STATE_VICTORY
+            victory_f.state_timer = victory_p
+            victory_f.hitbox_active = False
+            for beat in cine_beats["victory"].advance(victory_p):
+                run_cine_beat(beat, victory_f)
+        if outcome_seq.active:
+            outcome_seq.apply_camera(camera, real_dt)
         else:
             camera.update(mid_x, mid_y, dt)
             if camera_was_replaying:
-                KnockoutCam.restore_classic(camera)
+                OutcomeSequence.restore_classic(camera)
 
         particles = [p for p in particles if p.update(dt)]
         # Entregável 1.4: Particle Cap Global (limite de 150 para prevenir sobrecarga de memória)
@@ -1819,7 +1887,7 @@ def run_game():
                 screen.blit(banner_surf, (center_x - card_w // 2, center_y - card_h // 2))
 
         # Banner de Vitória (oculto quando a partida Melhor-de-3 já foi decidida — ver tela de resultados abaixo)
-        if round_winner and match_winner is None and not (knockout_cam.active or knockout_cam.pending):
+        if round_winner and match_winner is None and not (outcome_seq.active or outcome_seq.pending):
             if round_winner == "DRAW":
                 w_msg = t("draw_text")
                 w_color = COLOR_GOLD
@@ -1834,6 +1902,11 @@ def run_game():
             center_y = SCREEN_HEIGHT // 2 - 40
             screen.blit(v_surf, (center_x - v_surf.get_width() // 2, center_y))
             screen.blit(sub_surf, (center_x - sub_surf.get_width() // 2, center_y + 48))
+
+        # Entregável 7.4: letterbox e banner do vencedor durante a pose de vitória
+        if outcome_seq.phase == "victory" and victory_f is not None:
+            outcome_seq.render_overlay(screen, victory_f.name, get_fighter_color(victory_f),
+                                       (p1_char_id, p2_char_id)[0 if victory_f is p1 else 1])
 
         # Entregável 5.2: pergaminho vertical Sumi-E na abertura do round (a rotação é feita no azimute da câmera)
         if round_intro_timer > 0:

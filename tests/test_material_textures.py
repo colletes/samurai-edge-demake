@@ -1,6 +1,6 @@
 """
 Teste da 6.5.8 (texturas de material nas roupas): padrões novos, caixas orientadas com textura, materiais por lutador
-e o comportamento no cel-shading e na qualidade baixa.
+e o comportamento na qualidade baixa.
 Uso: SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy ./venv/bin/python tests/test_material_textures.py
 """
 import math
@@ -81,20 +81,6 @@ def test_oriented_boxes_take_textures():
     print("  [OK] Caixas orientadas (mangas, capas, braços) aceitam textura; translúcidas e a qualidade baixa ficam lisas.", flush=True)
 
 
-def test_cel_keeps_only_flat_friendly_textures():
-    voxel_renderer.set_render_style("cel")
-    try:
-        plain, silk, pleats = _canvas(), _canvas(), _canvas()
-        draw_voxel_box(plain, _cam(), 0.0, 0.0, 0.0, 1.2, 1.2, 1.4, (129, 30, 50))
-        draw_voxel_box(silk, _cam(), 0.0, 0.0, 0.0, 1.2, 1.2, 1.4, (129, 30, 50), texture="silk")
-        draw_voxel_box(pleats, _cam(), 0.0, 0.0, 0.0, 1.2, 1.2, 1.4, (129, 30, 50), texture="pleats")
-        assert (_arr(plain) == _arr(silk)).all(), "no cel os materiais finos não entram"
-        assert np.abs(_arr(plain) - _arr(pleats)).sum() > 0, "as linhas largas (pregas) continuam"
-    finally:
-        voxel_renderer.set_render_style("detailed")
-    print("  [OK] No cel-shading só pregas, trama larga e reflexo continuam; seda, couro e outros ficam de fora.", flush=True)
-
-
 def test_every_fighter_declares_materials():
     from src.entities import (anne_model, hanzo_model, joe_model, julie_model, kasumi_model, kenshi_model, murasaki_model, musashi_model,
                               saitou_model, teppo_model, tomoe_model)
@@ -131,12 +117,6 @@ def test_fighters_change_with_quality_and_budget():
         diff = int((np.abs(high - low).sum(axis=2) > 0).sum())
         assert diff > 30, f"{char}: as texturas de material não aparecem ({diff} pixels)"
         changed.append(diff)
-    voxel_renderer.set_render_style("cel")
-    try:
-        for char in ("kenshin", "murasaki"):
-            _fighter(char, state="ATTACK", timer=0.08)
-    finally:
-        voxel_renderer.set_render_style("detailed")
     results = {}
     for level in ("high", "low"):
         quality.set_effects_quality(level)
@@ -157,7 +137,6 @@ def test_fighters_change_with_quality_and_budget():
 def test_material_textures():
     test_new_patterns_exist_and_draw()
     test_oriented_boxes_take_textures()
-    test_cel_keeps_only_flat_friendly_textures()
     test_every_fighter_declares_materials()
     test_fighters_change_with_quality_and_budget()
 

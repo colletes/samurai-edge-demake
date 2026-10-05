@@ -3,7 +3,6 @@ Folha de sprites quadro a quadro dos lutadores (6.5.4): idle, caminhada, ataque,
 com o conceito e o portrait ao lado (e os sprites HD-2D de Kenshi e Murasaki, quando existem).
 
 Uso: SDL_VIDEODRIVER=dummy ./venv/bin/python tools/capture_sprite_sheet.py [--tag before] [--only okuni,kenshi] [--zoom 2.6]
-                                                                       [--style detailed|cel]
 Saída: docs/screenshots/sprites/<lutador>_<tag>.png
 """
 import argparse
@@ -136,7 +135,7 @@ def _reference_column(name, height) -> pygame.Surface:
         y += 18 + bust_img.get_height() + 10
     hd = HD2D_SPRITES.get(name)
     if hd:
-        col.blit(font.render("SPRITES HD-2D (referência cel-shading)", True, DIM), (8, y))
+        col.blit(font.render("SPRITES HD-2D (referência)", True, DIM), (8, y))
         x = 8
         for frame in ("idle", "walk_0", "walk_1", "attack"):
             img = _load(os.path.join(ROOT, "hd2d_edition", "assets", "sprites", hd, f"{frame}.png"))
@@ -177,12 +176,7 @@ def main():
     parser.add_argument("--tag", default="before")
     parser.add_argument("--only", default="")
     parser.add_argument("--zoom", type=float, default=3.2)
-    parser.add_argument("--style", default="detailed", choices=("detailed", "cel"))
     opts = parser.parse_args()
-
-    from src.isometric import voxel_renderer
-    if hasattr(voxel_renderer, "set_render_style"):
-        voxel_renderer.set_render_style(opts.style)
 
     names = [n for n in FIGHTERS if not opts.only or n in opts.only.split(",")]
     os.makedirs(OUT, exist_ok=True)

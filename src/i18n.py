@@ -7,7 +7,46 @@ regras do jogo, HUD, controles e manuais estratégicos dos 12 guerreiros.
 LANG_PT = "pt"
 LANG_EN = "en"
 
-_current_lang = LANG_PT
+
+def detect_system_lang() -> str:
+    """Idioma da máquina: português se a interface do sistema estiver em português, senão inglês."""
+    import locale
+    import os
+    import sys
+
+    candidates = []
+    override = os.environ.get("SAMURAI_EDGE_LANG", "").lower()
+    if override in (LANG_PT, LANG_EN):
+        return override
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+            return LANG_PT if (lang_id & 0x3FF) == 0x16 else LANG_EN
+        except Exception:
+            pass
+    elif sys.platform == "darwin":
+        try:
+            import subprocess
+            out = subprocess.run(["defaults", "read", "-g", "AppleLanguages"], capture_output=True, text=True, timeout=2).stdout
+            langs = [line.strip(' ",()') for line in out.splitlines() if line.strip(' ,()')]
+            if langs:
+                candidates.append(langs[0])
+        except Exception:
+            pass
+    for var in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        candidates.append(os.environ.get(var))
+    try:
+        candidates.append(locale.getlocale()[0])
+    except Exception:
+        pass
+    for value in candidates:
+        if value:
+            return LANG_PT if value.lower().replace("-", "_").startswith("pt") else LANG_EN
+    return LANG_EN
+
+
+_current_lang = detect_system_lang()
 
 def get_lang() -> str:
     return _current_lang
@@ -95,6 +134,8 @@ I18N = {
         "match_intro_p1": 'JOGADOR 1',
         "match_intro_p2": 'JOGADOR 2',
         "match_intro_ai": 'ADVERSÁRIO (IA)',
+        "winner_banner_label": 'VENCEDOR',
+        "match_winner_banner_label": 'VENCEDOR DA PARTIDA',
         "pause_resume": 'Retomar Duelo',
         "pause_settings": 'Configurações',
         "pause_arena": 'Escolher Cenário',
@@ -393,9 +434,6 @@ I18N = {
         "effects_quality_label": "Efeitos: [ {q_name} ] ([E] ou Clique)",
         "quality_high": "ALTA",
         "quality_low": "BAIXA",
-        "character_style_label": "Lutadores: [ {s_name} ] ([V] ou Clique)",
-        "style_detailed": "DETALHADO",
-        "style_cel": "CEL-SHADING",
         
         # ===== CHARACTER SELECT LABELS =====
         "char_stat_speed": "Vel",
@@ -539,6 +577,8 @@ I18N = {
         "match_intro_p1": 'PLAYER 1',
         "match_intro_p2": 'PLAYER 2',
         "match_intro_ai": 'OPPONENT (AI)',
+        "winner_banner_label": 'WINNER',
+        "match_winner_banner_label": 'MATCH WINNER',
         "pause_resume": 'Resume Duel',
         "pause_settings": 'Settings',
         "pause_arena": 'Choose Stage',
@@ -837,9 +877,6 @@ I18N = {
         "effects_quality_label": "Effects: [ {q_name} ] ([E] or Click)",
         "quality_high": "HIGH",
         "quality_low": "LOW",
-        "character_style_label": "Fighters: [ {s_name} ] ([V] or Click)",
-        "style_detailed": "DETAILED",
-        "style_cel": "CEL-SHADED",
         
         # ===== CHARACTER SELECT LABELS =====
         "char_stat_speed": "Speed",

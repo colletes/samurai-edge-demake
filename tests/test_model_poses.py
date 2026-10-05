@@ -150,10 +150,8 @@ def test_model_poses():
     test_poses_idle_fans_and_attack_arc()
     test_every_state_renders_at_all_azimuths_and_cloth_moves()
     test_sheet_frames_and_budget()
-    test_kenshi_and_murasaki_render_in_both_styles()
-    test_cel_outline_and_style_scope()
+    test_kenshi_and_murasaki_render_all_states()
     test_kenshi_murasaki_attack_and_sheet()
-    test_cel_budget_and_setting()
     test_musashi_two_blades_and_combo()
     test_all_fighters_have_models()
 
@@ -161,7 +159,6 @@ def test_model_poses():
 def test_musashi_two_blades_and_combo():
     from src.entities import musashi_model
     from src.entities.voxel_models import render_voxel_humanoid
-    from src.isometric import voxel_renderer
     blades, trails = [], []
     real_blade, real_trail = musashi_model._blade, musashi_model._slash_trail
     musashi_model._blade = lambda *a, **k: (blades.append(k.get("short", False)), real_blade(*a, **k))[1]
@@ -198,21 +195,12 @@ def test_musashi_two_blades_and_combo():
         if title.startswith("CAMINHADA"):
             distinct = len({pygame.surfarray.array3d(img).tobytes() for _, img in cells})
             assert distinct >= 7, f"Musashi {title}: {distinct} quadros distintos (antes eram só 5)"
-    assert voxel_renderer.get_render_style() == "detailed"
     print("  [OK] Musashi: duas lâminas na neutra e na defesa, bainhas na caminhada, 3 golpes do combo com rastro e caminhada com 7+ quadros distintos.", flush=True)
 def test_all_fighters_have_models():
     from src.entities import voxel_models
     from src.entities.voxel_models import render_voxel_humanoid
-    from src.isometric import voxel_renderer
     expected = {"kenshin", "murasaki", "musashi", "ninja", "american", "saitou", "rifleman", "kasumi", "tomoe", "pirate", "musketeer"}
     assert set(voxel_models.MODEL_FIGHTERS) == expected, "11 lutadores com modelo próprio (a Okuni tem o dela por ganchos)"
-    assert set(voxel_models.CEL_FIGHTERS) == {"kenshin", "murasaki"}
-    voxel_renderer.set_render_style("cel")
-    try:
-        _render(char="musashi", zoom=3.2)
-        assert _count_ink(_render(char="musashi", zoom=3.2)) < 60, "o cel-shading continua só em Kenshi e Murasaki"
-    finally:
-        voxel_renderer.set_render_style("detailed")
     states = (("IDLE", 0.0, False), ("WALK", 0.0, True), ("ATTACK", 0.02, False), ("ATTACK", 0.1, False), ("ATTACK", 0.17, False), ("ROLL", 0.1, True),
               ("PARRY", 0.1, False), ("STUNNED", 0.3, False), ("DEAD", 0.0, False), ("CAPE_FLOURISH", 0.08, False), ("FLECHE", 0.1, False),
               ("CUTLASS_CLEAVE", 0.1, False), ("ZEROSHIKI", 0.1, False), ("GATOTSU_CHARGE", 0.1, False))
@@ -244,52 +232,15 @@ def test_all_fighters_have_models():
     print(f"  [OK] 11 lutadores com modelo próprio: todos os estados em 4 azimutes (incluindo CAPE_FLOURISH, FLECHE, GATOTSU), kunai e furtividade; {ms:.1f} ms por quadro.", flush=True)
 
 
-INK = (18, 16, 22)
-
-
-def _count_ink(surf):
-    arr = pygame.surfarray.array3d(surf)
-    return int(((arr[:, :, 0] == INK[0]) & (arr[:, :, 1] == INK[1]) & (arr[:, :, 2] == INK[2])).sum())
-
-
-def test_kenshi_and_murasaki_render_in_both_styles():
-    from src.isometric import voxel_renderer
-    try:
-        for style in ("detailed", "cel"):
-            voxel_renderer.set_render_style(style)
-            for char in ("kenshin", "murasaki"):
-                for az in (0, 45, 135, 200):
-                    for state, timer, moving in (("IDLE", 0.0, False), ("WALK", 0.0, True), ("ATTACK", 0.02, False), ("ATTACK", 0.08, False),
-                                                 ("ATTACK", 0.14, False), ("ROLL", 0.1, True), ("PARRY", 0.1, False), ("STUNNED", 0.3, False),
-                                                 ("DEAD", 0.0, False)):
-                        _render(state, timer, moving=moving, az=az, char=char)
-                assert _diff(_render(walk=0.1, char=char), _render(walk=0.9, char=char)) > 20, f"{char}/{style}: o tecido muda no tempo"
-    finally:
-        voxel_renderer.set_render_style("detailed")
-    print("  [OK] Kenshi e Murasaki renderizam todos os estados em 4 azimutes nos estilos detalhado e cel, e o tecido balança.", flush=True)
-
-
-def test_cel_outline_and_style_scope():
-    from src.isometric import voxel_renderer
-    voxel_renderer.set_render_style("cel")
-    try:
-        cel = _render(char="kenshin", zoom=3.2)
-        assert voxel_renderer.get_render_style() == "cel"
-        assert _count_ink(cel) > 400, "silhueta com tinta dos sprites"
-        other = _render(char="okuni", zoom=3.2)
-        assert _count_ink(other) < 60, "quem não tem modelo cel continua no estilo detalhado, sem contorno de tinta"
-        light, mid, shadow = voxel_renderer.cel_ramp((129, 30, 50))
-        assert mid == (129, 30, 50) and light == (187, 53, 69) and shadow == (69, 13, 33), "rampa amostrada do sprite"
-        l2, m2, s2 = voxel_renderer.cel_ramp((10, 200, 10))
-        assert sum(l2) > sum(m2) > sum(s2), "rampa calculada: luz > médio > sombra"
-    finally:
-        voxel_renderer.set_render_style("detailed")
-    assert _count_ink(_render(char="kenshin", zoom=3.2)) < 60, "no estilo detalhado não há contorno de tinta"
-    assert voxel_renderer.get_render_style() == "detailed"
-    with voxel_renderer.render_style("cel"):
-        assert voxel_renderer.get_render_style() == "cel"
-    assert voxel_renderer.get_render_style() == "detailed"
-    print("  [OK] Cel-shading: silhueta de tinta, rampas dos sprites, só nos lutadores com modelo e o estilo volta ao detalhado.", flush=True)
+def test_kenshi_and_murasaki_render_all_states():
+    for char in ("kenshin", "murasaki"):
+        for az in (0, 45, 135, 200):
+            for state, timer, moving in (("IDLE", 0.0, False), ("WALK", 0.0, True), ("ATTACK", 0.02, False), ("ATTACK", 0.08, False),
+                                         ("ATTACK", 0.14, False), ("ROLL", 0.1, True), ("PARRY", 0.1, False), ("STUNNED", 0.3, False),
+                                         ("DEAD", 0.0, False)):
+                _render(state, timer, moving=moving, az=az, char=char)
+        assert _diff(_render(walk=0.1, char=char), _render(walk=0.9, char=char)) > 20, f"{char}: o tecido muda no tempo"
+    print("  [OK] Kenshi e Murasaki renderizam todos os estados em 4 azimutes, e o tecido balança.", flush=True)
 
 
 def test_kenshi_murasaki_attack_and_sheet():
@@ -330,36 +281,6 @@ def test_kenshi_murasaki_attack_and_sheet():
                 distinct = len({pygame.surfarray.array3d(img).tobytes() for _, img in cells})
                 assert distinct >= 7, f"{name} {title}: {distinct} quadros distintos"
     print("  [OK] Ataques: Kenshi saca antes de cortar e a foice cruza o corpo; rastros só no golpe; 8 quadros de ataque distintos.", flush=True)
-
-
-def test_cel_budget_and_setting():
-    import json
-    import tempfile
-    from src.isometric import voxel_renderer
-    voxel_renderer.set_render_style("cel")
-    try:
-        start = time.perf_counter()
-        for k in range(120):
-            _render("ATTACK" if k % 2 else "WALK", 0.1, moving=k % 2 == 0, walk=k * DT, zoom=1.0, char="murasaki" if k % 4 < 2 else "kenshin")
-        ms = (time.perf_counter() - start) * 1000.0 / 120
-    finally:
-        voxel_renderer.set_render_style("detailed")
-    assert ms < 12.0, f"{ms:.1f} ms por quadro em cel"
-    with tempfile.TemporaryDirectory() as tmp:
-        path = os.path.join(tmp, "settings.json")
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"video": {"character_style": "cel"}}, f)
-        voxel_renderer.load_render_style(path)
-        assert voxel_renderer.get_render_style() == "cel"
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"video": {"character_style": "qualquer"}}, f)
-        voxel_renderer.load_render_style(path)
-        assert voxel_renderer.get_render_style() == "detailed", "valor inválido cai no detalhado"
-        voxel_renderer.load_render_style(os.path.join(tmp, "nao_existe.json"))
-        assert voxel_renderer.get_render_style() == "detailed"
-    with open(os.path.join(ROOT, "settings.json"), encoding="utf-8") as f:
-        assert json.load(f)["video"]["character_style"] in ("detailed", "cel")
-    print(f"  [OK] Cel-shading custa {ms:.1f} ms por quadro (zoom 1) e `video.character_style` do settings.json é lido com segurança.", flush=True)
 
 
 if __name__ == "__main__":

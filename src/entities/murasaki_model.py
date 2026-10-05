@@ -2,13 +2,12 @@
 Murasaki, a kunoichi da Kusarigama (6.5.5): coque preto com laço roxo e fitas ao vento, máscara roxa, traje justo e brilhante com
 faixa roxa cruzada, ombreiras e braçadeiras de aço escuro, botas tabi roxas; foice (kama) na direita e corrente com bola
 de ferro presa à esquerda, que no ataque gira em arco largo deixando um rastro roxo.
-Dois estilos saem do mesmo modelo ("detailed" com as cores do conceito e "cel" com cores e rampas amostradas dos sprites
-HD-2D). Os ganchos são chamados por `render_voxel_humanoid`; só o visual muda, não a duração do ataque nem as hitboxes.
+Os ganchos são chamados por `render_voxel_humanoid`; só o visual muda, não a duração do ataque nem as hitboxes.
 """
 import math
 
 from src.entities import model_kit as mk
-from src.isometric import cloth, voxel_renderer
+from src.isometric import cloth
 
 DETAILED = {
     "suit": (34, 24, 46), "suit_dark": (20, 14, 30), "wrap": (118, 58, 176), "wrap_dark": (76, 36, 118), "wrap_light": (178, 112, 238),
@@ -21,37 +20,12 @@ DETAILED = {
     "aura": (200, 120, 255), "aura_core": (250, 232, 255),
 }
 
-# Sprites HD-2D (murasaki/front_idle_0): (sombra, tom médio, luz).
-_CEL_RAMPS = {
-    "suit": ((27, 17, 38), (47, 26, 62), (84, 52, 110)),
-    "wrap": ((51, 27, 71), (88, 52, 118), (140, 92, 178)),
-    "hair": ((18, 13, 23), (34, 22, 44), (70, 46, 85)),
-    "mask": ((54, 30, 78), (74, 42, 104), (112, 64, 146)),
-    "skin": ((140, 98, 90), (206, 152, 128), (236, 188, 156)),
-    "steel_dark": ((47, 39, 51), (87, 73, 104), (153, 131, 166)),
-    "boot": ((36, 24, 48), (52, 32, 68), (86, 58, 112)),
-    "ball": ((24, 20, 30), (58, 52, 70), (126, 118, 148)),
-}
-CEL = {
-    "suit": _CEL_RAMPS["suit"][1], "suit_dark": _CEL_RAMPS["suit"][0], "wrap": _CEL_RAMPS["wrap"][1], "wrap_dark": _CEL_RAMPS["wrap"][0],
-    "wrap_light": _CEL_RAMPS["wrap"][2], "skin": _CEL_RAMPS["skin"][1], "skin_shadow": _CEL_RAMPS["skin"][0],
-    "hair": _CEL_RAMPS["hair"][1], "hair_light": _CEL_RAMPS["hair"][2], "mask": _CEL_RAMPS["mask"][1], "mask_light": _CEL_RAMPS["mask"][2],
-    "eye": (214, 170, 255), "liner": (14, 10, 20),
-    "steel_dark": _CEL_RAMPS["steel_dark"][1], "steel": (126, 112, 142), "steel_light": _CEL_RAMPS["steel_dark"][2],
-    "boot": _CEL_RAMPS["boot"][1], "sole": (30, 26, 32), "strap": (30, 22, 40),
-    "chain": (140, 134, 156), "ball": _CEL_RAMPS["ball"][1], "ball_light": _CEL_RAMPS["ball"][2],
-    "wood": (74, 46, 36), "blade": (200, 196, 214), "edge": (250, 244, 255),
-    "aura": (212, 114, 240), "aura_core": (253, 238, 254),
-}
-for _name, (_shadow, _mid, _light) in _CEL_RAMPS.items():
-    voxel_renderer.register_cel_ramp(_mid, _light, _shadow)
-
 
 MATERIALS = {"suit": "latex", "suit_dark": "latex", "wrap": "latex", "wrap_dark": "latex", "wrap_light": "latex", "boot": "leather", "strap": "leather", "steel_dark": "brushed_metal", "steel": "brushed_metal", "mask": "latex", "ball": "brushed_metal"}  # chave da paleta -> textura de material (6.5.8)
 
 
 def pal() -> dict:
-    return CEL if voxel_renderer.get_render_style() == "cel" else DETAILED
+    return DETAILED
 
 
 def _smooth(x):

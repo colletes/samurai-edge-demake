@@ -22,9 +22,8 @@ from types import SimpleNamespace
 import math
 import pygame
 from src.isometric.iso_math import rotate_xy
-from src.isometric import cel_outline, voxel_renderer
 from src.isometric.voxel_renderer import draw_voxel_box, draw_oriented_voxel_box
-from src.entities import model_kit, okuni_model, kenshi_model, murasaki_model, musashi_model, hanzo_model, joe_model, saitou_model, teppo_model, kasumi_model, tomoe_model, anne_model, julie_model
+from src.entities import model_kit, okuni_model, kenshi_model, murasaki_model, musashi_model, hanzo_model, joe_model, saitou_model, teppo_model, kasumi_model, tomoe_model, anne_model, julie_model, pose_scripts
 from src.isometric.voxel_rig import calc_leg_joints, calc_blade_slash_3d, calc_character_idle_pose
 from src.config import (
     COLOR_STEEL, COLOR_GOLD, COLOR_WHITE, COLOR_BLACK,
@@ -82,10 +81,8 @@ def _canonical_char_type(char_type: str) -> str:
     return char_type
 
 
-# Lutadores com modelo em cel-shading (6.5.5): o contorno de silhueta é feito por `cel_outline` numa camada própria.
-CEL_FIGHTERS = {"kenshin": kenshi_model, "murasaki": murasaki_model}
-# Todos os lutadores com modelo próprio (ganchos por parte); o estilo cel vale só para os de CEL_FIGHTERS
-MODEL_FIGHTERS = {**CEL_FIGHTERS, "musashi": musashi_model, "ninja": hanzo_model, "american": joe_model, "saitou": saitou_model, "rifleman": teppo_model, "kasumi": kasumi_model, "tomoe": tomoe_model, "pirate": anne_model, "musketeer": julie_model}
+# Todos os lutadores com modelo próprio (ganchos por parte)
+MODEL_FIGHTERS = {"kenshin": kenshi_model, "murasaki": murasaki_model, "musashi": musashi_model, "ninja": hanzo_model, "american": joe_model, "saitou": saitou_model, "rifleman": teppo_model, "kasumi": kasumi_model, "tomoe": tomoe_model, "pirate": anne_model, "musketeer": julie_model}
 
 
 def _material(model_c, color):
@@ -94,13 +91,10 @@ def _material(model_c, color):
 
 
 def _skin_colors(char_type: str):
-    """(pele, sombra da pele): a rampa dos sprites HD-2D no cel-shading dos lutadores que têm modelo próprio."""
-    model = CEL_FIGHTERS.get(char_type)
-    if model is not None and voxel_renderer.get_render_style() == "cel":
+    """(pele, sombra da pele) da paleta do modelo próprio do lutador, quando ele define uma."""
+    model = MODEL_FIGHTERS.get(char_type)
+    if model is not None:
         p = model.pal()
-        return p["skin"], p["skin_shadow"]
-    if model is None and char_type in MODEL_FIGHTERS:
-        p = MODEL_FIGHTERS[char_type].pal()
         if "skin" in p:
             return p["skin"], p["skin_shadow"]
     return SKIN_COLOR, SKIN_SHADOW
@@ -120,14 +114,13 @@ def render_voxel_humanoid(
     is_moving: bool = False,
     extra_props: dict = None
 ):
-    """Desenha o lutador; os de `CEL_FIGHTERS` passam por uma camada com contorno quando o estilo é "cel"."""
-    if (voxel_renderer.get_render_style() == "cel" and state != "CORPSE_SLICED"
-            and _canonical_char_type(char_type) in CEL_FIGHTERS):
-        def draw(layer, layer_camera):
-            _render_voxel_humanoid(layer, layer_camera, wx, wy, wz, facing_x, facing_y, state, state_timer, is_alive, char_type,
-                                   walk_timer, 255, is_moving, extra_props)
-        cel_outline.render_cel(surface, camera, wx, wy, wz, alpha, draw)
-        return
+    """Desenha o lutador no estilo voxel detalhado; `INTRO` e `VICTORY` usam o roteiro de `pose_scripts` (o `state_timer` é o progresso 0..1)."""
+    if state in ("INTRO", "VICTORY"):
+        frame = pose_scripts.sample(char_type, state.lower(), state_timer)
+        state_timer = pose_scripts.state_timer_for(char_type, frame)
+        state = frame.state
+        extra_props = {**(extra_props or {}), **frame.extra}
+        alpha = int(alpha * frame.alpha)
     _render_voxel_humanoid(surface, camera, wx, wy, wz, facing_x, facing_y, state, state_timer, is_alive, char_type,
                            walk_timer, alpha, is_moving, extra_props)
 

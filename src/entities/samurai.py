@@ -21,6 +21,9 @@ STATE_PARRY = "PARRY"
 STATE_STUNNED = "STUNNED"
 STATE_DEAD = "DEAD"
 STATE_FALL = "FALL"
+# Poses cinematográficas (7.3/7.4): `state_timer` guarda o progresso 0..1 do roteiro, sem lógica de combate.
+STATE_INTRO = "INTRO"
+STATE_VICTORY = "VICTORY"
 
 # Estados em que o lutador atravessa buracos (esquivas, saltos e avanços); ao terminarem, o ponto de pouso decide
 PIT_CROSSING_STATES = frozenset({

@@ -3,95 +3,17 @@ Módulo de Renderização de Voxels Isométricos 3D.
 Projeta cubos e paralelepípedos volumétricos com iluminação direcional (faces superior, esquerda e direita)
 e chanfro estético característico de jogos voxel (como Crossy Road, 3D Dot Game Heroes e Voxatron).
 """
-import json
 import math
-from contextlib import contextmanager
 import pygame
 from src.config import HALF_TILE_W, HALF_TILE_H
 from src.isometric.iso_math import world_to_iso, PIXELS_PER_Z
 
 # Cache de cores sombreadas para performance máxima
 _COLOR_CACHE: dict[tuple, tuple[tuple[int, int, int], tuple[int, int, int], tuple[int, int, int], tuple[int, int, int]]] = {}
-_CEL_CACHE: dict[tuple, tuple] = {}
-_CEL_RAMPS: dict[tuple, tuple] = {}
-
-STYLES = ("detailed", "cel")
-CEL_INK = (18, 16, 22)  # cor do contorno dos sprites HD-2D
-CEL_TEXTURES = frozenset({"pleats", "weave", "gloss", "cloth"})  # no cel só as linhas largas; os materiais finos (seda, couro...) não entram
-_STYLE = "detailed"
-
-
-def set_render_style(style: str):
-    """"detailed" (voxels com chanfro e texturas) ou "cel" (3 faixas de tom chapadas e tinta, a partir dos sprites HD-2D)."""
-    global _STYLE
-    _STYLE = style if style in STYLES else "detailed"
-
-
-def get_render_style() -> str:
-    return _STYLE
-
-
-def load_render_style(settings_path: str):
-    """Aplica `video.character_style` do settings.json; sem o arquivo ou a chave fica "detailed"."""
-    try:
-        with open(settings_path, encoding="utf-8") as f:
-            set_render_style(json.load(f).get("video", {}).get("character_style", "detailed"))
-    except (OSError, ValueError, AttributeError):
-        set_render_style("detailed")
-
-
-@contextmanager
-def render_style(style: str):
-    """Troca o estilo só dentro do bloco (o contorno em cel-shading desenha o lutador numa camada própria)."""
-    global _STYLE
-    previous = _STYLE
-    _STYLE = style if style in STYLES else "detailed"
-    try:
-        yield
-    finally:
-        _STYLE = previous
-
-
-def register_cel_ramp(mid: tuple, light: tuple, shadow: tuple):
-    """Fixa a rampa (luz, sombra) de um tom médio, amostrada dos sprites; sem registro a rampa é calculada."""
-    mid = tuple(mid[:3])
-    _CEL_RAMPS[mid] = (tuple(light[:3]), tuple(shadow[:3]))
-    _CEL_CACHE.pop(mid, None)
-
-
-def _mix(a, b, t):
-    return (int(a[0] + (b[0] - a[0]) * t), int(a[1] + (b[1] - a[1]) * t), int(a[2] + (b[2] - a[2]) * t))
-
-
-def cel_ramp(color: tuple) -> tuple:
-    """(luz, tom médio, sombra) de uma cor: tons escuros clareiam saturando e sombreiam esfriando, como nos sprites."""
-    mid = tuple(color[:3])
-    if mid in _CEL_RAMPS:
-        light, shadow = _CEL_RAMPS[mid]
-        return light, mid, shadow
-    r, g, b = mid
-    lum = (0.30 * r + 0.59 * g + 0.11 * b) / 255.0
-    lift = 1.50 - 0.44 * min(1.0, lum / 0.9)
-    drop = 0.62 + 0.18 * min(1.0, lum / 0.9)
-    light = (min(255, int(r * lift) + 4), min(255, int(g * lift) + 3), min(255, int(b * lift) + 6))
-    cool = 1.0 - min(1.0, lum * 1.6)
-    shadow = (int(r * drop), int(g * drop * 0.94), min(255, int(b * drop * 0.98 + 10 * cool)))
-    return light, mid, shadow
-
-
-def _cel_shades(color: tuple):
-    shades = _CEL_CACHE.get(color)
-    if shades is None:
-        light, mid, shadow = cel_ramp(color)
-        shades = (light, mid, shadow, _mix(shadow, CEL_INK, 0.55))
-        _CEL_CACHE[color] = shades
-    return shades
 
 
 def get_voxel_shades(color: tuple[int, int, int]):
     """Retorna as 4 variações de sombreamento da cor: (top, left, right, outline)."""
-    if _STYLE == "cel":
-        return _cel_shades(tuple(color[:3]))
     if color in _COLOR_CACHE:
         return _COLOR_CACHE[color]
 
@@ -180,7 +102,7 @@ def draw_voxel_box(
     # Desenho direto ultra-rápido quando alpha == 255
     for poly, shade, _, _ in faces:
         pygame.draw.polygon(surface, shade, poly)
-    if texture and (_STYLE != "cel" or texture in CEL_TEXTURES):
+    if texture:
         from src.isometric.voxel_textures import draw_face_texture
         seed = int(wx * 37.0 + wy * 57.0 + wz * 91.0 + dx * 13.0)
         for poly, shade, axis, kind in faces:
@@ -322,7 +244,7 @@ def draw_oriented_voxel_box(
         ([1, 3, 7, 5], (rx, ry, rz), height, length, "side"),
         ([0, 2, 6, 4], (-rx, -ry, -rz), height, length, "side")
     ]
-    use_texture = bool(texture) and alpha >= 255 and (_STYLE != "cel" or texture in CEL_TEXTURES)
+    use_texture = bool(texture) and alpha >= 255
     seed = int(ox * 37.0 + oy * 57.0 + oz * 91.0 + length * 13.0) if use_texture else 0
 
     top_shade, left_shade, right_shade, outline_shade = get_voxel_shades(color)

@@ -57,6 +57,8 @@ class MockJoystick:
 
 class TestPhase3ControlsAndPersistence(unittest.TestCase):
     def setUp(self):
+        from src.i18n import set_lang
+        set_lang("pt")
         # Backup do arquivo original de config se existir
         self.backup_config = None
         if os.path.exists(CONFIG_PATH):
