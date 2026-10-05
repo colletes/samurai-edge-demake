@@ -69,7 +69,7 @@ class PowderTrap:
                                     from src.effects.particles import FloatingBanner
                                     banners.append(FloatingBanner("POWDER TRAP EXPLOSION!", f.wx, f.wy, wz=1.8, color=(255, 140, 20)))
                                 if cinematic_director:
-                                    cinematic_director.trigger_fatal_strike(self.owner, f, "HEADSHOT_EXPLODE", (0, 0))
+                                    cinematic_director.trigger_fatal_strike(self.owner, f, "KASUMI_EXPLODE", (0, 0))
             if self.fire_timer <= 0:
                 self.is_active = False
                 return False

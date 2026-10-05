@@ -16,7 +16,12 @@ from src.entities.projectile import (
 )
 from src.entities.doberman import STATE_DOG_CHARGE, STATE_DOG_KNOCKED_OUT, STATE_DOG_BARK
 
-def _get_death_style_for_attacker(attacker):
+def _get_death_style_for_attacker(attacker, weapon: str | None = None):
+    """Estilo de morte pelo golpe recebido: `weapon` (kunai, shuriken, arrow) tem prioridade sobre o atacante."""
+    if weapon in ("kunai", "shuriken"):
+        return "KUNAI_PIN"
+    if weapon == "arrow":
+        return "ARROW_PIN"
     char_type = getattr(attacker, "char_type", "").lower()
     state = getattr(attacker, "state", "")
     if "kenshin" in char_type or "red" in char_type:
@@ -27,17 +32,42 @@ def _get_death_style_for_attacker(attacker):
         return "PIRATE_CLEAVE"
     elif "musketeer" in char_type or "julie" in char_type or "saitou" in char_type or state == "GATOTSU_CHARGE":
         return "SAITOU_IMPALE"
-    elif "gray" in char_type or "kasumi" in char_type or "kemuri" in char_type:
-        return "KASUMI_EXPLODE"
-    elif "rifle" in char_type or "teppo" in char_type:
-        return "HEADSHOT_EXPLODE"
+    elif "ninja" in char_type or "hanzo" in char_type or "joe" in char_type or "american" in char_type \
+            or "gray" in char_type or "kasumi" in char_type or "kemuri" in char_type:
+        return "STAB_FALL"
+    elif "rifle" in char_type or "teppo" in char_type or "tomoe" in char_type or "archer" in char_type:
+        return "BLUNT_FALL"
     elif "kabuki" in char_type or "okuni" in char_type:
         return "MURASAKI_DECAP"
     return "KENSHIN_SPLIT"
 
+# Maior que o alcance do combo de Musashi (hitbox 0.9 + 2.06 + raio), para o ferido não contra-atacar na hora.
+HIT_KNOCKBACK_DISTANCE = 3.6
+
 class CombatSystem:
     def __init__(self):
         self.hitstop_timer = 0.0
+
+    @staticmethod
+    def _apply_hit_knockback(attacker, victim, game_map):
+        """Empurra o ferido (não morto) para longe do agressor; pode arremessá-lo em um buraco."""
+        dx = victim.wx - attacker.wx
+        dy = victim.wy - attacker.wy
+        dist = math.hypot(dx, dy)
+        if dist < 0.001:
+            dx, dy = attacker.facing_x, attacker.facing_y
+            dist = math.hypot(dx, dy) or 1.0
+        ux, uy = dx / dist, dy / dist
+        travel = HIT_KNOCKBACK_DISTANCE
+        pit_at = getattr(game_map, "pit_at", None)
+        if pit_at is not None:
+            # Um buraco no caminho captura o ferido em vez de ele "pular" por cima.
+            step = 0.1
+            for i in range(1, int(HIT_KNOCKBACK_DISTANCE / step) + 1):
+                if pit_at(victim.wx + ux * step * i, victim.wy + uy * step * i) is not None:
+                    travel = step * i
+                    break
+        victim.apply_forced_displacement(ux * travel, uy * travel, game_map)
 
     def _play_sound(self, event, volume: float = 1.0):
         """Helper seguro para disparo de efeitos sonoros em combate."""
@@ -231,7 +261,7 @@ class CombatSystem:
                             proj.is_active = False
                             self._play_sound("fatal_strike")
                             if cinematic_director:
-                                death_style = _get_death_style_for_attacker(proj.owner)
+                                death_style = _get_death_style_for_attacker(proj.owner, weapon="kunai")
                                 cinematic_director.trigger_fatal_strike(proj.owner, target, death_style, (proj.dir_x, proj.dir_y))
 
             # Se for SHURIKEN (Não mata! Apenas aplica stun!)
@@ -267,14 +297,13 @@ class CombatSystem:
                         if is_target_moving:
                             hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=1)
                             camera.add_shake(6.0)
-                            banners.append(FloatingBanner("SHURIKEN SNIPE - 1 DMG!", target.wx, target.wy, wz=1.7, color=(255, 215, 60)))
                             for _ in range(12):
                                 particles.append(BloodParticle(target.wx, target.wy, 0.5))
                             if dead:
                                 winner = "P1_WINS" if proj.owner == p1 else "P2_WINS"
                                 self._play_sound("fatal_strike")
                                 if cinematic_director:
-                                    death_style = _get_death_style_for_attacker(proj.owner)
+                                    death_style = _get_death_style_for_attacker(proj.owner, weapon="shuriken")
                                     cinematic_director.trigger_fatal_strike(proj.owner, target, death_style, (proj.dir_x, proj.dir_y))
                         else:
                             camera.add_shake(4.0)
@@ -488,7 +517,7 @@ class CombatSystem:
                             winner = winner_id
                             self._play_sound("fatal_strike")
                             if cinematic_director:
-                                cinematic_director.trigger_fatal_strike(proj.owner, target, "SAITOU_IMPALE", (proj.vx, proj.vy))
+                                cinematic_director.trigger_fatal_strike(proj.owner, target, "ARROW_PIN", (proj.vx, proj.vy))
 
             # Se for FLECHA SAGRADA DE KYUDO (HamayaArrowProjectile)
             elif isinstance(proj, HamayaArrowProjectile) and proj.is_active:
@@ -509,7 +538,7 @@ class CombatSystem:
                         winner = winner_id
                         self._play_sound("fatal_strike")
                         if cinematic_director:
-                            cinematic_director.trigger_fatal_strike(proj.owner, target, "SAITOU_IMPALE", (proj.vx, proj.vy))
+                            cinematic_director.trigger_fatal_strike(proj.owner, target, "ARROW_PIN", (proj.vx, proj.vy))
 
             # Se for BOMBA DE FUMAÇA (SmokeCloudEntity)
             elif isinstance(proj, SmokeCloudEntity) and proj.is_active:
@@ -536,7 +565,6 @@ class CombatSystem:
                             # Entregável 4.2: Dano de 1 HP no impacto do hook
                             hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=1)
                             camera.add_shake(6.0)
-                            banners.append(FloatingBanner("KUSARIGAMA HOOK - 1 DMG!", target.wx, target.wy, wz=1.8, color=(195, 120, 255)))
                             for _ in range(12):
                                 particles.append(BloodParticle(target.wx, target.wy, 0.4))
                             self._play_sound("chain_whip")
@@ -593,7 +621,6 @@ class CombatSystem:
                                 cinematic_director.trigger_fatal_strike(proj.owner, target, death_style, (proj.dir_x, proj.dir_y))
                         else:
                             camera.add_shake(8.0)
-                            banners.append(FloatingBanner("WAVE HIT - 2 DMG!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
                             for _ in range(15):
                                 particles.append(SparkParticle(target.wx, target.wy, 0.5))
                             self._play_sound("obstacle_hit")
@@ -659,7 +686,6 @@ class CombatSystem:
                         if cinematic_director:
                             cinematic_director.trigger_fatal_strike(None, fighter, "OKUNI_MELT", (0, 0))
                     else:
-                        banners.append(FloatingBanner("POISON - 2 DMG!", fighter.wx, fighter.wy, wz=1.8, color=(80, 225, 120)))
                         for _ in range(10):
                             particles.append(BloodParticle(fighter.wx, fighter.wy, 0.6))
 
@@ -700,7 +726,7 @@ class CombatSystem:
                         dog.state = "FOLLOW"
                         dog.hitbox_active = False
                         if cinematic_director:
-                            cinematic_director.trigger_fatal_strike(p1, p2, "CLEAN_DECAP", (dog.facing_x, dog.facing_y))
+                            cinematic_director.trigger_fatal_strike(p1, p2, "MAULED", (dog.facing_x, dog.facing_y))
                         if ctrl_mgr:
                             ctrl_mgr.rumble_player(0, 0.8, 1.0, 320)
                             ctrl_mgr.rumble_player(1, 1.0, 1.0, 400)
@@ -737,7 +763,7 @@ class CombatSystem:
                         dog.state = "FOLLOW"
                         dog.hitbox_active = False
                         if cinematic_director:
-                            cinematic_director.trigger_fatal_strike(p2, p1, "CLEAN_DECAP", (dog.facing_x, dog.facing_y))
+                            cinematic_director.trigger_fatal_strike(p2, p1, "MAULED", (dog.facing_x, dog.facing_y))
                         if ctrl_mgr:
                             ctrl_mgr.rumble_player(1, 0.8, 1.0, 320)
                             ctrl_mgr.rumble_player(0, 1.0, 1.0, 400)
@@ -855,7 +881,6 @@ class CombatSystem:
                     p2.wx = max(1.0, min(game_map.cols - 1.0, p2.wx + p1.facing_x * 1.6))
                     p2.wy = max(1.0, min(game_map.rows - 1.0, p2.wy + p1.facing_y * 1.6))
                     camera.add_shake(8.0)
-                    banners.append(FloatingBanner("RIFLE BUTT - 1 DMG!", p2.wx, p2.wy, wz=1.7, color=(210, 210, 230)))
                     for _ in range(12):
                         particles.append(SparkParticle(p2.wx, p2.wy, 0.5))
                     self._play_sound("obstacle_hit")
@@ -863,7 +888,7 @@ class CombatSystem:
                         winner = "P1_WINS"
                         self._play_sound("fatal_strike")
                         if cinematic_director:
-                            cinematic_director.trigger_fatal_strike(p1, p2, "HEADSHOT_EXPLODE", p1.slash_dir)
+                            cinematic_director.trigger_fatal_strike(p1, p2, "BLUNT_FALL", p1.slash_dir)
                 else:
                     is_ninja = (getattr(p1, "char_type", "") == "ninja" or hasattr(p1, "has_kunai"))
                     kill_label = None
@@ -903,10 +928,10 @@ class CombatSystem:
                             cinematic_director.trigger_fatal_strike(p1, p2, death_style, p1.slash_dir)
                     elif hit:
                         camera.add_shake(7.0)
-                        banners.append(FloatingBanner("TANTO STAB (1/2)!", p2.wx, p2.wy, wz=1.7, color=(255, 200, 50)))
                         for _ in range(12):
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                         self._play_sound("sword_slash")
+                        self._apply_hit_knockback(p1, p2, game_map)
 
 
         # -------------------------------------------------------------
@@ -944,7 +969,6 @@ class CombatSystem:
                     p1.wx = max(1.0, min(game_map.cols - 1.0, p1.wx + p2.facing_x * 1.6))
                     p1.wy = max(1.0, min(game_map.rows - 1.0, p1.wy + p2.facing_y * 1.6))
                     camera.add_shake(8.0)
-                    banners.append(FloatingBanner("RIFLE BUTT - 1 DMG!", p1.wx, p1.wy, wz=1.7, color=(210, 210, 230)))
                     for _ in range(12):
                         particles.append(SparkParticle(p1.wx, p1.wy, 0.5))
                     self._play_sound("obstacle_hit")
@@ -952,7 +976,7 @@ class CombatSystem:
                         winner = "P2_WINS"
                         self._play_sound("fatal_strike")
                         if cinematic_director:
-                            cinematic_director.trigger_fatal_strike(p2, p1, "HEADSHOT_EXPLODE", p2.slash_dir)
+                            cinematic_director.trigger_fatal_strike(p2, p1, "BLUNT_FALL", p2.slash_dir)
                 else:
                     is_ninja = getattr(p2, "char_type", "") == "ninja"
                     kill_label = None
@@ -991,10 +1015,10 @@ class CombatSystem:
                             cinematic_director.trigger_fatal_strike(p2, p1, death_style, p2.slash_dir)
                     elif hit:
                         camera.add_shake(7.0)
-                        banners.append(FloatingBanner("TANTO STAB (1/2)!", p1.wx, p1.wy, wz=1.7, color=(255, 200, 50)))
                         for _ in range(12):
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                         self._play_sound("sword_slash")
+                        self._apply_hit_knockback(p2, p1, game_map)
 
 
         # -------------------------------------------------------------

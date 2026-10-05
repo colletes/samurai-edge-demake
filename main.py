@@ -72,8 +72,9 @@ from src.isometric import voxel_renderer
 from src.effects.fall_render import render_falling_fighter
 from src.entities.samurai import STATE_FALL
 from src.ui.round_intro import RoundIntroScreen
-from src.ui.round_result import RoundResultScreen, check_match_winner, render_round_pips, MATCH_WINS_NEEDED
+from src.ui.round_result import RoundResultScreen, check_match_winner, render_round_pips, render_damage_bars, MATCH_WINS_NEEDED
 from src.ui.match_intro import MatchIntro
+from src.ui.knockout_cam import KnockoutCam
 from src.ui.pause_menu import (
     PauseMenu, ACTION_RESUME, ACTION_SETTINGS, ACTION_ARENA, ACTION_FIGHTER, ACTION_MAIN_MENU, ACTION_QUIT
 )
@@ -555,6 +556,7 @@ def run_game():
     camera = None
     combat_system = CombatSystem()
     cinematic_director = CinematicDirector()
+    knockout_cam = KnockoutCam()
     clash_system = ClashSystem()
     round_intro = RoundIntroScreen()
     round_result_screen = RoundResultScreen()
@@ -613,6 +615,7 @@ def run_game():
         round_start_shaken = False
         round_intro_timer = 2.0
         cinematic_director.reset_round()
+        knockout_cam.reset()
         static_render_queue = build_static_render_queue(game_map)
         round_intro.start(
             p1.name, p2.name,
@@ -649,7 +652,10 @@ def run_game():
     def request_restart():
         """Ponto único de reinício: decide entre revanche completa (partida encerrada) ou próximo round."""
         if match_winner is not None:
-            if round_result_screen.can_accept_rematch():
+            if knockout_cam.active or knockout_cam.pending:
+                knockout_cam.skip()
+                KnockoutCam.restore_classic(camera)
+            elif round_result_screen.can_accept_rematch():
                 request_rematch()
         else:
             request_next_round()
@@ -976,6 +982,9 @@ def run_game():
         # DUELO EM ANDAMENTO (GAME LOOP)
         # -------------------------------------------------------------
         touch_controls.reset_frame_triggers()
+
+        real_dt = dt
+        dt *= knockout_cam.time_scale()
 
         # Determinar direções ativas de movimentação/mira prévia
         keys = pygame.key.get_pressed()
@@ -1385,12 +1394,23 @@ def run_game():
                 play_sfx(SoundEvent.ROUND_WIN)
 
         # Entregável 5.3: Contador Best of 3 (BO3) — verifica se a partida terminou
+        if round_winner in ("P1_WINS", "P2_WINS"):
+            loser = p2 if round_winner == "P1_WINS" else p1
+            knockout_cam.arm((loser.wx, loser.wy))
+        if knockout_cam.pending and not cinematic_director.is_frozen():
+            knockout_cam.begin()
+
         if round_winner is not None and match_winner is None:
             mw = check_match_winner(score_p1, score_p2)
             if mw is not None:
                 match_winner = mw
                 winner_fighter = p1 if mw == "P1" else p2
-                round_result_screen.show(winner_fighter.name.upper(), get_fighter_color(winner_fighter), score_p1, score_p2)
+                knockout_cam.deferred_result = (winner_fighter.name.upper(), get_fighter_color(winner_fighter), score_p1, score_p2)
+
+        # A tela de resultados só aparece depois do replay de nocaute
+        if knockout_cam.deferred_result and not knockout_cam.active and not knockout_cam.pending:
+            round_result_screen.show(*knockout_cam.deferred_result)
+            knockout_cam.deferred_result = None
 
         round_result_screen.update(dt)
 
@@ -1404,7 +1424,14 @@ def run_game():
             camera.rotate(CAMERA_ORBIT_SPEED * dt)
         if keys[pygame.K_BACKSLASH]:
             camera.set_azimuth(0.0)
-        camera.update(mid_x, mid_y, dt)
+        camera_was_replaying = knockout_cam.active
+        knockout_cam.update(real_dt, (mid_x, mid_y))
+        if knockout_cam.active:
+            knockout_cam.apply_camera(camera, real_dt)
+        else:
+            camera.update(mid_x, mid_y, dt)
+            if camera_was_replaying:
+                KnockoutCam.restore_classic(camera)
 
         particles = [p for p in particles if p.update(dt)]
         # Entregável 1.4: Particle Cap Global (limite de 150 para prevenir sobrecarga de memória)
@@ -1605,6 +1632,7 @@ def run_game():
 
         # Entregável 5.3: Marcadores (pips) de rounds vencidos — Melhor-de-3 (BO3)
         render_round_pips(screen, score_p1, score_p2, p1_color, p2_color, panel_rect=panel_rect)
+        render_damage_bars(screen, p1, p2, p1_color, p2_color, panel_rect)
 
         mode_text = t("mode_hud_1p") if vs_ai_mode else t("mode_hud_2p")
         mode_surf = font_small.render(mode_text, True, COLOR_GOLD)
@@ -1791,7 +1819,7 @@ def run_game():
                 screen.blit(banner_surf, (center_x - card_w // 2, center_y - card_h // 2))
 
         # Banner de Vitória (oculto quando a partida Melhor-de-3 já foi decidida — ver tela de resultados abaixo)
-        if round_winner and match_winner is None:
+        if round_winner and match_winner is None and not (knockout_cam.active or knockout_cam.pending):
             if round_winner == "DRAW":
                 w_msg = t("draw_text")
                 w_color = COLOR_GOLD

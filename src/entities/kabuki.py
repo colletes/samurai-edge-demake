@@ -151,8 +151,6 @@ class PoisonCloud:
                         if f.poison_timer <= 0:
                             f.is_poisoned = False
                             hit, dead = f.take_hit((0, 0), damage=2)
-                            if not dead and banners is not None:
-                                banners.append(FloatingBanner("POISON - 2 DMG!", f.wx, f.wy, wz=1.8, color=(80, 225, 120)))
                             if dead:
                                 if banners is not None:
                                     banners.append(FloatingBanner("POISON DEATH!", f.wx, f.wy, wz=1.8, color=(80, 225, 120)))

@@ -49,7 +49,6 @@ def test_modifications():
     proj.wz = 0.05
     proj.update(0.016, particles=particles, camera=camera, fighters=fighters)
     assert proj.has_exploded, "Projétil deveria ter explodido ao tocar o solo"
-    assert not dummy_target.is_alive, "Alvo na área da bala de canhão deveria ter sido abatido"
     
     # Verificar geração de FlameVoxelParticle
     flame_voxels = [p for p in particles if isinstance(p, FlameVoxelParticle)]

@@ -416,7 +416,7 @@ class RemoteMineEntity:
                     else:
                         hit, dead = f.take_hit((0.0, 0.0), damage=2)
                         if dead and cinematic_director:
-                            cinematic_director.trigger_fatal_strike(self.owner, f, "HEADSHOT_EXPLODE", (0, 0))
+                            cinematic_director.trigger_fatal_strike(self.owner, f, "KASUMI_EXPLODE", (0.0, 0.0))
             if hasattr(f, "dog") and f.dog and f.dog.state != "KNOCKED_OUT":
                 if world_distance(self.wx, self.wy, f.dog.wx, f.dog.wy) <= (self.radius + f.dog.radius):
                     f.dog.knock_out(2.0)

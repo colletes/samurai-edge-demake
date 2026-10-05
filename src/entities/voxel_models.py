@@ -187,6 +187,12 @@ def _render_voxel_humanoid(
         # Poça de sangue dramática no solo
         pygame.draw.ellipse(surface, (120, 16, 20, 180), (sx - 30, sy - 14, 60, 28))
         pygame.draw.ellipse(surface, (70, 10, 12, 220), (sx - 20, sy - 10, 40, 20))
+        # O próprio modelo do lutador deitado; as caixas abaixo ficam só como reserva
+        from src.entities.voxel_corpse import draw_fallen_model
+        if draw_fallen_model(surface, camera, wx, wy, wz, facing_x, facing_y,
+                             lambda layer, lc: render_voxel_humanoid(layer, lc, wx, wy, wz, facing_x, facing_y, "IDLE", 0.0, True,
+                                                                     char_type, walk_timer, 255, False, extra_props)):
+            return
         # Torso caído
         draw_voxel_box(surface, camera, wx - 0.18, wy - 0.12, 0.03, 0.36, 0.24, 0.15, col_torso, outline=True, alpha=alpha)
         # Pelve e cinto

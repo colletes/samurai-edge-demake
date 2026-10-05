@@ -284,7 +284,7 @@ class RunawayCarriage:
                 cinematic_director.trigger_fatal_strike(
                     None,
                     fighter,
-                    death_style="HEADSHOT_EXPLODE",
+                    death_style="CRUSHED",
                     slash_dir=(self.dir_x, self.dir_y)
                 )
             return True
@@ -400,7 +400,7 @@ class FallingDebris:
                         cinematic_director.trigger_fatal_strike(
                             None,
                             f,
-                            death_style="KASUMI_EXPLODE",
+                            death_style="CRUSHED",
                             slash_dir=(0.0, 1.0)
                         )
 

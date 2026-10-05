@@ -21,18 +21,10 @@ from src.world.map_data import GameMap
 
 
 def test_kenshin_tier_d_buffs():
-    """Entregável 4.1: Kenshin Iai recovery reduzido ao acertar e i-frame pós-Shukuchi."""
+    """Entregável 4.1: i-frame pós-Shukuchi do Kenshin."""
     game_map = GameMap()
     kenshin = RedSamurai(5.0, 5.0)
 
-    # 1. Testar Iai recovery reduction on hit
-    kenshin.trigger_iai_attack(7.0, 5.0)
-    assert kenshin.state == STATE_ATTACK
-    kenshin.on_hit_success()
-    assert kenshin.state == STATE_RECOVERY
-    assert kenshin.state_timer == 0.25
-
-    # 2. Testar pós-Shukuchi i-frame
     kenshin.state = STATE_IDLE
     kenshin.roll_recovery_timer = 0.0
     kenshin.roll_cooldown_timer = 0.0

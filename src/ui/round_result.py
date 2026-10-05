@@ -52,6 +52,30 @@ def render_round_pips(surface: pygame.Surface, score_p1: int, score_p2: int, p1_
         pygame.draw.circle(surface, (20, 20, 25), (cx, y), pip_radius, width=2)
 
 
+def render_damage_bars(surface: pygame.Surface, p1, p2, p1_color, p2_color, panel_rect: pygame.Rect):
+    """Barras de dano segmentadas (uma seção por ponto de vida) logo abaixo do contador de rounds."""
+    seg_w, seg_h, gap = 34, 9, 4
+    y = panel_rect.bottom + 6
+    for fighter, color, from_left in ((p1, p1_color, True), (p2, p2_color, False)):
+        max_hp = max(1, getattr(fighter, "max_hp", 2))
+        hp = max(0, min(max_hp, getattr(fighter, "hp", max_hp)))
+        total_w = max_hp * seg_w + (max_hp - 1) * gap
+        x0 = panel_rect.x + 20 if from_left else panel_rect.right - 20 - total_w
+        backing = pygame.Rect(x0 - 3, y - 3, total_w + 6, seg_h + 6)
+        pygame.draw.rect(surface, (20, 24, 22), backing, border_radius=5)
+        pygame.draw.rect(surface, (60, 75, 68), backing, 1, border_radius=5)
+        for i in range(max_hp):
+            # P1 esvazia da direita para a esquerda; P2 da esquerda para a direita (espelhado)
+            slot = i if from_left else max_hp - 1 - i
+            seg = pygame.Rect(x0 + slot * (seg_w + gap), y, seg_w, seg_h)
+            if i < hp:
+                pygame.draw.rect(surface, color, seg, border_radius=2)
+                pygame.draw.line(surface, tuple(min(255, c + 70) for c in color), (seg.x + 2, seg.y + 1), (seg.right - 3, seg.y + 1))
+            else:
+                pygame.draw.rect(surface, (44, 30, 32), seg, border_radius=2)
+                pygame.draw.rect(surface, (120, 50, 55), seg, 1, border_radius=2)
+
+
 class RoundResultScreen:
     """Tela final de partida (Melhor-de-3), com opção de revanche rápida."""
 

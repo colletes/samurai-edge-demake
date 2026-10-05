@@ -714,12 +714,20 @@ pie title Status dos Recursos e Frentes do Projeto
   - **Teste:** `tests/test_match_intro.py::test_battle_intro_orbital_camera`
   - **Verificação:** ✅ Capturas do jogo real nas duas arenas (título, P1, P2, saída e READY)
 
-- [ ] **Entregável 7.2: Câmera Dramática de Nocaute (Instant Replay Orbital)**
+- [x] **Entregável 7.2: Câmera Dramática de Nocaute (Instant Replay Orbital)** ✅ COMPLETE
   - **Objetivo:** Quando um lutador é abatido (vida = 0), antes de `round_result.py`, executar órbita lenta da câmera ao redor do derrotado em câmera lenta enquanto cai.
-  - **Solução:** Reutilizar `Camera.azimuth` da Fase 6.1, trocando target (lutador vencido), duração (mais lento, ~2.5s), e easing (ease-out suave). Possível leve zoom final no rosto/arma para dramaticidade.
-  - **Arquivos:** `src/ui/round_result.py`, `main.py`
-  - **Teste:** Nocaute em duelo → câmera faz órbita lenta ao redor do derrotado, sem pular para result screen imediatamente.
-  - **Verificação:** ✅ Instant replay dramático implementado
+  - **Solução:** `src/ui/knockout_cam.py` (`KnockoutCam`) reutiliza `Camera.azimuth` da Fase 6.1: após o congelamento Kurosawa, a câmera gira ~70° (ease-out, 2.5 s) com zoom 1.75x e foco no derrotado, e volta suave à vista clássica (0.6 s). A simulação roda a 30% da velocidade e volta ao normal ao longo da órbita. A tela de resultados da partida e o banner de vitória só aparecem depois do replay; `Espaço`/confirmação pula o replay no fim de partida, e o próximo round começa imediatamente nos demais casos. Empate não tem replay.
+  - **Arquivos:** `[NEW] src/ui/knockout_cam.py`, `main.py`
+  - **Teste:** `tests/test_knockout_cam.py` (órbita, câmera lenta, um replay por round, pular, duração)
+  - **Verificação:** ✅ Testes de unidade e compilação; ainda não conferido em partida real.
+
+- [x] **Entregável 7.2.1: Corpos Abatidos Fiéis aos Novos Modelos e ao Golpe Sofrido** ✅ COMPLETE
+  - **Objetivo:** O corpo do derrotado, que agora fica em foco na câmera de nocaute (7.2), precisa ser coerente com o modelo voxel atual do lutador (Fase 6.5) e com o ataque que o abateu.
+  - **Problema anterior:** `VoxelCorpse` montava o corpo com blocos genéricos (cores de torso, calça e cabelo por `char_type`), sem usar os modelos, texturas de material e cel-shading dos 12 lutadores; e o estilo da morte dependia só de quem atacou, sem considerar o golpe específico.
+  - **Solução:** (1) `VoxelCorpse` desenha o próprio modelo do lutador (`victim.render`) numa camada transparente e o recorta por altura (pescoço, cintura, corte diagonal) em peças com a física 3D de antes; a camada é refeita quando azimute/zoom mudam, então os corpos acompanham a órbita do replay; (2) estilhaços (explosão, tiro na cabeça) usam cores sorteadas dos pixels do modelo; (3) estilos novos por golpe: `KUNAI_PIN` (kunai e shuriken), `ARROW_PIN` (flechas), `STAB_FALL` (tanto/faca de ninjas), `SAITOU_IMPALE` (estocada), todos com a arma cravada no peito e o corpo jogado para longe do agressor, `MAULED` (cão), `CRUSHED` (carruagem e escombros, corpo achatado) e `BLUNT_FALL` (coronhada); explosões de pólvora e bombas usam `KASUMI_EXPLODE`; o veneno derrete o próprio modelo em poça ácida; (4) mortes sem cinemática (ex.: tiro de canhão) deitam o modelo do lutador em vez das caixas genéricas; (5) a direção da queda é suavizada em tela para não inverter com o azimute.
+  - **Arquivos:** `src/entities/voxel_corpse.py`, `src/entities/voxel_models.py`, `src/combat/collision.py`, `src/world/kyoto_map.py`, `src/entities/rifleman.py`, `src/entities/projectile.py`
+  - **Teste:** `tests/test_voxel_corpse.py` (12 lutadores × 14 estilos em 4 azimutes/zooms, cores do modelo nos estilhaços, cortes, arma cravada, queda para longe do agressor, derretimento/esmagamento, mapa golpe → estilo e corpo caído sem cinemática)
+  - **Verificação:** ✅ Testes automatizados e folha de contato dos estilos renderizada; ainda não conferido em partida real.
 
 - [ ] **Entregável 7.3: Animação de Introdução Personalizada por Personagem**
   - **Objetivo:** Cada um dos 12 lutadores ganha uma pose/animação própria de apresentação (saque da lâmina, giro da capa, canhão, tiro de pederneira, cão Yamato etc.) executada no seu ato da introdução da batalha (7.1), no lugar do idle genérico.

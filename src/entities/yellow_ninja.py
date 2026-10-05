@@ -283,12 +283,6 @@ class YellowNinja(Samurai):
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
-        # Barra de Vida (se tomou dano mas ainda está vivo)
-        if self.hp < self.max_hp and self.is_alive:
-            sx, sy = camera.apply(self.wx, self.wy, 1.35)
-            pygame.draw.rect(surface, (40, 40, 40, 200), (sx - 10, sy, 20, 4))
-            pygame.draw.rect(surface, (255, 50, 50, 220), (sx - 10, sy, 10, 4))
-
         # Indicador se está desarmado (sem kunai)
         if not self.has_kunai and self.is_alive:
             sx, sy = camera.apply(self.wx, self.wy, 1.5)
