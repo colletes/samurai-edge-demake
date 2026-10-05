@@ -17,10 +17,27 @@ jobs:
       - name: Setup Butler
         uses: remarkablegames/setup-butler@v1
 
-      - name: Check itch.io Account & Games
+      - name: Download v1.4.0 Assets from GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download v1.4.0 --dir release_assets
+          ls -la release_assets/
+
+      - name: Push Windows to itch.io
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
         run: |
-          echo "=== Profile / Key Check ==="
-          curl -s -H "Authorization: $BUTLER_API_KEY" https://itch.io/api/1/key/my-games > games.json
-          cat games.json | jq . || cat games.json
+          butler push release_assets/Samurai-Edge-Demake-Windows.zip colletes/samurai-edge-bakumatsu:windows --userversion "v1.4.0"
+
+      - name: Push macOS to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          butler push release_assets/Samurai-Edge-Demake-macOS.zip colletes/samurai-edge-bakumatsu:osx --userversion "v1.4.0"
+
+      - name: Push Linux to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          butler push release_assets/Samurai-Edge-Demake-Linux.tar.gz colletes/samurai-edge-bakumatsu:linux --userversion "v1.4.0"

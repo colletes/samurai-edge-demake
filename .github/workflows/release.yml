@@ -186,7 +186,7 @@ jobs:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
         run: |
           TAG="${{ steps.release_tag.outputs.tag }}"
-          TARGET="colletes/samurai-edge-demake"
+          TARGET="colletes/samurai-edge-bakumatsu"
           
           if [ -f "release_assets/Samurai-Edge-Demake-Windows.zip" ]; then
             echo "Pushing Windows build to itch.io ($TARGET:windows)..."
@@ -220,5 +220,5 @@ jobs:
           body: |
             ### 🎮 Playable Builds & Downloads
             Official game builds for macOS, Windows, Linux, and Android are distributed **exclusively on itch.io**:
-            👉 **[Download Samurai Edge Demake on itch.io](https://colletes.itch.io/samurai-edge-demake)**
+            👉 **[Download Samurai Edge Demake on itch.io](https://colletes.itch.io/samurai-edge-bakumatsu)**
 

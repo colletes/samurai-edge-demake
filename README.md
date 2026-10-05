@@ -2,8 +2,8 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Pygame-CE](https://img.shields.io/badge/pygame--ce-2.5+-green.svg)](https://pyga.me/)
-[![Available on itch.io](https://img.shields.io/badge/itch.io-Play%20on%20itch.io-fa5c5c?logo=itchdotio&logoColor=white)](https://colletes.itch.io/samurai-edge-demake)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-lightgrey.svg)](https://colletes.itch.io/samurai-edge-demake)
+[![Available on itch.io](https://img.shields.io/badge/itch.io-Play%20on%20itch.io-fa5c5c?logo=itchdotio&logoColor=white)](https://colletes.itch.io/samurai-edge-bakumatsu)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-lightgrey.svg)](https://colletes.itch.io/samurai-edge-bakumatsu)
 [![License: Proprietary](https://img.shields.io/badge/license-Personal%20Use-red.svg)](LICENSE)
 
 A tactical isometric lethal dueling game in **3D Voxel Art** and **HD-2D**, inspired by the unforgiving realism of classics like *Bushido Blade*, Akira Kurosawa's samurai cinema, and retro demake aesthetics. Featuring volumetric dismemberment physics, dynamic procedural lighting, interactive atmospheric hazards, a blade clash QTE system, cloth physics, and a finely balanced roster of 12 warriors across 12 distinct arenas.
@@ -16,9 +16,9 @@ A tactical isometric lethal dueling game in **3D Voxel Art** and **HD-2D**, insp
 
 ## 📦 1. Downloads & Playable Releases
 
-Official pre-compiled executable packages and updates for all supported platforms are distributed **exclusively via [itch.io](https://colletes.itch.io/samurai-edge-demake)**:
+Official pre-compiled executable packages and updates for all supported platforms are distributed **exclusively via [itch.io](https://colletes.itch.io/samurai-edge-bakumatsu)**:
 
-👉 **[Download Samurai Edge Demake on itch.io](https://colletes.itch.io/samurai-edge-demake)**
+👉 **[Download Samurai Edge Demake on itch.io](https://colletes.itch.io/samurai-edge-bakumatsu)**
 
 | Platform | Channel / Package | How to Run |
 | :--- | :--- | :--- |

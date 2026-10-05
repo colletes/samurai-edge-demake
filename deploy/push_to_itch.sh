@@ -4,7 +4,7 @@
 # ==============================================================================
 set -euo pipefail
 
-ITCH_TARGET="${ITCH_TARGET:-colletes/samurai-edge-demake}"
+ITCH_TARGET="${ITCH_TARGET:-colletes/samurai-edge-bakumatsu}"
 VERSION="${1:-}"
 
 # Check butler availability
