@@ -1,4 +1,5 @@
 pygame-ce>=2.5.0
+numpy>=1.26
 
 # Opcional: reprodução do vídeo de abertura cinematográfico (src/ui/opening_video.py).
 # O jogo funciona normalmente sem isso (a abertura é simplesmente pulada).

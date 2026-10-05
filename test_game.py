@@ -163,7 +163,7 @@ def test_complete_roster():
     # 4. Testar Rifleman (Teppo): Início Carregado, Coleta de Pólvora no Chão, Coronhada e Salto Evasivo
     projectiles.clear()
     rifleman = Rifleman(wx=6.0, wy=11.0)
-    samurai_target = BlueSamurai(wx=11.0, wy=11.0)
+    samurai_target = RedSamurai(wx=11.0, wy=11.0)
     assert rifleman.has_ammo == True, "Teppo deve começar municiado!"
     rifleman.has_ammo = False
 
@@ -196,7 +196,7 @@ def test_complete_roster():
     assert rifleman.state == "IDLE"
 
     # Testar coronhada tática do Teppo (1 dano + knockback 1.6m + stun)
-    melee_dummy = BlueSamurai(wx=6.8, wy=11.0)
+    melee_dummy = RedSamurai(wx=6.8, wy=11.0)
     rifleman.trigger_rifle_butt(melee_dummy.wx, melee_dummy.wy)
     assert rifleman.hitbox_active == True
     combat.process_combat(rifleman, melee_dummy, game_map, particles, banners, camera, projectiles, 0.016)
@@ -223,7 +223,7 @@ def test_complete_roster():
     # 5. Testar Okuni: Leques de Aço (Tessen) e Finta Teatral Kawarimi com Whiff Stun
     projectiles.clear()
     okuni = Kabuki(wx=8.0, wy=11.0)
-    musashi_target = BlueSamurai(wx=8.8, wy=11.0)
+    musashi_target = RedSamurai(wx=8.8, wy=11.0)
 
     # Ataque Melee: Leques de Aço Tessen
     okuni.trigger_fan_strike(musashi_target.wx, musashi_target.wy)
@@ -507,7 +507,8 @@ def test_complete_roster():
     cs_screen = CharacterSelectScreen()
     assert not cs_screen.help_modal.is_open
     cs_screen.render(screen, pygame.font.Font(None, 36), font_test, pygame.font.Font(None, 16))
-    assert len(cs_screen.info_btn_rects) == 12, f"Esperado 12 botões de interrogação [?], obtido {len(cs_screen.info_btn_rects)}"
+    visible_info_btns = [r for r in cs_screen.info_btn_rects if r.width > 0]
+    assert len(visible_info_btns) == 12, f"Esperado 12 botões de interrogação [?], obtido {len(visible_info_btns)}"
 
     # Tecla H abre o guia de regras
     cs_screen.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_h))
