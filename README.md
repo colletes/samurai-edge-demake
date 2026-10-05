@@ -2,334 +2,368 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Pygame-CE](https://img.shields.io/badge/pygame--ce-2.5+-green.svg)](https://pyga.me/)
-[![Releases](https://img.shields.io/badge/releases-v1.3.4-gold.svg)](https://github.com/colletes/samurai-edge-demake/releases)
+[![Releases](https://img.shields.io/badge/releases-v1.4.0-gold.svg)](https://github.com/colletes/samurai-edge-demake/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-lightgrey.svg)](https://github.com/colletes/samurai-edge-demake/releases)
 [![License: Proprietary](https://img.shields.io/badge/license-Personal%20Use-red.svg)](LICENSE)
 
-Um jogo de duelo mortal isométrico tático em **3D Voxel Art** e **HD-2D**, inspirado no realismo impiedoso de clássicos como *Bushido Blade*, filmes de samurai de Akira Kurosawa e estética de demakes retrô com física de desmembramento volumétrico, iluminação dinâmica e um elenco perfeitamente equilibrado de 12 guerreiros.
+A tactical isometric lethal dueling game in **3D Voxel Art** and **HD-2D**, inspired by the unforgiving realism of classics like *Bushido Blade*, Akira Kurosawa's samurai cinema, and retro demake aesthetics. Featuring volumetric dismemberment physics, dynamic procedural lighting, interactive atmospheric hazards, a blade clash QTE system, cloth physics, and a finely balanced roster of 12 warriors across 12 distinct arenas.
 
-![Samurai Edge: Bakumatsu - Tela de Título Sumi-E](docs/screenshots/01_title_screen.png)
+![Samurai Edge: Bakumatsu - Sumi-E Title Screen](docs/screenshots/01_title_screen.png)
 
-![Samurai Edge Demake - Seleção de 12 Guerreiros do Bakumatsu](docs/screenshots/02_character_select.png)
+![Samurai Edge Demake - 12 Bakumatsu Warriors Selection](docs/screenshots/02_character_select.png)
 
 ---
 
-## 📦 1. Downloads & Links para as Releases Prontas
+## 📦 1. Downloads & Pre-compiled Releases
 
-Você pode baixar os pacotes executáveis pré-compilados diretamente na aba de **[Releases Oficiais no GitHub](https://github.com/colletes/samurai-edge-demake/releases)**:
+You can download pre-compiled executable packages directly from the **[Official GitHub Releases](https://github.com/colletes/samurai-edge-demake/releases)**:
 
-| Plataforma | Pacote de Download | Como Executar |
+| Platform | Download Package | How to Run |
 | :--- | :--- | :--- |
-| 🍏 **macOS** | [`Samurai-Edge-Demake-macOS.zip`](https://github.com/colletes/samurai-edge-demake/releases/latest) | Descompacte e abra o arquivo executável ou utilize o atalho `iniciar.command`. Caso o macOS exiba aviso de desenvolvedor não verificado: clique com o botão direito $\to$ *Abrir*, ou execute no terminal: `xattr -cr SamuraiEdge.app` |
-| 🪟 **Windows** | [`Samurai-Edge-Demake-Windows.zip`](https://github.com/colletes/samurai-edge-demake/releases/latest) | Extraia a pasta zipada e dê dois cliques em `SamuraiEdge.exe`. |
-| 🐧 **Linux** | [`Samurai-Edge-Demake-Linux.tar.gz`](https://github.com/colletes/samurai-edge-demake/releases/latest) | Extraia com `tar -xzvf Samurai-Edge-Demake-Linux.tar.gz` e execute `./SamuraiEdge/SamuraiEdge`. |
-| 🤖 **Android** | `SamuraiEdge.apk` | Guia completo de compilação rápida em [`deploy/android/README.md`](deploy/android/README.md). |
-| 📱 **iOS** | Projeto Xcode nativo | Projeto configurado para compilação via Xcode em [`deploy/ios/README.md`](deploy/ios/README.md). |
+| 🍏 **macOS** | [`Samurai-Edge-Demake-macOS.zip`](https://github.com/colletes/samurai-edge-demake/releases/latest) | Unzip and run the executable or use the `iniciar.command` shortcut. If macOS displays an unverified developer warning: right-click $\to$ *Open*, or run in terminal: `xattr -cr SamuraiEdge.app` |
+| 🪟 **Windows** | [`Samurai-Edge-Demake-Windows.zip`](https://github.com/colletes/samurai-edge-demake/releases/latest) | Extract the zip folder and double-click `SamuraiEdge.exe`. |
+| 🐧 **Linux** | [`Samurai-Edge-Demake-Linux.tar.gz`](https://github.com/colletes/samurai-edge-demake/releases/latest) | Extract via `tar -xzvf Samurai-Edge-Demake-Linux.tar.gz` and run `./SamuraiEdge/SamuraiEdge`. |
+| 🤖 **Android** | `SamuraiEdge.apk` | Build guide and instructions in [`deploy/android/README.md`](deploy/android/README.md). |
+| 📱 **iOS** | Native Xcode Project | Configured Xcode project ready for deployment in [`deploy/ios/README.md`](deploy/ios/README.md). |
 
 ---
 
-## ⚔️ 2. Mecânica do Jogo e Cenário Histórico
+## ⚔️ 2. Game Mechanics & Historical Setting
 
-### Cenário Histórico: O Crepúsculo do Período Edo (Bakumatsu)
-O jogo é ambientado em meados do século XIX, durante o turbulento período do **Bakumatsu** no Japão feudal — o fim da era dos samurais e a abertura para o comércio com o Ocidente. 
-Guerreiros de diferentes origens colidem em duas arenas temáticas com características e perigos próprios:
-- **Espadachins Tradicionais e Retalhadores**: Mestres das escolas *Iaijutsu*, *Niten Ichi-ryū* e os temidos capitães do *Shinsengumi*.
-- **Clãs Shinobi e Kunoichis**: Assassinas furtivas de Iga e Koga empunhando foices *Kusarigama* e explosivos de cerâmica.
-- **Arqueiras Miko e Mestras Kabuki**: Defensoras dos santuários xintoístas e acrobatas teatrais letais com leques de aço.
-- **Armas de Fogo Feudais**: Atiradores veteranos armados com os pesados arcabuzes *Tanegashima*.
-- **Guerreiros Estrangeiros**: Espadachins bucaneiros e mosqueteiras da guarda real europeia que aportaram nos portos de Nagasaki e Yokohama.
+### Historical Setting: The Twilight of the Edo Period (Bakumatsu)
+Set during the turbulent mid-19th century **Bakumatsu** era in feudal Japan—the end of the samurai shogunate and the rapid reopening of Japan to Western trade. 
+Warriors from conflicting allegiances clash across diverse historical battlegrounds:
+- **Traditional Swordsmen & Slashers**: Masters of *Iaijutsu*, the dual-wielding *Niten Ichi-ryū*, and elite captains of the *Shinsengumi*.
+- **Shinobi & Kunoichi Clans**: Shadow assassins of Iga and Koga wielding deadly *Kusarigama* sickles, shurikens, and ceramic bombs.
+- **Miko Archers & Kabuki Masters**: Shinto shrine protectors and lethal theatrical acrobats wielding razor steel fans and toxic breath.
+- **Feudal Firearms**: Veteran marksmen wielding matchlock *Tanegashima* arquebuses.
+- **Foreign Combatants**: Buccaneer privateers and French royal musketeers arriving through the ports of Nagasaki and Yokohama.
 
-![Seleção de Arenas e Perigos Ambientais](docs/screenshots/04_arena_select.png)
-
-### Arenas Dinâmicas de Combate
-
-#### 🎋 Arena 1: Floresta de Bambu Sagrada & Lago Zen
-Uma clareira mística cercada por bambuzais verdejantes e monumentos ancestrais:
-- **Bambuzal Cortável**: Golpes de lâmina decepam colunas de bambu, abrindo linhas de visão e novas rotas de ataque.
-- **Água Desaceleradora**: Atravessar a lagoa reduz a velocidade do lutador em 45%, tornando-o um alvo vulnerável para estocadas e projéteis.
-- **Ponte Estreita (Taiko-bashi)**: Zona de afunilamento que favorece golpes retilíneos de longo alcance e ataques de varredura ampla.
-- **Obstáculos de Cobertura**: Rochas talhadas e o poço de cantaria bloqueiam investidas, tiros de arcabuz, flechas e kunais.
-
-![Arena 1 - Jardim Sagrado de Bambus e Ponte Taiko-bashi](docs/screenshots/05_bamboo_arena_gameplay.png)
-
-#### 🔥 Arena 2: Kyoto: Bakumatsu (Guerra Urbana & Perigos Ativos)
-A capital imperial sitiada em chamas durante as rebeliões do final do xogunato:
-- **Avenida Imperial Larga**: Terreno amplo de paralelepípedos de granito, ideal para movimentação rápida, kiting e arrancadas supersônicas.
-- **Machiyas em Chamas**: Edificações tradicionais de madeira com telhados ardentes e iluminação dinâmica noturna com faíscas incandescentes.
-- **Carruagem Desgovernada (Runaway Carriage)**: Perigo ambiental letal! Uma carruagem em disparada cruza a via em alta velocidade (14.0 tiles/s), atropelando fatalmente qualquer combatente desatento.
-- **Escombros Flamejantes**: Vigas em brasa e telhas caem do topo das construções, exigindo atenção constante ao posicionamento.
-
-![Arena 2 - Kyoto Bakumatsu com Guerra Urbana e Carruagem Desgovernada](docs/screenshots/06_kyoto_bakumatsu_gameplay.png)
-
-### Mecânicas de Combate: Bushido Letal (1-Hit Kill)
-- **Morte em 1 Golpe**: Não há barras de vida longas ou combos infinitos. Um único corte limpo de espada, flecha certeira ou tiro à queima-roupa é fatal. Cada aproximação exige frieza, posicionamento e cálculo milimétrico.
-- **Violência Cinematográfica (Kurosawa Noir)**:
-  - **Hitstop Freeze**: Congelamento dramático instantâneo no exato momento do impacto letal.
-  - **Flash Monocromático de Alto Contraste**: Efeito inspirado na cinematografia de Akira Kurosawa (*Sanjuro*, *Yojimbo*), dessaturando a cena e destacando com intensidade o sangue carmesim.
-  - **Morte Atrasada (Delayed Death)**: O oponente atingido permanece estático por ~0.4s em suspense antes de colapsar com gêiseres de sangue e desmembramento volumétrico em peças 3D de voxels.
-  - **Manchas de Sangue Persistentes**: O sangue jorrado permanece no assoalho de madeira e na terra durante todo o round.
-- **Spawns Aleatórios & Indicadores de Partida**:
-  - A cada novo round, os lutadores surgem em coordenadas aleatórias da arena com distância garantida $\ge 7.0$ tiles.
-  - Indicadores piscantes `[ P1 ]` e `[ P2 ]` sobre as cabeças mostram instantaneamente quem é quem.
-
-![Violência Cinematográfica Samurai Kurosawa - 1-Hit Kill](docs/screenshots/07_cinematic_violence_kurosawa.png)
+![Arena Selection and Environmental Hazards](docs/screenshots/04_arena_select.png)
 
 ---
 
-## 🎯 3. Objetivo do Jogo
+### 🗺️ The 12 Dynamic Combat Arenas
 
-O objetivo é simples, direto e impiedoso: **eliminar o oponente antes de ser atingido**. 
-- As partidas são decididas no formato clássico de **Melhor de 3 Rounds** (First to 2 Kills).
-- **Modos Disponíveis**:
-  - 👤 **1 Jogador (1P vs IA Adaptativa)**: Enfrente a inteligência artificial com comportamentos táticos exclusivos para cada um dos 12 personagens (controle de distância, emboscadas em bambus, iscas e esquivas).
-  - 👥 **2 Jogadores Local (Versus 1v1)**: Luta direta entre dois jogadores no mesmo computador (divisão de teclado ou com dois controles de videogame independentes).
+Each arena features unique environmental hazards, destructible elements, tactical surfaces, atmospheric lighting, and shared wind dynamics:
+
+1. **🎋 Sacred Bamboo Forest (`bamboo`)**:
+   - *Features*: Sliceable bamboo stalks that cut open lines of sight, a serene Zen lake, a stone well (*Tsukubai*), and an arched wooden bridge (*Taiko-bashi*).
+   - *Hazards & Tactics*: Water slows movement by 45%, turning warriors into vulnerable targets. Narrow bridge chokepoints favor linear thrusts.
+2. **🔥 Kyoto: Burning Bakumatsu (`kyoto`)**:
+   - *Features*: Wide cobblestone imperial avenues lined with burning *machiya* townhouses and dynamic spark lighting.
+   - *Hazards & Tactics*: **Runaway Carriage** crosses the street at breakneck speed (14.0 tiles/s), instantly trampling unwary fighters. Falling flaming debris demands constant positional awareness.
+3. **🌊 Ganryū Island (`ganryu_island`)**:
+   - *Features*: Coastal shore with stranded wooden boats, plank crossings, and tidal sands.
+   - *Hazards & Tactics*: **Tide Surge** covers the beach with rising waters; navigate fissures and wooden planks to preserve footing.
+4. **🏯 Iga Rooftops (`iga_rooftops`)**:
+   - *Features*: Three tiled rooftops connected by narrow timber beams over shadowy alleys.
+   - *Hazards & Tactics*: Lethal pit drops between buildings. Requires agile dashes, Hanzo's parabolic jump, or Kenshi's *Shukuchi* to cross wide gaps safely.
+5. **🏴‍☠️ Storm Pirate Deck (`pirate_deck`)**:
+   - *Features*: Ship deck battered by ocean waves, masts, cargo barrels, and deck cannons.
+   - *Hazards & Tactics*: **Ship Roll** tilts the arena, sliding combatants across the listing deck. Strike cannons to light fuses and sweep the deck with cannonfire.
+6. **⛓️ Cave of Shadows (`shadow_cave`)**:
+   - *Features*: Subterranean cavern with ancient Jizo statues, massive stone pillars, and hanging iron chains.
+   - *Hazards & Tactics*: **Chain Pendulum** sweeps back and forth across the cavern; watch floor shadows to dodge the deadly swing. Jizo statues block projectiles.
+7. **🌫️ Temple in the Mist (`mist_temple`)**:
+   - *Features*: Ancient mountain temple enveloped in volumetric fog, pine trees, and a shallow koi pond.
+   - *Hazards & Tactics*: **Firework Mortars** rain down explosive artillery marked by warning ground circles. Pond water impairs dash mobility.
+8. **⛺ Forest Camp (`forest_camp`)**:
+   - *Features*: Hidden woodland encampment with palisades, tents, watchtowers, and supply crates.
+   - *Hazards & Tactics*: Concealed **Snare Traps** in disturbed soil immobilize fighters; supply crates provide durable projectile cover.
+9. **💥 Nagashino Field (`nagashino_field`)**:
+   - *Features*: Historic battlefield with wooden cavalry palisades, wet mud, and clan war banners (*Nobori*).
+   - *Hazards & Tactics*: **Powder Barrels** ignite upon weapon strikes, bullets, or bombs, dealing devastating area-of-effect blast damage.
+10. **🎭 Kabuki Stage (`kabuki_stage`)**:
+    - *Features*: Traditional theatrical stage with a *hanamichi* walkway, painted folding screens, and striped Kabuki curtains.
+    - *Hazards & Tactics*: **Revolving Stage Disc** steadily spins combatants, shifting positioning without direct damage; screens absorb projectile impacts.
+11. **⛩️ Mountain Shrine (`mountain_shrine`)**:
+    - *Features*: Ascending avenue of Torii gates, sacred Kyudo archery targets, and a giant bronze shrine bell.
+    - *Hazards & Tactics*: No lethal environmental traps. Strike the shrine bell to clear smoke screens and dispel toxic mist clouds.
+12. **👑 Baroque Court (`baroque_court`)**:
+    - *Features*: Manicured palace grounds with checkered marble tiles, ornamental hedges, classical statues, and a marble fountain.
+    - *Hazards & Tactics*: Hazard-free architectural duel. Hedges and marble statues provide solid cover; fountain basin slows crossing fighters.
+
+![Bamboo Arena Gameplay](docs/screenshots/05_bamboo_arena_gameplay.png)
+![Kyoto Bakumatsu Gameplay](docs/screenshots/06_kyoto_bakumatsu_gameplay.png)
 
 ---
 
-## 🥋 4. Guia Completo dos 12 Guerreiros
+### Core Combat Mechanics: Lethal Bushido (1-Hit Kill System)
 
-O elenco conta com **12 combatentes (6 mulheres e 6 homens)**, cada um com mecânicas, armas, alcances e tempos de recuperação próprios.
+- **One-Strike Lethality**: There are no bloated health bars or repetitive 50-hit juggle combos. A single clean sword slash, accurately placed arrow, or point-blank firearm shot is instantly lethal *(Musashi features a unique 3-HP endurance system balancing dual-blade defense)*. Every advance requires deliberation, patience, and precise spacing.
+- **Cinematic Violence (Kurosawa Noir)**:
+  - **Hitstop Freeze**: Instantaneous dramatic micro-freeze upon lethal impact.
+  - **High-Contrast Monochrome Flash**: Desaturates the world into stark black-and-white, highlighting vivid crimson blood sprays in homage to Akira Kurosawa classics (*Sanjuro*, *Yojimbo*).
+  - **Delayed Death**: Victims freeze in suspended shock for ~0.4s before collapsing into geysers of blood and 3D volumetric voxel dismemberment.
+  - **Persistent Bloodstains**: Blood splatters remain permanently on wooden decks, stone roads, and grass for the duration of the match.
+- **Blade Clash QTE System (New in v1.4.0)**:
+  - When two weapon strikes meet simultaneously at equal priority, fighters lock weapons in a fierce **Clash**. Rapidly mash the attack button to overpower your opponent and stagger them backwards!
+- **Match Flow & Best-of-3 Format**:
+  - Rounds begin with dramatic banner announcements (`DUEL 1`, `FINAL DUEL`).
+  - First fighter to 2 round victories claims the match.
+  - **Random Spawns & Start Indicators**: Fighters spawn $\ge 7.0$ tiles apart in fair tactical positions, with flashing `[ P1 ]` and `[ P2 ]` indicators overhead.
+
+![Cinematic Violence - Kurosawa Style 1-Hit Kill](docs/screenshots/07_cinematic_violence_kurosawa.png)
+
+---
+
+## 🎯 3. Objective & Game Modes
+
+The objective is pure and uncompromising: **cut down your opponent before they strike you**.
+
+- **Best-of-3 Rounds** (First to 2 Kills).
+- **Available Modes**:
+  - 👤 **1 Player (1P vs Adaptive AI)**: Challenge an AI engine programmed with distinct tactical behaviors for each of the 12 fighters (spacing control, bamboo ambushes, parry reflexes, baiting, and projectile kiting).
+  - 👥 **2 Players Local (Versus 1v1)**: Face off locally on the same machine using shared keyboard configurations or two independent gamepads.
+
+---
+
+## 🥋 4. Complete Guide to the 12 Warriors
+
+The roster features **12 warriors (6 female, 6 male)**, each offering distinct weapon ranges, mobility speeds, attack arcs, recovery windows, and counter strategies.
 
 ```
-       [ GUERREIROS SAMURAI EDGE ]
-Homens/Guerreiros: Kenshi | Musashi | Hanzo | Joe & Doberman | Saitou | Teppo
-Mulheres:           Murasaki | Kasumi | Okuni | Tomoe | Anne | Julie
+       [ SAMURAI EDGE ROSTER ]
+Male Warriors:   Kenshi | Musashi | Hanzo | Joe & Doberman | Saitou | Teppo
+Female Warriors: Murasaki | Kasumi | Okuni | Tomoe | Anne | Julie
 ```
 
-![Roster Completo dos 12 Guerreiros em 3D Voxel Art](docs/screenshots/03_roster_showcase.png)
+![Complete 12 Warriors Roster Showcase](docs/screenshots/03_roster_showcase.png)
 
 ---
 
-### 1. Kenshi — A Espadachim Lendária [F]
-*Mestre do Iaijutsu e do Saque Relâmpago.*
-- **Estilo**: Hiten Mitsurugi-ryū | **Velocidade**: [5/5] Máxima
-- **Ataque Primário [E / U]**: *Iai Flash* — Saque fulminante com avanço frontal em alta velocidade (1-Hit Kill) que decepa bambus pelo caminho.
-- **Ação Secundária [R / I]**: *Shukuchi* — Passo de deslocamento divino (28.0 tiles/s) deixando pós-imagens translúcidas (*zanzou*).
-- **Estratégia a Favor**: Use o *Shukuchi* para fechar a distância no exato instante em que o rival errar um ataque. O *Iai Flash* tem prioridade frontal devastadora em linha reta.
-- **Estratégia Contra**: Após desferir o *Iai Flash*, ela entra na animação de *Noto* (embainhar a katana), ficando indefesa por uma fração de segundo. Se ela errar o golpe (*whiff*), puna imediatamente! Mantenha rochas entre você e ela.
+### 1. Kenshi — The Slasher [F]
+*Master of Iaijutsu and Lightning Quickdraw.*
+- **Style**: Hiten Mitsurugi-ryū | **Speed**: [5/5] Maximum
+- **Primary Attack [E / U]**: *Iai Flash* — Lightning-fast dashing draw cut (1-Hit Kill) that slices bamboo stalks in its path.
+- **Secondary Action [R / I]**: *Shukuchi* — Divine rapid step (28.0 tiles/s) leaving trailing translucent afterimages (*zanzou*).
+- **Offensive Strategy**: Use *Shukuchi* to instantly close distance the moment an opponent misses. *Iai Flash* holds overwhelming linear forward priority.
+- **How to Counter**: After executing *Iai Flash*, Kenshi enters a brief *Noto* (sheathing) recovery animation. If she whiffs, punish immediately! Keep stone obstacles between you and her dash line.
 
 ---
 
-### 2. Musashi — O Mestre das Duas Lâminas [M]
-*O estrategista lendário do estilo Niten Ichi-ryū.*
-- **Estilo**: Niten Ichi-ryū (Katana & Wakizashi) | **Velocidade**: [2/5] Cadenciada
-- **Ataque Primário [E / U]**: *Combo de Lâminas Duplas* — Sequência de 3 cortes cruzados em rápida sucessão, cobrindo múltiplas áreas de esquiva.
-- **Ação Secundária [R / I]**: *Parry Perfeito* — Postura defensiva de aparo que desvia espadas, kunais, flechas e cães de ataque, atordoando o agressor.
-- **Estratégia a Favor**: Faça pressão com a ameaça do *Parry*. Quando o adversário hesitar com medo de atacar, avance com o combo de cortes para encurralá-lo.
-- **Estratégia Contra**: Não ataque Musashi de frente de forma óbvia! Use ataques de longa distância (Projéteis, Arcabuz, Bombas) ou finte o ataque para fazer com que ele gaste o tempo do *Parry*.
+### 2. Musashi — Dual Blade Master [M]
+*Legendary tactician of the Niten Ichi-ryū school.*
+- **Style**: Niten Ichi-ryū (Katana & Wakizashi) | **Speed**: [2/5] Measured
+- **Durability**: **3 HP (Musashi-Exclusive)** — The only fighter who can absorb up to 2 non-fatal strikes, rewarding calculated close-quarters defense.
+- **Primary Attack [E / U]**: *Dual Blade Combo* — Rapid 3-slash cross-cutting sequence with extended reach across all 3 tiers (+11% reach), covering wide evasion angles.
+- **Secondary Action [R / I]**: *Perfect Parry* — Defensive counter stance that deflects swords, kunais, arrows, and attack dogs, staggering the attacker.
+- **Offensive Strategy**: Pressure opponents with the threat of your parry. When they hesitate, step forward with your extended dual-blade combo to pin them down.
+- **How to Counter**: Never strike Musashi head-on predictably! Bait his parry window, or punish him with ranged zoning (Arquebus, Bow, Bombs).
 
 ---
 
-### 3. Hanzo — O Mestre Shinobi de Iga [M]
-*Agilidade extrema e projéteis letais à distância.*
-- **Estilo**: Ninjutsu & Kunai | **Velocidade**: [5/5] Máxima
-- **Ataque Primário [E / U]**: *Estocada Rápida* — Golpe curto e veloz com adaga shinobi (requer 2 acertos para eliminar).
-- **Ação Secundária [R / I]**: *Arremesso de Kunai* — Disparo fatal de kunai (1-Hit Kill à distância). Se errar ou atingir uma rocha, ela se crava no solo e deve ser recuperada a pé.
-- **Estratégia a Favor**: Mantenha-se móvel, espere o rival se alinhar e arremesse a Kunai para uma vitória limpa. Caso erre, use sua velocidade máxima para recolher a lâmina ou fustigar com a adaga.
-- **Estratégia Contra**: A Kunai viaja em linha reta. Movimente-se perpendicularmente (em zigue-zague) ou use troncos de bambu e rochas como escudo balístico.
+### 3. Hanzo — Iga Master Shinobi [M]
+*Superb agility and deadly long-range kunai projectiles.*
+- **Style**: Ninjutsu & Kunai | **Speed**: [5/5] Maximum
+- **Primary Attack [E / U]**: *Quick Tanto Thrust* — Rapid short-range dagger jab (requires 2 hits to eliminate).
+- **Secondary Action [R / I]**: *Kunai Throw / Parabolic Jump* — Throws a lethal flying kunai (1-Hit Kill at range). If it strikes stone or misses, it embeds into the terrain and must be retrieved on foot.
+- **Offensive Strategy**: Stay agile, align with your opponent's movement axis, and throw the kunai for a clean kill. If you miss, use max speed to retrieve it or finish with the tanto.
+- **How to Counter**: The kunai travels in a straight line. Move diagonally or zig-zag, using bamboo trunks and stone lanterns as ballistic shields.
 
 ---
 
-### 4. Joe — O American Ninja & Cão Doberman [M]
-*Combate tático em dupla com cão de caça treinado.*
-- **Estilo**: Ninjutsu Ocidental & Adestramento de Combate | **Velocidade**: [4/5] Rápido
-- **Ataque Primário [E / U]**: *Shuriken Stun* — Estrela de metal arremessada velozmente. Não mata, mas aplica paralisia e atordoamento no impacto.
-- **Ação Secundária [R / I]**: *Comando do Doberman* — O cão de guerra dispara em investida voraz, desferindo uma mordida fatal (1-Hit Kill).
-- **Estratégia a Favor**: A estratégia clássica de pinça: arremesse a Shuriken para atordoar o rival e, no mesmo segundo, aperte a ação secundária para o Doberman finalizar o alvo indefeso.
-- **Estratégia Contra**: O cão corre em linha reta previsível. Golpes cortantes de ampla abertura podem golpear e nocauteá-lo temporariamente durante o salto. Foque a pressão diretamente em Joe.
+### 4. Joe — The American Ninja & Doberman [M]
+*Tactical tandem combat paired with a trained war dog.*
+- **Style**: Western Ninjutsu & Tactical K9 | **Speed**: [4/5] Fast
+- **Primary Attack [E / U]**: *Shuriken Stun* — High-velocity thrown metal star. Non-lethal, but inflicts immediate hitstun on impact.
+- **Secondary Action [R / I]**: *Doberman Command* — Commands the war hound to lunge forward in a ferocious charge, landing a lethal bite (1-Hit Kill).
+- **Offensive Strategy**: The classic pincer tactic: throw the shuriken to stun the enemy, then immediately trigger the Doberman command to execute the immobilized target.
+- **How to Counter**: The dog charges in a predictable linear path. Wide sweeping strikes can knock the dog unconscious mid-lunge. Keep direct pressure focused on Joe.
 
 ---
 
-### 5. Hajime Saitou — O Lobo de Mibu [M]
-*O lendário capitão da terceira divisão do Shinsengumi.*
-- **Estilo**: Shinsengumi (Mizoguchi-ha Ittō-ryū) | **Velocidade**: [5/5] Carga Explosiva
-- **Ataque Primário [E / U]**: *Gatotsu Shinsen* — Arrancada com aceleração progressiva contínua até velocidade supersônica (19.0 tiles/s), cortando bambus e atravessando a arena. Pode ser levemente curvada durante a corrida.
-- **Ação Secundária [R / I]**: *Gatotsu Zeroshiki* — Estocada à queima-roupa desferida instantaneamente do corpo a corpo, sem corrida prévia.
-- **Estratégia a Favor**: O *Gatotsu* possui prioridade frontal absurda. Quando o rival iniciar um movimento, engrene a marcha do Gatotsu. Se ele tentar colar pelas costas, vire e solte o *Zeroshiki*.
-- **Estratégia Contra**: O *Gatotsu* perde controle lateral na alta velocidade e ricocheteia com atordoamento ao bater em pedras ou no poço. Lute perto dos obstáculos e esquive lateralmente no último segundo.
+### 5. Hajime Saitou — The Wolf of Mibu [M]
+*Legendary 3rd Division Captain of the Shinsengumi.*
+- **Style**: Shinsengumi (Mizoguchi-ha Ittō-ryū) | **Speed**: [5/5] Explosive Charge
+- **Primary Attack [E / U]**: *Gatotsu Shinsen* — Relentless lunging thrust accelerating up to supersonic speed (19.0 tiles/s), slicing through bamboo across the arena. Can be steered slightly while charging.
+- **Secondary Action [R / I]**: *Gatotsu Zeroshiki* — Instant point-blank thrust delivered from neutral without any charging distance.
+- **Offensive Strategy**: *Gatotsu* boasts tremendous frontal priority. If the opponent attempts to flank your recovery, pivot instantly and unleash *Zeroshiki*.
+- **How to Counter**: *Gatotsu* suffers poor turning control at top speed and staggers Saitou if he collides with solid rocks or wells. Fight near obstacles and side-step at the last split-second.
 
-![Mecânicas Especiais de Combate - Gatotsu Shinsen vs Parry Perfeito](docs/screenshots/08_special_combat_mechanics.png)
-
----
-
-### 6. Teppo — O Marksman do Arcabuz Feudal [M]
-*A revolução da pólvora nos campos de batalha japoneses.*
-- **Estilo**: Tanegashima (Tiro de Mecha Feudal) | **Velocidade**: [3/5] Cadenciada
-- **Ataque Primário [E / U]**: *Disparo de Arcabuz / Coronhada* — Se municiado, dispara um projétil devastador (1-Hit Kill). Se descarregado, desfere uma coronhada de carvalho que atordoa e repele o inimigo.
-- **Ação Secundária [R / I]**: *Carregar Pólvora (Hold) / Salto Evasivo (Tap)* — Segurar recarrega a arma; um toque rápido executa um salto acrobático para trás com fumaça protetora.
-- **Estratégia a Favor**: Teppo inicia a rodada desmuniciado! Siga a seta dourada flutuante e a bússola superior até o barril de pólvora, carregue o tiro e mantenha o oponente à distância para liquidar o duelo.
-- **Estratégia Contra**: Não deixe Teppo chegar aos barris de pólvora! Pressione-o desde o primeiro segundo de luta. Se ele conseguir carregar a arma, fique atrás de rochas densas.
+![Special Combat Mechanics - Gatotsu Shinsen vs Perfect Parry](docs/screenshots/08_special_combat_mechanics.png)
 
 ---
 
-### 7. Murasaki — A Kunoichi da Foice [F]
-*Agilidade felina com Kusarigama e prioridade absoluta de golpe.*
-- **Estilo**: Kusarigamajutsu (Foice & Corrente) | **Velocidade**: [4/5] Ágil
-- **Ataque Primário [E / U]**: *Corte de Foice (Kama Strike)* — Golpe dotado de **Precedência Absoluta**: anula e vence qualquer ataque adversário simultâneo sem gerar choque de espadas (*Clash*).
-- **Ação Secundária [R / I]**: *Puxão de Corrente* — Lança a corrente com peso de ferro; se atingir, fisga o oponente e o arrasta velozmente até seus pés.
-- **Estratégia a Favor**: Controle a distância com o gancho da corrente. Puxe o oponente e finalize imediatamente com a foice. Em trocas de golpes frontais simultâneos, seu ataque sempre tem preferência mecânica.
-- **Estratégia Contra**: A corrente tem tempo de arremesso e recolhimento. Se ela errar o puxão, avance em diagonal e puna a abertura. Nunca dispute um ataque corpo a corpo no mesmo instante contra ela.
+### 6. Teppo — Feudal Arquebus Marksman [M]
+*Gunpowder revolution on the battlefields of Sengoku and Bakumatsu.*
+- **Style**: Tanegashima Matchlock | **Speed**: [3/5] Cadenced
+- **Primary Attack [E / U]**: *Matchlock Shot / Rifle Butt Strike* — When loaded, fires a devastating bullet (1-Hit Kill). When empty, swings the heavy oak stock to stun and knock back the foe.
+- **Secondary Action [R / I]**: *Reload Powder (Hold) / Evasive Leap (Tap)* — Holding the button reloads the matchlock; tapping it triggers an evasive backward leap with smoke cover.
+- **Offensive Strategy**: Teppo starts every round unloaded! Follow the floating golden arrow and compass HUD to the nearest powder keg, load your round, and control the distance.
+- **How to Counter**: Never give Teppo room to reach powder barrels! Rush him down from second one. If he manages to load, stay behind dense stone boulders.
 
 ---
 
-### 8. Kasumi — A Kunoichi da Névoa [F]
-*Mestra do engano, bombas de cerâmica e cortinas de fumaça.*
-- **Estilo**: Pólvora & Arte da Fumaça | **Velocidade**: [4/5] Evasiva
-- **Ataque Primário [E / U]**: *Bomba em Arco 3D* — Arremessa bomba em trajetória parabólica sobre obstáculos (até 2 ativas). Detona no contato ou após queima do pavio (1.5s), com dano em área (inclui fogo amigo!).
-- **Ação Secundária [R / I]**: *Cortina de Fumaça* — Detona bomba de fumaça densa aos pés, camuflando a ninja e aplicando 65% de lentidão (*Slow*) a quem entrar na névoa.
-- **Estratégia a Favor**: Arremesse bombas por cima de rochas e bambuzais para atingir inimigos escondidos. Solte a cortina de fumaça em passagens estreitas (como a ponte) para paralisar o avanço inimigo.
-- **Estratégia Contra**: Cole nela em combate corpo a corpo! Se Kasumi lançar uma bomba muito perto de si mesma, ela sofrerá auto-dano e morrerá pela própria explosão.
+### 7. Murasaki — Sickle Kunoichi [F]
+*Feline agility with the Kusarigama and absolute attack precedence.*
+- **Style**: Kusarigamajutsu (Sickle & Weighted Chain) | **Speed**: [4/5] Agile
+- **Primary Attack [E / U]**: *Kama Strike* — A lethal strike possessing **Absolute Precedence**: cleanly overrides and beats any simultaneous enemy frontal attack without triggering a clash.
+- **Secondary Action [R / I]**: *Chain Pull* — Casts the weighted iron chain forward; if it catches the foe, drags them directly into melee range.
+- **Offensive Strategy**: Control the neutral zone with the chain. Pull the opponent inward and immediately slice them with the sickle. In simultaneous trades, your strike always wins.
+- **How to Counter**: The chain has fixed cast and reel recovery times. If she misses, advance along a diagonal angle and punish her open recovery. Never contest a simultaneous frontal melee strike against her.
 
 ---
 
-### 9. Okuni — A Mestra do Teatro Kabuki [F]
-*Dança acrobática mortal e veneno de contagem regressiva.*
-- **Estilo**: Tessen-jutsu & Dança do Veneno | **Velocidade**: [4/5] Acrobata
-- **Ataque Primário [E / U]**: *Sopro de Veneno* — Sopra uma névoa carmesim tóxica. Ao atingir o rival, inicia uma **contagem regressiva fatal de 10 SEGUNDOS para a morte**!
-- **Ação Secundária [R / I]**: *Kawarimi Decoy / Pirueta* — Salto acrobático que deixa um tronco de madeira (*kawarimi*) absorvendo golpes.
-- **Estratégia a Favor**: Sua condição de vitória é única: infecte o adversário com o veneno no início do round. Depois disso, não lute! Fuja, salte obstáculos com o *Kawarimi* e espere os 10 segundos esgotarem.
-- **Estratégia Contra**: Se for envenenado, seu tempo está correndo! Você recebe um bônus de fúria e velocidade: abandone a cautela e vá com tudo para cima de Okuni para matá-la antes que o contador chegue a zero.
+### 8. Kasumi — Mist Kunoichi [F]
+*Mistress of deception, ceramic bombs, and dense smoke screens.*
+- **Style**: Gunpowder & Art of Smoke | **Speed**: [4/5] Elusive
+- **Primary Attack [E / U]**: *3D Arcing Ceramic Bomb* — Lobs a bomb in a parabolic arc over obstacles (up to 2 active). Detonates on impact or after a 1.5s fuse, dealing area splash damage (includes self-damage!).
+- **Secondary Action [R / I]**: *Smoke Screen* — Detonates a dense smoke canister at her feet, concealing her silhouette and slowing anyone entering the cloud by 65%.
+- **Offensive Strategy**: Lob bombs over high rocks and bamboo thickets to flush out camping enemies. Drop smoke screens in narrow chokepoints like bridges.
+- **How to Counter**: Stay right in her face! If Kasumi throws a bomb at point-blank range, the explosion will catch and kill her as well.
 
 ---
 
-### 10. Tomoe — A Arqueira Miko [F]
-*Precisão sagrada do longo arco tradicional japonês.*
-- **Estilo**: Kyudo Sagrado | **Velocidade**: [4/5] Ágil
-- **Ataque Primário [E / U]**: *Retesamento do Arco Yumi* — Entra em postura de mira com barra de precisão sobre a cabeça; ao soltar, dispara uma flecha fatal com alcance superior a qualquer arma da arena.
-- **Ação Secundária [R / I]**: *Flecha de Corda* — Cancela o preparo do arco e dispara uma flecha atrelada a uma corda que se fixa no cenário e puxa a arqueira rapidamente.
-- **Estratégia a Favor**: Mantenha a maior distância possível do adversário. Use a *Flecha de Corda* para escapar quando encurralada e solte a flecha no corredor onde o inimigo estiver correndo.
-- **Estratégia Contra**: Tomoe fica imóvel e vulnerável durante os instantes de retesamento do arco (*windup*). Aproxime-se em zigue-zague e use coberturas do mapa até poder desferir o golpe letal.
+### 9. Okuni — Kabuki Theatre Master [F]
+*Deadly theatrical acrobatics and lethal countdown venom.*
+- **Style**: Tessen-jutsu & Dance of Venom | **Speed**: [4/5] Acrobat
+- **Primary Attack [E / U]**: *Toxic Breath* — Exhales a cloud of crimson poisonous mist. Catching an opponent triggers an unavoidable **10-SECOND FATAL DEATH COUNTDOWN**!
+- **Secondary Action [R / I]**: *Kawarimi Decoy / Pirouette* — Acrobatic leap leaving behind a wooden log dummy (*kawarimi*) that absorbs incoming strikes.
+- **Offensive Strategy**: Your win condition is unique: infect the opponent with venom early, then disengage! Evade, leap over obstacles with *Kawarimi*, and watch the 10-second timer expire.
+- **How to Counter**: If poisoned, your clock is ticking! You gain a temporary adrenaline fury speed boost: abandon defensive play and rush Okuni down before the timer hits zero.
 
 ---
 
-### 11. Anne — A Loba dos Mares [F]
-*A espadachim bucaneira que domina varreduras em área.*
-- **Estilo**: Alfanje Bucaneiro (Cutlass) | **Velocidade**: [4/5] Firme
-- **Ataque Primário [E / U]**: *Corte de Alfanje 180°* — Golpe horizontal varrendo um semi-círculo completo de 180 graus com 1.35 tiles de raio, punindo rolagens laterais.
-- **Ação Secundária [R / I]**: *Pólvora nos Olhos* — Arremessa pólvora abrasiva no rosto do rival à queima-roupa, aplicando atordoamento e cegueira enquanto salta em recuo evasivo.
-- **Estratégia a Favor**: Aproxime-se, jogue a pólvora no rosto do adversário para cegá-lo e, com ele desorientado, execute o giro de 180° com o alfanje. O golpe cobre toda a frente, impedindo desvios curtos.
-- **Estratégia Contra**: A pólvora tem alcance curto. Lute a média distância e utilize armas de estocada reta mais longas (como o Florete ou o Gatotsu) para puni-la de fora do seu alcance.
+### 10. Tomoe — The Miko Archer [F]
+*Sacred precision of the traditional Japanese asymmetric Yumi longbow.*
+- **Style**: Sacred Kyudo | **Speed**: [4/5] Agile
+- **Primary Attack [E / U]**: *Yumi Bow Draw* — Enters steady aiming stance with an overhead charge bar; releasing looses a high-speed fatal arrow with the longest range in the game.
+- **Secondary Action [R / I]**: *Grappling String Arrow* — Cancels bow draw and shoots a rope-tethered arrow that anchors to terrain and pulls Tomoe rapidly to safety.
+- **Offensive Strategy**: Maintain maximum distance. Use the grappling string arrow to zip away when cornered, and loose arrows into narrow transit corridors.
+- **How to Counter**: Tomoe cannot move while drawing the bow (*windup*). Close in using zig-zag movement and environmental cover until you are within striking range.
 
 ---
 
-### 12. Julie — A Flor da Guarda Real [F]
-*Nobreza europeia com esgrima clássica de precisão cirúrgica.*
-- **Estilo**: Esgrima Francesa (Florete & Capa) | **Velocidade**: [5/5] Velocidade de Elite
-- **Ataque Primário [E / U]**: *Estocada Fleche* — Lunge linear instantâneo de longo alcance (1.30 tiles) com o florete de aço, com recuperação quase instantânea (0.14s).
-- **Ação Secundária [R / I]**: *Capa Riposte & Pistola* — Postura defensiva com a capa de seda reforçada (apara golpes) seguida de um contragolpe surpresa fatal com pistola de pederneira.
-- **Estratégia a Favor**: O *Fleche* tem alcance superior ao das katanas convencionais. Mantenha o inimigo na ponta do florete. Se ele tentar contra-atacar, ative o *Riposte* da capa para aparar e disparar.
-- **Estratégia Contra**: O *Fleche* avança em uma linha muito reta e estreita; esquivas laterais limpas abrem as costas de Julie para punição. Fique atento à postura da capa para não cair no contra-ataque.
+### 11. Anne — The Sea Wolf [F]
+*Buccaneer privateer wielding sweeping cutlass arcs.*
+- **Style**: Buccaneer Cutlass | **Speed**: [4/5] Resolute
+- **Primary Attack [E / U]**: *180° Cutlass Slash* — Sweeping horizontal slash covering a full 180-degree semi-circle with a 1.35-tile radius, punishing lateral rolls.
+- **Secondary Action [R / I]**: *Gunpowder in the Eyes* — Flings abrasive black powder into the opponent's face at close range, blinding and stunning them while performing an evasive backstep.
+- **Offensive Strategy**: Close in, blind your foe with powder, and unleash the wide 180° cutlass sweep while they are disoriented.
+- **How to Counter**: The powder toss has very short reach. Keep spacing at mid-range and utilize longer linear thrusts (like Julie's Foil or Saitou's Gatotsu) to punish her from outside her sweep radius.
 
 ---
 
-### 📖 Manual Estratégico & Fichas Táticas in-game (`F1` ou `[ ? ]`)
-Pressione `F1` no teclado, clique no botão `[ ? ]` sobre o card de qualquer guerreiro na tela de seleção, ou use o atalho de ajuda no controle para abrir o guia estratégico oficial:
-- **Ficha Completa dos 12 Guerreiros**: História, estilo de luta, comandos de ataque e especial.
-- **Gráficos e Atributos**: Velocidade, alcance, cadência e estilo de combate.
-- **Táticas Ofensivas e Defensivas**: Dicas de como jogar com cada combatente e como contra-atacar seus pontos fracos (*How to Counter*).
-- **Modelo 3D Voxel ao Vivo**: Preview rotativo do modelo do personagem selecionado.
-- **Totalmente Bilíngue**: Alternância instantânea de idioma entre **Português (PT-BR)** e **Inglês (EN)**.
-
-![Manual Estratégico e Ficha Tática do Guerreiro in-game (F1)](docs/screenshots/09_help_strategy_manual.png)
+### 12. Julie — Flower of the Royal Guard [F]
+*European nobility with surgical French fencing precision.*
+- **Style**: French Fencing (Foil & Cloak) | **Speed**: [5/5] Elite Speed
+- **Primary Attack [E / U]**: *Flèche Thrust* — Instantaneous linear lunge with extended reach (1.30 tiles) and near-instant recovery (0.14s).
+- **Secondary Action [R / I]**: *Cloak Riposte & Flintlock* — Defensive parrying stance with a weighted silk cloak, followed by a surprise flintlock pistol countershot upon deflecting a blow.
+- **Offensive Strategy**: The *Flèche* outranges conventional katanas. Keep the enemy at the tip of your blade. If they retaliate, activate the cloak riposte to parry and shoot.
+- **How to Counter**: The *Flèche* travels in a very narrow straight corridor. Clean sidesteps expose Julie's back for easy punishment. Watch for the cloak posture to avoid triggering her countershot.
 
 ---
 
-## 🎮 5. Controles e Opções
+### 📖 In-Game Strategy Manual & Fighter Dossiers (`F1` or `[ ? ]`)
 
-### Mapeamento no Teclado
+Press `F1` on keyboard, click the `[ ? ]` button on any warrior card during character selection, or press the help button on your gamepad to open the official in-game strategy manual:
+- **Full Dossiers for All 12 Warriors**: Lore, weapon schools, primary attacks, and tactical specials.
+- **Stats & Graphs**: Speed, attack range, cadence, and fighting style.
+- **Offensive & Defensive Guides**: Comprehensive tactical advice on how to play each warrior and how to counter their vulnerabilities (*How to Counter*).
+- **Live 3D Voxel Preview**: Interactive rotating 3D voxel model of the selected fighter.
+- **Fully Bilingual**: Real-time instantaneous language switching between **Portuguese (PT-BR)** and **English (EN)**.
 
-| Ação | Jogador 1 (P1) | Jogador 2 (P2) |
+![In-Game Strategy Manual and Fighter Dossier (F1)](docs/screenshots/09_help_strategy_manual.png)
+
+---
+
+## 🎮 5. Controls & Options
+
+### Keyboard Mapping
+
+| Action | Player 1 (P1) | Player 2 (P2) |
 | :--- | :--- | :--- |
-| **Movimento** | `W, A, S, D` | `Setas Direcionais (↑, ←, ↓, →)` |
-| **Ataque Primário** | `E` | `U` |
-| **Ação Secundária / Especial** | `R` | `I` |
-| **Esquiva (Roll / Dash)** | `T` | `O` |
-| **Confirmar Seleção** | `E` ou `Espaço` | `U` ou `Enter` |
-| **Troca de Modo (1P vs IA / 2 Jogadores)** | `TAB` | `TAB` |
-| **Menu de Configurações** | `C` | `C` |
-| **Ajuda & Guia Estratégico in-game** | `F1` | `F1` |
-| **Reiniciar Partida (Reset)** | `Espaço` | `Espaço` |
-| **Voltar ao Menu / Sair** | `ESC` | `ESC` |
+| **Movement** | `W, A, S, D` | `Arrow Keys (↑, ←, ↓, →)` |
+| **Primary Attack** | `E` | `U` |
+| **Secondary Action / Special** | `R` | `I` |
+| **Dodge (Roll / Dash)** | `T` | `O` |
+| **Confirm Selection** | `E` or `Space` | `U` or `Enter` |
+| **Mode Switch (1P vs AI / 2P Local)** | `TAB` | `TAB` |
+| **Settings Menu** | `C` | `C` |
+| **In-Game Help & Strategy Manual** | `F1` | `F1` |
+| **Rematch / Reset Round** | `Space` | `Space` |
+| **Return to Menu / Pause / Exit** | `ESC` | `ESC` |
 
 ---
 
-### Suporte Nativo a Gamepads / Controles de Videogame
-O jogo reconhece e calibra automaticamente controles conectados via USB ou Bluetooth:
-- **Xbox (360, One, Series X/S)**: Direcional Analógico/D-Pad, Ataque no `A`, Especial no `B`.
-- **PlayStation (DualShock 4, DualSense PS5)**: Direcional Analógico/D-Pad, Ataque no `✕`, Especial no `○`.
-- **Controles Arcade / USB Genéricos**: Suporte completo via mapeamento SDL.
-- **2 Controles Simultâneos**: Conecte dois controles para jogar em modo Versus local com seus amigos no sofá.
-- **Vibração Háptica (Rumble)**: Resposta tátil com vibração em impactos críticos e finalizações.
+### Native Gamepad Support
+The game automatically detects and calibrates gamepads via USB or Bluetooth with controller-aware on-screen prompts:
+- **Xbox (360, One, Series X/S)**: D-Pad / Left Stick for movement, `A` for Attack, `B` for Special.
+- **PlayStation (DualShock 4, DualSense PS5)**: D-Pad / Left Stick for movement, `✕` for Attack, `○` for Special.
+- **Nintendo Switch / Generic Arcade USB**: Automatic SDL mapping.
+- **Simultaneous Dual Gamepads**: Plug in two controllers for instant local couch multiplayer.
+- **Haptic Vibration (Rumble)**: Dynamic force-feedback on lethal strikes, clashes, and explosions.
 
 ---
 
-### Controles Touchscreen & Dispositivos Móveis
-Ao ser executado em smartphones ou tablets (Android e iOS), o jogo ativa automaticamente uma interface tátil calibrada:
-- **Analógico Virtual Flutuante**: Posicionado no polegar esquerdo, ajusta-se dinamicamente onde você tocar na tela.
-- **Botões Táteis de Ataque e Especial**: Posicionados no polegar direito, com legendas dinâmicas do guerreiro atual e suporte a multitoque simultâneo (*multi-touch*).
-- **Suporte a Toque Contínuo (Hold)**: Permite segurar o botão de recarga da pólvora para o arcabuzeiro Teppo sem interromper a movimentação.
-- **Display Scaler Responsivo**: Adaptação para telas 16:9, 19.5:9, 20:9 e tablets sem distorção.
+### Touchscreen & Mobile Controls
+When launched on smartphones or tablets (Android & iOS), the engine activates an intuitive touch overlay:
+- **Dynamic Floating Virtual Joystick**: Anchors dynamically under your left thumb wherever you touch.
+- **Tactile Action Buttons**: Positioned under your right thumb, featuring dynamic action labels and full multi-touch support.
+- **Continuous Hold Gestures**: Smoothly supports holding down reload inputs (such as Teppo's gunpowder loading) without interrupting movement.
+- **Adaptive Display Scaler**: Seamless presentation across 16:9, 19.5:9, 20:9, and tablet aspect ratios without distortion.
 
-![Controles Virtuais Touchscreen para Android e iOS](docs/screenshots/10_touchscreen_mobile_controls.png)
-
----
-
-### Menu de Configurações & Opções (`C` ou `Start`)
-- **Idioma (i18n)**: Alternância dinâmica e instantânea entre **Português do Brasil (PT-BR)** e **Inglês (EN)**.
-- **Modo Touchscreen**: Opções `Auto` (detecta toque), `Ligado` (sempre visível) ou `Desligado`.
-- **Áudio & Efeitos**: Calibração de efeitos sonoros e intensidade de vibração háptica.
-- **Manual F1**: Menu interativo de consulta de atributos com modelo tridimensional giratório do personagem selecionado.
+![Virtual Touchscreen Mobile Controls for Android and iOS](docs/screenshots/10_touchscreen_mobile_controls.png)
 
 ---
 
-## 🛠️ 6. Instalação e Execução a partir do Código-Fonte
+### Settings & Audio Menu (`C` or `Start`)
+- **Language (i18n)**: Instant dynamic switching between **English (EN)** and **Português do Brasil (PT-BR)**.
+- **Visuals & Effects Quality**: Toggle between High (volumetric fog, particle trails, dynamic reflections) and Low performance profiles.
+- **Character Style & Cel-Shading**: Selectable character rendering styles including cel-shading outlines for Kenshi and Murasaki.
+- **Touchscreen Mode**: `Auto` (detects touch input), `On` (always visible), or `Off`.
+- **Audio & Haptics**: Dedicated volume sliders for lossless WAV sound effects, high-fidelity stage BGM, and haptic vibration intensity.
 
-### Pré-requisitos
-- Python 3.10 ou superior
-- `pip` e gerenciador de ambientes virtuais (`venv`)
+---
+
+## 🛠️ 6. Installation & Running from Source
+
+### Prerequisites
+- Python 3.10 or higher
+- `pip` and Python virtual environment (`venv`)
 
 ```bash
-# 1. Clonar o repositório
+# 1. Clone the repository
 git clone https://github.com/colletes/samurai-edge-demake.git
 cd samurai-edge-demake
 
-# 2. Criar e ativar o ambiente virtual
+# 2. Create and activate a virtual environment
 python3 -m venv venv
-source venv/bin/activate  # No Windows: venv\Scripts\activate
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# 3. Instalar dependências
+# 3. Install core dependencies
 pip install -r requirements.txt
 
-# 3.1 (Opcional) Vídeo de abertura cinematográfico
-# Sem isso o jogo funciona normalmente — a abertura é apenas pulada.
-# No macOS, use "opencv-python-headless" (NÃO "opencv-python"): a variante com GUI
-# embute sua própria libSDL2, que colide com a do pygame em runtime e pode causar
-# travamentos/erros aleatórios ("Class X is implemented in both ... mysterious crashes").
+# 3.1 (Optional) Cinematic Opening Video Support
+# Without these packages, the game runs normally by skipping the opening video.
+# On macOS, use "opencv-python-headless" (NOT "opencv-python") to avoid SDL collisions:
 pip install --no-deps opencv-python-headless==4.10.0.84 sounddevice numpy
 pip install --no-deps pyvidplayer2==0.9.37
 
-# 4. Executar o jogo
+# 4. Launch the game
 python3 main.py
 
-# Dica para macOS: você também pode abrir com um duplo clique no script:
+# macOS quick shortcut: you can also double-click:
 # ./iniciar.command
 ```
 
-### Execução da Suíte de Testes Automatizados
+### Running the Automated Test Suite
 ```bash
-# Executa todos os 18 testes automatizados de sistema
+# Run all automated system tests
 ./venv/bin/python test_game.py
 
-# Executa testes específicos de controles e responsividade tátil
+# Run controller and touchscreen response tests
 ./venv/bin/python tests/test_controllers_and_touch.py
 ```
 
 ---
 
-## 📄 7. Licença de Uso
+## 📄 7. License
 
-Este projeto é disponibilizado sob uma **Licença Proprietária de Uso Pessoal Não Comercial** (*Source-Available / Personal Non-Commercial License*).
-- Você tem permissão para baixar, executar, modificar localmente e estudar o código para fins pessoais e não comerciais.
-- Todos os direitos autorais, de publicação, exploração comercial e distribuição de builds são reservados com exclusividade a **Thiago Carvalho**.
-- É expressamente proibida a cópia, republicação ou incorporação deste código em produtos comerciais sem autorização prévia por escrito.
-Consulte o arquivo [`LICENSE`](LICENSE) para os termos jurídicos completos.
+This project is distributed under a **Proprietary Personal Non-Commercial License** (*Source-Available / Personal Non-Commercial License*).
+- You are granted permission to download, execute, modify locally, and study the source code for personal, educational, and non-commercial purposes.
+- All copyrights, publication rights, commercial exploitation, and distribution of official builds are reserved exclusively by **Thiago Carvalho**.
+- Copying, redistributing, or incorporating this codebase into commercial products without prior written permission is strictly prohibited.
+See the [`LICENSE`](LICENSE) file for complete legal terms.
