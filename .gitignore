@@ -55,3 +55,8 @@ assets/Opening Videos/Take*
 /SPRINT_*.md
 /VISUAL_ENHANCEMENTS.md
 !/BALANCE_REPORT*.md
+
+# Distribution archives
+*.zip
+*.tar.gz
+
