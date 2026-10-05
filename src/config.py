@@ -148,6 +148,7 @@ CHAR_ARCHER = "archer"
 CHAR_TOMOE = "archer"
 CHAR_PIRATE = "pirate"
 CHAR_MUSKETEER = "musketeer"
+CHAR_BOSS = "gashadokuro"  # Oni Gashadokuro, chefe do Arcade (não é um lutador do elenco)
 CHAR_RANDOM = "random_fighter"  # carta de sorteio na seleção de personagens (não é um lutador)
 
 # Mapeamento de Teclas Padrão
@@ -212,6 +213,7 @@ ARENA_KABUKI_STAGE = "kabuki_stage"
 ARENA_MOUNTAIN_SHRINE = "mountain_shrine"
 ARENA_PIRATE_DECK = "pirate_deck"
 ARENA_BAROQUE_COURT = "baroque_court"
+ARENA_GASHADOKURO = "gashadokuro_graveyard"  # arena do chefe do Arcade, fora das telas de seleção
 ARENA_RANDOM = "random"
 
 # Cores da Arena Kyoto Bakumatsu (Noite de Guerra Civil)

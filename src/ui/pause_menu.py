@@ -15,6 +15,7 @@ ACTION_ARENA = "ARENA"
 ACTION_FIGHTER = "FIGHTER"
 ACTION_MAIN_MENU = "MAIN_MENU"
 ACTION_QUIT = "QUIT"
+ACTION_ABANDON = "ABANDON"
 
 _ITEMS = [
     ("pause_resume", ACTION_RESUME),
@@ -25,6 +26,13 @@ _ITEMS = [
     ("pause_quit", ACTION_QUIT),
 ]
 
+_ARCADE_ITEMS = [
+    ("pause_resume", ACTION_RESUME),
+    ("pause_settings", ACTION_SETTINGS),
+    ("arcade_abandon", ACTION_ABANDON),
+    ("pause_quit", ACTION_QUIT),
+]
+
 PANEL_W, ROW_H, HEADER_H, PAD_BOTTOM = 460, 52, 86, 34
 
 
@@ -32,13 +40,17 @@ class PauseMenu:
     def __init__(self):
         self.is_open = False
         self.selected = 0
+        self.items = _ITEMS
+        self.confirm_abandon = False
         self.item_rects: list[pygame.Rect] = []
         self._snapshot: pygame.Surface | None = None
         self._axis_held = False
 
-    def open(self, snapshot: pygame.Surface):
-        """Abre o menu congelando o quadro atual como fundo."""
+    def open(self, snapshot: pygame.Surface, arcade: bool = False, demo: bool = False):
+        """Abre o menu congelando o quadro atual como fundo (Arcade: sem cenário/lutador; demo: sem escolha de cenário)."""
         self.is_open = True
+        self.items = _ARCADE_ITEMS if arcade else [i for i in _ITEMS if not (demo and i[1] == ACTION_ARENA)]
+        self.confirm_abandon = False
         self.selected = 0
         self._snapshot = snapshot.copy()
         self._axis_held = False
@@ -47,8 +59,17 @@ class PauseMenu:
         self.is_open = False
         self._snapshot = None
 
+    def _choose(self, index: int) -> str | None:
+        """Abandonar a jornada pede uma segunda confirmação."""
+        action = self.items[index][1]
+        if action == ACTION_ABANDON and not self.confirm_abandon:
+            self.confirm_abandon = True
+            return None
+        return action
+
     def _move(self, step: int):
-        self.selected = (self.selected + step) % len(_ITEMS)
+        self.confirm_abandon = False
+        self.selected = (self.selected + step) % len(self.items)
 
     def handle_event(self, event, ctrl_mgr=None) -> str | None:
         """Devolve a ação escolhida (ACTION_*) ou None."""
@@ -60,7 +81,7 @@ class PauseMenu:
             elif event.key in (pygame.K_DOWN, pygame.K_s):
                 self._move(1)
             elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
-                return _ITEMS[self.selected][1]
+                return self._choose(self.selected)
 
         elif event.type == pygame.MOUSEMOTION:
             for i, r in enumerate(self.item_rects):
@@ -71,7 +92,7 @@ class PauseMenu:
             for i, r in enumerate(self.item_rects):
                 if r.collidepoint(event.pos):
                     self.selected = i
-                    return _ITEMS[i][1]
+                    return self._choose(i)
 
         elif event.type in (pygame.JOYBUTTONDOWN, pygame.JOYHATMOTION):
             from src.input.controller_manager import get_dpad_motion_from_event
@@ -82,7 +103,7 @@ class PauseMenu:
                 return None
             if event.type == pygame.JOYBUTTONDOWN and ctrl_mgr is not None:
                 if ctrl_mgr.is_event_menu_confirm(event) or event.button == 0:
-                    return _ITEMS[self.selected][1]
+                    return self._choose(self.selected)
                 if ctrl_mgr.is_event_menu_cancel(event) or ctrl_mgr.is_event_menu_pause(event) or event.button in (1, 6, 7):
                     return ACTION_RESUME
 
@@ -105,7 +126,7 @@ class PauseMenu:
         shade.fill((6, 6, 10, 170))
         surface.blit(shade, (0, 0))
 
-        panel_h = HEADER_H + ROW_H * len(_ITEMS) + PAD_BOTTOM
+        panel_h = HEADER_H + ROW_H * len(self.items) + PAD_BOTTOM
         panel = pygame.Rect((SCREEN_WIDTH - PANEL_W) // 2, (SCREEN_HEIGHT - panel_h) // 2, PANEL_W, panel_h)
         pm.draw_paper_card(surface, panel, seed=57)
 
@@ -116,15 +137,16 @@ class PauseMenu:
 
         item_font = get_title_font(19)
         self.item_rects = []
-        for i, (key, _action) in enumerate(_ITEMS):
+        for i, (key, _action) in enumerate(self.items):
             row = pygame.Rect(panel.x + 36, panel.y + HEADER_H + i * ROW_H, PANEL_W - 72, ROW_H - 6)
             self.item_rects.append(row)
             selected = i == self.selected
+            text = t("arcade_abandon_confirm") if (self.confirm_abandon and _action == ACTION_ABANDON) else t(key)
             if selected:
                 pm.draw_brush_highlight(surface, row.inflate(10, 4), pm.SEAL_RED, seed=i + 3)
-                label = item_font.render(t(key), True, (252, 244, 226))
+                label = item_font.render(text, True, (252, 244, 226))
             else:
-                label = pm.render_ink(item_font, t(key), pm.INK)
+                label = pm.render_ink(item_font, text, pm.INK)
             max_w = row.width - 24
             if label.get_width() > max_w:
                 label = pygame.transform.smoothscale(label, (max_w, label.get_height()))

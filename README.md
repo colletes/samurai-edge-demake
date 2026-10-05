@@ -103,6 +103,10 @@ Each arena features unique environmental hazards, destructible elements, tactica
   - **Persistent Bloodstains**: Blood splatters remain permanently on wooden decks, stone roads, and grass for the duration of the match.
 - **Blade Clash QTE System (New in v1.4.0)**:
   - When two weapon strikes meet simultaneously at equal priority, fighters lock weapons in a fierce **Clash**. Rapidly mash the attack button to overpower your opponent and stagger them backwards!
+- **Arcade Mode (New in v1.5.0)**:
+  - Solo journey of 11 fights: 7 best-of-3 duels, a mirror match, an endurance match (1x2), the ninja challenge and the final boss, **Oni Gashadokuro** (5 voxel phases, telegraphed attacks).
+  - Continues are infinite but counted: each one costs 2000 points and lowers the AI difficulty; two fights in a row without a Continue raise it. High scores and the current run are saved in `arcade_save.json`.
+- **Demo edition**: the itch.io `-demo` channels ship Kenshi and Tomoe only, Kenshi's arena, 1P or 2P, without Arcade. Run `SAMURAI_EDGE_DEMO=1 python main.py` to try it from source.
 - **Match Flow & Best-of-3 Format**:
   - Rounds begin with dramatic banner announcements (`DUEL 1`, `FINAL DUEL`).
   - First fighter to 2 round victories claims the match.

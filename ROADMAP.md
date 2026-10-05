@@ -10,11 +10,8 @@
 
 ```mermaid
 pie title Status dos Recursos e Frentes do Projeto
-    "Concluído (Fases 1-6, 7.1, 7.2, 7.2.1, Patches, Balanceamento)" : 90
+    "Concluído (Fases 1-6, 7, 8, Patches, Balanceamento)" : 98
     "Fase 5.5: pergaminho no título/opções/pausa e idioma salvo" : 2
-    "Fase 7: introdução e vitória por personagem (7.3, 7.4)" : 3
-    "Fase 8: Modo Arcade (8.1)" : 3
-    "Fase 8: Boss Gashadokuro (8.2)" : 2
 ```
 
 ---
@@ -821,7 +818,8 @@ pie title Status dos Recursos e Frentes do Projeto
 
 *Visão geral: o Arcade (8.1) é uma jornada de 11 lutas (7 duelos, mirror match, endurance match, ninja challenge e o chefe) montada sobre o duelo BO3 que já existe; o chefe (8.2) é a 11ª luta e ocupa o lugar do "P2" no duelo. Por isso o 8.1 é feito primeiro, com a 11ª luta temporariamente apontando para um duelista comum (ou para um boss de teste), e o 8.2 entra por último sem refazer o fluxo.*
 
-- [ ] **Entregável 8.1: Modo Torneio Arcade (11 Lutas)**
+- [x] **Entregável 8.1: Modo Torneio Arcade (11 Lutas)**
+  - **Implementação (v1.5.0):** `src/arcade/` (`arcade_mode.py` regras puras, `arcade_save.py`, `arcade_screens.py`, `arcade_tables.py` gerado por `tools/generate_arcade_tables.py` a partir do `tournament_results.json` existente); estados `ARCADE_*` no `main.py`; "Continuar jornada" aparece no menu de dificuldade; pausa própria com abandono confirmado. Testes: `tests/test_arcade_mode.py`. Pendentes: perfis de IA por lutador (8.1.8), anel do espelho sob os pés, bônus de golpe de estilo (o parâmetro existe, mas o `main.py` ainda passa falso).
   - **Objetivo:** Campanha solo: o jogador escolhe a dificuldade inicial e um lutador e enfrenta 11 lutas em sequência, cada uma na própria arena; os Continues são infinitos, mas contados e penalizados na pontuação final; vitórias somam pontos e entram em uma tabela de recordes.
   - **Estrutura da jornada (11 lutas):**
     1. **Lutas 1 a 7 — Duelos BO3** (vence quem ganhar 2 rounds) contra 7 lutadores **sem os ninjas** (Hanzo, Joe, Kasumi e Murasaki ficam de fora desta etapa): o conjunto é Kenshi, Musashi, Saitou, Teppo, Okuni, Tomoe, Anne e Julie, sem o próprio jogador, do mais fraco ao mais forte. Se o jogador escolher um ninja sobram 8 e um deles é descartado por sorteio com a semente da jornada.
@@ -851,7 +849,8 @@ pie title Status dos Recursos e Frentes do Projeto
   - **Critério de aceite:** do título até o final sem passar por nenhuma tela do modo Versus, com a dificuldade escolhida no início e ajustada pelas vitórias e pelos Continues, os três formatos especiais (espelho, endurance e ninja challenge) funcionando, Continues infinitos contados na pontuação final, recorde salvo e jornada retomável.
   - **Riscos:** (1) `main.py` já tem ~1800 linhas e estado do duelo em variáveis locais: manter as regras fora dele (módulo puro) e deixar só ganchos finos (`on_round_end`, `on_match_end`); (2) `request_restart()` e `match_winner` precisam saber se estão no Arcade (feito pela fase do `OutcomeSequence` do 7.4); (3) duração de uma jornada de 11 lutas: se ficar longa, oferecer "Arcade curto" como variação (por exemplo, só 3 duelos antes dos três formatos especiais), sem mudar as regras; (4) os desafios 9 e 10 trocam o P2 no meio da partida: `start_new_match` hoje recria arena, câmera, névoa e iluminação a cada round, então separar "recriar lutadores" de "recriar cenário" ou aceitar o custo de recriar o cenário; (5) o espelho usa o mesmo `char_type` nos dois lados: conferir tudo que usa `isinstance`/`char_type` para identificar o lado (HUD, IA, projéteis com `owner`).
 
-- [ ] **Entregável 8.2: Boss Final "Oni Gashadokuro" (5 Fases Voxel)**
+- [x] **Entregável 8.2: Boss Final "Oni Gashadokuro" (5 Fases Voxel)**
+  - **Implementação (v1.5.0):** `src/entities/boss_model.py` (31 ossos reaproveitados, desabamento), `src/entities/boss_oni.py` (10 pontos de vida, 5 fases, áreas telegrafadas, `BOSS_TUNING`), arena `gashadokuro_graveyard` escondida em `arenas.py`, barra do chefe no HUD, checkpoint por fase no Arcade; `tools/simulate_boss.py` para calibrar. Testes: `tests/test_boss_oni.py`. **Pendentes:** trilha `bgm_gashadokuro.mp3` (usa a da Gruta das Sombras), SFX `BOSS_*`, tela "AVISO" em tinta, órbita da câmera na transformação e calibração com jogadores reais (um bot que desvia conclui só ~6%, Kenshi 50%).
   - **Objetivo:** Esqueleto colossal (gashadokuro: esqueleto gigante formado pelos ossos de mortos de fome no campo de batalha) como 11ª e última luta do Arcade, com 5 transformações volumétricas distintas (cada uma perde uma parte do corpo e reaproveita os mesmos voxels), padrões de ataque telegrafados e uma arena própria.
   - **Ponto de partida (código atual):** `CombatSystem.process_combat(p1, p2, ...)` recebe exatamente dois lutadores e usa `p2.radius` (0.35 padrão) e `wz < 0.65` na colisão corpo a corpo; `main.py` assume `p1`/`p2` e tem ramos `isinstance` por classe para IA, especiais e HUD; perigos telegrafados já existem (`TelegraphedHazard(damage, warn_time, active_time)` em `src/world/hazards.py`, usados pelas arenas) e projéteis em `src/entities/projectile.py`; 1 unidade de altura do mundo ≈ 32 px a zoom 1.0 e um lutador tem ~1.25 unidades, então um chefe de até ~5.5 unidades de altura (a serpente tem ~5.5 de comprimento) ocupa até ~180 px a zoom 1.0 (cabe nos 720 px, com folga para zoom 0.85); `VoxelCorpse` (7.2.1) corta modelos humanoides e não serve para o chefe.
   - **Decisões de projeto (D5 a D8; valores iniciais, calibrar com simulação em 8.2.7):**

@@ -57,6 +57,8 @@ def render_damage_bars(surface: pygame.Surface, p1, p2, p1_color, p2_color, pane
     seg_w, seg_h, gap = 34, 9, 4
     y = panel_rect.bottom + 6
     for fighter, color, from_left in ((p1, p1_color, True), (p2, p2_color, False)):
+        if getattr(fighter, "is_boss", False):
+            continue  # o chefe tem a própria barra (render_boss_bar)
         max_hp = max(1, getattr(fighter, "max_hp", 2))
         hp = max(0, min(max_hp, getattr(fighter, "hp", max_hp)))
         total_w = max_hp * seg_w + (max_hp - 1) * gap
@@ -74,6 +76,33 @@ def render_damage_bars(surface: pygame.Surface, p1, p2, p1_color, p2_color, pane
             else:
                 pygame.draw.rect(surface, (44, 30, 32), seg, border_radius=2)
                 pygame.draw.rect(surface, (120, 50, 55), seg, 1, border_radius=2)
+
+
+def render_boss_bar(surface: pygame.Surface, boss, panel_rect: pygame.Rect):
+    """Barra do chefe: 10 pontos de vida em 5 grupos de 2 (um por fase), com o nome e o título da fase."""
+    seg_w, seg_h, gap, group_gap = 22, 10, 3, 7
+    max_hp = max(1, boss.max_hp)
+    groups = max_hp // 2
+    total_w = groups * (2 * seg_w + gap) + (groups - 1) * group_gap
+    x0 = panel_rect.right - 20 - total_w
+    y = panel_rect.bottom + 6
+    backing = pygame.Rect(x0 - 3, y - 3, total_w + 6, seg_h + 6)
+    pygame.draw.rect(surface, (20, 24, 22), backing, border_radius=5)
+    pygame.draw.rect(surface, (60, 75, 68), backing, 1, border_radius=5)
+    for i in range(max_hp):
+        g, k = divmod(i, 2)
+        # Esvazia da esquerda para a direita; a fase atual fica destacada
+        seg = pygame.Rect(x0 + g * (2 * seg_w + gap + group_gap) + k * (seg_w + gap), y, seg_w, seg_h)
+        if i < boss.hp:
+            color = (240, 110, 70) if g == boss.phase else (200, 90, 62)
+            pygame.draw.rect(surface, color, seg, border_radius=2)
+            pygame.draw.line(surface, (255, 190, 150), (seg.x + 2, seg.y + 1), (seg.right - 3, seg.y + 1))
+        else:
+            pygame.draw.rect(surface, (44, 30, 32), seg, border_radius=2)
+            pygame.draw.rect(surface, (120, 50, 55), seg, 1, border_radius=2)
+    font = get_text_font(15)
+    label = font.render(f"{boss.name.upper()} — {t('boss_phase_label', n=boss.phase + 1, title=boss.phase_title)}", True, (255, 200, 150))
+    surface.blit(label, (panel_rect.right - 20 - label.get_width(), y + seg_h + 6))
 
 
 class RoundResultScreen:

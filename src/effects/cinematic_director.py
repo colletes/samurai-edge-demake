@@ -15,6 +15,7 @@ class CinematicDirector:
         self.bw_flash_duration = 0.45
         self.delayed_death_timer = 0.0
         self.pending_corpse = None
+        self.pending_boss = None  # chefe cujos ossos desabam depois do congelamento fatal (8.2.5)
         self.corpses = []  # Lista de corpos voxel persistentes na partida
 
         # Cache de Kanjis de corte fatal Kurosawa (Entregável 3.2)
@@ -22,7 +23,7 @@ class CinematicDirector:
         self.current_kanji_text: str = ""
         self.current_kanji_subtitle: str = ""
 
-    def _build_kanji_overlay(self, attacker=None, victim=None, death_style: str = ""):
+    def _build_kanji_overlay(self, attacker=None, victim=None, death_style: str = "", phrase: tuple | None = None):
         """Gera e cacheia a textura de caligrafia Sumi-E dos kanjis de corte fatal."""
         import random
         from src.ui.fonts import get_text_font
@@ -34,7 +35,7 @@ class CinematicDirector:
             ("神速必殺", "SHINSOKU HISSATSU — GOLPE DIVINO"),
             ("生死一瞬", "SEISHI ISSHUN — VIDA E MORTE"),
         ]
-        kanji_str, sub_str = random.choice(phrases)
+        kanji_str, sub_str = phrase or random.choice(phrases)
         self.current_kanji_text = kanji_str
         self.current_kanji_subtitle = sub_str
 
@@ -71,6 +72,20 @@ class CinematicDirector:
 
     def trigger_fatal_strike(self, attacker, victim, death_style: str, slash_dir: tuple[float, float]):
         """Dispara a sequência de cinema samurai no golpe letal."""
+        if getattr(victim, "is_boss", False):
+            from src.i18n import t
+            self.is_active = True
+            self.freeze_timer = 0.5
+            self.bw_flash_timer = 0.7
+            self.delayed_death_timer = 0.6
+            victim.is_alive = False
+            victim.state = "DYING_FREEZE"
+            victim.state_timer = 0.5
+            self._build_kanji_overlay(attacker, victim, death_style, phrase=("餓者髑髏", t("boss_defeated")))
+            self.pending_corpse = None
+            self.pending_boss = victim
+            return
+
         self.is_active = True
         self.freeze_timer = 0.38          # Tempo de congelamento inicial
         self.bw_flash_timer = 0.50        # Duração do filtro preto e branco
@@ -98,6 +113,9 @@ class CinematicDirector:
 
         if self.delayed_death_timer > 0:
             self.delayed_death_timer = max(0.0, self.delayed_death_timer - dt)
+            if self.delayed_death_timer <= 0 and self.pending_boss is not None:
+                self.pending_boss.begin_collapse()
+                self.pending_boss = None
             if self.delayed_death_timer <= 0 and self.pending_corpse:
                 # O suspense acabou: O corpo se parte e o geiser explode!
                 if self.pending_corpse.victim:
@@ -152,6 +170,7 @@ class CinematicDirector:
         self.bw_flash_timer = 0.0
         self.delayed_death_timer = 0.0
         self.pending_corpse = None
+        self.pending_boss = None
         self.corpses.clear()
         self.cached_kanji_surf = None
         self.current_kanji_text = ""

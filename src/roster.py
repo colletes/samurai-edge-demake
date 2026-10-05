@@ -27,3 +27,6 @@ ARENA_ORDER = tuple(arena for _, arena, _ in ROSTER)
 ARENA_BY_FIGHTER = {fighter: arena for fighter, arena, _ in ROSTER}
 FIGHTER_BY_ARENA = {arena: fighter for fighter, arena, _ in ROSTER}
 FIGHTER_NAME_KEY = {fighter: f"char_{key}_name" for fighter, _, key in ROSTER}
+
+# Dados gerados do Arcade (tools/generate_arcade_tables.py): ordem de força geral e taxa de vitória por confronto
+from src.arcade.arcade_tables import ARCADE_TIER_ORDER, ARCADE_MATCHUP_TABLE  # noqa: E402,F401

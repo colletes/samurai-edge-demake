@@ -30,6 +30,7 @@ from src.ui.portraits import get_portrait
 from src.ui.fonts import get_title_font, get_text_font
 from src.effects import parchment as pm
 from src.roster import ROSTER_ORDER
+from src.edition import is_demo, DEMO_FIGHTERS
 
 # Paleta Sumi-E inspirada no conceito artístico do título
 COLOR_SUMI_INK = (18, 18, 20)
@@ -326,9 +327,19 @@ class PreviewCamera:
 
 
 class CharacterSelectScreen:
+    arcade_mode = False  # Arcade: só o P1 escolhe, sem modo 2P nem etapa do oponente
+
+    @property
+    def vs_ai(self) -> bool:
+        return self._vs_ai
+
+    @vs_ai.setter
+    def vs_ai(self, value: bool):
+        self._vs_ai = True if self.arcade_mode else value
+
     def __init__(self, ai_difficulty: str = "normal"):
         self.p1_choice_idx = 0  # Kenshin
-        self.p2_choice_idx = 1  # Musashi
+        self.p2_choice_idx = ROSTER_ORDER.index(CHAR_ARCHER) if is_demo() else 1  # Musashi (na demo, Tomoe)
         self.p1_ready = False
         self.p2_ready = False
         self.vs_ai = True
@@ -414,6 +425,21 @@ class CharacterSelectScreen:
         return len(self.characters) - 1
 
     def _grid_step(self, idx: int, dx: int, dy: int) -> int:
+        """Move o cursor; na demo pula as cartas bloqueadas."""
+        new = self._raw_grid_step(idx, dx, dy)
+        if not is_demo():
+            return new
+        for _ in range(40):
+            if not self.is_locked(new):
+                return new
+            new = self._raw_grid_step(new, dx, dy)
+        return idx
+
+    def is_locked(self, idx: int) -> bool:
+        """Na demo só Kenshi e Tomoe podem ser escolhidos (a carta Aleatório também fica bloqueada)."""
+        return is_demo() and self.characters[idx]["id"] not in DEMO_FIGHTERS
+
+    def _raw_grid_step(self, idx: int, dx: int, dy: int) -> int:
         """Move o cursor na grade 6x2 de guerreiros mais a carta Aleatório numa terceira linha."""
         cols, rnd = 6, self.random_idx
         if idx == rnd:
@@ -577,6 +603,8 @@ class CharacterSelectScreen:
 
     def cycle_ai_difficulty(self):
         """Alterna o nível de dificuldade da IA (Fácil -> Normal -> Difícil)."""
+        if self.arcade_mode:
+            return  # no Arcade a dificuldade vem do menu próprio e muda durante a jornada
         from src.audio.sound_manager import SoundManager
         from src.audio.sound_events import SoundEvent
         from src.input.controls_storage import load_controls_config, save_controls_config
@@ -613,7 +641,7 @@ class CharacterSelectScreen:
         if self.reveal is not None:
             return False
         result = self._handle_event_inner(event)
-        if result is True and self.random_idx in (self.p1_choice_idx, self.p2_choice_idx):
+        if result is True and self.random_idx in ((self.p1_choice_idx,) if self.arcade_mode else (self.p1_choice_idx, self.p2_choice_idx)):
             self._start_reveal()
             return False
         return result
@@ -623,7 +651,7 @@ class CharacterSelectScreen:
         n = len(ROSTER_ORDER)
         targets = {}
         for player, idx in (("P1", self.p1_choice_idx), ("P2", self.p2_choice_idx)):
-            if idx == self.random_idx:
+            if idx == self.random_idx and (player == "P1" or not self.arcade_mode):
                 targets[player] = random.randrange(n)
         self.reveal = {"t": 0.0, "roulette": 1.1, "hold": 0.55, "targets": targets, "last_step": {}}
 
@@ -679,7 +707,7 @@ class CharacterSelectScreen:
                     return
 
                 active_idx = self.p1_choice_idx if (not self.vs_ai or self.selection_step == "P1") else self.p2_choice_idx
-                if dy < 0 and active_idx < cols:
+                if dy < 0 and active_idx < cols and not self.arcade_mode:
                     self.focus_zone = "MODE_BTN"
                     return
 
@@ -708,6 +736,8 @@ class CharacterSelectScreen:
 
             if self.vs_ai:
                 if self.selection_step == "P1":
+                    if self.arcade_mode:
+                        return True
                     self.selection_step = "AI"
                     return False
                 elif self.selection_step == "AI":
@@ -1080,6 +1110,14 @@ class CharacterSelectScreen:
             return random.choice(ROSTER_ORDER) if idx == self.random_idx else self.characters[idx]["id"]
         return pick(self.p1_choice_idx), pick(self.p2_choice_idx), self.vs_ai
 
+    def _render_locked_overlay(self, surface, rect, font):
+        """Escurece a carta bloqueada da demo e marca que ela só existe na versão completa."""
+        shade = pygame.Surface(rect.size, pygame.SRCALPHA)
+        shade.fill((12, 10, 14, 170))
+        surface.blit(shade, rect.topleft)
+        label = font.render(t("demo_locked_card"), True, (225, 205, 160))
+        surface.blit(label, (rect.centerx - label.get_width() // 2, rect.centery - label.get_height() // 2))
+
     def _render_random_card(self, surface, rect, idx, char_info, parch, font_name, font_small, font_tiny, font_stamp):
         """Faixa do sorteio: círculo com interrogação, nome e dica; durante a roleta pulsa em dourado."""
         is_p1 = (self.p1_choice_idx == idx)
@@ -1183,7 +1221,12 @@ class CharacterSelectScreen:
 
         # 4. Botão Modo de Jogo & Dificuldade da IA (Kanban laqueado com encaixes de ferro)
         is_mode_focused = (self.focus_zone == "MODE_BTN")
-        if self.vs_ai:
+        if self.arcade_mode:
+            self.mode_btn_rect = pygame.Rect(0, 0, 0, 0)
+            self.difficulty_btn_rect = pygame.Rect(0, 0, 0, 0)
+            arcade_rect = pygame.Rect(SCREEN_WIDTH // 2 - 190, 52, 380, 32)
+            draw_kanban_menu_button(surface, font_zen_small, t("arcade_title"), "", arcade_rect, False, True, self.anim_timer)
+        elif self.vs_ai:
             self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 290, 52, 350, 32)
             self.difficulty_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 + 70, 52, 180, 32)
             mode_text = "MODO: 1P vs IA (TREINO)" if lang == LANG_PT else "MODE: 1P vs AI (TRAIN)"
@@ -1249,9 +1292,11 @@ class CharacterSelectScreen:
             if char_info["id"] == CHAR_RANDOM:
                 # Carta Aleatório: faixa estreita na terceira linha, no fim da grade
                 rand_rect = pygame.Rect(SCREEN_WIDTH // 2 - 260, start_y + 2 * (card_h + spacing_y), 520, 48)
-                self.card_rects.append(rand_rect)
+                self.card_rects.append(pygame.Rect(0, 0, 0, 0) if self.is_locked(idx) else rand_rect)
                 self.info_btn_rects.append(pygame.Rect(0, 0, 0, 0))
                 self._render_random_card(surface, rand_rect, idx, char_info, parch, font_oriental_name, font_zen_small, font_zen_tiny, font_zen_stamp)
+                if self.is_locked(idx):
+                    self._render_locked_overlay(surface, rand_rect, font_zen_small)
                 continue
 
             row = idx // 6
@@ -1260,7 +1305,7 @@ class CharacterSelectScreen:
             cy = start_y + row * (card_h + spacing_y)
 
             rect = pygame.Rect(cx, cy, card_w, card_h)
-            self.card_rects.append(rect)
+            self.card_rects.append(pygame.Rect(0, 0, 0, 0) if self.is_locked(idx) else rect)
 
             is_p1 = (self.p1_choice_idx == idx)
             is_p2 = (self.p2_choice_idx == idx)
@@ -1394,6 +1439,8 @@ class CharacterSelectScreen:
             self.info_btn_rects.append(info_btn)
             draw_hanko_stamp(surface, font_zen_mid, "?", info_btn.x, info_btn.y + 7, size=24,
                              color=COLOR_HANKO_RED if parch else COLOR_GOLD, border_w=1)
+            if self.is_locked(idx):
+                self._render_locked_overlay(surface, rect, font_zen_small)
 
         # 7. Botão Grande de Ação: pergaminho com vara + pincelada vermelha (ou laca escarlate no fallback)
         start_w = 420

@@ -5,6 +5,19 @@ All notable changes to Samurai Edge Demake are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-10-05
+
+### Added
+- **Arcade mode**: 11-fight journey (7 duels, mirror match, endurance 1x2, ninja challenge, final boss) with infinite counted Continues, dynamic AI difficulty, scoring, high scores and resumable runs
+- **Oni Gashadokuro**: 5-phase voxel skeleton boss with telegraphed attacks, its own arena and per-phase checkpoints
+- Per-character intro and victory animations, with an end-of-round sequence (knockout replay, victory pose)
+- Hit knockback, knockout replay camera, HUD damage bars and voxel corpses
+- Default language detected from the system (`SAMURAI_EDGE_LANG` overrides it)
+- Demo edition (itch.io `-demo` channels): Kenshi and Tomoe only, Kenshi's arena, 1P or 2P, no Arcade
+
+### Removed
+- Cel shading option and models
+
 ## [1.4.0] - 2026-10-04
 
 ### Added

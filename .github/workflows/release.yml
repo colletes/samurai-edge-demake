@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - '!v*-demo'
   workflow_dispatch:
     inputs:
       tag_name:
@@ -40,6 +41,9 @@ jobs:
           python tests/test_phase3_controls_and_persistence.py
           python tests/test_patches_and_improvements.py
           python tests/test_audio_system.py
+          python tests/test_arcade_mode.py
+          python tests/test_boss_oni.py
+          python tests/test_demo_edition.py
 
   build:
     name: Build (${{ matrix.platform }})

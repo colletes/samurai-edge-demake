@@ -5,7 +5,7 @@ Aqui ficam os dados de cada arena e o registro dos tipos de prop, estrutura e pe
 (`arena_generator.py`) sabe instanciar. Novas arenas (Entregável 6.3) são só novos specs.
 """
 from src.config import (
-    ARENA_BAMBOO, ARENA_KYOTO, ARENA_GANRYU, ARENA_IGA, ARENA_PIRATE_DECK, ARENA_SHADOW_CAVE, ARENA_MIST_TEMPLE, ARENA_FOREST_CAMP, ARENA_NAGASHINO, ARENA_KABUKI_STAGE, ARENA_MOUNTAIN_SHRINE, ARENA_BAROQUE_COURT, COLOR_BG, COLOR_KYOTO_BG,
+    ARENA_BAMBOO, ARENA_KYOTO, ARENA_GANRYU, ARENA_IGA, ARENA_PIRATE_DECK, ARENA_SHADOW_CAVE, ARENA_MIST_TEMPLE, ARENA_FOREST_CAMP, ARENA_NAGASHINO, ARENA_KABUKI_STAGE, ARENA_MOUNTAIN_SHRINE, ARENA_BAROQUE_COURT, ARENA_GASHADOKURO, COLOR_BG, COLOR_KYOTO_BG,
     COLOR_GRASS, COLOR_GRASS_LIGHT, COLOR_EARTH, COLOR_WATER, COLOR_WATER_HIGHLIGHT,
     COLOR_KYOTO_STONE, COLOR_KYOTO_STONE_LIGHT, COLOR_KYOTO_STONE_DARK, COLOR_KYOTO_CURB, COLOR_KYOTO_PAVEMENT,
     MAP_COLS, MAP_ROWS,
@@ -804,12 +804,60 @@ ARENA_SPECS: dict[str, ArenaSpec] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Campo dos Mortos de Fome (chefe Oni Gashadokuro) — 8.2.3, fora das telas de seleção
+# ---------------------------------------------------------------------------
+TILE_GY_SOIL = 58
+TILE_GY_PATH = 59
+TILE_GY_MOUND = 60
+
+_GY_GRAVES = ((5.5, 5.5), (16.5, 5.5), (3.5, 11.0), (18.5, 11.0), (5.5, 16.5), (16.5, 16.5), (9.0, 13.5), (13.0, 8.5))
+_GY_LANTERNS = ((7.0, 3.5), (15.0, 3.5), (7.0, 18.5), (15.0, 18.5))
+
+GASHADOKURO_SPEC = ArenaSpec(
+    id=ARENA_GASHADOKURO,
+    name="Campo dos Mortos de Fome",
+    cols=MAP_COLS,
+    rows=MAP_ROWS,
+    bg_color=(18, 8, 12),
+    music="bgm_shadow_cave",  # troca por bgm_gashadokuro quando a trilha existir (8.2.4)
+    wind=WindSpec(1, 0.3, 0.2, 0.5),
+    tile_styles={
+        TILE_GY_SOIL: TileStyle("flat", ((58, 44, 40), (52, 39, 36)), pattern="parity", edge=(30, 22, 22), surface="earth"),
+        TILE_GY_PATH: TileStyle("flat", ((92, 74, 68), (84, 67, 62)), pattern="parity", edge=(48, 36, 34), surface="earth"),
+        TILE_GY_MOUND: TileStyle("flat", ((120, 96, 84), (110, 88, 77)), pattern="parity", edge=(62, 46, 42), surface="earth"),
+    },
+    layers=(
+        FillLayer(TILE_GY_SOIL),
+        EllipseLayer(TILE_GY_PATH, cx=10.5, cy=10.5, radius=9.0),
+        EllipseLayer(TILE_GY_MOUND, cx=10.5, cy=7.5, radius=2.6),
+    ),
+    props=(
+        tuple(PropSpec("jizo", x, y) for x, y in _GY_GRAVES)
+        + tuple(PropSpec("stone_lantern", x, y) for x, y in _GY_LANTERNS)
+    ),
+    playable_bounds=(2.0, 2.0, 20.0, 20.0),
+    spawns=SpawnRule(x_range=(4.0, 18.0), margin=4.0, min_distance=7.0, fallback=((10.5, 17.5), (10.5, 7.5))),
+    stage=StageSpec(10.5, 10.5),
+    drift_count=0,
+    lighting=LightingEnvironment(
+        ambient_color=(130, 60, 70), ambient_strength=0.4, vignette=0.5,
+        lights=tuple(LightSource(x, y, 0.9, (255, 80, 60), 3.6, flicker=0.25) for x, y in _GY_LANTERNS),
+        atmosphere=(AtmosphereEffect("mist", density=0.7),),
+    ),
+)
+
+# Arenas que só o Arcade usa: ficam fora de `arena_ids()` e, portanto, das telas de seleção e do sorteio
+HIDDEN_ARENA_SPECS = {ARENA_GASHADOKURO: GASHADOKURO_SPEC}
+
+
 def arena_ids() -> list[str]:
     """Ids das arenas jogáveis, na ordem de registro (a 'Arena Aleatória' sorteia entre elas)."""
     return list(ARENA_SPECS)
 
 
 def create_arena(arena_id: str) -> ArenaMap:
-    if arena_id not in ARENA_SPECS:
+    spec = ARENA_SPECS.get(arena_id) or HIDDEN_ARENA_SPECS.get(arena_id)
+    if spec is None:
         raise KeyError(f"Arena desconhecida: {arena_id}")
-    return ArenaMap(ARENA_SPECS[arena_id])
+    return ArenaMap(spec)

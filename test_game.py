@@ -601,10 +601,9 @@ def test_complete_roster():
     # Navegar para Arcade (Cima / W)
     title_screen.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_UP))
     assert title_screen.selected_mode == MODE_ARCADE
-    # Tentar confirmar Arcade -> Deve bloquear e retornar None, ativando notice_timer
+    # Confirmar Arcade -> Agora habilitado (8.1): devolve a ação ARCADE
     res_arcade = title_screen.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
-    assert res_arcade is None
-    assert title_screen.notice_timer > 0.0
+    assert res_arcade == "ARCADE"
 
     # Navegar para Versus e confirmar
     title_screen.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN))

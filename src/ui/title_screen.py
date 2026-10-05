@@ -14,6 +14,7 @@ from src.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_GOLD, COLOR_WHITE, COLOR_BG, get_asset_path
 )
 from src.i18n import t
+from src.edition import is_demo
 
 MODE_ARCADE = 0
 MODE_VERSUS = 1
@@ -65,6 +66,7 @@ class SumieTitleScreen:
         """
         Retorna:
           - "VERSUS": se o jogador confirmar Versus
+          - "ARCADE": se o jogador confirmar Arcade
           - "OPTIONS": se o jogador confirmar Opções
           - "QUIT": se o jogador cancelar/voltar na tela inicial
           - None: se ainda na tela
@@ -131,9 +133,11 @@ class SumieTitleScreen:
 
     def _activate_current_mode(self) -> str | None:
         if self.selected_mode == MODE_ARCADE:
-            self.notice_timer = 2.0
-            self.notice_text = t("arcade_development_notice")
-            return None
+            if is_demo():
+                self.notice_timer = 2.0
+                self.notice_text = t("demo_locked_notice")
+                return None
+            return "ARCADE"
         elif self.selected_mode == MODE_VERSUS:
             return "VERSUS"
         elif self.selected_mode == MODE_OPTIONS:
@@ -188,7 +192,7 @@ class SumieTitleScreen:
 
         # Itens do Menu
         modes = [
-            {"id": MODE_ARCADE, "name": t("mode_arcade"), "sub": t("mode_coming_soon"), "enabled": False},
+            {"id": MODE_ARCADE, "name": t("mode_arcade"), "sub": t("demo_locked_sub") if is_demo() else t("mode_arcade_sub"), "enabled": not is_demo()},
             {"id": MODE_VERSUS, "name": t("mode_versus"), "sub": t("mode_immediate_duel"), "enabled": True},
             {"id": MODE_OPTIONS, "name": t("mode_options"), "sub": t("mode_configure_controls"), "enabled": True},
         ]
@@ -252,5 +256,8 @@ class SumieTitleScreen:
             surface.blit(notice_surf, (notice_rect.centerx - notice_surf.get_width() // 2, notice_rect.centery - notice_surf.get_height() // 2))
 
         # 5. Rodapé com instruções em Zen Antique
+        if is_demo():
+            badge = font_menu_title.render(t("demo_badge"), True, COLOR_GOLD)
+            surface.blit(badge, (SCREEN_WIDTH - badge.get_width() - 24, 20))
         tip_text = font_menu_tip.render(t("title_menu_hint"), True, (175, 170, 165))
         surface.blit(tip_text, (SCREEN_WIDTH // 2 - tip_text.get_width() // 2, SCREEN_HEIGHT - 16))

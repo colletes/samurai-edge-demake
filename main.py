@@ -36,7 +36,7 @@ from src.config import (
     COLOR_BG, COLOR_WHITE, COLOR_GOLD, COLOR_RED_AURA, COLOR_BLUE_AURA, COLOR_YELLOW_AURA,
     KEY_RESTART, KEY_TOGGLE_AI, KEY_SETTINGS, DEFAULT_CONTROLS,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
-    CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
+    CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER, CHAR_BOSS,
     COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA, COLOR_SAITOU_AURA,
     COLOR_RIFLE_AURA, COLOR_KABUKI_AURA, COLOR_ARCHER_AURA,
     COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA,
@@ -57,6 +57,7 @@ from src.entities.kabuki import Kabuki, PoisonCloud
 from src.entities.kyudo_archer import KyudoArcher
 from src.entities.pirate import PirateSwordswoman
 from src.entities.musketeer import Musketeer
+from src.entities.boss_oni import BossOni
 from src.entities.ai_controller import SamuraiAI
 from src.entities.pickups import PowderPouch
 from src.combat.collision import CombatSystem
@@ -72,12 +73,16 @@ from src.effects.fall_render import render_falling_fighter
 from src.entities.samurai import STATE_FALL, STATE_IDLE, STATE_INTRO, STATE_VICTORY
 from src.entities.pose_scripts import BeatPlayer
 from src.ui.round_intro import RoundIntroScreen
-from src.ui.round_result import RoundResultScreen, check_match_winner, render_round_pips, render_damage_bars, MATCH_WINS_NEEDED
+from src.ui.round_result import RoundResultScreen, check_match_winner, render_round_pips, render_damage_bars, render_boss_bar, MATCH_WINS_NEEDED
 from src.ui.match_intro import MatchIntro
 from src.ui.outcome_sequence import OutcomeSequence
 from src.ui.pause_menu import (
-    PauseMenu, ACTION_RESUME, ACTION_SETTINGS, ACTION_ARENA, ACTION_FIGHTER, ACTION_MAIN_MENU, ACTION_QUIT
+    PauseMenu, ACTION_RESUME, ACTION_SETTINGS, ACTION_ARENA, ACTION_FIGHTER, ACTION_MAIN_MENU, ACTION_QUIT, ACTION_ABANDON
 )
+from src.arcade import arcade_save
+from src.edition import is_demo, DEMO_ARENA
+from src.arcade.arcade_mode import ArcadeRun, FIGHT_WON, FIGHT_LOST, NEXT_OPPONENT, FightKind
+from src.arcade.arcade_screens import ArcadeDifficultyScreen, ArcadeBracketScreen, ArcadeResultScreen
 from src.ui.settings_menu import SettingsMenu, format_key_name
 from src.ui.character_select import CharacterSelectScreen
 from src.ui.title_screen import SumieTitleScreen
@@ -101,6 +106,10 @@ class GameState(Enum):
     ARENA_SELECT = "arena_select"
     DUEL_PLAYING = "duel_playing"
     DUEL_RESULT = "duel_result"
+    ARCADE_DIFFICULTY = "arcade_difficulty"
+    ARCADE_CHAR_SELECT = "arcade_char_select"
+    ARCADE_BRACKET = "arcade_bracket"
+    ARCADE_RESULT = "arcade_result"
 
 # Compatibilidade com código existente
 STATE_OPENING_VIDEO = GameState.OPENING_VIDEO.value
@@ -108,6 +117,10 @@ STATE_TITLE = GameState.TITLE.value
 STATE_CHAR_SELECT = GameState.CHARACTER_SELECT.value
 STATE_ARENA_SELECT = GameState.ARENA_SELECT.value
 STATE_DUEL_PLAYING = GameState.DUEL_PLAYING.value
+STATE_ARCADE_DIFFICULTY = GameState.ARCADE_DIFFICULTY.value
+STATE_ARCADE_CHAR_SELECT = GameState.ARCADE_CHAR_SELECT.value
+STATE_ARCADE_BRACKET = GameState.ARCADE_BRACKET.value
+STATE_ARCADE_RESULT = GameState.ARCADE_RESULT.value
 
 def create_fighter(char_id: str, wx: float, wy: float):
     """Fábrica de lutadores com base no ID escolhido."""
@@ -135,9 +148,15 @@ def create_fighter(char_id: str, wx: float, wy: float):
         return PirateSwordswoman(wx, wy)
     elif char_id == CHAR_MUSKETEER:
         return Musketeer(wx, wy)
+    elif char_id == CHAR_BOSS:
+        return BossOni(wx, wy)
     return RedSamurai(wx, wy)
 
 def get_fighter_color(fighter):
+    if isinstance(fighter, BossOni):
+        return (226, 96, 64)
+    if getattr(fighter, "mirror_alt", False):
+        return (70, 210, 200)  # espelho do Arcade: cor alternativa para distinguir do jogador
     if isinstance(fighter, RedSamurai):
         return COLOR_RED_AURA
     elif isinstance(fighter, BlueSamurai):
@@ -489,7 +508,7 @@ def run_game():
     pygame.init()
     pygame.font.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption(TITLE)
+    pygame.display.set_caption(f"{TITLE} (Demo)" if is_demo() else TITLE)
     clock = pygame.time.Clock()
     quality.load_effects_quality(quality.SETTINGS_PATH)
 
@@ -541,6 +560,7 @@ def run_game():
     else:
         game_state = STATE_TITLE
     selected_arena_id = ARENA_KYOTO
+    demo_start_pending = False
 
     # Dados da Partida
     p1_char_id = CHAR_KENSHIN
@@ -582,17 +602,39 @@ def run_game():
     match_winner = None
     round_number = 1
 
+    # Arcade (8.1): a jornada vive em `arcade_run`; as regras ficam em src/arcade/arcade_mode.py
+    arcade_run: ArcadeRun | None = None
+    arcade_start_level = 1
+    arcade_fight_over = None      # "won" | "lost" quando a luta atual terminou
+    arcade_round_status = None    # último resultado de `on_round_end`
+    arcade_round_reported = False
+    round_clock = 0.0
+    arcade_difficulty_screen = ArcadeDifficultyScreen()
+    arcade_bracket = ArcadeBracketScreen()
+    arcade_result_screen = ArcadeResultScreen()
+
     static_render_queue = []
 
     def start_new_match(play_intro: bool = False):
-        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, lighting_fx, terrain_fx, fog, round_winner, round_start_timer, round_start_shaken, round_intro_timer, powder_pouches, decoys, poison_clouds, powder_traps, static_render_queue
+        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, lighting_fx, terrain_fx, fog, round_winner, round_start_timer, round_start_shaken, round_intro_timer, powder_pouches, decoys, poison_clouds, powder_traps, static_render_queue, arcade_round_reported, round_clock
         game_map = create_arena(selected_arena_id)
         (p1_wx, p1_wy), (p2_wx, p2_wy) = game_map.pick_spawns(min_distance=7.0)
+        if p2_char_id == CHAR_BOSS:
+            (p1_wx, p1_wy), (p2_wx, p2_wy) = (10.5, 17.5), (10.5, 7.5)  # o chefe nasce do monte; o jogador, na borda oposta
 
         p1 = create_fighter(p1_char_id, wx=p1_wx, wy=p1_wy)
         p2 = create_fighter(p2_char_id, wx=p2_wx, wy=p2_wy)
         p1.set_facing(p2.wx, p2.wy)
         p2.set_facing(p1.wx, p1.wy)
+        if isinstance(p2, BossOni):
+            if arcade_run is not None:
+                p2.set_difficulty(arcade_run.difficulty_name)
+                p2.set_phase(arcade_run.boss_phase)
+        if arcade_run is not None and p2_char_id == p1_char_id:
+            p2.mirror_alt = True
+            p2.name = f"{p2.name} ({t('arcade_mirror_tag')})"
+        arcade_round_reported = False
+        round_clock = 0.0
         for f in (p1, p2):
             if isinstance(f, Kabuki):
                 f.registered_decoys = decoys
@@ -650,8 +692,98 @@ def run_game():
         round_number += 1
         start_new_match()
 
+    def save_arcade_run():
+        data = arcade_save.load()
+        data["current_run"] = arcade_run.to_dict() if arcade_run is not None else None
+        arcade_save.save(data)
+
+    def leave_arcade():
+        """Sai do Arcade de volta ao título; a dificuldade do Versus volta ao valor salvo."""
+        nonlocal arcade_run, arcade_fight_over, arcade_round_status, game_state, match_winner
+        arcade_run = None
+        arcade_fight_over = None
+        arcade_round_status = None
+        match_winner = None
+        char_select_screen.arcade_mode = False
+        ai.set_difficulty(settings_menu.ai_difficulty)
+        round_result_screen.hide()
+        pause_menu.close()
+        sound_mgr.play_music(MusicTrack.TITLE_THEME)
+        game_state = STATE_TITLE
+
+    def abandon_arcade():
+        data = arcade_save.load()
+        data["current_run"] = None
+        arcade_save.save(data)
+        leave_arcade()
+
+    def open_arcade_bracket(banner=None, gained=0):
+        nonlocal game_state
+        arcade_bracket.open(arcade_run, banner, gained)
+        sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
+        game_state = STATE_ARCADE_BRACKET
+
+    def begin_arcade_fight():
+        """Prepara e inicia a luta atual da jornada (arena, lutadores, IA) com a introdução orbital."""
+        nonlocal p1_char_id, p2_char_id, vs_ai_mode, selected_arena_id, score_p1, score_p2, match_winner
+        nonlocal round_number, arcade_fight_over, arcade_round_status, game_state
+        fight = arcade_run.current_fight()
+        selected_arena_id = fight.arena_id
+        p1_char_id = arcade_run.player_char
+        p2_char_id = arcade_run.current_opponent()
+        vs_ai_mode = True
+        ai.set_difficulty(arcade_run.difficulty_name)
+        score_p1 = score_p2 = 0
+        match_winner = None
+        round_number = 1
+        arcade_fight_over = None
+        arcade_round_status = None
+        round_result_screen.hide()
+        start_new_match(play_intro=True)
+        game_state = STATE_DUEL_PLAYING
+
+    def advance_arcade_opponent():
+        """Desafios 9 e 10: próximo oponente na mesma arena, com o placar de rounds zerado."""
+        nonlocal p2_char_id, score_p1, score_p2, round_number, arcade_round_status
+        p2_char_id = arcade_run.current_opponent()
+        score_p1 = score_p2 = 0
+        round_number = 1
+        arcade_round_status = None
+        start_new_match()
+
+    def finish_arcade_fight():
+        """Fim da luta: vitória avança as chaves (ou fecha a jornada), derrota oferece o Continue."""
+        nonlocal game_state
+        if arcade_fight_over == "lost":
+            open_arcade_bracket("defeat")
+            return
+        gained = arcade_run.stats[-1]["score"] if arcade_run.stats else 0
+        if arcade_run.is_finished:
+            data = arcade_save.load()
+            rank = arcade_save.add_high_score(data, arcade_run)
+            data["current_run"] = None
+            arcade_save.save(data)
+            arcade_result_screen.open(arcade_run, rank, data["high_scores"])
+            sound_mgr.play_music(MusicTrack.TITLE_THEME)
+            game_state = STATE_ARCADE_RESULT
+        else:
+            save_arcade_run()
+            open_arcade_bracket("cleared", gained)
+
     def request_restart():
         """Ponto único de reinício: decide entre revanche completa (partida encerrada) ou próximo round."""
+        if arcade_run is not None:
+            if arcade_fight_over is not None:
+                if outcome_seq.active or outcome_seq.pending:
+                    outcome_seq.skip()
+                    OutcomeSequence.restore_classic(camera)
+                else:
+                    finish_arcade_fight()
+            elif arcade_round_status == NEXT_OPPONENT:
+                advance_arcade_opponent()
+            else:
+                request_next_round()
+            return
         if match_winner is not None:
             if outcome_seq.active or outcome_seq.pending:
                 outcome_seq.skip()
@@ -796,6 +928,18 @@ def run_game():
                         char_select_screen.reset()
                         sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
                         game_state = STATE_CHAR_SELECT
+                    elif action == "ARCADE":
+                        play_sfx(SoundEvent.MENU_SELECT)
+                        saved = arcade_save.load()
+                        saved_run = saved["current_run"]
+                        try:
+                            if saved_run is not None:
+                                ArcadeRun.from_dict(saved_run)
+                        except (ValueError, KeyError, TypeError):
+                            saved_run = None
+                        arcade_difficulty_screen.open(
+                            {"easy": 0, "normal": 1, "hard": 2}.get(settings_menu.ai_difficulty, 1), saved_run, saved["high_scores"])
+                        game_state = STATE_ARCADE_DIFFICULTY
                     elif action == "OPTIONS":
                         play_sfx(SoundEvent.MENU_SELECT)
                         settings_menu.open()
@@ -805,6 +949,106 @@ def run_game():
             title_screen.update(dt)
             title_screen.render(screen, font_large, font_mid, font_small)
             pygame.display.flip()
+            continue
+
+        # -------------------------------------------------------------
+        # ARCADE (8.1): dificuldade, seleção do lutador, chaves e resultado final
+        # -------------------------------------------------------------
+        if game_state == STATE_ARCADE_DIFFICULTY:
+            for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
+                if event.type == pygame.QUIT:
+                    running = False
+                    continue
+                result = arcade_difficulty_screen.handle_event(event, ctrl_mgr)
+                if result == "BACK":
+                    play_sfx(SoundEvent.MENU_SELECT)
+                    game_state = STATE_TITLE
+                elif result == "RESUME":
+                    play_sfx(SoundEvent.MENU_SELECT)
+                    arcade_run = ArcadeRun.from_dict(arcade_difficulty_screen.saved_run)
+                    open_arcade_bracket()
+                elif isinstance(result, tuple):
+                    play_sfx(SoundEvent.MENU_SELECT)
+                    arcade_start_level = result[1]
+                    char_select_screen.arcade_mode = True
+                    char_select_screen.vs_ai = True
+                    char_select_screen.reset()
+                    sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
+                    game_state = STATE_ARCADE_CHAR_SELECT
+                if game_state != STATE_ARCADE_DIFFICULTY:
+                    break
+            if game_state == STATE_ARCADE_DIFFICULTY:
+                arcade_difficulty_screen.render(screen)
+                pygame.display.flip()
+            continue
+
+        if game_state == STATE_ARCADE_CHAR_SELECT:
+            start_arcade = False
+            for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
+                if event.type == pygame.QUIT:
+                    running = False
+                    continue
+                result = char_select_screen.handle_event(event)
+                if result == "BACK":
+                    play_sfx(SoundEvent.MENU_SELECT)
+                    char_select_screen.arcade_mode = False
+                    game_state = STATE_ARCADE_DIFFICULTY
+                elif result:
+                    start_arcade = True
+            if char_select_screen.update(dt):
+                start_arcade = True
+            if start_arcade and game_state == STATE_ARCADE_CHAR_SELECT:
+                play_sfx(SoundEvent.MENU_SELECT)
+                chosen, _, _ = char_select_screen.get_selected_characters()
+                char_select_screen.arcade_mode = False
+                arcade_run = ArcadeRun(player_char=chosen, difficulty_start=arcade_start_level, seed=random.randrange(2 ** 31))
+                save_arcade_run()
+                open_arcade_bracket()
+            elif game_state == STATE_ARCADE_CHAR_SELECT:
+                char_select_screen.render(screen, font_large, font_mid, font_small)
+                pygame.display.flip()
+            continue
+
+        if game_state == STATE_ARCADE_BRACKET:
+            for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
+                if event.type == pygame.QUIT:
+                    running = False
+                    continue
+                result = arcade_bracket.handle_event(event, ctrl_mgr)
+                if result == "FIGHT":
+                    play_sfx(SoundEvent.MENU_SELECT)
+                    if arcade_bracket.banner == "defeat":
+                        arcade_run.on_continue()
+                        save_arcade_run()
+                    begin_arcade_fight()
+                    break
+                if result == "ABANDON":
+                    play_sfx(SoundEvent.MENU_SELECT)
+                    abandon_arcade()
+                    break
+            if game_state == STATE_ARCADE_BRACKET:
+                arcade_bracket.update(dt)
+                arcade_bracket.render(screen)
+                pygame.display.flip()
+            continue
+
+        if game_state == STATE_ARCADE_RESULT:
+            for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
+                if event.type == pygame.QUIT:
+                    running = False
+                    continue
+                if arcade_result_screen.handle_event(event, ctrl_mgr) == "DONE":
+                    play_sfx(SoundEvent.MENU_SELECT)
+                    leave_arcade()
+                    break
+            if game_state == STATE_ARCADE_RESULT:
+                arcade_result_screen.update(dt)
+                arcade_result_screen.render(screen)
+                pygame.display.flip()
             continue
 
         # -------------------------------------------------------------
@@ -833,6 +1077,7 @@ def run_game():
                 p1_char_id, p2_char_id, vs_ai_mode = char_select_screen.get_selected_characters()
                 ai.set_difficulty(char_select_screen.ai_difficulty)
                 settings_menu.ai_difficulty = char_select_screen.ai_difficulty
+                demo_start_pending = is_demo()
                 game_state = STATE_ARENA_SELECT
             char_select_screen.render(screen, font_large, font_mid, font_small)
             pygame.display.flip()
@@ -842,6 +1087,22 @@ def run_game():
         # TELA DE SELEÇÃO DE ARENA
         # -------------------------------------------------------------
         if game_state == STATE_ARENA_SELECT:
+            if is_demo():
+                # Demo: não há escolha de cenário; depois dos lutadores vai direto à arena da Kenshi
+                if demo_start_pending:
+                    selected_arena_id = DEMO_ARENA
+                    score_p1 = 0
+                    score_p2 = 0
+                    match_winner = None
+                    round_number = 1
+                    round_result_screen.hide()
+                    start_new_match(play_intro=True)
+                    game_state = STATE_DUEL_PLAYING
+                else:
+                    char_select_screen.reset()
+                    game_state = STATE_CHAR_SELECT
+                demo_start_pending = False
+                continue
             for event in pygame.event.get():
                 ctrl_mgr.handle_event(event)
                 if event.type == pygame.QUIT:
@@ -882,7 +1143,7 @@ def run_game():
             settings_menu.update(dt)
             if not settings_menu.is_open:
                 char_select_screen.ai_difficulty = settings_menu.ai_difficulty
-                ai.set_difficulty(settings_menu.ai_difficulty)
+                ai.set_difficulty(arcade_run.difficulty_name if arcade_run is not None else settings_menu.ai_difficulty)
             settings_menu.render(screen, font_large, font_mid, font_small)
             pygame.display.flip()
             continue
@@ -904,6 +1165,8 @@ def run_game():
                     settings_menu.open()
                 elif action == ACTION_QUIT:
                     running = False
+                elif action == ACTION_ABANDON:
+                    abandon_arcade()
                 else:
                     pause_menu.close()
                     if action == ACTION_ARENA:
@@ -933,7 +1196,7 @@ def run_game():
                     running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        pause_menu.open(screen)
+                        pause_menu.open(screen, arcade=arcade_run is not None, demo=is_demo())
                         break
                     if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
                         match_intro.skip()
@@ -941,7 +1204,7 @@ def run_game():
                     match_intro.skip()
                 elif event.type == pygame.JOYBUTTONDOWN:
                     if ctrl_mgr.is_event_menu_pause(event, 0) or getattr(event, "button", None) == 6:
-                        pause_menu.open(screen)
+                        pause_menu.open(screen, arcade=arcade_run is not None, demo=is_demo())
                         break
                     if ctrl_mgr.is_event_menu_confirm(event) or getattr(event, "button", None) == 0:
                         match_intro.skip()
@@ -1033,6 +1296,10 @@ def run_game():
         touch_controls.reset_frame_triggers()
 
         real_dt = dt
+        if arcade_run is not None:
+            arcade_run.add_time(real_dt)
+        if round_winner is None and round_start_timer <= 0 and round_intro_timer <= 0:
+            round_clock += real_dt
         dt *= outcome_seq.time_scale()
 
         # Determinar direções ativas de movimentação/mira prévia
@@ -1089,14 +1356,14 @@ def run_game():
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    pause_menu.open(screen)
+                    pause_menu.open(screen, arcade=arcade_run is not None, demo=is_demo())
                     break
                 elif event.key == KEY_SETTINGS:
                     settings_menu.open()
                 elif event.key == KEY_RESTART:
                     if round_winner is not None:
                         request_restart()
-                elif event.key == KEY_TOGGLE_AI:
+                elif event.key == KEY_TOGGLE_AI and arcade_run is None:
                     vs_ai_mode = not vs_ai_mode
 
                 # Ao terminar um duelo, permitir que Quadrado / Ação Primária reinicie o duelo (mas nunca com duelo em andamento)
@@ -1137,7 +1404,7 @@ def run_game():
 
             elif event.type == pygame.JOYBUTTONDOWN:
                 if ctrl_mgr.is_event_menu_pause(event, 0) or ctrl_mgr.is_event_menu_pause(event, 1) or (getattr(event, "button", None) == 6):
-                    pause_menu.open(screen)
+                    pause_menu.open(screen, arcade=arcade_run is not None, demo=is_demo())
                     break
                 elif round_winner is not None:
                     # Ao terminar o duelo, tanto restart quanto quadrado/ação primária reiniciam
@@ -1166,7 +1433,7 @@ def run_game():
                 # Gamepad Jogador 2
                 if not vs_ai_mode and p2.is_alive and round_winner is None and round_start_timer <= 0:
                     if ctrl_mgr.is_event_menu_pause(event, 1) or (getattr(event, "button", None) == 6):
-                        pause_menu.open(screen)
+                        pause_menu.open(screen, arcade=arcade_run is not None, demo=is_demo())
                         break
                     elif ctrl_mgr.is_event_action(event, 1, "attack"):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
@@ -1184,15 +1451,15 @@ def run_game():
                     request_restart()
                 else:
                     select_btn_rect = pygame.Rect(25, 20, 160, 32)
-                    if select_btn_rect.collidepoint(mx, my):
+                    if arcade_run is None and select_btn_rect.collidepoint(mx, my):
                         play_sfx(SoundEvent.MENU_SELECT)
                         sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
                         game_state = STATE_ARENA_SELECT
 
         # Comandos de Ação Touchscreen
         if touch_controls.is_menu_requested():
-            pause_menu.open(screen)
-        if touch_controls.is_select_requested():
+            pause_menu.open(screen, arcade=arcade_run is not None, demo=is_demo())
+        if touch_controls.is_select_requested() and arcade_run is None:
             play_sfx(SoundEvent.MENU_SELECT)
             sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
             game_state = STATE_ARENA_SELECT
@@ -1315,7 +1582,9 @@ def run_game():
                 p1.apply_movement(p1_dwx, p1_dwy, dt, game_map)
 
             # Movimento Jogador 2 (IA ou Humano)
-            if vs_ai_mode:
+            if isinstance(p2, BossOni):
+                pass  # o chefe se move pelo próprio cérebro (BossOni.update)
+            elif vs_ai_mode:
                 if round_start_timer <= 0:
                     ai.update(p2, p1, dt, game_map, projectiles, powder_pouches, decoys)
             else:
@@ -1360,6 +1629,12 @@ def run_game():
                 if f.state == STATE_FALL:
                     f.update_pit(dt, game_map, particles, banners)
                     continue
+                if isinstance(f, BossOni):
+                    if round_start_timer <= 0 and round_intro_timer <= 0:
+                        f.update(dt, game_map, opp, particles, banners, projectiles, camera)
+                    else:
+                        f.update(dt)
+                    continue
                 if isinstance(f, Rifleman):
                     f.check_powder_pickup(powder_pouches, particles)
                 if isinstance(f, PirateSwordswoman):
@@ -1403,6 +1678,22 @@ def run_game():
                     for node in f.drain_fog_nodes():
                         fog.add_trail(*node)
 
+        # Eventos do chefe: nova fase, checkpoint do Arcade e golpes
+        if isinstance(p2, BossOni):
+            for ev in p2.pop_events():
+                if ev.startswith("phase_"):
+                    phase_no = int(ev[6:])
+                    if arcade_run is not None:
+                        arcade_run.boss_phase = max(arcade_run.boss_phase, phase_no)
+                    camera.add_shake(18.0)
+                    play_sfx(SoundEvent.BOMB_EXPLODE)
+                    banners.append(FloatingBanner(t("boss_phase_label", n=phase_no + 1, title=p2.phase_title), p2.wx, p2.wy,
+                                                  wz=4.2, color=(255, 190, 120), duration=2.4))
+                elif ev == "hit":
+                    play_sfx(SoundEvent.SWORD_SLASH)
+                elif ev == "player_hit":
+                    ctrl_mgr.rumble_player(0, 0.7, 1.0, 220)
+
         # Atualizar Diretor Cinematográfico (Temporizadores e Corpos Voxel)
         cinematic_director.update(dt, game_map, particles)
 
@@ -1442,17 +1733,27 @@ def run_game():
                 round_winner = "DRAW"
                 play_sfx(SoundEvent.ROUND_WIN)
 
+        # Arcade (8.1): informa o round à jornada uma única vez; as regras decidem se a luta, o oponente ou o round continua
+        if arcade_run is not None and round_winner is not None and not arcade_round_reported:
+            arcade_round_reported = True
+            arcade_round_status = arcade_run.on_round_end(
+                {"P1_WINS": "P1", "P2_WINS": "P2"}.get(round_winner, "DRAW"), round_clock, flawless=p1.hp >= p1.max_hp)
+            arcade_fight_over = {FIGHT_WON: "won", FIGHT_LOST: "lost"}.get(arcade_round_status)
+
         # Entregável 5.3: Contador Best of 3 (BO3) — verifica se a partida terminou
         if round_winner in ("P1_WINS", "P2_WINS"):
             loser = p2 if round_winner == "P1_WINS" else p1
             victor = p1 if round_winner == "P1_WINS" else p2
+            if arcade_run is not None:
+                ends_match = arcade_fight_over == "won"
+            else:
+                ends_match = check_match_winner(score_p1, score_p2) is not None
             outcome_seq.arm((loser.wx, loser.wy), winner_idx=0 if victor is p1 else 1,
-                            winner_pos=(victor.wx, victor.wy),
-                            match_end=check_match_winner(score_p1, score_p2) is not None)
+                            winner_pos=(victor.wx, victor.wy), match_end=ends_match)
         if outcome_seq.pending and not cinematic_director.is_frozen():
             outcome_seq.begin()
 
-        if round_winner is not None and match_winner is None:
+        if arcade_run is None and round_winner is not None and match_winner is None:
             mw = check_match_winner(score_p1, score_p2)
             if mw is not None:
                 match_winner = mw
@@ -1466,9 +1767,11 @@ def run_game():
 
         round_result_screen.update(dt)
 
-        # Câmera segue o ponto médio
-        mid_x = (p1.wx + p2.wx) / 2.0
-        mid_y = (p1.wy + p2.wy) / 2.0
+        # Câmera segue o ponto médio (contra o chefe, 35% jogador / 65% chefe)
+        boss_fight = isinstance(p2, BossOni)
+        w_boss = 0.65 if boss_fight else 0.5
+        mid_x = p1.wx * (1.0 - w_boss) + p2.wx * w_boss
+        mid_y = p1.wy * (1.0 - w_boss) + p2.wy * w_boss
         # Atalhos de desenvolvimento do azimute (Entregável 6.1): [ e ] giram a câmera, \ restaura a vista clássica
         if keys[pygame.K_LEFTBRACKET]:
             camera.rotate(-CAMERA_ORBIT_SPEED * dt)
@@ -1498,6 +1801,8 @@ def run_game():
             outcome_seq.apply_camera(camera, real_dt)
         else:
             camera.update(mid_x, mid_y, dt)
+            if boss_fight and round_intro_timer <= 0:
+                camera.zoom = 0.85  # o chefe tem até ~5 unidades de altura
             if camera_was_replaying:
                 OutcomeSequence.restore_classic(camera)
 
@@ -1544,6 +1849,9 @@ def run_game():
 
         render_queue.append((camera.depth(p1.wx, p1.wy), 'fighter', p1))
         render_queue.append((camera.depth(p2.wx, p2.wy), 'fighter', p2))
+        if isinstance(p2, BossOni):
+            for hazard in p2.hazards:
+                render_queue.append((-1e9, 'boss_ground', hazard))
 
         # Adicionar cão Doberman ao Y-sorting se houver American Ninja na partida
         if hasattr(p1, "dog") and p1.dog:
@@ -1692,6 +2000,8 @@ def run_game():
 
         p1_name = p1.name.split()[0].upper()
         p2_name = p2.name.split()[0].upper()
+        if getattr(p2, "mirror_alt", False):
+            p2_name = t("arcade_mirror_tag")
 
         p1_title = font_mid.render(f"{p1_name}  {score_p1}", True, p1_color)
         p2_title = font_mid.render(f"{score_p2}  {p2_name}", True, p2_color)
@@ -1699,10 +2009,19 @@ def run_game():
         screen.blit(p2_title, (panel_rect.right - p2_title.get_width() - 20, panel_rect.y + 10))
 
         # Entregável 5.3: Marcadores (pips) de rounds vencidos — Melhor-de-3 (BO3)
-        render_round_pips(screen, score_p1, score_p2, p1_color, p2_color, panel_rect=panel_rect)
-        render_damage_bars(screen, p1, p2, p1_color, p2_color, panel_rect)
+        if isinstance(p2, BossOni):
+            render_boss_bar(screen, p2, panel_rect)
+            render_damage_bars(screen, p1, p2, p1_color, p2_color, panel_rect)
+        else:
+            render_round_pips(screen, score_p1, score_p2, p1_color, p2_color, panel_rect=panel_rect)
+            render_damage_bars(screen, p1, p2, p1_color, p2_color, panel_rect)
 
         mode_text = t("mode_hud_1p") if vs_ai_mode else t("mode_hud_2p")
+        if arcade_run is not None:
+            fight_no = arcade_run.index if arcade_fight_over == "won" else arcade_run.index + 1
+            mode_text = t("arcade_fight_n_of_m", n=fight_no, m=len(arcade_run.ladder))
+            if arcade_run.lives_left is not None:
+                mode_text += f"  |  {t('arcade_round_lives', n=arcade_run.lives_left)}"
         mode_surf = font_small.render(mode_text, True, COLOR_GOLD)
         screen.blit(mode_surf, (panel_rect.centerx - mode_surf.get_width() // 2, panel_rect.y + 12))
 
@@ -1827,12 +2146,13 @@ def run_game():
                         screen.blit(dist_lbl, (d_bg.x + 4, d_bg.y + 1))
 
 
-        # Botão Trocar Personagens no topo esquerdo
-        select_btn = pygame.Rect(25, 20, 180, 32)
-        pygame.draw.rect(screen, (26, 34, 30, 210), select_btn, border_radius=6)
-        pygame.draw.rect(screen, COLOR_GOLD, select_btn, 1, border_radius=6)
-        sel_txt = font_small.render(t("change_warriors"), True, COLOR_GOLD)
-        screen.blit(sel_txt, (select_btn.centerx - sel_txt.get_width() // 2, select_btn.y + 7))
+        # Botão Trocar Personagens no topo esquerdo (não existe no Arcade)
+        if arcade_run is None:
+            select_btn = pygame.Rect(25, 20, 180, 32)
+            pygame.draw.rect(screen, (26, 34, 30, 210), select_btn, border_radius=6)
+            pygame.draw.rect(screen, COLOR_GOLD, select_btn, 1, border_radius=6)
+            sel_txt = font_small.render(t("change_warriors"), True, COLOR_GOLD)
+            screen.blit(sel_txt, (select_btn.centerx - sel_txt.get_width() // 2, select_btn.y + 7))
 
         # Renderizar Controles Virtuais Touchscreen (se ativos/visíveis)
         p1_a1, p1_a2 = get_fighter_action_labels(p1)
@@ -1897,6 +2217,9 @@ def run_game():
                 w_color = get_fighter_color(w_fighter)
             v_surf = font_large.render(w_msg, True, w_color)
             sub_surf = font_mid.render(t("next_round_hint"), True, COLOR_WHITE)
+            if arcade_run is not None:
+                hint_key = {"won": "arcade_next_fight", "lost": "arcade_continue_hint"}.get(arcade_fight_over, "rematch_prompt")
+                sub_surf = font_mid.render(t(hint_key), True, COLOR_WHITE)
 
             center_x = SCREEN_WIDTH // 2
             center_y = SCREEN_HEIGHT // 2 - 40

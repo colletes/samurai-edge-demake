@@ -130,9 +130,11 @@ def test_intro_only_triggered_when_a_battle_starts():
     with open(os.path.join(ROOT, "main.py"), encoding="utf-8") as fh:
         src = fh.read()
     assert re.search(r"def start_new_match\(play_intro: bool = False\)", src)
-    assert len(re.findall(r"start_new_match\(play_intro=True\)", src)) == 1
+    assert len(re.findall(r"start_new_match\(play_intro=True\)", src)) == 3  # cenário (Versus), demo e início de luta (Arcade)
     arena_block = src.split("arena_choice in arena_ids()")[1].split("arena_select_screen.update")[0]
     assert "start_new_match(play_intro=True)" in arena_block
+    arcade_block = src.split("def begin_arcade_fight")[1].split("def ")[0]
+    assert "start_new_match(play_intro=True)" in arcade_block
     for helper in ("def request_rematch", "def request_next_round"):
         body = src.split(helper)[1].split("def ")[0]
         assert "play_intro" not in body
