@@ -468,8 +468,8 @@ class SamuraiAI:
                 aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
                 ai_fighter.trigger_gunpowder_blind(aim_x, aim_y, opponent=opponent)
                 return
-            # Mosqueteira (Julie): Riposte de capa
-            elif hasattr(ai_fighter, "trigger_cloak_riposte") and random.random() < 0.65:
+            # Mosqueteira (Julie): riposte de capa; com a capa em recarga, cai no rolamento universal abaixo
+            elif hasattr(ai_fighter, "trigger_cloak_riposte") and getattr(ai_fighter, "cape_timer", 0.0) <= 0 and random.random() < 0.65:
                 ai_fighter.trigger_cloak_riposte()
                 return
             # Evasão universal: se puder rolar

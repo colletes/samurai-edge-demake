@@ -258,9 +258,10 @@ Female Warriors: Murasaki | Kasumi | Okuni | Tomoe | Anne | Julie
 *European nobility with surgical French fencing precision.*
 - **Style**: French Fencing (Foil & Cloak) | **Speed**: [5/5] Elite Speed
 - **Primary Attack [E / U]**: *Flèche Thrust* — Instantaneous linear lunge with extended reach (1.30 tiles) and near-instant recovery (0.14s).
-- **Secondary Action [R / I]**: *Cloak Riposte & Flintlock* — Defensive parrying stance with a weighted silk cloak, followed by a surprise flintlock pistol countershot upon deflecting a blow.
+- **Secondary Action [R / I]**: *Flintlock / Cape Flip* — Context-sensitive: fires the pocket flintlock when it is ready; while the pistol reloads, performs a cape flip that repels nearby foes and deflects projectiles.
+- **Third Action (Roll)**: *Musketeer Roll* — A large invulnerable roll (about 3.2 tiles) that clears pits and deflects projectiles while it lasts.
 - **Offensive Strategy**: The *Flèche* outranges conventional katanas. Keep the enemy at the tip of your blade. If they retaliate, activate the cloak riposte to parry and shoot.
-- **How to Counter**: The *Flèche* travels in a very narrow straight corridor. Clean sidesteps expose Julie's back for easy punishment. Watch for the cloak posture to avoid triggering her countershot.
+- **How to Counter**: The *Flèche* travels in a very narrow straight corridor. Clean sidesteps expose Julie's back for easy punishment. Her roll deflects projectiles, so shoot when she is recovering.
 
 ---
 

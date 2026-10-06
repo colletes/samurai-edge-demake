@@ -679,7 +679,7 @@ def test_complete_roster():
     hit_carriage = carriage.check_fighter_hit(dummy_p1, c_particles, c_banners, camera, cinematic_director)
     assert hit_carriage is True
     assert dummy_p1.is_alive is False
-    assert len(c_banners) > 0
+    assert len(c_banners) == 0  # sem avisos de dano/morte sobre o lutador
 
     # Testar queda e impacto letal dos Escombros Flamejantes
     debris = FallingDebris(target_x=18.0, target_y=18.0)
@@ -692,7 +692,7 @@ def test_complete_roster():
     debris.update(0.05, camera, d_particles, [dummy_p1, dummy_p2], d_banners, cinematic_director)
     assert debris.has_impacted is True
     assert dummy_p2.is_alive is False
-    assert len(d_banners) > 0
+    assert len(d_banners) == 0
 
     # Testar renderização de terreno e objetos da Arena Kyoto
     kyoto.render_terrain(screen, camera, 1.0)

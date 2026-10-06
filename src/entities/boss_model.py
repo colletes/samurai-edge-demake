@@ -10,7 +10,8 @@ import math
 import random
 from dataclasses import dataclass
 
-from src.isometric.voxel_renderer import draw_voxel_box
+from src.entities import boss_head
+from src.isometric.fast_voxels import draw_cubes
 
 BONE = (226, 218, 188)
 BONE_DARK = (186, 174, 144)
@@ -26,20 +27,22 @@ COLLAPSE_TIME = 3.2
 @dataclass(frozen=True)
 class Bone:
     id: str
-    thick: float
+    thick: float  # espessura física (queda dos ossos); o desenho usa `vox`
     color: tuple
+    vox: float = 0.0  # lado dos voxels que formam o osso; 0 = desenhado pela cabeça (boss_head)
+    wide: int = 1  # fileiras paralelas (lâmina larga)
 
 
 BONES = (
     Bone("skull", 0.95, BONE), Bone("jaw", 0.55, BONE_DARK), Bone("eye_l", 0.24, EYE), Bone("eye_r", 0.24, EYE),
-    *[Bone(f"spine{i}", 0.42, RUST if i >= 4 else BONE) for i in range(6)],
-    *[Bone(f"rib_l{i}", 0.2, BONE_DARK) for i in range(4)],
-    *[Bone(f"rib_r{i}", 0.2, BONE_DARK) for i in range(4)],
-    Bone("pelvis", 0.7, RUST),
-    Bone("arm_l_up", 0.34, BONE), Bone("arm_l_low", 0.3, BONE), Bone("arm_r_up", 0.34, BONE), Bone("arm_r_low", 0.3, BONE),
-    Bone("blade", 0.26, STEEL), Bone("handle", 0.3, HANDLE),
-    Bone("leg_l_up", 0.42, BONE), Bone("leg_l_low", 0.36, BONE), Bone("leg_r_up", 0.42, BONE), Bone("leg_r_low", 0.36, BONE),
-    Bone("foot_l", 0.4, BONE_DARK), Bone("foot_r", 0.4, BONE_DARK),
+    *[Bone(f"spine{i}", 0.42, RUST if i >= 4 else BONE, 0.2) for i in range(6)],
+    *[Bone(f"rib_l{i}", 0.2, BONE_DARK, 0.1) for i in range(4)],
+    *[Bone(f"rib_r{i}", 0.2, BONE_DARK, 0.1) for i in range(4)],
+    Bone("pelvis", 0.7, RUST, 0.2),
+    Bone("arm_l_up", 0.34, BONE, 0.15), Bone("arm_l_low", 0.3, BONE, 0.14), Bone("arm_r_up", 0.34, BONE, 0.15), Bone("arm_r_low", 0.3, BONE, 0.14),
+    Bone("blade", 0.26, STEEL, 0.13, 3), Bone("handle", 0.3, HANDLE, 0.13),
+    Bone("leg_l_up", 0.42, BONE, 0.18), Bone("leg_l_low", 0.36, BONE, 0.16), Bone("leg_r_up", 0.42, BONE, 0.18), Bone("leg_r_low", 0.36, BONE, 0.16),
+    Bone("foot_l", 0.4, BONE_DARK, 0.14), Bone("foot_r", 0.4, BONE_DARK, 0.14),
 )
 BONE_BY_ID = {b.id: b for b in BONES}
 BONE_COUNT = len(BONES)
@@ -77,6 +80,16 @@ def _single(p):
     return (p, p)
 
 
+def _head(c, fwd, jaw_open: float = 0.0) -> dict:
+    """Ossos da cabeça (cranió, mandíbula e olhos) com o centro do crânio em `c`, voltada para `fwd` (fx, fy)."""
+    fx, fy = fwd
+    jm = boss_head.JAW_MID
+    mid = (c[0] + fx * jm[0], c[1] + fy * jm[0], c[2] + jm[2] - jaw_open)
+    eyes = [(c[0] + fx * 0.8 - fy * sg * 0.3, c[1] + fy * 0.8 + fx * sg * 0.3, c[2] + 0.1) for sg in (1, -1)]
+    return {"skull": (c, c), "jaw": ((mid[0] + fx * 0.05, mid[1] + fy * 0.05, mid[2]), (mid[0] - fx * 0.05, mid[1] - fy * 0.05, mid[2])),
+            "eye_l": (eyes[0], eyes[0]), "eye_r": (eyes[1], eyes[1])}
+
+
 def layout_stand(fr: Frame, pose: dict) -> dict:
     """Fase 1: esqueleto de pé com o facão no braço direito (pose: t, stomp 0..1, sweep em radianos ou None)."""
     L = fr.w
@@ -100,11 +113,7 @@ def layout_stand(fr: Frame, pose: dict) -> dict:
         out[f"rib_l{i}"] = (L(0, 0.1, h), L(0.1, w, h - 0.25))
         out[f"rib_r{i}"] = (L(0, -0.1, h), L(0.1, -w, h - 0.25))
     neck_h = hip_h + 1.6
-    sk = neck_h + 0.55
-    out["skull"] = _single(L(0.1, 0, sk))
-    out["jaw"] = (L(0.4, 0, sk - 0.55), L(0.25, 0, sk - 0.5))
-    out["eye_l"] = _single(L(0.62, 0.22, sk + 0.1))
-    out["eye_r"] = _single(L(0.62, -0.22, sk + 0.1))
+    out.update(_head(L(0.1, 0, neck_h + 0.95), (fr.fx, fr.fy), pose.get("jaw", 0.0)))
     sh = neck_h - 0.15
     out["arm_l_up"] = (L(0, 0.7, sh), L(0.25, 1.0, sh - 0.9))
     out["arm_l_low"] = (L(0.25, 1.0, sh - 0.9), L(0.8, 0.9, sh - 1.6))
@@ -147,11 +156,8 @@ def layout_serpent(trail_point, pose: dict) -> dict:
     tx, ty = head[0] - ahead[0], head[1] - ahead[1]
     tn = math.hypot(tx, ty) or 1.0
     tx, ty = tx / tn, ty / tn
-    hh = 0.45 + head_up * 0.6
-    out["skull"] = _single((head[0], head[1], hh + 0.3))
-    out["jaw"] = ((head[0] + tx * 0.35, head[1] + ty * 0.35, hh - 0.2), (head[0] + tx * 0.2, head[1] + ty * 0.2, hh - 0.25))
-    for k, sgn in (("eye_l", 1), ("eye_r", -1)):
-        out[k] = _single((head[0] + tx * 0.55 - ty * sgn * 0.22, head[1] + ty * 0.55 + tx * sgn * 0.22, hh + 0.4))
+    hh = 1.45 + head_up * 0.5
+    out.update(_head((head[0], head[1], hh), (tx, ty)))
     d = 0.95
     for bone_id, length in SERPENT_CHAIN:
         a, b = trail_point(d), trail_point(d + length)
@@ -185,11 +191,7 @@ def layout_torso(fr: Frame, pose: dict) -> dict:
         w = 0.85 + 0.1 * math.sin(i * 1.2)
         out[f"rib_l{i}"] = (L(0, 0.1, h), L(0.1, w, h - 0.25))
         out[f"rib_r{i}"] = (L(0, -0.1, h), L(0.1, -w, h - 0.25))
-    sk = base + 2.45
-    out["skull"] = _single(L(0.1 + swing * 0.5, 0, sk))
-    out["jaw"] = (L(0.4 + swing * 0.5, 0, sk - 0.55), L(0.25 + swing * 0.5, 0, sk - 0.5))
-    out["eye_l"] = _single(L(0.62 + swing * 0.5, 0.22, sk + 0.1))
-    out["eye_r"] = _single(L(0.62 + swing * 0.5, -0.22, sk + 0.1))
+    out.update(_head(L(0.1 + swing * 0.5, 0, base + 2.85), (fr.fx, fr.fy)))
     sh = base + 2.0
     out["arm_l_up"] = (L(0, 0.7, sh), L(0.4 + swing, 1.1, sh - 0.7))
     out["arm_l_low"] = (L(0.4 + swing, 1.1, sh - 0.7), L(0.9 + swing * 2, 1.0, sh - 1.5))
@@ -225,23 +227,14 @@ def layout_club(fr: Frame, pose: dict) -> dict:
         u = 0.62 + i * 0.075
         out[f"rib_l{i}"] = (at(u), at(u + 0.03, 0.8, 0.25 - 0.12 * i))
         out[f"rib_r{i}"] = (at(u), at(u + 0.03, -0.8, 0.25 - 0.12 * i))
-    out["skull"] = _single(at(1.0, 0.0, 0.0))
-    out["jaw"] = (at(1.0, 0.0, -0.45), at(0.97, 0.0, -0.5))
-    out["eye_l"] = _single(L(0.45, 0.22, tip_h + 0.1))
-    out["eye_r"] = _single(L(0.45, -0.22, tip_h + 0.1))
+    out.update(_head(at(1.0, 0.0, 0.45), (fr.fx, fr.fy)))
     return out
 
 
 def layout_skull(fr: Frame, pose: dict) -> dict:
     """Fase 5: só o crânio (`h` = altura do salto)."""
     L = fr.w
-    h = 0.75 + pose.get("h", 0.0)
-    return {
-        "skull": _single(L(0, 0, h)),
-        "jaw": (L(0.4, 0, h - 0.6 + pose.get("jaw", 0.0)), L(0.25, 0, h - 0.65 + pose.get("jaw", 0.0))),
-        "eye_l": _single(L(0.62, 0.24, h + 0.12)),
-        "eye_r": _single(L(0.62, -0.24, h + 0.12)),
-    }
+    return _head(L(0, 0, 1.05 + pose.get("h", 0.0)), (fr.fx, fr.fy), abs(pose.get("jaw", 0.0)) * 1.6)
 
 
 def _lerp(a, b, k):
@@ -251,6 +244,11 @@ def _lerp(a, b, k):
 def _smooth(k):
     k = max(0.0, min(1.0, k))
     return k * k * (3 - 2 * k)
+
+
+def _rest_size(bone_id: str) -> float:
+    bone = BONE_BY_ID[bone_id]
+    return (bone.vox * 1.5) if bone.vox else bone.thick
 
 
 def lying(pair, thick: float, rng: random.Random, origin):
@@ -277,6 +275,8 @@ class BossModel:
         self.xform_phase = 0
         self.collapse: dict | None = None
         self.last_poses: dict = {}
+        self.head_yaw = (1.0, 0.0)
+        self.glow_t = 0.0
 
     # ------------------------------------------------------------------ fases
     def prime(self, phase: int, fr: Frame):
@@ -285,7 +285,7 @@ class BossModel:
         self.xform_t = 1.0
         base = layout_stand(fr, {})
         for bone_id in DEBRIS_BY_PHASE[phase]:
-            self.debris[bone_id] = lying(base[bone_id], BONE_BY_ID[bone_id].thick, self.rng, (fr.x, fr.y))
+            self.debris[bone_id] = lying(base[bone_id], _rest_size(bone_id), self.rng, (fr.x, fr.y))
 
     def begin_transform(self, new_phase: int, fr: Frame):
         self.xform_from = dict(self.last_poses)
@@ -293,7 +293,7 @@ class BossModel:
         self.xform_phase = new_phase
         for bone_id in DEBRIS_BY_PHASE[new_phase]:
             if bone_id not in self.debris and bone_id in self.xform_from:
-                self.debris[bone_id] = lying(self.xform_from[bone_id], BONE_BY_ID[bone_id].thick, self.rng, (fr.x, fr.y))
+                self.debris[bone_id] = lying(self.xform_from[bone_id], _rest_size(bone_id), self.rng, (fr.x, fr.y))
 
     @property
     def transforming(self) -> bool:
@@ -343,7 +343,7 @@ class BossModel:
         c = self.collapse
         c["t"] += dt
         for bone_id, p in c["pieces"].items():
-            thick = BONE_BY_ID[bone_id].thick
+            thick = _rest_size(bone_id)
             if not p["landed"]:
                 p["v"][2] -= 14.0 * dt
                 for end in (p["a"], p["b"]):
@@ -366,13 +366,59 @@ class BossModel:
     def draw(self, surface, camera, poses: dict, alpha: int = 255):
         cubes = []
         for bone in BONES:
-            a, b = poses[bone.id]
-            length = math.dist(a, b)
-            n = 1 if length < 1e-3 else min(9, int(length / (bone.thick * 1.05)) + 1)
-            for i in range(n):
-                k = 0.5 if n == 1 else i / (n - 1)
-                x, y, z = a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k
-                cubes.append((camera.depth(x, y), z, x, y, bone.thick, bone.color))
-        cubes.sort(key=lambda c: (c[0], c[1]))
-        for _, z, x, y, t, color in cubes:
-            draw_voxel_box(surface, camera, x - t / 2, y - t / 2, z - t / 2, t, t, t, color, outline=True)
+            if bone.vox:
+                _bone_cubes(bone, poses[bone.id], cubes)
+        if self.collapse is None:
+            self.head_yaw = boss_head.head_yaw(poses["skull"][0], poses["eye_l"][0], poses["eye_r"][0], self.head_yaw)
+        skull, jaw = poses["skull"][0], poses["jaw"]
+        jaw_mid = tuple((jaw[0][i] + jaw[1][i]) / 2.0 for i in range(3))
+        head, skull_up = boss_head.head_cubes(skull, jaw_mid, self.head_yaw)
+        cubes += head
+        draw_cubes(surface, camera, cubes, alpha)
+        if alpha >= 255:
+            boss_head.draw_eye_glow(surface, camera, skull_up, self.head_yaw, self.glow_t)
+            self.glow_t += 1.0 / 60.0
+
+
+def _tones(color):
+    return tuple(tuple(int(c * k) for c in color) for k in (1.0, 0.9, 0.8))
+
+
+_TONES = {b.id: _tones(b.color) for b in BONES}
+
+
+def _bone_cubes(bone: Bone, pair, out: list):
+    """Osso como fileira de voxels pequenos entre `a` e `b` (vértebras alternadas, costelas arqueadas, lâmina larga)."""
+    a, b = pair
+    dx, dy, dz = b[0] - a[0], b[1] - a[1], b[2] - a[2]
+    length = math.sqrt(dx * dx + dy * dy + dz * dz)
+    vox = bone.vox
+    n = max(1, min(48, int(length / (vox * 0.85)) + 1))
+    tones = _TONES[bone.id]
+    horiz = math.hypot(dx, dy)
+    # direção horizontal perpendicular ao osso (fileiras paralelas) e "para a frente" das costelas
+    px, py = (-dy / horiz, dx / horiz) if horiz > 1e-6 else (1.0, 0.0)
+    rib = bone.id.startswith("rib_")
+    if rib:
+        hn = max(horiz, 1e-6)
+        fwd = (dy / hn, -dx / hn) if bone.id[4] == "l" else (-dy / hn, dx / hn)
+        fwd = fwd if horiz > 1e-6 else (1.0, 0.0)
+    for i in range(n):
+        k = 0.5 if n == 1 else i / (n - 1)
+        x, y, z = a[0] + dx * k, a[1] + dy * k, a[2] + dz * k
+        size = vox
+        if rib:
+            bow = math.sin(math.pi * k) * 0.3
+            x, y = x + fwd[0] * bow, y + fwd[1] * bow
+            z += math.sin(math.pi * k) * 0.05
+        elif bone.id.startswith("spine"):
+            size = vox if i % 2 == 0 else vox * 0.72
+        elif k in (0.0, 1.0) and n > 2 and bone.id[:3] in ("arm", "leg"):
+            size = vox * 1.5  # juntas (cotovelo, joelho, tornozelo)
+        color = tones[(i + int(a[0] * 3)) % 3]
+        if bone.wide > 1:
+            for r in range(bone.wide):
+                off = (r - (bone.wide - 1) / 2.0) * vox * 1.05
+                out.append((x + px * off, y + py * off, z, size, color))
+        else:
+            out.append((x, y, z, size, color))

@@ -277,7 +277,6 @@ class RunawayCarriage:
                 particles.append(BloodParticle(fighter.wx, fighter.wy, 0.7))
                 particles.append(SparkParticle(fighter.wx, fighter.wy, 0.5, color=COLOR_KYOTO_CARRIAGE_WOOD))
 
-            banners.append(FloatingBanner("CARRIAGE CRUSH!", fighter.wx, fighter.wy, wz=1.8, color=(255, 60, 40)))
             camera.add_shake(14.0)
 
             if cinematic_director:
@@ -395,7 +394,6 @@ class FallingDebris:
                     f.is_alive = False
                     for _ in range(20):
                         particles.append(BloodParticle(f.wx, f.wy, 0.6))
-                    banners.append(FloatingBanner("CRUSHED BY DEBRIS!", f.wx, f.wy, wz=1.8, color=(255, 100, 30)))
                     if cinematic_director:
                         cinematic_director.trigger_fatal_strike(
                             None,

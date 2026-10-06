@@ -158,6 +158,36 @@ def test_julie_cape_deflects_frontal_but_not_rear():
     print("[PASS] Teste 9: Deflexão frontal de capa: frente defletida, costas passa através")
 
 
+def test_julie_large_roll_deflects_projectiles_from_any_side():
+    from src.entities.samurai import STATE_ROLL
+    julie = Musketeer(10.0, 10.0)
+    g_map = GameMap()
+    start = julie.wx
+    julie.trigger_roll(1.0, 0.0)
+    assert julie.state == STATE_ROLL and julie.is_invulnerable_dodge
+    assert julie.roll_speed * julie.roll_duration > 3.0, "rolamento grande"
+    bullet = MusketBulletProjectile(9.0, 10.0, 0.45, 1.0, 0.0, owner=RedSamurai(5.0, 10.0))  # pelas costas
+    CombatSystem().process_combat(julie, RedSamurai(18.0, 18.0), g_map, [], [], Camera(10.0, 10.0), [bullet], 0.016)
+    assert not bullet.is_active, "o giro da capa desvia em qualquer direção"
+    for _ in range(40):
+        julie.update(0.016, g_map)
+    assert julie.state != STATE_ROLL and julie.wx - start > 3.0
+    print("[PASS] Teste 10: rolamento grande de Julie percorre >3 tiles e desvia projéteis")
+
+
+def test_julie_secondary_switches_between_pistol_and_cape_flip():
+    julie = Musketeer(10.0, 10.0)
+    opp = RedSamurai(10.9, 10.0)
+    projs = []
+    julie.flintlock_timer = 0.0
+    assert julie.trigger_secondary(15.0, 10.0, projs, opponent=opp) == "shot" and len(projs) == 1
+    assert julie.flintlock_timer > 0
+    julie.state, julie.dash_recovery_timer = "IDLE", 0.0
+    assert julie.trigger_secondary(15.0, 10.0, projs, opponent=opp) == "flip"
+    assert julie.state == "CAPE_FLOURISH" and len(projs) == 1 and julie.cape_timer > 0
+    print("[PASS] Teste 11: secundário atira com a pistola pronta e faz o floreio de capa durante a recarga")
+
+
 if __name__ == "__main__":
     test_anne_cleave_and_cannon()
     test_anne_dash_and_deflection()
@@ -165,5 +195,7 @@ if __name__ == "__main__":
     test_julie_cape_deflection_and_coup_de_pied()
     test_julie_pocket_flintlock()
     test_julie_cape_deflects_frontal_but_not_rear()
-    print("\nTODOS OS 9 TESTES DE ANNE E JULIE PASSARAM COM SUCESSO!")
+    test_julie_large_roll_deflects_projectiles_from_any_side()
+    test_julie_secondary_switches_between_pistol_and_cape_flip()
+    print("\nTODOS OS 11 TESTES DE ANNE E JULIE PASSARAM COM SUCESSO!")
 

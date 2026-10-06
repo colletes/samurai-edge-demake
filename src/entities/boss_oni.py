@@ -22,12 +22,18 @@ from src.i18n import t
 BOSS_TUNING = {
     "hp_total": 10, "points_per_phase": 2,
     "player_iframes": 1.2, "hit_cooldown": 0.7,
-    "p1_walk_speed": 1.4, "p1_gap": (0.9, 1.6), "p1_stomp_warn": 0.9, "p1_stomp_radius": 2.0, "p1_ring_speed": 5.0,
-    "p1_ring_max": 4.6, "p1_sweep_warn": 0.9, "p1_sweep_active": 0.35, "p1_sweep_radius": 3.6, "p1_recover": 1.3,
-    "p2_speed": 4.5, "p2_telegraph": 1.4, "p2_slow": 1.5, "p2_stun": 1.5, "p2_contact": 0.6,
-    "p3_speed": 4.0, "p3_speed_gain": 0.5, "p3_speed_max": 7.5, "p3_aim": 0.8, "p3_stun": 1.5, "p3_tired_after": 6.0,
-    "p4_warn": 1.0, "p4_radius": 2.2, "p4_aim_error": 0.8, "p4_jump": 0.45, "p4_stuck": 2.0,
-    "p5_warns": (0.7, 0.6, 0.5), "p5_radius": 1.6, "p5_direct": 0.6, "p5_jump": 0.45, "p5_rest": 1.5,
+    "p1_walk_speed": 2.2, "p1_gap": (0.2, 0.5), "p1_stomp_warn": 0.7, "p1_stomp_radius": 2.0, "p1_ring_speed": 5.5,
+    "p1_ring_max": 4.6, "p1_sweep_warn": 0.7, "p1_sweep_active": 0.3, "p1_sweep_radius": 3.6, "p1_recover": 0.45,
+    "p2_speed": 5.6, "p2_telegraph": 0.9, "p2_slow": 0.8, "p2_stun": 0.9, "p2_contact": 0.6,
+    "p3_speed": 4.8, "p3_speed_gain": 0.6, "p3_speed_max": 8.5, "p3_aim": 0.55, "p3_stun": 0.9, "p3_tired_after": 5.0,
+    "p4_idle": 0.25, "p4_warn": 0.8, "p4_radius": 2.2, "p4_aim_error": 0.8, "p4_jump": 0.4, "p4_stuck": 1.0,
+    "p5_warns": (0.55, 0.45, 0.4), "p5_radius": 1.6, "p5_direct": 0.6, "p5_jump": 0.4, "p5_rest": 0.9,
+    # Perigos do palco (a partir da fase 2): intervalo em segundos por fase (None = ainda não aparece)
+    "env_grace": 2.0,
+    "env_fire_every": (None, 5.0, 3.6, 2.8, 2.0), "env_fire_count": (0, 1, 1, 2, 3), "env_fire_warn": 1.0, "env_fire_radius": 1.3,
+    "env_lava_every": (None, None, 9.0, 6.5, 4.5), "env_lava_warn": 1.4, "env_lava_speed": 9.0, "env_lava_width": 1.6, "env_lava_slab": 3.5,
+    "env_trap_every": (None, None, None, 6.0, 4.0), "env_trap_count": (0, 0, 0, 3, 5), "env_trap_warn": 1.1, "env_trap_active": 0.7,
+    "env_trap_radius": 0.95,
 }
 TUNE = BOSS_TUNING
 PHASE_RADIUS = (1.1, 0.9, 1.1, 1.0, 0.8)
@@ -44,6 +50,7 @@ class BossHazard:
         self.shape = shape
         self.t = 0.0
         self.hit_done = False
+        self.announced = False  # o impacto já gerou o evento de som/tremor
         self.extra_life = shape.get("life", 0.0)  # `path`: continua desenhado depois do aviso
 
     @property
@@ -62,8 +69,14 @@ class BossHazard:
 
     def contains(self, px: float, py: float) -> bool:
         d = math.hypot(px - self.x, py - self.y)
-        if self.kind == "circle":
+        if self.kind in ("circle", "fireball", "spikes"):
             return d <= self.shape["r"]
+        if self.kind == "lava":
+            ux, uy = self.shape["dx"], self.shape["dy"]
+            along = (px - self.x) * ux + (py - self.y) * uy
+            perp = abs(-(px - self.x) * uy + (py - self.y) * ux)
+            front = self.shape["speed"] * max(0.0, self.t - self.warn)
+            return perp <= self.shape["width"] / 2.0 and front - self.shape["slab"] <= along <= front
         if self.kind == "ring":
             r = self.radius_now()
             return r - self.shape["width"] <= d <= r
@@ -76,9 +89,20 @@ class BossHazard:
         return False
 
     # ------------------------------------------------------------------ desenho
+    def _lava_quad(self, a0: float, a1: float):
+        ux, uy, half = self.shape["dx"], self.shape["dy"], self.shape["width"] / 2.0
+        px, py = -uy * half, ux * half
+        x0, y0, x1, y1 = self.x + ux * a0, self.y + uy * a0, self.x + ux * a1, self.y + uy * a1
+        return [(x0 + px, y0 + py), (x1 + px, y1 + py), (x1 - px, y1 - py), (x0 - px, y0 - py)]
+
     def _outline(self):
         n = 40
-        if self.kind in ("circle", "ring"):
+        if self.kind == "lava":
+            if self.t < self.warn:
+                return self._lava_quad(0.0, self.shape["len"])
+            front = self.shape["speed"] * (self.t - self.warn)
+            return self._lava_quad(max(0.0, front - self.shape["slab"]), min(self.shape["len"] + self.shape["slab"], front))
+        if self.kind in ("circle", "ring", "fireball", "spikes"):
             r = self.radius_now() if self.kind == "ring" else self.shape["r"]
             return [(self.x + math.cos(i / n * math.tau) * r, self.y + math.sin(i / n * math.tau) * r) for i in range(n)]
         if self.kind == "sector":
@@ -110,12 +134,64 @@ class BossHazard:
         active = self.is_active
         if self.kind == "path":
             pygame.draw.lines(overlay, (255, 150, 60, 190), True, local, 5)
+        elif self.kind == "lava":
+            if active:
+                pygame.draw.polygon(overlay, (255, 96, 18, 235), local)
+                pygame.draw.polygon(overlay, (255, 214, 90, 255), local, 3)
+            else:
+                progress = min(1.0, self.t / max(0.01, self.warn))
+                pygame.draw.polygon(overlay, (255, 90, 30, int(30 + 70 * progress)), local)
+                pygame.draw.polygon(overlay, (255, 150, 60, 200), local, 2)
         else:
             progress = min(1.0, self.t / max(0.01, self.warn))
             fill = (255, 40, 30, 150) if active else (255, 120, 50, int(40 + 70 * progress))
+            if self.kind == "spikes" and not active:
+                fill = (150, 20, 20, int(40 + 70 * progress))
             pygame.draw.polygon(overlay, fill, local)
             pygame.draw.polygon(overlay, (255, 220, 120, 230), local, 2)
         surface.blit(overlay, (x0, y0))
+        if self.kind == "spikes":
+            self._render_spikes(surface, camera)
+
+    def _render_spikes(self, surface, camera):
+        """Espinhos de osso que sobem do chão: tocos durante o aviso e lanças inteiras durante o perigo."""
+        k = min(1.0, self.t / max(0.01, self.warn))
+        height = 0.15 + 0.2 * k if self.t < self.warn else 1.1
+        r = self.shape["r"]
+        for i in range(7):
+            ox, oy = (0.0, 0.0) if i == 0 else (math.cos(i / 6 * math.tau) * r * 0.62, math.sin(i / 6 * math.tau) * r * 0.62)
+            bx, by = camera.apply(self.x + ox, self.y + oy, 0.0)
+            tx, ty = camera.apply(self.x + ox, self.y + oy, height * (1.0 if i else 1.3))
+            pygame.draw.polygon(surface, (236, 228, 204), [(bx - 5, by), (bx + 5, by), (tx, ty)])
+            pygame.draw.polygon(surface, (120, 100, 80), [(bx - 5, by), (bx + 5, by), (tx, ty)], 1)
+
+    def render_air(self, surface, camera):
+        """Bola de fogo caindo do céu durante o aviso (desenhada acima dos lutadores)."""
+        if self.kind != "fireball" or self.t >= self.warn:
+            return
+        k = self.t / max(0.01, self.warn)
+        fall = 1.0 - k
+        for n in range(6, -1, -1):  # rastro de chamas atrás da bola
+            f = min(1.0, fall + n * 0.05)
+            x, y, z = self.x - 2.2 * f, self.y - 2.2 * f, 0.5 + 9.0 * f ** 1.4
+            px, py = camera.apply(x, y, z)
+            zoom = getattr(camera, "zoom", 1.0)
+            color = (255, 120 + n * 15, 30) if n else (255, 235, 140)
+            pygame.draw.circle(surface, color, (px, py), max(2, int((9 - n) * zoom)))
+
+    @property
+    def air_view(self):
+        return _AirView(self)
+
+
+class _AirView:
+    """Adaptador para a fila de desenho do mundo: `render(surface, camera)` desenha a parte aérea do perigo."""
+
+    def __init__(self, hazard):
+        self.hazard = hazard
+
+    def render(self, surface, camera, game_time: float = 0.0):
+        self.hazard.render_air(surface, camera)
 
 
 class BossOni(Samurai):
@@ -144,6 +220,9 @@ class BossOni(Samurai):
         self.velocity = (0.0, 0.0)
         self.bounce_phase = 0.0
         self.last_attacks: list[str] = []
+        self.env_rng = random.Random(seed + 101)  # sorteio separado: os perigos do palco não alteram os padrões do chefe
+        self.env_timers: dict[str, float] = {}
+        self._reset_env()
         self._clank = False
         self.dying = False
         self.events: list[str] = []
@@ -175,11 +254,16 @@ class BossOni(Samurai):
     def _reset_brain(self):
         self.sub, self.sub_t, self.sub_data = "idle", 0.0, {}
         self.hazards.clear()
+        self._reset_env()
         self.pose = {"stomp": 0.0, "sweep": None, "head_up": 1.0, "raise": 0.0}
         self.wz = 0.0
         self.velocity = (0.0, 0.0)
         if self.phase == 1:
             self._init_trail()
+
+    def _reset_env(self):
+        g = TUNE["env_grace"]
+        self.env_timers = {"fire": g, "lava": g + 1.5, "trap": g + 3.0}
 
     def _init_trail(self):
         self.trail = [(self.wx - self.facing_x * i * 0.2, self.wy - self.facing_y * i * 0.2) for i in range(60)]
@@ -304,8 +388,6 @@ class BossOni(Samurai):
             if particles is not None:
                 for _ in range(6):
                     particles.append(SparkParticle(self.wx, self.wy, 0.9, color=(210, 210, 220)))
-            if banners is not None:
-                banners.append(FloatingBanner(t("boss_clank"), self.wx, self.wy, wz=2.2, color=(210, 210, 225), duration=0.8))
         if not self.is_alive or self.dying:
             return
         if self.transforming:
@@ -318,21 +400,75 @@ class BossOni(Samurai):
         self.vulnerable = True
         brain = (self._brain_stand, self._brain_serpent, self._brain_torso, self._brain_club, self._brain_skull)[self.phase]
         brain(dt, game_map, target, particles, banners, camera)
+        self._update_env(dt, game_map, target)
         for h in self.hazards:
             h.update(dt)
+            if h.is_active and not h.announced:
+                h.announced = True
+                if h.kind in ("fireball", "spikes", "lava"):
+                    self.events.append(f"env_{h.kind}")
+                    if camera is not None and h.kind != "lava":
+                        camera.add_shake(6.0)
+                    if h.kind == "fireball":
+                        self._dust(particles, h.x, h.y, 8)
             if h.is_active and not h.hit_done and h.contains(target.wx, target.wy):
-                if h.kind in ("circle", "ring", "sector"):
+                if h.kind in ("circle", "ring", "sector", "fireball", "spikes", "lava"):
                     if self._hurt_player(target, (h.x, h.y), game_map, particles, banners, camera, h.damage):
                         h.hit_done = True
         self.hazards = [h for h in self.hazards if not h.done]
+
+    # ------------------------------------------------------------------ perigos do palco
+    def _update_env(self, dt, game_map, target):
+        """Bolas de fogo, rios de lava e armadilhas aparecem em ritmo crescente a cada fase."""
+        for key in ("fire", "lava", "trap"):
+            every = TUNE[f"env_{key}_every"][self.phase]
+            if every is None:
+                continue
+            self.env_timers[key] -= dt
+            if self.env_timers[key] <= 0.0:
+                self.env_timers[key] = every * self.env_rng.uniform(0.8, 1.2)
+                getattr(self, f"_spawn_{key}")(game_map, target)
+
+    def _random_spot(self, game_map, near=None, spread: float = 0.0):
+        min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
+        if near is None:
+            x, y = self.env_rng.uniform(min_x, max_x), self.env_rng.uniform(min_y, max_y)
+        else:
+            x, y = near[0] + self.env_rng.uniform(-spread, spread), near[1] + self.env_rng.uniform(-spread, spread)
+        return max(min_x, min(max_x, x)), max(min_y, min(max_y, y))
+
+    def _spawn_fire(self, game_map, target):
+        for i in range(TUNE["env_fire_count"][self.phase]):
+            x, y = self._random_spot(game_map, (target.wx, target.wy), 1.8) if i == 0 else self._random_spot(game_map)
+            self.hazards.append(BossHazard("fireball", x, y, self._scaled(TUNE["env_fire_warn"]) + 0.3 * i, 0.25, r=TUNE["env_fire_radius"]))
+
+    def _spawn_trap(self, game_map, target):
+        for i in range(TUNE["env_trap_count"][self.phase]):
+            x, y = self._random_spot(game_map, (target.wx, target.wy), 0.6) if i == 0 else self._random_spot(game_map)
+            self.hazards.append(BossHazard("spikes", x, y, self._scaled(TUNE["env_trap_warn"]) + 0.2 * i, TUNE["env_trap_active"],
+                                           r=TUNE["env_trap_radius"]))
+
+    def _spawn_lava(self, game_map, target):
+        """Rio de lava que nasce num canto e atravessa a arena rumo ao canto oposto (puxado para o jogador)."""
+        min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
+        corners = [(min_x, min_y), (max_x, min_y), (max_x, max_y), (min_x, max_y)]
+        first = self.env_rng.randrange(4)
+        for n in range(2 if self.phase == 4 else 1):
+            sx, sy = corners[(first + 2 * n) % 4]
+            ox, oy = corners[(first + 2 * n + 2) % 4]
+            ex, ey = ox + (target.wx - ox) * 0.4, oy + (target.wy - oy) * 0.4
+            length = math.hypot(ex - sx, ey - sy) or 1.0
+            dx, dy = (ex - sx) / length, (ey - sy) / length
+            length += 3.0  # sai da arena
+            active = (length + TUNE["env_lava_slab"]) / TUNE["env_lava_speed"]
+            self.hazards.append(BossHazard("lava", sx, sy, self._scaled(TUNE["env_lava_warn"]) + 0.8 * n, active, dx=dx, dy=dy, len=length,
+                                           width=TUNE["env_lava_width"], speed=TUNE["env_lava_speed"], slab=TUNE["env_lava_slab"]))
 
     def _finish_transform(self, target, banners):
         self._reset_brain()
         if self.phase in (2, 4) and target is not None and target.is_alive and target.hp < target.max_hp:
             target.hp += 1
             self.events.append("heal")
-            if banners is not None:
-                banners.append(FloatingBanner(t("boss_heal"), target.wx, target.wy, wz=1.9, color=(120, 240, 150), duration=1.2))
 
     def tick_transform(self, dt: float, target=None, banners=None):
         """Chamada pelo laço depois de `model.update`: avisa quando a transformação termina."""
@@ -561,7 +697,7 @@ class BossOni(Samurai):
         if sub == "idle":
             self._face(target)
             self.pose["raise"] = max(0.0, self.pose["raise"] - dt * 2.0)
-            if self.sub_t >= 1.0:
+            if self.sub_t >= TUNE["p4_idle"]:
                 err = TUNE["p4_aim_error"]
                 lx, ly = target.wx + self.rng.uniform(-err, err), target.wy + self.rng.uniform(-err, err)
                 min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)

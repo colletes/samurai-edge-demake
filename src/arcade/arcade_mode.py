@@ -35,6 +35,7 @@ FIGHT_LOST = "FIGHT_LOST"
 
 ORDER_TIER = "tier"
 ORDER_RANDOM = "random"
+TIER_JITTER = 1.6  # em posições de tier: só oponentes próximos na escala podem trocar de lugar
 
 
 class FightKind(Enum):
@@ -78,6 +79,9 @@ def build_ladder(player_char: str, seed: int = 0, order: str = ORDER_TIER) -> li
         pool.remove(rng.choice(pool))
     if order == ORDER_RANDOM:
         rng.shuffle(pool)
+    else:
+        rank = {c: i + rng.uniform(-TIER_JITTER, TIER_JITTER) for i, c in enumerate(pool)}
+        pool.sort(key=rank.get)
     ladder = [ArcadeFight(FightKind.DUEL, (opp,), ARENA_BY_FIGHTER[opp]) for opp in pool]
 
     ladder.append(ArcadeFight(FightKind.MIRROR, (player_char,), ARENA_BY_FIGHTER[player_char]))
@@ -148,6 +152,19 @@ class ArcadeRun:
         fight = self.current_fight()
         return None if fight is None or not fight.is_challenge else self.player_round_lives
 
+    @property
+    def challenge_rounds_total(self) -> int:
+        """Rounds a vencer no desafio inteiro (4 na endurance, 8 no ninja challenge); 0 fora dos desafios."""
+        fight = self.current_fight()
+        return 0 if fight is None or not fight.is_challenge else len(fight.opponents) * fight.rounds_to_win
+
+    @property
+    def challenge_rounds_won(self) -> int:
+        fight = self.current_fight()
+        if fight is None or not fight.is_challenge:
+            return 0
+        return self.opponent_index * fight.rounds_to_win + self.rounds_won_vs_current
+
     def add_time(self, dt: float):
         self.elapsed += dt
 
@@ -185,6 +202,7 @@ class ArcadeRun:
                 self.opponent_index += 1
                 self.rounds_won_vs_current = 0
                 self.rounds_lost_vs_current = 0
+                self.player_round_lives = fight.player_round_lives  # cada oponente é uma luta nova: vidas de volta
                 return NEXT_OPPONENT
             self.on_fight_won()
             return FIGHT_WON

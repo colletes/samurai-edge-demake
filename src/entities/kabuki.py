@@ -117,8 +117,6 @@ class PoisonCloud:
                             f.wx = max(1.0, min(24.0, f.wx))
                             f.wy = max(1.0, min(24.0, f.wy))
                             f.slow_timer = 0.0 # Sem lentidão!
-                            if banners is not None:
-                                banners.append(FloatingBanner("BLOWN BACK!", f.wx, f.wy, wz=1.7, color=(140, 245, 170), duration=1.2))
 
                         # 2. Infectar com veneno (sem slow, concedendo adrenalina de velocidade e cooldowns 20% menores)
                         if not getattr(f, "is_poisoned", False):
@@ -152,8 +150,6 @@ class PoisonCloud:
                             f.is_poisoned = False
                             hit, dead = f.take_hit((0, 0), damage=2)
                             if dead:
-                                if banners is not None:
-                                    banners.append(FloatingBanner("POISON DEATH!", f.wx, f.wy, wz=1.8, color=(80, 225, 120)))
                                 if particles is not None:
                                     from src.effects.particles import BloodParticle
                                     for _ in range(30):
@@ -252,7 +248,6 @@ class OkuniDecoy:
         """Absorve o golpe adversário, causa whiff stun e estoura em pétalas de cerejeira."""
         self.is_active = False
         camera.add_shake(7.0)
-        banners.append(FloatingBanner("KAWARIMI WHIFF!", self.wx, self.wy, wz=1.7, color=COLOR_SAKURA_PINK))
         if attacker and attacker.is_alive:
             attacker.stun(0.45)  # Whiff punish fatal!
         if particles is not None:

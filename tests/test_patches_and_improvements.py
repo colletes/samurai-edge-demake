@@ -160,14 +160,12 @@ def test_item_6_joes_dog_only_stunned_when_attacking():
 
 
 def test_item_7_and_8_julie_flintlock_and_repel():
-    """Item 7 e 8: Repel é a esquiva (trigger_roll) e Secundário é o disparo Flintlock."""
+    """Item 7 e 8: o floreio de capa repele de perto e o Secundário é o disparo Flintlock quando pronto."""
     julie = Musketeer(10.0, 10.0)
     opp = RedSamurai(10.8, 10.0)
     particles = []
-    banners = []
 
-    # Roll é Cape Flourish Repel
-    julie.trigger_roll(1.0, 0.0, particles, opponent=opp, banners=banners)
+    julie.trigger_cape_flip(1.0, 0.0, particles, opponent=opp)
     assert julie.state == "CAPE_FLOURISH"
     assert julie.is_invulnerable_dodge is True
     assert julie.state_timer <= 0.16 + 1e-4
@@ -184,7 +182,7 @@ def test_item_7_and_8_julie_flintlock_and_repel():
 
 
 def test_item_9_julie_flintlock_banner_name():
-    """Item 9: Disparo fatal de Julie exibe POCKET FLINTLOCK SNIPE! em vez de Tanegashima."""
+    """Item 9: o disparo fatal de Julie não exibe aviso flutuante de morte."""
     julie = Musketeer(10.0, 10.0)
     p2 = RedSamurai(10.5, 10.0)
     bullet = MusketBulletProjectile(10.5, 10.0, 0.45, 1.0, 0.0, owner=julie)
@@ -196,8 +194,7 @@ def test_item_9_julie_flintlock_banner_name():
 
     combat.process_combat(julie, p2, game_map, particles, banners, camera, [bullet])
     banner_texts = [b.text for b in banners]
-    assert "POCKET FLINTLOCK SNIPE!" in banner_texts
-    assert not any("TANEGASHIMA" in t for t in banner_texts)
+    assert not any("SNIPE" in t or "TANEGASHIMA" in t for t in banner_texts)
 
 
 def test_item_10_murasaki_frontal_deflection_cone():

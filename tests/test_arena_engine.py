@@ -239,7 +239,7 @@ def test_failed_crossing_and_forced_displacement_fall():
     _roll(f)
     particles, banners = _run(f, arena, 3.0)
     assert f.state == STATE_DEAD and f.fell_into_pit and not f.is_alive and f.hp == 0
-    assert banners, "a queda mostra um banner"
+    assert not banners, "a queda não mostra aviso flutuante"
     assert particles, "a queda levanta poeira"
 
     pushed = _fighter_at(CHAR_GRAY, m.x0 - 0.5)

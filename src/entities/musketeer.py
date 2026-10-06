@@ -34,12 +34,12 @@ class Musketeer(Samurai):
         self.flintlock_cooldown = 4.5
         self.flintlock_timer = 1.0  # Inicia com 1.0s no round para evitar tiro instantâneo no spawn
 
-        # Terceira Ação: Floreio de Capa & Repel de Esquiva (Especial / Ágil)
-        self.is_agile_dodge = True
-        self.roll_speed = 10.5
-        self.roll_duration = 0.22
-        self.roll_recovery_duration = 0.12
-        self.roll_cooldown_duration = 0.35
+        # Terceira Ação: Rolamento de Mosqueteira (grande: cobre buracos largos e desvia projéteis)
+        self.is_agile_dodge = False
+        self.roll_speed = 9.5
+        self.roll_duration = 0.34
+        self.roll_recovery_duration = 0.20
+        self.roll_cooldown_duration = 0.60
 
     def can_act(self) -> bool:
         return (
@@ -98,12 +98,19 @@ class Musketeer(Samurai):
             for _ in range(16):
                 particles.append(SparkParticle(self.wx + dir_x * 0.5, self.wy + dir_y * 0.5, 0.45, color=(255, 210, 100)))
 
-    def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None, opponent = None, banners: list = None):
+    def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
+        """Terceira Ação: rolamento grande com i-frames; a capa desvia projéteis durante o giro (ver CombatSystem)."""
+        if self.state == "CAPE_FLOURISH":
+            return
+        super().trigger_roll(dir_x, dir_y, particles)
+
+    def trigger_cape_flip(self, dir_x: float, dir_y: float, particles: list = None, opponent=None):
         """
-        Terceira Ação / Esquiva: Cape Flourish & Coup de Pied (Repel - Item 7).
-        Esquiva veloz com giro da capa que repele projéteis e oponentes a curta distância.
+        Floreio de Capa & Coup de Pied: salto curto com giro da capa que desvia projéteis
+        e repele oponentes a curta distância.
         """
-        if not self.is_alive or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK, "CAPE_FLOURISH") or self.dash_recovery_timer > 0:
+        if (not self.is_alive or self.cape_timer > 0 or self.dash_recovery_timer > 0
+                or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK, "CAPE_FLOURISH")):
             return
 
         if dir_x == 0 and dir_y == 0:
@@ -117,12 +124,11 @@ class Musketeer(Samurai):
         self.facing_x = dir_x
         self.facing_y = dir_y
         self.state = "CAPE_FLOURISH"
-        self.state_timer = 0.16  # Rápido e responsivo (Item 7)
+        self.state_timer = 0.16
         self.cape_timer = self.cape_cooldown
         self.is_invulnerable_dodge = True
         self.hitbox_active = False
 
-        # Deslocamento ágil de esquiva
         self.wx += dir_x * 0.45
         self.wy += dir_y * 0.45
 
@@ -140,12 +146,17 @@ class Musketeer(Samurai):
                     opponent.stun(0.35)
                 opponent.wx += self.facing_x * 2.0
                 opponent.wy += self.facing_y * 2.0
-                if banners is not None:
-                    from src.effects.particles import FloatingBanner
-                    banners.append(FloatingBanner("COUP DE PIED! REPEL!", opponent.wx, opponent.wy, wz=1.75, color=(100, 175, 255)))
+
+    def trigger_secondary(self, aim_x: float, aim_y: float, projectiles: list, particles: list = None, opponent=None) -> str | None:
+        """Ação Secundária contextual: tiro de pederneira quando pronto; com a pistola recarregando, o floreio de capa."""
+        if self.flintlock_timer <= 0 and projectiles is not None and self.can_act():
+            self.trigger_flintlock_shot(aim_x, aim_y, projectiles, particles)
+            return "shot"
+        self.trigger_cape_flourish(aim_x, aim_y, opponent=opponent, particles=particles)
+        return "flip" if self.state == "CAPE_FLOURISH" else None
 
     def trigger_cape_flourish(self, target_wx: float = None, target_wy: float = None, opponent = None, particles: list = None, banners: list = None, projectiles: list = None):
-        """Redireciona para trigger_roll (Repel de esquiva) ou trigger_flintlock_shot."""
+        """Floreio de capa na direção do alvo (IA e chamadas legadas)."""
         dir_x, dir_y = self.facing_x, self.facing_y
         if target_wx is not None and target_wy is not None:
             dx = target_wx - self.wx
@@ -153,7 +164,7 @@ class Musketeer(Samurai):
             mag = math.hypot(dx, dy)
             if mag > 0.001:
                 dir_x, dir_y = dx / mag, dy / mag
-        self.trigger_roll(dir_x, dir_y, particles=particles, opponent=opponent, banners=banners)
+        self.trigger_cape_flip(dir_x, dir_y, particles=particles, opponent=opponent)
 
     def trigger_cloak_riposte(self, target_wx: float = None, target_wy: float = None, projectiles: list = None, particles: list = None, opponent = None, banners: list = None):
         """Compatibilidade para chamadas legadas: redireciona para o floreio de capa/esquiva."""

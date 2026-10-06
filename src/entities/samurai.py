@@ -263,7 +263,6 @@ class Samurai:
         if banners is not None:
             from src.effects.particles import FloatingBanner
             from src.i18n import t
-            banners.append(FloatingBanner(t("banner_fell"), self.wx, self.wy, wz=1.7, color=(235, 205, 150), duration=1.4))
 
     def apply_forced_displacement(self, dx: float, dy: float, game_map):
         """Empurrão/puxão externo: respeita limites e sólidos, mas ignora buracos (a queda é decidida em update_pit)."""

@@ -5,6 +5,19 @@ All notable changes to Samurai Edge Demake are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-10-06
+
+### Added
+- Oni Gashadokuro: menacing kabuto-skull head (gold crest, horns, glowing eyes), bones and ribs rebuilt from small voxels, much shorter cooldowns between moves, and stage hazards that grow with each phase (falling fireballs, corner-to-corner lava streams, bone-spike traps)
+- Endurance and ninja challenge HUD: round dots now track the whole challenge (4 and 8) with an "opponent n/m" counter
+- Julie: musketeer roll as the third action (large, clears pits, deflects projectiles)
+
+### Changed
+- Challenge fights restore the player's two round lives against each new opponent
+- Arcade duel order still follows the balance tiers, but opponents close in tier now shuffle each run
+- Julie's secondary action is contextual: flintlock shot when ready, cape flip while the pistol reloads
+- Damage and kill messages no longer float above fighters; status, parry, deflection and clash messages remain
+
 ## [1.5.0] - 2026-10-05
 
 ### Added

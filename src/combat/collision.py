@@ -7,7 +7,7 @@ from src.isometric.iso_math import world_distance
 from src.effects.particles import (
     SparkParticle, BloodParticle, FloatingBanner
 )
-from src.entities.samurai import STATE_PARRY, STATE_RECOVERY, STATE_STUNNED
+from src.entities.samurai import STATE_PARRY, STATE_RECOVERY, STATE_STUNNED, STATE_ROLL
 from src.entities.projectile import (
     KunaiProjectile, ShurikenProjectile, TimedBombEntity, SmokeCloudEntity,
     KusarigamaChainEntity, MusketBulletProjectile, PoisonCloudProjectile,
@@ -154,17 +154,17 @@ class CombatSystem:
                             camera.add_shake(4.0)
                             self._play_sound("parry")
 
-            # 5. Julie: Floreio de Capa Defensivo (Cape Deflection - Cone Frontal de ~120°)
-            elif char_t == "musketeer" and def_fighter.state == "CAPE_FLOURISH":
+            # 5. Julie: Floreio de Capa (cone frontal) e Rolamento (giro completo da capa) desviam projéteis
+            elif char_t == "musketeer" and def_fighter.state in ("CAPE_FLOURISH", STATE_ROLL):
+                rolling = def_fighter.state == STATE_ROLL
                 for proj in projectiles:
                     if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter:
                         dist = world_distance(def_fighter.wx, def_fighter.wy, proj.wx, proj.wy)
-                        if dist < 1.95:
-                            # Verifica cone frontal: apenas projéteis vindos de frente são defletidos
+                        if dist < (2.1 if rolling else 1.95):
                             proj_dx = proj.wx - def_fighter.wx
                             proj_dy = proj.wy - def_fighter.wy
                             dot = (proj_dx * def_fighter.facing_x + proj_dy * def_fighter.facing_y) / max(0.001, dist)
-                            if dot > 0.0:  # Cone frontal de 90° de cada lado (180° total de frente)
+                            if rolling or dot > 0.0:
                                 proj.is_active = False
                                 for _ in range(12):
                                     particles.append(SparkParticle(proj.wx, proj.wy, 0.55, color=(100, 180, 255)))
@@ -253,7 +253,6 @@ class CombatSystem:
                         hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=2)
                         if dead:
                             camera.add_shake(15.0)
-                            banners.append(FloatingBanner("KUNAI SNIPE - 1 HIT KILL!", target.wx, target.wy, wz=1.8, color=(255, 220, 50)))
                             for _ in range(25):
                                 particles.append(BloodParticle(target.wx, target.wy, 0.6))
                             self.hitstop_timer = 0.12
@@ -326,7 +325,6 @@ class CombatSystem:
                 if should_detonate:
                     proj.is_active = False
                     camera.add_shake(18.0)
-                    banners.append(FloatingBanner("BOOM! - BOMB DETONATION!", proj.wx, proj.wy, wz=1.8, color=(255, 140, 20)))
                     self._play_sound("bomb_explode")
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(0, 0.9, 0.7, 280)
@@ -444,14 +442,6 @@ class CombatSystem:
                             hit, dead = target.take_hit((proj.vx, proj.vy), damage=2)
                             if dead:
                                 camera.add_shake(16.0)
-                                owner_type = getattr(proj.owner, "char_type", "")
-                                if owner_type in ("musketeer", "julie"):
-                                    banner_text = "POCKET FLINTLOCK SNIPE!"
-                                    banner_color = (255, 215, 70)
-                                else:
-                                    banner_text = "TANEGASHIMA HEADSHOT!"
-                                    banner_color = (255, 180, 50)
-                                banners.append(FloatingBanner(banner_text, target.wx, target.wy, wz=1.8, color=banner_color))
                                 for _ in range(30):
                                     particles.append(BloodParticle(target.wx, target.wy, 0.6))
                                 self.hitstop_timer = 0.14
@@ -510,7 +500,6 @@ class CombatSystem:
                         hit, dead = target.take_hit((proj.vx, proj.vy), damage=2)
                         if dead:
                             camera.add_shake(15.0)
-                            banners.append(FloatingBanner("YUMI HEART SHOT!", target.wx, target.wy, wz=1.8, color=(100, 220, 140)))
                             for _ in range(25):
                                 particles.append(BloodParticle(target.wx, target.wy, 0.6))
                             self.hitstop_timer = 0.12
@@ -529,7 +518,6 @@ class CombatSystem:
                     hit, dead = target.take_hit((proj.vx, proj.vy), damage=2)
                     if dead:
                         camera.add_shake(16.0)
-                        banners.append(FloatingBanner("HAMAYA PURIFICATION!", target.wx, target.wy, wz=1.8, color=(255, 225, 90)))
                         for _ in range(30):
                             particles.append(BloodParticle(target.wx, target.wy, 0.6))
                         for _ in range(16):
@@ -610,7 +598,6 @@ class CombatSystem:
                         hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=2)
                         if dead:
                             camera.add_shake(15.0)
-                            banners.append(FloatingBanner("MUSASHI WAVE - 1 HIT KILL!", target.wx, target.wy, wz=1.8, color=(100, 200, 255)))
                             for _ in range(25):
                                 particles.append(BloodParticle(target.wx, target.wy, 0.6))
                             self.hitstop_timer = 0.12
@@ -637,7 +624,6 @@ class CombatSystem:
                                 hit, dead = target.take_hit((0, 0), damage=2)
                                 if dead:
                                     camera.add_shake(20.0)
-                                    banners.append(FloatingBanner("NAVAL CANNON FATALITY!", target.wx, target.wy, wz=2.0, color=(255, 120, 30)))
                                     for _ in range(35):
                                         particles.append(BloodParticle(target.wx, target.wy, 0.7))
                                     self.hitstop_timer = 0.16
@@ -678,7 +664,6 @@ class CombatSystem:
                     fighter.is_poisoned = False
                     _, poison_dead = fighter.take_hit((0, 0), damage=2)
                     if poison_dead:
-                        banners.append(FloatingBanner("POISON DEATH!", fighter.wx, fighter.wy, wz=1.8, color=(80, 225, 120)))
                         for _ in range(30):
                             particles.append(BloodParticle(fighter.wx, fighter.wy, 0.6))
                         if winner is None:
@@ -718,7 +703,6 @@ class CombatSystem:
                     hit, dead = p2.take_hit((dog.facing_x, dog.facing_y), damage=2)
                     if dead:
                         camera.add_shake(16.0)
-                        banners.append(FloatingBanner("DOBERMAN BITE - FATAL!", p2.wx, p2.wy, wz=1.8, color=(255, 45, 45)))
                         for _ in range(30):
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                         self.hitstop_timer = 0.14
@@ -755,7 +739,6 @@ class CombatSystem:
                     hit, dead = p1.take_hit((dog.facing_x, dog.facing_y), damage=2)
                     if dead:
                         camera.add_shake(16.0)
-                        banners.append(FloatingBanner("DOBERMAN BITE - FATAL!", p1.wx, p1.wy, wz=1.8, color=(255, 45, 45)))
                         for _ in range(30):
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                         self.hitstop_timer = 0.14
@@ -797,7 +780,6 @@ class CombatSystem:
                     p2.hitbox_active = False
                     hit, dead = p2.take_hit(p1.slash_dir, damage=2)
                     camera.add_shake(16.0)
-                    banners.append(FloatingBanner("PRECEDÊNCIA ABSOLUTA! (FOICE)", p2.wx, p2.wy, wz=1.8, color=(220, 140, 255)))
                     for _ in range(25):
                         particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                     self.hitstop_timer = 0.14
@@ -811,7 +793,6 @@ class CombatSystem:
                     p1.hitbox_active = False
                     hit, dead = p1.take_hit(p2.slash_dir, damage=2)
                     camera.add_shake(16.0)
-                    banners.append(FloatingBanner("PRECEDÊNCIA ABSOLUTA! (FOICE)", p1.wx, p1.wy, wz=1.8, color=(220, 140, 255)))
                     for _ in range(25):
                         particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                     self.hitstop_timer = 0.14
@@ -891,7 +872,6 @@ class CombatSystem:
                             cinematic_director.trigger_fatal_strike(p1, p2, "BLUNT_FALL", p1.slash_dir)
                 else:
                     is_ninja = (getattr(p1, "char_type", "") == "ninja" or hasattr(p1, "has_kunai"))
-                    kill_label = None
                     if is_ninja:
                         # 1-Hit Kill em Contra-Ataque (adversário em recovery/stunned) ou Costas (backstab)
                         dot_facing = p1.facing_x * p2.facing_x + p1.facing_y * p2.facing_y
@@ -899,7 +879,6 @@ class CombatSystem:
                         is_punish = (p2.state in (STATE_RECOVERY, STATE_STUNNED))
                         if is_backstab or is_punish:
                             damage = 2
-                            kill_label = "BACKSTAB - 1 HIT KILL!" if is_backstab else "PUNISH - 1 HIT KILL!"
                         else:
                             damage = 1
                     else:
@@ -911,13 +890,6 @@ class CombatSystem:
                             p1.on_hit_success()
                     if dead:
                         camera.add_shake(14.0)
-                        if kill_label:
-                            kill_msg = kill_label
-                        elif p1.state == "GATOTSU_CHARGE":
-                            kill_msg = "GATOTSU - 1 HIT KILL!"
-                        else:
-                            kill_msg = "FATAL STRIKE!"
-                        banners.append(FloatingBanner(kill_msg, p2.wx, p2.wy, wz=1.8, color=(255, 220, 50) if kill_label else ((120, 210, 255) if p1.state == "GATOTSU_CHARGE" else (255, 60, 60))))
                         for _ in range(25):
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                         self.hitstop_timer = 0.12
@@ -979,14 +951,12 @@ class CombatSystem:
                             cinematic_director.trigger_fatal_strike(p2, p1, "BLUNT_FALL", p2.slash_dir)
                 else:
                     is_ninja = getattr(p2, "char_type", "") == "ninja"
-                    kill_label = None
                     if is_ninja:
                         dot_facing = p2.facing_x * p1.facing_x + p2.facing_y * p1.facing_y
                         is_backstab = (dot_facing > 0.20)
                         is_punish = (p1.state in (STATE_RECOVERY, STATE_STUNNED))
                         if is_backstab or is_punish:
                             damage = 2
-                            kill_label = "BACKSTAB - 1 HIT KILL!" if is_backstab else "PUNISH - 1 HIT KILL!"
                         else:
                             damage = 1
                     else:
@@ -998,13 +968,6 @@ class CombatSystem:
                             p2.on_hit_success()
                     if dead:
                         camera.add_shake(14.0)
-                        if kill_label:
-                            kill_msg = kill_label
-                        elif p2.state == "GATOTSU_CHARGE":
-                            kill_msg = "GATOTSU - 1 HIT KILL!"
-                        else:
-                            kill_msg = "FATAL STRIKE!"
-                        banners.append(FloatingBanner(kill_msg, p1.wx, p1.wy, wz=1.8, color=(255, 220, 50) if kill_label else ((120, 210, 255) if p2.state == "GATOTSU_CHARGE" else (70, 150, 255))))
                         for _ in range(25):
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                         self.hitstop_timer = 0.12

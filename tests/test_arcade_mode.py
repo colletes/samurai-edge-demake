@@ -50,7 +50,8 @@ def test_ladder_for_all_fighters():
         duels = [f.opponents[0] for f in ladder[:7]]
         assert len(set(duels)) == 7 and player not in duels and not (set(duels) & NINJAS), (player, duels)
         strength = [ARCADE_TIER_ORDER.index(c) for c in duels]
-        assert strength == sorted(strength), "do mais fraco ao mais forte"
+        pool_rank = sorted(strength)
+        assert all(abs(pos - pool_rank.index(s)) <= 3 for pos, s in enumerate(strength)), (player, "segue os tiers com sorteio curto")
         assert [ARENA_BY_FIGHTER[o] for o in duels] == [f.arena_id for f in ladder[:7]]
         mirror = ladder[7]
         assert mirror.opponents == (player,) and mirror.arena_id == ARENA_BY_FIGHTER[player] and not mirror.is_challenge
@@ -83,6 +84,9 @@ def test_ladder_order_and_seed():
     assert a == b and sorted(a) == sorted(c)
     discarded = {tuple(sorted(f.opponents[0] for f in build_ladder("ninja", s)[:7])) for s in range(12)}
     assert len(discarded) > 1, "jogador ninja: o descartado muda com a semente"
+    orders = {tuple(f.opponents[0] for f in build_ladder("kenshin", s)[:7]) for s in range(30)}
+    assert len(orders) > 5, "a ordem dos duelos varia a cada jornada"
+    assert all(sorted(o) == sorted(next(iter(orders))) for o in orders), "mesmos 7 oponentes, só a ordem muda"
     print("  [OK] A ordem por tier e por semente é reproduzível; ninja descarta um oponente por sorteio.", flush=True)
 
 
@@ -138,6 +142,18 @@ def test_challenges():
     assert end.current_opponent() != first and end.ladder[8].arena_id == ARENA_BY_FIGHTER[first], "troca de oponente sem trocar de arena"
     end.on_round_end("P2")
     assert end.lives_left == 1
+    assert (end.challenge_rounds_won, end.challenge_rounds_total) == (2, 4)
+    end.on_round_end("P1")
+    assert (end.challenge_rounds_won, end.challenge_rounds_total) == (3, 4) and end.lives_left == 1
+    assert end.on_round_end("P1") == FIGHT_WON
+    ninja = ArcadeRun("kenshin")
+    jump_to(ninja, FightKind.NINJA_CHALLENGE)
+    assert ninja.challenge_rounds_total == 8
+    ninja.on_round_end("P2")
+    assert ninja.lives_left == 1
+    ninja.on_round_end("P1"); ninja.on_round_end("P1")
+    assert ninja.lives_left == 2, "cada oponente novo devolve as vidas de round"
+    assert ninja.on_round_end("P2") == NEXT_ROUND and ninja.on_round_end("P2") == FIGHT_LOST
     print("  [OK] Desafios: 2 rounds por oponente, 2 vidas de round, 2ª derrota encerra, Continue refaz tudo.", flush=True)
 
 

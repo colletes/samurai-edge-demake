@@ -26,8 +26,8 @@ def check_match_winner(score_p1: int, score_p2: int, wins_needed: int = MATCH_WI
     return None
 
 
-def render_round_pips(surface: pygame.Surface, score_p1: int, score_p2: int, p1_color, p2_color, wins_needed: int = MATCH_WINS_NEEDED, panel_rect: pygame.Rect = None):
-    """Desenha os marcadores (pips) de rounds vencidos por cada jogador na HUD (Melhor-de-3)."""
+def render_round_pips(surface: pygame.Surface, score_p1: int, score_p2: int, p1_color, p2_color, wins_needed: int = MATCH_WINS_NEEDED, panel_rect: pygame.Rect = None, p1_total: int | None = None):
+    """Desenha os marcadores (pips) de rounds vencidos por cada jogador na HUD (`p1_total` amplia só os do jogador 1)."""
     pip_radius = 6
     spacing = 18
     if panel_rect is not None:
@@ -39,7 +39,7 @@ def render_round_pips(surface: pygame.Surface, score_p1: int, score_p2: int, p1_
         start_x_p1 = 24
         start_x_p2 = SCREEN_WIDTH - 24
 
-    for i in range(wins_needed):
+    for i in range(p1_total or wins_needed):
         color = p1_color if i < score_p1 else (70, 70, 80)
         cx = start_x_p1 + i * spacing
         pygame.draw.circle(surface, color, (cx, y), pip_radius)

@@ -396,7 +396,6 @@ class RemoteMineEntity:
 
         if banners is not None:
             from src.effects.particles import FloatingBanner
-            banners.append(FloatingBanner("REMOTE DETONATION!", self.wx, self.wy, wz=1.8, color=(255, 120, 40)))
 
         target_list = list(fighters) if fighters is not None else []
         if self.owner and self.owner not in target_list:

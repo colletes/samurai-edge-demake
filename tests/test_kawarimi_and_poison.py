@@ -70,7 +70,7 @@ def test_kawarimi_and_poison():
     assert not decoy_ref.is_active, "Decoy deve ser destruído ao ser atingido"
     assert len(decoys) == 0, "Decoys inativos devem ser limpos da lista de decoys ativos"
     assert attacker.state == "STUNNED", f"Atacante deveria estar STUNNED pelo Kawarimi Whiff, obtido {attacker.state}"
-    assert any("KAWARIMI WHIFF!" in b.text for b in banners), "Banner KAWARIMI WHIFF! deve ser exibido"
+    assert not any("KAWARIMI WHIFF!" in b.text for b in banners), "golpe no Kawarimi não gera aviso flutuante"
     print("  [OK] Atacante punido com STUN ao atingir o manequim Kawarimi!", flush=True)
 
     print("\n=== TESTE 2: Veneno de Okuni (Dokukiri 6s) e Prevenção de Softlock ===", flush=True)
@@ -91,7 +91,7 @@ def test_kawarimi_and_poison():
     cloud.update(0.02, fighters=[victim], particles=particles, banners=banners, cinematic_director=cinematic_director)
     
     assert not victim.is_alive, "Vítima deveria ter perecido pelo veneno"
-    assert any("POISON DEATH!" in b.text for b in banners), "Banner POISON DEATH! deve ser emitido"
+    assert not any("POISON DEATH!" in b.text for b in banners), "morte por veneno não gera aviso flutuante"
     assert cinematic_director.pending_corpse is not None, "Cinematic Director deve registrar o cadáver em dissolução"
     assert cinematic_director.pending_corpse.death_style == "OKUNI_MELT", "Estilo de morte deve ser OKUNI_MELT"
     print("  [OK] Morte por veneno aciona OKUNI_MELT no CinematicDirector sem fazer o corpo sumir.", flush=True)

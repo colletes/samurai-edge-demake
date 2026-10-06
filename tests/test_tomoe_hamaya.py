@@ -127,7 +127,7 @@ class TestTomoeHamaya(unittest.TestCase):
         self.assertEqual(winner, "P1_WINS", "Hamaya deve conceder a vitória letal")
         self.assertFalse(self.enemy.is_alive, "Oponente deve morrer com 1 hit da Hamaya")
         self.assertFalse(hamaya.is_active, "Hamaya é consumida ao cravar no oponente")
-        self.assertTrue(any("HAMAYA PURIFICATION!" in b.text for b in banners), "Banner sagrado deve ser emitido")
+        self.assertFalse(any("HAMAYA" in b.text for b in banners), "morte não gera aviso flutuante")
         self.assertTrue(len(particles) >= 20, "Partículas de sangue e luz sagrada devem ser geradas")
 
 if __name__ == "__main__":

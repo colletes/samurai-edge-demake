@@ -698,25 +698,26 @@ FIGHTERS_GUIDE_DATA = [
             "style": "Esgrima Francesa (Florete & Capa)",
             "vel": "[5/5] Velocidade de Elite",
             "dano": "Fleche Thrust Longo e Preciso",
-            "especial": "Capa Riposte (Desvio & Contra-Ataque)",
+            "especial": "Pederneira, Floreio de Capa e Rolamento Desviante",
             "keys_p1": "[E] Estocada Fleche (Ataque)",
-            "keys_p2": "[R] Capa Riposte (Especial)",
+            "keys_p2": "[R] Pederneira / Floreio de Capa (Especial)",
             "conceito": (
                 "Nobre duelista europeia mestre na arte do florete e capa de esgrima. Campeã invicta em duelos "
                 "de honra, combina elegância aristocrática, estocadas de alcance cirúrgico e defesas perfeitas."
             ),
             "habilidades": (
                 "• Fleche Thrust [E]: Investida frontal alongada em passo de flecha de longo alcance e precisão cirúrgica.\n"
-                "• Capa Riposte [R]: Gira a capa de combate de seda reforçada para aparar golpes e contra-atacar fatalmente."
+                "• Pederneira / Floreio de Capa [R]: com a pistola pronta, dispara; com ela recarregando, o floreio de capa repele quem está perto e desvia projéteis.\n"
+                "• Rolamento [T]: rolamento grande com i-frames que atravessa buracos e desvia projéteis."
             ),
             "estrategia_ofensiva": (
                 "• O Fleche tem alcance superior ao das katanas convencionais. Pique o oponente de fora do alcance dele!\n"
-                "• Se você antecipar o ataque inimigo, ative o Riposte [R]: a capa desviará a lâmina e perfurará o rival.\n"
+                "• Atire com a pederneira [R] de média distância; com a pistola recarregando, use o floreio de capa [R] para repelir o rival.\n"
                 "• Abuse de sua velocidade 5/5 para entrar, atacar e recuar com graça e impunidade."
             ),
             "estrategia_defensiva": (
                 "• Como vencer Julie: O Fleche tem linha reta muito estreita; esquivas laterais limpas abrem as costas "
-                "dela para punição. Fique atento ao Riposte da capa para não cair na armadilha do contra-ataque."
+                "dela para punição. Ela rola para longe e desvia projéteis durante o rolamento: atire quando ela estiver em recuperação."
             )
         },
         "en": {
@@ -725,25 +726,26 @@ FIGHTERS_GUIDE_DATA = [
             "style": "French Fencing (Rapier & Cloak)",
             "vel": "[5/5] Elite Fencing Speed",
             "dano": "Long Precision Fleche Thrust",
-            "especial": "Cloak Riposte (Deflect & Counter)",
+            "especial": "Flintlock, Cape Flip and Deflecting Roll",
             "keys_p1": "[E] Fleche Thrust (Attack)",
-            "keys_p2": "[R] Cloak Riposte (Special)",
+            "keys_p2": "[R] Flintlock / Cape Flip (Special)",
             "conceito": (
                 "Aristocratic European duelist, undefeated master of rapier and combat cloak fencing. "
                 "Melds courtly elegance with surgical reach and deadly counter-ripostes."
             ),
             "habilidades": (
                 "• Fleche Thrust [E]: Extended acrobatic lunging thrust with extreme range and pinpoint accuracy.\n"
-                "• Cloak Riposte [R]: Swirls her reinforced silk cloak to parry attacks and immediately counter with a fatal thrust."
+                "• Flintlock / Cape Flip [R]: fires the pistol when ready; while it reloads, the cape flip repels nearby foes and deflects projectiles.\n"
+                "• Roll [T]: a large invulnerable roll that clears pits and deflects projectiles."
             ),
             "estrategia_ofensiva": (
                 "• Fleche out-ranges conventional samurai katanas. Strike from just outside their range!\n"
-                "• If you anticipate an enemy strike, trigger Cloak Riposte [R] to parry and instantly pierce them.\n"
+                "• Shoot the flintlock [R] from mid-range; while it reloads, use the cape flip [R] to repel your rival.\n"
                 "• Abuse your 5/5 top speed to lunge, hit, and dance away untouched."
             ),
             "estrategia_defensiva": (
                 "• How to defeat Julie: The Fleche travels along a narrow straight line; clean lateral sidesteps "
-                "expose her back to punishment. Watch out for her cloak riposte trap."
+                "expose her back to punishment. She rolls away and deflects projectiles mid-roll: shoot when she is recovering."
             )
         }
     }

@@ -433,9 +433,12 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
         # Anne Bonny: Naval Artillery Strike (Hold & release orbital cannonball)
         fighter.start_cannon_strike(aim_x, aim_y)
     elif isinstance(fighter, Musketeer):
-        # Julie: Disparo veloz de pederneira (Pocket Flintlock de curto alcance - Item 7 e 20)
-        fighter.trigger_flintlock_shot(aim_x, aim_y, projectiles, particles=particles)
-        play_sfx(SoundEvent.FLINTLOCK_FIRE)
+        # Julie: pederneira quando pronta; com ela recarregando, floreio de capa (repele e desvia projéteis)
+        result = fighter.trigger_secondary(aim_x, aim_y, projectiles, particles=particles, opponent=opponent)
+        if result == "shot":
+            play_sfx(SoundEvent.FLINTLOCK_FIRE)
+        elif result == "flip":
+            play_sfx(SoundEvent.DODGE_WHOOSH)
 
 def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None, opponent=None, banners=None):
     """Executa a Terceira Ação (Roll / Dash dedicado) com invulnerabilidade temporária (i-frames)."""
@@ -451,9 +454,6 @@ def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: f
     elif isinstance(fighter, KyudoArcher):
         # Tomoe: Flecha de corda para movimentação rápida
         fighter.start_rope_arrow_charge(aim_x, aim_y, game_map)
-    elif isinstance(fighter, Musketeer):
-        # Julie: Cape Flourish & Coup de Pied (Repel de esquiva - Item 7)
-        fighter.trigger_roll(dwx, dwy, particles=particles, opponent=opponent, banners=banners)
     else:
         # Demais personagens (BlueSamurai, YellowNinja, AmericanNinja, GrayNinja, PurpleNinja, SaitouSamurai)
         if hasattr(fighter, "trigger_roll"):
@@ -1691,6 +1691,10 @@ def run_game():
                                                   wz=4.2, color=(255, 190, 120), duration=2.4))
                 elif ev == "hit":
                     play_sfx(SoundEvent.SWORD_SLASH)
+                elif ev in ("env_fireball", "env_spikes"):
+                    play_sfx(SoundEvent.BOMB_EXPLODE if ev == "env_fireball" else SoundEvent.OBSTACLE_HIT)
+                elif ev == "env_lava":
+                    play_sfx(SoundEvent.CANNON_FIRE)
                 elif ev == "player_hit":
                     ctrl_mgr.rumble_player(0, 0.7, 1.0, 220)
 
@@ -1852,6 +1856,8 @@ def run_game():
         if isinstance(p2, BossOni):
             for hazard in p2.hazards:
                 render_queue.append((-1e9, 'boss_ground', hazard))
+                if hazard.kind == "fireball":
+                    render_queue.append((camera.depth(hazard.x, hazard.y) + 40.0, 'boss_air', hazard.air_view))
 
         # Adicionar cão Doberman ao Y-sorting se houver American Ninja na partida
         if hasattr(p1, "dog") and p1.dog:
@@ -2003,7 +2009,19 @@ def run_game():
         if getattr(p2, "mirror_alt", False):
             p2_name = t("arcade_mirror_tag")
 
-        p1_title = font_mid.render(f"{p1_name}  {score_p1}", True, p1_color)
+        # Desafios: após vencer a luta, a jornada já avançou; o HUD continua mostrando a luta que acabou
+        hud_fight = None
+        if arcade_run is not None:
+            hud_idx = arcade_run.index - 1 if arcade_fight_over == "won" else arcade_run.index
+            hud_fight = arcade_run.ladder[hud_idx] if 0 <= hud_idx < len(arcade_run.ladder) else None
+        challenge_total = len(hud_fight.opponents) * hud_fight.rounds_to_win if hud_fight is not None and hud_fight.is_challenge else 0
+        if not challenge_total:
+            p1_round_score = score_p1
+        elif arcade_fight_over == "won":
+            p1_round_score = challenge_total
+        else:
+            p1_round_score = arcade_run.challenge_rounds_won
+        p1_title = font_mid.render(f"{p1_name}  {p1_round_score}", True, p1_color)
         p2_title = font_mid.render(f"{score_p2}  {p2_name}", True, p2_color)
         screen.blit(p1_title, (panel_rect.x + 20, panel_rect.y + 10))
         screen.blit(p2_title, (panel_rect.right - p2_title.get_width() - 20, panel_rect.y + 10))
@@ -2013,15 +2031,16 @@ def run_game():
             render_boss_bar(screen, p2, panel_rect)
             render_damage_bars(screen, p1, p2, p1_color, p2_color, panel_rect)
         else:
-            render_round_pips(screen, score_p1, score_p2, p1_color, p2_color, panel_rect=panel_rect)
+            render_round_pips(screen, p1_round_score, score_p2, p1_color, p2_color, panel_rect=panel_rect, p1_total=challenge_total or None)
             render_damage_bars(screen, p1, p2, p1_color, p2_color, panel_rect)
 
         mode_text = t("mode_hud_1p") if vs_ai_mode else t("mode_hud_2p")
         if arcade_run is not None:
             fight_no = arcade_run.index if arcade_fight_over == "won" else arcade_run.index + 1
             mode_text = t("arcade_fight_n_of_m", n=fight_no, m=len(arcade_run.ladder))
-            if arcade_run.lives_left is not None:
-                mode_text += f"  |  {t('arcade_round_lives', n=arcade_run.lives_left)}"
+            if challenge_total:
+                opp_no = len(hud_fight.opponents) if arcade_fight_over == "won" else arcade_run.opponent_index + 1
+                mode_text += f"  |  {t('arcade_opponent_n_of_m', n=opp_no, m=len(hud_fight.opponents))}"
         mode_surf = font_small.render(mode_text, True, COLOR_GOLD)
         screen.blit(mode_surf, (panel_rect.centerx - mode_surf.get_width() // 2, panel_rect.y + 12))
 
