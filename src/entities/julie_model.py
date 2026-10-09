@@ -20,7 +20,7 @@ PALETTE = {
 }
 
 
-MATERIALS = {"cape": "velvet", "cape_dark": "velvet", "blue": "brocade", "blue_dark": "velvet", "leather": "leather", "boot": "leather", "boot_cuff": "leather", "lace": "knit", "lace_dark": "knit", "glove": "silk", "hat": "velvet", "pants": "silk"}  # chave da paleta -> textura de material (6.5.8)
+MATERIALS = {"cape": "velvet", "cape_dark": "velvet", "blue": "brocade", "blue_dark": "velvet", "leather": "leather", "boot": "leather", "boot_cuff": "leather", "lace": "knit", "lace_dark": "knit", "glove": "silk", "hat": "velvet", "pants": "silk", "steel": "steel", "gold": "gold"}  # chave da paleta -> textura de material (6.5.8)
 
 
 def pal() -> dict:
@@ -104,29 +104,116 @@ def draw_sleeves(c, arms):
 
 
 def draw_head(c):
-    """Rosto de olhos azul-acinzentados, cabelo ruivo com trança, chapéu azul de aba larga e a pluma branca que esvoaça."""
+    """
+    Rosto limpo de pele suave, cabelo castanho-acobreado com trança elegante,
+    e o autêntico Chapéu de Mosqueteira Cavalier do séc. XVII fiel ao concept art oficial:
+    - Copa arredondada / cônica alta em Azul Royal com fita dourada e topo vincado
+    - Aba assimétrica viva (NUNCA plana/quadrada): aba direita e frontal suavemente caídas,
+      e aba lateral esquerda dobrada acentuadamente para cima (cocked brim) com debrum de ouro
+    - Broche dourado floral / Flor-de-lis prendendo a aba dobrada
+    - Majestosa e volumosa pluma branca de avestruz que se ergue alta e arqueia graciosamente para trás
+    """
     P = pal()
     bx, by, hz, fx, fy, px, py = c.base_x, c.base_y, c.head_z, c.fx, c.fy, c.px, c.py
-    mk.face(c, P["eye"], P["brow"], P["lip"], P["skin_shadow"], brow_tilt=0.004, spacing=0.032, mouth_w=0.024)
-    mk.cbox(c, bx, by, hz + 0.115, 0.16, 0.16, 0.075, P["hair"])
-    if not mk.facing_camera(c):
-        mk.hair_volume(c, P["hair"], size=0.15, height=0.13)
-    trail, amp, freq = mk.motion(c, 0.08)
-    for s in (-1.0, 1.0):
-        mk.limb(c, (bx + fx * 0.07, by + fy * 0.07, hz + 0.17), (bx + fx * 0.075 + px * 0.065 * s, by + fy * 0.075 + py * 0.065 * s, hz + 0.115), 0.03, P["hair"], outline=False)
-    anchor = (bx + px * 0.075 + fx * 0.02, by + py * 0.075 + fy * 0.02, hz + 0.06)  # trança sobre o ombro
-    mk.panels(c, anchor, 5, 0.07, 0.05, 0.045, (P["hair"],) * 5, phase=1.1, up=(fx, fy, 0.0), trail=trail, amp=amp, freq=freq, flare=-0.004)
-    mk.cbox(c, bx, by, hz + 0.18, 0.186, 0.186, 0.03, P["gold"], outline=False)
-    mk.cbox(c, bx, by, hz + 0.18, 0.17, 0.17, 0.08, P["hat"])
-    mk.cbox(c, bx, by, hz + 0.168, 0.35, 0.35, 0.022, P["hat"])
-    mk.cbox(c, bx - px * 0.16, by - py * 0.16, hz + 0.178, 0.1, 0.1, 0.05, P["hat"], outline=False)  # aba dobrada para cima
-    root = (bx - px * 0.09, by - py * 0.09, hz + 0.26)
-    offs = mk.cloth_offsets(c, 4, 0.5, trail, amp * 2.0, freq, root, wind_gain=0.08)
-    prev = root
-    for i, o in enumerate(offs):
-        tip = (root[0] - px * 0.03 * (i + 1) - fx * 0.05 * (i + 1) + o[0], root[1] - py * 0.03 * (i + 1) - fy * 0.05 * (i + 1) + o[1], root[2] + 0.05 - 0.035 * i + o[2])
-        mk.limb(c, prev, tip, 0.05 - 0.008 * i, P["plume"] if i % 2 == 0 else P["plume_dark"], outline=(i == 0), height=0.014)
-        prev = tip
+
+    # 1. Volume da cabeça, nuca e cabelo castanho-acobreado (Auburn)
+    # Rosto limpo (sem olhos ou boca de cubo saltados)
+    hair_col = P["hair"]
+    hair_dark = (135, 52, 28)
+    skin_col = P["skin"]
+
+    # Cabelo lateral e traseiro sob o chapéu
+    mk.cbox(c, bx - fx * 0.02, by - fy * 0.02, hz + 0.03, 0.12, 0.12, 0.08, hair_col, outline=False)
+    # Franja estilosa e mechas frontais emoldurando o rosto
+    mk.cbox(c, bx + fx * 0.055 - px * 0.03, by + fy * 0.055 - py * 0.03, hz + 0.045, 0.045, 0.045, 0.035, hair_col, outline=False)
+    mk.cbox(c, bx + fx * 0.055 + px * 0.03, by + fy * 0.055 + py * 0.03, hz + 0.045, 0.04, 0.04, 0.035, hair_col, outline=False)
+
+    # Trança elegante descendo suavemente sobre o ombro
+    trail, amp, freq = mk.motion(c, 0.06)
+    braid_root = (bx - px * 0.06 - fx * 0.03, by - py * 0.06 - fy * 0.03, hz + 0.02)
+    mk.panels(c, braid_root, 5, 0.05, 0.04, 0.038, (hair_col, hair_dark, hair_col, hair_dark, hair_col),
+              phase=1.0, up=(fx, fy, 0.0), trail=trail, amp=amp, freq=freq, flare=-0.003)
+    # Fita azul amarrando o final da trança
+    braid_tip = (braid_root[0] - trail[0] * 0.6, braid_root[1] - trail[1] * 0.6, braid_root[2] - 0.14)
+    mk.cbox(c, braid_tip[0], braid_tip[1], braid_tip[2], 0.035, 0.035, 0.022, P["blue"], outline=False)
+
+    # =========================================================================
+    # CHAPÉU CAVALIER DE MOSQUEIRO (SEVENTEENTH CENTURY FLAMBOYANT HAT)
+    # =========================================================================
+    hat_blue = P["hat"]
+    hat_dark = P["blue_dark"]
+    gold = P["gold"]
+
+    # -------------------------------------------------------------------------
+    # A. COPA DO CHAPÉU (CROWN): Alta, afunilada e arredondada (NÃO plana)
+    # -------------------------------------------------------------------------
+    # Base da copa que se assenta na cabeça
+    mk.cbox(c, bx - fx * 0.015, by - fy * 0.015, hz + 0.075, 0.13, 0.13, 0.045, hat_blue)
+    # Faixa dourada elegante de couro/tecido (hatband) circulando a copa
+    mk.cbox(c, bx - fx * 0.015, by - fy * 0.015, hz + 0.10, 0.138, 0.138, 0.022, gold, texture="gold", outline=False)
+    # Corpo médio da copa afunilando
+    mk.cbox(c, bx - fx * 0.018, by - fy * 0.018, hz + 0.12, 0.12, 0.12, 0.045, hat_blue)
+    # Topo arredondado da copa
+    mk.cbox(c, bx - fx * 0.020, by - fy * 0.020, hz + 0.16, 0.105, 0.105, 0.035, hat_blue)
+    # Vinco/fenda sutil no topo do feltro (creased crown)
+    mk.cbox(c, bx - fx * 0.020, by - fy * 0.020, hz + 0.19, 0.075, 0.065, 0.015, hat_dark, outline=False)
+
+    # -------------------------------------------------------------------------
+    # B. ABA ASSIMÉTRICA CAVALIER (BRIM): Fluida, orgânica e com curvaturas 3D
+    # -------------------------------------------------------------------------
+    # 1. Base interna circular da aba conectada à copa
+    mk.cbox(c, bx - fx * 0.01, by - fy * 0.01, hz + 0.07, 0.155, 0.155, 0.02, hat_blue, outline=False)
+
+    # 2. Aba Frontal: projeta-se à frente ao longo de (fx, fy) e desce em declive suave
+    front_dir = mk.norm((fx, fy, -0.22))
+    mk.obox(c, (bx + fx * 0.055, by + fy * 0.055, hz + 0.072), front_dir, 0.075, 0.15, 0.02, hat_blue)
+
+    # 3. Aba Lateral Direita: estende-se sobre o ombro direito (-px, -py) e cai suavemente
+    right_dir = mk.norm((-px, -py, -0.28))
+    mk.obox(c, (bx - px * 0.055, by - py * 0.055, hz + 0.072), right_dir, 0.075, 0.14, 0.02, hat_blue)
+
+    # 4. Aba Traseira: curva suave sobre a nuca
+    back_dir = mk.norm((-fx, -fy, -0.15))
+    mk.obox(c, (bx - fx * 0.055, by - fy * 0.055, hz + 0.072), back_dir, 0.065, 0.14, 0.02, hat_blue)
+
+    # 5. ABA LATERAL ESQUERDA DOBRADA PARA CIMA (COCKED / TURNED-UP BRIM):
+    # No concept art oficial, a aba do lado esquerdo sobe na vertical encostada na copa!
+    cocked_dir = mk.norm((px * 0.15, py * 0.15, 0.98))
+    cocked_origin = (bx + px * 0.065 - fx * 0.01, by + py * 0.065 - fy * 0.01, hz + 0.075)
+    mk.obox(c, cocked_origin, cocked_dir, 0.125, 0.14, 0.024, hat_blue, up=(-fx, -fy, 0.0))
+
+    # Debrum dourado bordado no topo da aba dobrada
+    trim_dir = mk.norm((fx, fy, 0.0))
+    trim_start = (bx + px * 0.082 - fx * 0.07, by + py * 0.082 - fy * 0.07, hz + 0.195)
+    mk.obox(c, trim_start, trim_dir, 0.13, 0.018, 0.016, gold, texture="gold", outline=False)
+
+    # 6. Broche / Fivela de Ouro (Flor-de-lis) prendendo a aba dobrada
+    mk.cbox(c, bx + px * 0.088 + fx * 0.01, by + py * 0.088 + fy * 0.01, hz + 0.125, 0.035, 0.035, 0.035, gold, texture="gold", outline=True)
+
+    # -------------------------------------------------------------------------
+    # C. MAJESTOSA PLUMA DE AVESTRUZ BRANCA (SWEEPING OSTRICH PLUME)
+    # -------------------------------------------------------------------------
+    plume_white = (252, 252, 255)
+    plume_shade = (218, 226, 238)
+    plume_core  = (195, 205, 220)
+
+    # Raiz da pluma saindo de trás do broche dourado
+    mk.cbox(c, bx + px * 0.075 + fx * 0.01, by + py * 0.075 + fy * 0.01, hz + 0.145, 0.045, 0.045, 0.05, plume_white, outline=False)
+    # Haste subindo além da copa
+    mk.cbox(c, bx + px * 0.065 - fx * 0.02, by + py * 0.065 - fy * 0.02, hz + 0.190, 0.055, 0.055, 0.06, plume_white, outline=False)
+    # Arco alto ultrapassando a altura do chapéu
+    mk.cbox(c, bx + px * 0.040 - fx * 0.05, by + py * 0.040 - fy * 0.05, hz + 0.240, 0.065, 0.065, 0.06, plume_white, outline=False)
+    # Ponto mais alto da pluma (crista farta)
+    mk.cbox(c, bx + px * 0.010 - fx * 0.09, by + py * 0.010 - fy * 0.09, hz + 0.270, 0.075, 0.075, 0.055, plume_white, outline=False)
+    # Franjas fofas superiores dando aspecto plumoso
+    mk.cbox(c, bx + px * 0.015 - fx * 0.08, by + py * 0.015 - fy * 0.08, hz + 0.295, 0.050, 0.050, 0.030, plume_white, outline=False)
+    mk.cbox(c, bx + px * 0.020 - fx * 0.07, by + py * 0.020 - fy * 0.07, hz + 0.250, 0.045, 0.045, 0.045, plume_shade, outline=False)
+    # Cascata descendo pelas costas
+    mk.cbox(c, bx - px * 0.02 - fx * 0.13 + trail[0] * 0.5, by - py * 0.02 - fy * 0.13 + trail[1] * 0.5, hz + 0.235, 0.070, 0.070, 0.050, plume_white, outline=False)
+    mk.cbox(c, bx - px * 0.05 - fx * 0.17 + trail[0], by - py * 0.05 - fy * 0.17 + trail[1], hz + 0.185, 0.060, 0.060, 0.045, plume_shade, outline=False)
+    # Ponta da pluma esvoaçando graciosa atrás da nuca
+    mk.cbox(c, bx - px * 0.08 - fx * 0.21 + trail[0] * 1.4, by - py * 0.08 - fy * 0.21 + trail[1] * 1.4, hz + 0.135, 0.048, 0.048, 0.040, plume_white, outline=False)
+    mk.cbox(c, bx - px * 0.10 - fx * 0.24 + trail[0] * 1.8, by - py * 0.10 - fy * 0.24 + trail[1] * 1.8, hz + 0.098, 0.035, 0.035, 0.030, plume_core, outline=False)
 
 
 def _rapier(c, hand, d, length):

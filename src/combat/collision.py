@@ -12,7 +12,8 @@ from src.entities.projectile import (
     KunaiProjectile, ShurikenProjectile, TimedBombEntity, SmokeCloudEntity,
     KusarigamaChainEntity, MusketBulletProjectile, PoisonCloudProjectile,
     KyudoArrowProjectile, RopeArrowProjectile, CannonballProjectile,
-    RemoteMineEntity, HamayaArrowProjectile, MusashiWaveProjectile
+    RemoteMineEntity, HamayaArrowProjectile, MusashiWaveProjectile,
+    SacredArrowVolleyProjectile
 )
 from src.entities.doberman import STATE_DOG_CHARGE, STATE_DOG_KNOCKED_OUT, STATE_DOG_BARK
 
@@ -633,7 +634,27 @@ class CombatSystem:
                                     if cinematic_director:
                                         cinematic_director.trigger_fatal_strike(proj.owner, target, "KASUMI_EXPLODE", (0, 0))
 
-
+            # Se for CHUVA DE FLECHAS SAGRADAS EM ARCO (SacredArrowVolleyProjectile)
+            elif isinstance(proj, SacredArrowVolleyProjectile) and proj.is_active:
+                if proj.has_impacted and not proj.damage_dealt:
+                    proj.damage_dealt = True
+                    self._play_sound("arrow_hit")
+                    for target, win_id in ((p1, "P2_WINS"), (p2, "P1_WINS")):
+                        if target.is_alive and target != proj.owner:
+                            if world_distance(proj.target_wx, proj.target_wy, target.wx, target.wy) < (proj.radius + target.radius):
+                                hit, dead = target.take_hit((0, 0), damage=2)
+                                if dead:
+                                    camera.add_shake(20.0)
+                                    for _ in range(35):
+                                        particles.append(BloodParticle(target.wx, target.wy, 0.7))
+                                    for _ in range(20):
+                                        particles.append(SparkParticle(target.wx, target.wy, 0.6, color=(255, 230, 100)))
+                                    self.hitstop_timer = 0.16
+                                    if winner is None:
+                                        winner = win_id
+                                    self._play_sound("fatal_strike")
+                                    if cinematic_director:
+                                        cinematic_director.trigger_fatal_strike(proj.owner, target, "ARROW_PIN", (0, 0))
 
             if proj.is_active:
                 active_projectiles.append(proj)
@@ -651,6 +672,7 @@ class CombatSystem:
                     "ryuu_timer", "dash_recovery_timer", "jump_timer", "jump_cooldown_timer",
                     "chain_timer", "mine_timer", "bomb_timer", "smoke_timer", "rope_timer",
                     "arrow_cooldown_timer", "ofuda_cooldown_timer", "cannon_cooldown_timer",
+                    "volley_cooldown_timer", "sacred_volley_cooldown_timer",
                     "flintlock_timer", "cape_timer", "trap_timer", "zeroshiki_timer",
                     "shuriken_timer", "thrust_timer", "kama_timer", "backstep_timer", "cleave_timer"
                 ):

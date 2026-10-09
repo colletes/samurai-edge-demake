@@ -24,7 +24,7 @@ from src.entities.yellow_ninja import YellowNinja
 from src.entities.rifleman import Rifleman
 from src.entities.projectile import (
     HamayaArrowProjectile, KyudoArrowProjectile, KunaiProjectile,
-    MusketBulletProjectile, TimedBombEntity
+    MusketBulletProjectile, TimedBombEntity, SacredArrowVolleyProjectile
 )
 from src.combat.collision import CombatSystem
 from src.world.map_data import GameMap
@@ -39,17 +39,19 @@ class TestTomoeHamaya(unittest.TestCase):
         self.enemy = RedSamurai(15.0, 10.0)
 
     def test_hamaya_shot_and_cooldown(self):
-        """Teste 1: Disparo da Hamaya e ativação do cooldown de 3.6s."""
+        """Teste 1: Disparo da salva sagrada e ativação do cooldown de 4.5s (idêntico à Anne)."""
         projs = []
         particles = []
-        self.assertEqual(self.tomoe.hamaya_cooldown_timer, 0.0)
+        # Inicia com 4.5s idêntico à Anne
+        self.assertEqual(self.tomoe.hamaya_cooldown_timer, 4.5)
+        self.tomoe.hamaya_cooldown_timer = 0.0
         
         self.tomoe.trigger_hamaya_shot(15.0, 10.0, projs, particles)
         self.assertEqual(len(projs), 1)
-        hamaya = projs[0]
-        self.assertIsInstance(hamaya, HamayaArrowProjectile)
-        self.assertEqual(hamaya.owner, self.tomoe)
-        self.assertAlmostEqual(self.tomoe.hamaya_cooldown_timer, 3.6, delta=0.01)
+        salva = projs[0]
+        self.assertIsInstance(salva, SacredArrowVolleyProjectile)
+        self.assertEqual(salva.owner, self.tomoe)
+        self.assertAlmostEqual(self.tomoe.hamaya_cooldown_timer, 4.5, delta=0.01)
         self.assertTrue(len(particles) >= 12, "Deve gerar partículas sagradas de disparo")
 
         # Tentativa durante cooldown deve ser ignorada
@@ -58,7 +60,7 @@ class TestTomoeHamaya(unittest.TestCase):
         self.assertEqual(len(projs), 1, "Não deve disparar em cooldown")
 
         # Após atualizar o tempo do cooldown, o disparo volta a ser permitido
-        self.tomoe.update(3.7, self.game_map)
+        self.tomoe.update(4.6, self.game_map)
         self.assertLessEqual(self.tomoe.hamaya_cooldown_timer, 0.0)
         self.tomoe.trigger_hamaya_shot(15.0, 10.0, projs, particles)
         self.assertEqual(len(projs), 2, "Deve permitir novo disparo após zerar cooldown")

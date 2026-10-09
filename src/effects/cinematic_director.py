@@ -72,6 +72,9 @@ class CinematicDirector:
 
     def trigger_fatal_strike(self, attacker, victim, death_style: str, slash_dir: tuple[float, float]):
         """Dispara a sequência de cinema samurai no golpe letal."""
+        from src.audio.sound_manager import get_sound_manager
+        get_sound_manager().play_death_music(fadeout_ms=350)
+
         if getattr(victim, "is_boss", False):
             from src.i18n import t
             self.is_active = True

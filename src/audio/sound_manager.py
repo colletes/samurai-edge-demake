@@ -41,6 +41,9 @@ class SoundManager:
         self.is_audio_available: bool = False
         self._sfx_cache: dict[str, pygame.mixer.Sound] = {}
         self.current_music_track: str | None = None
+        self._pending_music: tuple[str, int, int] | None = None
+        self._pending_music_timer: float = 0.0
+        self._pending_music_deadline: int = 0
 
         self._init_mixer()
 
@@ -108,17 +111,10 @@ class SoundManager:
         except Exception:
             return None
 
-    def play_music(self, track: MusicTrack | str, fade_ms: int = 800):
-        """
-        Inicia ou transiciona suavemente a música de fundo (BGM).
-        Se o arquivo não existir em disco, silencia a música mantendo o SFX ativo.
-        """
+    def _play_music_file(self, track_key: str, loops: int = -1, fade_in_ms: int = 0) -> bool:
+        """Carrega e inicia a reprodução do arquivo de música especificado."""
         if not self.is_audio_available:
-            return
-
-        track_key = track.value if isinstance(track, MusicTrack) else str(track)
-        if self.current_music_track == track_key and pygame.mixer.music.get_busy():
-            return
+            return False
 
         self.current_music_track = track_key
         eff_vol = max(0.0, min(1.0, self.master_volume * self.bgm_volume))
@@ -127,16 +123,97 @@ class SoundManager:
             file_path = os.path.join(MUSIC_DIR, f"{track_key}{ext}")
             if os.path.isfile(file_path):
                 try:
-                    pygame.mixer.music.fadeout(fade_ms)
                     pygame.mixer.music.load(file_path)
                     pygame.mixer.music.set_volume(eff_vol)
-                    pygame.mixer.music.play(loops=-1, fade_ms=fade_ms)
-                    return
+                    if fade_in_ms > 0:
+                        pygame.mixer.music.play(loops=loops, fade_ms=fade_in_ms)
+                    else:
+                        pygame.mixer.music.play(loops=loops)
+                    return True
                 except Exception:
                     pass
+        return False
+
+    def play_music(self, track: MusicTrack | str, fade_ms: int = 800, loops: int = -1):
+        """
+        Inicia ou transiciona suavemente a música de fundo (BGM).
+        Se o arquivo não existir em disco, silencia a música mantendo o SFX ativo.
+        """
+        if not self.is_audio_available:
+            return
+
+        self._pending_music = None
+        self._pending_music_timer = 0.0
+        self._pending_music_deadline = 0
+
+        track_key = track.value if isinstance(track, MusicTrack) else str(track)
+        if self.current_music_track == track_key and pygame.mixer.music.get_busy():
+            return
+
+        if pygame.mixer.music.get_busy() and fade_ms > 0:
+            try:
+                pygame.mixer.music.fadeout(fade_ms)
+            except Exception:
+                pass
+
+        self._play_music_file(track_key, loops=loops, fade_in_ms=fade_ms)
+
+    def play_death_music(self, fadeout_ms: int = 350):
+        """
+        Aplica um fadeout rápido na música atual do cenário e inicia a música de morte
+        (bgm_death) logo em seguida, sem fade-in.
+        """
+        if not self.is_audio_available:
+            return
+
+        # Se já estiver tocando a música de morte ou pendente, não reiniciar
+        if self.current_music_track == "bgm_death" or (self._pending_music and self._pending_music[0] == "bgm_death"):
+            return
+
+        # Fadeout rápido na música atual se estiver tocando
+        if pygame.mixer.music.get_busy():
+            try:
+                pygame.mixer.music.fadeout(fadeout_ms)
+            except Exception:
+                pass
+            self._pending_music = ("bgm_death", 0, 0)
+            self._pending_music_timer = max(0.05, fadeout_ms / 1000.0)
+            if pygame.get_init():
+                self._pending_music_deadline = pygame.time.get_ticks() + fadeout_ms
+            else:
+                self._pending_music_deadline = 0
+        else:
+            self._pending_music = None
+            self._pending_music_timer = 0.0
+            self._pending_music_deadline = 0
+            self._play_music_file("bgm_death", loops=0, fade_in_ms=0)
+
+    def update(self, dt: float = 0.0):
+        """Atualiza temporizadores de transição suave/agendada de música."""
+        if not self.is_audio_available or not self._pending_music:
+            return
+
+        should_trigger = False
+        if self._pending_music_deadline > 0 and pygame.get_init():
+            if pygame.time.get_ticks() >= self._pending_music_deadline:
+                should_trigger = True
+        else:
+            self._pending_music_timer -= dt
+            if self._pending_music_timer <= 0:
+                should_trigger = True
+
+        if should_trigger:
+            track_key, loops, fade_in_ms = self._pending_music
+            self._pending_music = None
+            self._pending_music_timer = 0.0
+            self._pending_music_deadline = 0
+            self._play_music_file(track_key, loops=loops, fade_in_ms=fade_in_ms)
 
     def stop_music(self, fade_ms: int = 500):
         """Para a música com fadeout suave."""
+        self._pending_music = None
+        self._pending_music_timer = 0.0
+        self._pending_music_deadline = 0
         if not self.is_audio_available:
             return
         try:

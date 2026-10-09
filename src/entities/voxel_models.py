@@ -620,9 +620,8 @@ def _render_voxel_humanoid(
         # Balaclava preta cobrindo cabeça, nuca e rosto; só a faixa dos olhos fica à mostra
         draw_voxel_box(surface, camera, base_x - 0.04, base_y - 0.04, neck_z - 0.01, 0.08, 0.08, 0.07, JOE_BALACLAVA, outline=False, alpha=alpha)
         draw_voxel_box(surface, camera, base_x - head_w/2 - 0.008, base_y - head_w/2 - 0.008, head_z + 0.02, head_w + 0.016, head_w + 0.016, 0.16, JOE_BALACLAVA, outline=True, alpha=alpha)
+        # Faixa de pele visível da balaclava (sem cubos saltados de olhos)
         draw_voxel_box(surface, camera, base_x + fx * 0.075 - 0.035, base_y + fy * 0.075 - 0.035, head_z + 0.055, 0.07, 0.07, 0.035, skin_color, outline=False, alpha=alpha)
-        for eye in (-1.0, 1.0):
-            draw_voxel_box(surface, camera, base_x + fx * 0.098 + px * 0.022 * eye - 0.01, base_y + fy * 0.098 + py * 0.022 * eye - 0.01, head_z + 0.063, 0.02, 0.02, 0.016, (30, 30, 34), outline=False, alpha=alpha)
         # Faixa de pano na testa com o sol vermelho e pontas do nó balançando atrás
         draw_voxel_box(surface, camera, base_x - 0.086, base_y - 0.086, head_z + 0.095, 0.172, 0.172, 0.04, JOE_HEADBAND, outline=True, alpha=alpha)
         draw_voxel_box(surface, camera, base_x + fx * 0.09 - 0.024, base_y + fy * 0.09 - 0.024, head_z + 0.10, 0.048, 0.048, 0.03, JOE_SUN_RED, outline=False, alpha=alpha)
@@ -661,10 +660,18 @@ def _render_voxel_humanoid(
         draw_voxel_box(surface, camera, base_x - 0.08, base_y - 0.08, head_z + 0.20, 0.16, 0.16, 0.06, COLOR_PIRATE_HAT, outline=True, alpha=alpha)
 
     elif char_type == "musketeer":
-        draw_voxel_box(surface, camera, base_x - 0.08, base_y - 0.08, head_z + 0.10, 0.16, 0.16, 0.08, (220, 190, 95), outline=True, alpha=alpha)
-        draw_voxel_box(surface, camera, base_x - 0.15, base_y - 0.15, head_z + 0.14, 0.30, 0.30, 0.06, COLOR_MUSKETEER_HAT, outline=True, alpha=alpha)
-        # Pluma esvoaçante
-        draw_voxel_box(surface, camera, base_x + px*0.08, base_y + py*0.08, head_z + 0.20, 0.06, 0.06, 0.14, COLOR_MUSKETEER_FEATHER, outline=True, alpha=alpha)
+        # Copa cônica em azul real com faixa dourada
+        draw_voxel_box(surface, camera, base_x - 0.065, base_y - 0.065, head_z + 0.08, 0.13, 0.13, 0.05, COLOR_MUSKETEER_HAT, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - 0.07, base_y - 0.07, head_z + 0.10, 0.14, 0.14, 0.02, COLOR_GOLD, outline=False, alpha=alpha, texture="gold")
+        draw_voxel_box(surface, camera, base_x - 0.055, base_y - 0.055, head_z + 0.13, 0.11, 0.11, 0.05, COLOR_MUSKETEER_HAT, outline=True, alpha=alpha)
+        # Aba frontal e aba lateral esquerda virada para cima
+        draw_oriented_voxel_box(surface, camera, base_x + fx*0.055, base_y + fy*0.055, head_z + 0.075, fx, fy, -0.22, 0.075, 0.15, 0.02, COLOR_MUSKETEER_HAT, outline=True, alpha=alpha)
+        draw_oriented_voxel_box(surface, camera, base_x + px*0.065, base_y + py*0.065, head_z + 0.08, px*0.15, py*0.15, 0.98, 0.12, 0.14, 0.022, COLOR_MUSKETEER_HAT, outline=True, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x + px*0.085, base_y + py*0.085, head_z + 0.12, 0.035, 0.035, 0.035, COLOR_GOLD, outline=True, alpha=alpha, texture="gold")
+        # Pluma de avestruz arqueada
+        draw_voxel_box(surface, camera, base_x + px*0.05 - fx*0.03, base_y + py*0.05 - fy*0.03, head_z + 0.22, 0.06, 0.06, 0.06, COLOR_MUSKETEER_FEATHER, outline=False, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x + px*0.01 - fx*0.08, base_y + py*0.01 - fy*0.08, head_z + 0.26, 0.07, 0.07, 0.055, COLOR_MUSKETEER_FEATHER, outline=False, alpha=alpha)
+        draw_voxel_box(surface, camera, base_x - px*0.03 - fx*0.13, base_y - py*0.03 - fy*0.13, head_z + 0.23, 0.065, 0.065, 0.05, (230, 235, 245), outline=False, alpha=alpha)
 
     # -------------------------------------------------------------
     # 6. ARMAS E ESPADAS COM FLUXO ANGULAR 3D (NUNCA ESTÁTICAS)

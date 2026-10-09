@@ -290,18 +290,17 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
         return {"name": "Kawarimi", "timer": timer, "max_cd": cd, "color": (210, 70, 150)}
 
     elif isinstance(fighter, KyudoArcher):
-        h_timer = max(0.0, getattr(fighter, "hamaya_cooldown_timer", 0.0))
-        if h_timer > 0:
-            return {"name": "Hamaya", "timer": h_timer, "max_cd": getattr(fighter, "hamaya_cooldown", 3.6), "color": (255, 215, 60)}
+        v_timer = max(0.0, getattr(fighter, "volley_cooldown_timer", getattr(fighter, "sacred_volley_cooldown_timer", 0.0)))
+        v_cd = getattr(fighter, "volley_cooldown", getattr(fighter, "sacred_volley_cooldown", 4.5))
+        if v_timer > 0:
+            return {"name": "Chuva Sagrada", "timer": v_timer, "max_cd": v_cd, "color": (255, 215, 60)}
         r_timer = max(0.0, getattr(fighter, "rope_timer", 0.0))
         if r_timer > 0:
             return {"name": "Flecha Corda", "timer": r_timer, "max_cd": getattr(fighter, "rope_cooldown", 2.0), "color": (210, 185, 120)}
         a_timer = max(0.0, getattr(fighter, "arrow_cooldown_timer", 0.0))
         if a_timer > 0:
             return {"name": "Flecha Yumi", "timer": a_timer, "max_cd": getattr(fighter, "arrow_cooldown", 1.20), "color": (100, 215, 140)}
-        timer = max(0.0, getattr(fighter, "ofuda_cooldown_timer", 0.0))
-        cd = getattr(fighter, "ofuda_cooldown", 3.2)
-        return {"name": "Hamaya", "timer": h_timer, "max_cd": getattr(fighter, "hamaya_cooldown", 3.6), "color": (255, 215, 60)}
+        return {"name": "Chuva Sagrada", "timer": v_timer, "max_cd": v_cd, "color": (255, 215, 60)}
 
     elif isinstance(fighter, PirateSwordswoman):
         timer = max(0.0, getattr(fighter, "cannon_cooldown_timer", 0.0))
@@ -431,8 +430,8 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
         fighter.trigger_dokukiri(aim_x, aim_y, poison_clouds)
         play_sfx(SoundEvent.POISON_BREATH)
     elif isinstance(fighter, KyudoArcher):
-        # Tomoe: Flecha Ritual Sagrada Hamaya (破魔矢)
-        fighter.trigger_hamaya_shot(aim_x, aim_y, projectiles, particles=particles)
+        # Tomoe: Chuva / Salva de Flechas Sagradas em Arco (Mecanismo idêntico ao da Anne: Hold & Release)
+        fighter.start_sacred_volley(aim_x, aim_y)
         play_sfx(SoundEvent.BOW_RELEASE)
     elif isinstance(fighter, PirateSwordswoman):
         # Anne Bonny: Naval Artillery Strike (Hold & release orbital cannonball)
@@ -605,6 +604,7 @@ def run_game():
     round_start_timer = 1.8
     round_start_shaken = False
     round_intro_timer = 0.0
+    round_started = False
     match_winner = None
     round_number = 1
 
@@ -623,7 +623,7 @@ def run_game():
     static_render_queue = []
 
     def start_new_match(play_intro: bool = False):
-        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, lighting_fx, terrain_fx, fog, round_winner, round_start_timer, round_start_shaken, round_intro_timer, powder_pouches, decoys, poison_clouds, powder_traps, static_render_queue, arcade_round_reported, round_clock
+        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, lighting_fx, terrain_fx, fog, round_winner, round_start_timer, round_start_shaken, round_intro_timer, round_started, powder_pouches, decoys, poison_clouds, powder_traps, static_render_queue, arcade_round_reported, round_clock
         game_map = create_arena(selected_arena_id)
         (p1_wx, p1_wy), (p2_wx, p2_wy) = game_map.pick_spawns(min_distance=7.0)
         if p2_char_id == CHAR_BOSS:
@@ -663,6 +663,7 @@ def run_game():
         round_start_timer = 1.8
         round_start_shaken = False
         round_intro_timer = 2.0
+        round_started = False
         cinematic_director.reset_round()
         outcome_seq.reset()
         cine_beats.clear()
@@ -854,15 +855,15 @@ def run_game():
                 particles.append(SparkParticle(fighter.wx, fighter.wy, random.uniform(0.6, 1.4)))
 
     def step_idle_fighter(f, opp, dt_):
-        """Avança só a animação do lutador (introdução cinematográfica), sem física de combate."""
+        """Avança só a animação do lutador (introdução cinematográfica), sem física de combate e sem drenar cooldowns."""
         if isinstance(f, PirateSwordswoman):
-            f.update(dt_, game_map, particles, opponent=opp, banners=banners)
+            f.update(0.0, game_map, particles, opponent=opp, banners=banners)
         elif isinstance(f, (SaitouSamurai, Rifleman, Kabuki, Musketeer, GrayNinja)):
-            f.update(dt_, game_map, particles)
+            f.update(0.0, game_map, particles)
         elif isinstance(f, (BlueSamurai, KyudoArcher)):
-            f.update(dt_, game_map, particles, projectiles)
+            f.update(0.0, game_map, particles, projectiles)
         else:
-            f.update(dt_, game_map)
+            f.update(0.0, game_map)
     sound_mgr = SoundManager.get_instance()
     audio_cfg = saved_cfg.get("audio", {})
     sound_mgr.set_master_volume(audio_cfg.get("master", 1.0))
@@ -876,6 +877,7 @@ def run_game():
     while running:
         dt = clock.tick(FPS) / 1000.0
         dt = min(dt, 0.05)
+        sound_mgr.update(dt)
 
         # -------------------------------------------------------------
         # VÍDEO CINEMATOGRÁFICO DE ABERTURA
@@ -1371,7 +1373,14 @@ def run_game():
                 round_start_shaken = True
 
         # Bloqueio de movimentação durante a cinemática de abertura e o início do round (Item 10 / Entregável 5.2)
-        if round_start_timer > 0 or round_intro_timer > 0:
+        round_in_progress = (round_winner is None and round_start_timer <= 0 and round_intro_timer <= 0)
+        if round_in_progress and not round_started:
+            round_started = True
+            for f in (p1, p2):
+                if f and hasattr(f, "on_round_start"):
+                    f.on_round_start()
+
+        if not round_in_progress:
             p1_dwx, p1_dwy = 0.0, 0.0
             p2_dwx, p2_dwy = 0.0, 0.0
 
@@ -1406,7 +1415,7 @@ def run_game():
                         clash_system.register_press(1)
 
                 # Comandos Jogador 1 (Teclado)
-                if p1.is_alive and round_winner is None and round_start_timer <= 0:
+                if p1.is_alive and round_winner is None and round_in_progress:
                     if event.key == controls["P1_ATTACK"]:
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                         execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
@@ -1418,7 +1427,7 @@ def run_game():
                         execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p2, banners=banners)
 
                 # Comandos Jogador 2 (Teclado)
-                if not vs_ai_mode and p2.is_alive and round_winner is None and round_start_timer <= 0:
+                if not vs_ai_mode and p2.is_alive and round_winner is None and round_in_progress:
                     if event.key == controls["P2_ATTACK"]:
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
                         execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles)
@@ -1446,7 +1455,7 @@ def run_game():
                         clash_system.register_press(0)
                     if ctrl_mgr.is_event_action(event, 1, "attack"):
                         clash_system.register_press(1)
-                elif p1.is_alive and round_winner is None and round_start_timer <= 0:
+                elif p1.is_alive and round_winner is None and round_in_progress:
                     if ctrl_mgr.is_event_action(event, 0, "attack"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                         execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
@@ -1458,7 +1467,7 @@ def run_game():
                         execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p2, banners=banners)
 
                 # Gamepad Jogador 2
-                if not vs_ai_mode and p2.is_alive and round_winner is None and round_start_timer <= 0:
+                if not vs_ai_mode and p2.is_alive and round_winner is None and round_in_progress:
                     if ctrl_mgr.is_event_menu_pause(event, 1) or (getattr(event, "button", None) == 6):
                         pause_menu.open(screen, arcade=arcade_run is not None, demo=is_demo())
                         break
@@ -1494,7 +1503,7 @@ def run_game():
         if pause_menu.is_open:
             continue
 
-        if p1.is_alive and round_winner is None and round_start_timer <= 0:
+        if p1.is_alive and round_winner is None and round_in_progress:
             if touch_controls.is_attack_just_pressed():
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                 execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
@@ -1512,7 +1521,7 @@ def run_game():
 
         # Suporte ao Hold and Release do Bombardeio de Canhão Celestial da Pirata Anne Bonny
         p1_sec_held = keys[controls.get("P1_SECONDARY", pygame.K_r)] or ctrl_mgr.is_action_down(0, "secondary")
-        if isinstance(p1, PirateSwordswoman) and p1.is_alive and round_winner is None and round_start_timer <= 0:
+        if isinstance(p1, PirateSwordswoman) and p1.is_alive and round_in_progress:
             if p1_sec_held:
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                 p1.update_cannon_strike(dt, aim_x, aim_y)
@@ -1522,7 +1531,7 @@ def run_game():
 
         p2_sec_key = controls.get("P2_SECONDARY", pygame.K_i)
         p2_sec_held = keys[p2_sec_key] or (controls.get("P2_PARRY") and keys[controls["P2_PARRY"]]) or ctrl_mgr.is_action_down(1, "secondary")
-        if not vs_ai_mode and isinstance(p2, PirateSwordswoman) and p2.is_alive and round_winner is None and round_start_timer <= 0:
+        if not vs_ai_mode and isinstance(p2, PirateSwordswoman) and p2.is_alive and round_in_progress:
             if p2_sec_held:
                 aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
                 p2.update_cannon_strike(dt, aim_x, aim_y)
@@ -1530,14 +1539,31 @@ def run_game():
                 if p2.is_aiming_cannon:
                     p2.release_cannon_strike(projectiles, particles)
 
+        # Suporte ao Hold and Release da Chuva de Flechas Sagradas em Arco de Tomoe (KyudoArcher)
+        if isinstance(p1, KyudoArcher) and p1.is_alive and round_in_progress:
+            if p1_sec_held:
+                aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                p1.update_sacred_volley(dt, aim_x, aim_y)
+            else:
+                if getattr(p1, "is_aiming_volley", False):
+                    p1.release_sacred_volley(projectiles, particles)
+
+        if not vs_ai_mode and isinstance(p2, KyudoArcher) and p2.is_alive and round_in_progress:
+            if p2_sec_held:
+                aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
+                p2.update_sacred_volley(dt, aim_x, aim_y)
+            else:
+                if getattr(p2, "is_aiming_volley", False):
+                    p2.release_sacred_volley(projectiles, particles)
+
         # Suporte ao carregamento contínuo de pólvora do Rifleman (segurando ação secundária)
-        if isinstance(p1, Rifleman) and p1.is_alive and round_winner is None and round_start_timer <= 0:
+        if isinstance(p1, Rifleman) and p1.is_alive and round_in_progress:
             if p1_sec_held and not p1.has_ammo:
                 p1.trigger_reload_hold()
             else:
                 p1.is_reloading = False
 
-        if not vs_ai_mode and isinstance(p2, Rifleman) and p2.is_alive and round_winner is None and round_start_timer <= 0:
+        if not vs_ai_mode and isinstance(p2, Rifleman) and p2.is_alive and round_in_progress:
             if p2_sec_held and not p2.has_ammo:
                 p2.trigger_reload_hold()
             else:
@@ -1545,7 +1571,7 @@ def run_game():
 
         # Suporte ao Hold and Release da Flecha de Corda de Tomoe (KyudoArcher) na Terceira Ação (Roll / Dash dedicado)
         p1_dash_held = keys[controls.get("P1_DASH", pygame.K_t)] or ctrl_mgr.is_action_down(0, "dash") or touch_controls.is_dash_held()
-        if isinstance(p1, KyudoArcher) and p1.is_alive and round_winner is None and round_start_timer <= 0:
+        if isinstance(p1, KyudoArcher) and p1.is_alive and round_in_progress:
             if p1_dash_held:
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                 if not p1.is_charging_rope:
@@ -1558,7 +1584,7 @@ def run_game():
 
         p2_dash_key = controls.get("P2_DASH", pygame.K_o)
         p2_dash_held = keys[p2_dash_key] or ctrl_mgr.is_action_down(1, "dash")
-        if not vs_ai_mode and isinstance(p2, KyudoArcher) and p2.is_alive and round_winner is None and round_start_timer <= 0:
+        if not vs_ai_mode and isinstance(p2, KyudoArcher) and p2.is_alive and round_in_progress:
             if p2_dash_held:
                 aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
                 if not p2.is_charging_rope:
@@ -1570,7 +1596,7 @@ def run_game():
                     p2.release_rope_arrow(projectiles, particles, game_map)
 
         # Suporte ao Hold & Release do Escudo de Corrente de Murasaki (Item 24)
-        if isinstance(p1, PurpleNinja) and p1.is_alive and round_winner is None and round_start_timer <= 0:
+        if isinstance(p1, PurpleNinja) and p1.is_alive and round_in_progress:
             if p1_sec_held:
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                 p1.update_chain_shield(dt, aim_x, aim_y)
@@ -1578,7 +1604,7 @@ def run_game():
                 if getattr(p1, "is_holding_shield", False):
                     p1.release_chain_shield(projectiles, particles)
 
-        if not vs_ai_mode and isinstance(p2, PurpleNinja) and p2.is_alive and round_winner is None and round_start_timer <= 0:
+        if not vs_ai_mode and isinstance(p2, PurpleNinja) and p2.is_alive and round_in_progress:
             if p2_sec_held:
                 aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
                 p2.update_chain_shield(dt, aim_x, aim_y)
@@ -1591,6 +1617,7 @@ def run_game():
             for f in (p1, p2):
                 if isinstance(f, KyudoArcher):
                     f.is_charging_rope = False
+                    f.is_aiming_volley = False
                 elif isinstance(f, PirateSwordswoman):
                     f.is_aiming_cannon = False
                 elif isinstance(f, PurpleNinja):
@@ -1612,7 +1639,7 @@ def run_game():
             if isinstance(p2, BossOni):
                 pass  # o chefe se move pelo próprio cérebro (BossOni.update)
             elif vs_ai_mode:
-                if round_start_timer <= 0:
+                if round_in_progress:
                     ai.update(p2, p1, dt, game_map, projectiles, powder_pouches, decoys)
             else:
                 if hasattr(p2, "apply_gatotsu_steering") and p2.state == "GATOTSU_CHARGE":
@@ -1651,38 +1678,41 @@ def run_game():
                 if isinstance(archer, KyudoArcher):
                     archer.update_ofuda_barrier_effects(dt, projectiles, opponent=opp, particles=particles)
 
+            f_dt = dt if round_in_progress else 0.0
+
             for f in (p1, p2):
                 opp = p2 if f is p1 else p1
                 if f.state == STATE_FALL:
-                    f.update_pit(dt, game_map, particles, banners)
+                    f.update_pit(f_dt, game_map, particles, banners)
                     continue
                 if isinstance(f, BossOni):
-                    if round_start_timer <= 0 and round_intro_timer <= 0:
+                    if round_in_progress:
                         f.update(dt, game_map, opp, particles, banners, projectiles, camera)
                     else:
-                        f.update(dt)
+                        f.update(0.0)
                     continue
                 if isinstance(f, Rifleman):
-                    f.check_powder_pickup(powder_pouches, particles)
+                    if round_in_progress:
+                        f.check_powder_pickup(powder_pouches, particles)
                 if isinstance(f, PirateSwordswoman):
-                    f.update(dt, game_map, particles, opponent=opp, banners=banners)
+                    f.update(f_dt, game_map, particles, opponent=opp, banners=banners)
                 elif isinstance(f, SaitouSamurai):
-                    f.update(dt, game_map, particles)
+                    f.update(f_dt, game_map, particles)
                 elif isinstance(f, (Rifleman, Kabuki, Musketeer, GrayNinja)):
-                    f.update(dt, game_map, particles)
+                    f.update(f_dt, game_map, particles)
                 elif isinstance(f, BlueSamurai):
-                    f.update(dt, game_map, particles, projectiles)
+                    f.update(f_dt, game_map, particles, projectiles)
                 elif isinstance(f, KyudoArcher):
-                    f.update(dt, game_map, particles, projectiles)
+                    f.update(f_dt, game_map, particles, projectiles)
                 else:
-                    f.update(dt, game_map)
+                    f.update(f_dt, game_map)
 
                 # Decremento universal de cooldown de impacto com obstáculos sólidos
-                if getattr(f, "obstacle_spark_timer", 0) > 0:
+                if round_in_progress and getattr(f, "obstacle_spark_timer", 0) > 0:
                     f.obstacle_spark_timer -= dt
 
                 # Item 17: Indicador visual e decremento de lentidão (fuligem de pólvora escorrendo aos pés)
-                if f.is_alive and getattr(f, "slow_timer", 0) > 0:
+                if round_in_progress and f.is_alive and getattr(f, "slow_timer", 0) > 0:
                     f.slow_timer -= dt
                     if random.random() < 0.40:
                         particles.append(SmokeParticle(
@@ -1695,15 +1725,16 @@ def run_game():
                         ))
 
                 # Queda em buracos da arena: toca o som e treme a câmera no frame em que começa
-                if f.update_pit(dt, game_map, particles, banners):
+                if round_in_progress and f.update_pit(dt, game_map, particles, banners):
                     play_sfx(SoundEvent.FALL)
                     camera.add_shake(3.0)
 
             for f in (p1, p2):
-                terrain_fx.step(f, game_map, dt)
-                if hasattr(f, "drain_fog_nodes"):
-                    for node in f.drain_fog_nodes():
-                        fog.add_trail(*node)
+                if round_in_progress:
+                    terrain_fx.step(f, game_map, dt)
+                    if hasattr(f, "drain_fog_nodes"):
+                        for node in f.drain_fog_nodes():
+                            fog.add_trail(*node)
 
         # Eventos do chefe: nova fase, checkpoint do Arcade e golpes
         if isinstance(p2, BossOni):
@@ -1763,6 +1794,9 @@ def run_game():
             elif not p1.is_alive and not p2.is_alive:
                 round_winner = "DRAW"
                 play_sfx(SoundEvent.ROUND_WIN)
+
+        if round_winner is not None:
+            sound_mgr.play_death_music(fadeout_ms=350)
 
         # Arcade (8.1): informa o round à jornada uma única vez; as regras decidem se a luta, o oponente ou o round continua
         if arcade_run is not None and round_winner is not None and not arcade_round_reported:

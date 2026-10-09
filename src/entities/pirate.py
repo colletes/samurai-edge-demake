@@ -43,6 +43,10 @@ class PirateSwordswoman(Samurai):
         self.roll_dir_y = 0.0
         self.dash_has_hit = False
 
+    def on_round_start(self):
+        """Inicia o cooldown inicial do canhão no momento exato em que o round começa."""
+        self.cannon_cooldown_timer = self.cannon_cooldown
+
     def can_act(self) -> bool:
         return (
             self.is_alive

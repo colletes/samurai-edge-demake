@@ -13,6 +13,7 @@ import pygame
 from src.config import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.i18n import t
 from src.ui.fonts import get_title_font, get_text_font
+from src.ui.svg_icon_renderer import render_text_with_icons
 
 MATCH_WINS_NEEDED = 2  # Melhor-de-3: primeiro a vencer 2 rounds fecha a partida
 
@@ -166,6 +167,8 @@ class RoundResultScreen:
 
         if self.can_accept_rematch():
             pulse = 0.65 + 0.35 * abs(math.sin(self.timer * 3.2))
-            prompt_surf = font_prompt.render(t("rematch_prompt"), True, (255, 255, 255))
-            prompt_surf.set_alpha(int(255 * pulse))
-            surface.blit(prompt_surf, (SCREEN_WIDTH // 2 - prompt_surf.get_width() // 2, ty + 118))
+            render_text_with_icons(
+                surface, font_prompt, t("rematch_prompt"),
+                SCREEN_WIDTH // 2, ty + 118,
+                text_color=(255, 255, 255), icon_size=18, alpha=int(255 * pulse)
+            )

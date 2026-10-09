@@ -104,6 +104,10 @@ class Samurai:
     def dash_recovery_duration(self, val: float):
         self.roll_recovery_duration = val
 
+    def on_round_start(self):
+        """Hook invocado no início efetivo do round (quando a luta de fato começa)."""
+        pass
+
     def apply_slow(self, duration: float = 2.5, banners: list = None):
         """Aplica desaceleração de 65% na velocidade de movimentação."""
         if getattr(self, "is_poisoned", False):
@@ -244,6 +248,8 @@ class Samurai:
         return True
 
     def _begin_fall(self, pit, particles: list = None, banners: list = None):
+        from src.audio.sound_manager import get_sound_manager
+        get_sound_manager().play_death_music(fadeout_ms=350)
         self.state = STATE_FALL
         self.fall_timer = 0.0
         self.fall_pit = pit

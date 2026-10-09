@@ -19,7 +19,7 @@ PALETTE = {
 }
 
 
-MATERIALS = {"haori": "silk", "haori_dark": "silk", "navy": "silk", "belt": "silk", "kyahan": "leather", "saya": "lacquer", "strap": "canvas"}  # chave da paleta -> textura de material (6.5.8)
+MATERIALS = {"haori": "silk", "haori_dark": "silk", "navy": "silk", "belt": "silk", "kyahan": "leather", "saya": "lacquer", "strap": "canvas", "steel": "steel", "gold": "gold"}  # chave da paleta -> textura de material (6.5.8)
 
 
 def pal() -> dict:

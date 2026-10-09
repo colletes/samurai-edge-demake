@@ -21,7 +21,7 @@ DETAILED = {
 }
 
 
-MATERIALS = {"suit": "latex", "suit_dark": "latex", "wrap": "latex", "wrap_dark": "latex", "wrap_light": "latex", "boot": "leather", "strap": "leather", "steel_dark": "brushed_metal", "steel": "brushed_metal", "mask": "latex", "ball": "brushed_metal"}  # chave da paleta -> textura de material (6.5.8)
+MATERIALS = {"suit": "latex", "suit_dark": "latex", "wrap": "latex", "wrap_dark": "latex", "wrap_light": "latex", "boot": "leather", "strap": "leather", "steel_dark": "metal", "steel": "metal", "steel_light": "chrome", "mask": "latex", "mask_light": "latex", "ball": "metal", "chain": "metal", "blade": "steel", "edge": "steel"}  # chave da paleta -> textura de material (6.5.8)
 
 
 def pal() -> dict:
@@ -218,7 +218,7 @@ def draw_torso(c):
     P = pal()
     tz = c.torso_z
     front = 0.085
-    mk.cbox(c, c.base_x, c.base_y, tz - 0.005, 0.215, 0.165, 0.125, P["wrap"], texture="gloss")
+    mk.cbox(c, c.base_x, c.base_y, tz - 0.005, 0.215, 0.165, 0.125, P["wrap"], texture="latex")
     for s in (-1.0, 1.0):  # faixas cruzando o abdômen
         a = (c.base_x + c.fx * (front + 0.006) + c.px * 0.085 * s, c.base_y + c.fy * (front + 0.006) + c.py * 0.085 * s, tz + 0.115)
         b = (c.base_x + c.fx * (front + 0.006) - c.px * 0.07 * s, c.base_y + c.fy * (front + 0.006) - c.py * 0.07 * s, tz + 0.01)
@@ -265,12 +265,8 @@ def draw_head(c):
     if mk.facing_camera(c):
         mk.obox(c, (bx - fx * 0.01, by - fy * 0.01, hz + 0.028), (fx, fy, 0.0), hw / 2 + 0.017, hw + 0.016, 0.078, P["mask"])
         mk.obox(c, (bx - fx * 0.01, by - fy * 0.01, hz + 0.092), (fx, fy, 0.0), hw / 2 + 0.017, hw + 0.016, 0.012, P["mask_light"], outline=False)
-        front = hw / 2 + 0.004
-        for s in (-1.0, 1.0):
-            ex, ey = bx + fx * front + px * 0.034 * s, by + fy * front + py * 0.034 * s
-            mk.cbox(c, ex, ey, hz + 0.104, 0.03, 0.02, 0.024, P["eye"], outline=False)
-            mk.cbox(c, ex, ey, hz + 0.109, 0.012, 0.014, 0.014, P["liner"], outline=False)
-            mk.limb(c, (ex - px * 0.02 * s, ey - py * 0.02 * s, hz + 0.13), (ex + px * 0.022 * s, ey + py * 0.022 * s, hz + 0.142), 0.01, P["liner"], outline=False, height=0.01)
+        # Máscara facial kunoichi roxa limpa (sem cubos saltados de olhos em 360°)
+        pass
     mk.cbox(c, bx, by, hz + 0.145, 0.15, 0.15, 0.06, P["hair"])
     if not mk.facing_camera(c):
         _hair_volume(c)

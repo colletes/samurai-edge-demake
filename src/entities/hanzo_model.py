@@ -17,7 +17,7 @@ PALETTE = {
 }
 
 
-MATERIALS = {"torso": "knit", "pants": "knit", "yellow_dark": "knit", "black": "leather", "boot": "leather", "steel": "brushed_metal", "steel_dark": "brushed_metal", "belt": "leather"}  # chave da paleta -> textura de material (6.5.8)
+MATERIALS = {"torso": "knit", "pants": "knit", "yellow_dark": "knit", "black": "leather", "boot": "leather", "steel": "metal", "steel_dark": "metal", "belt": "leather", "gold": "gold", "stud": "gold"}  # chave da paleta -> textura de material (6.5.8)
 
 
 def pal() -> dict:
@@ -145,11 +145,8 @@ def draw_head(c):
         mk.plate(c, hz + 0.03, 0.075, P["black"])
         mk.plate(c, hz + 0.105, 0.04, P["skin_shadow"], inset=0.004)
         mk.plate(c, hz + 0.145, 0.05, P["yellow_dark"])
-        front = c.head_w / 2 + 0.018
-        for s in (-1.0, 1.0):
-            ex, ey = bx + fx * front + px * 0.036 * s, by + fy * front + py * 0.036 * s
-            mk.cbox(c, ex, ey, hz + 0.112, 0.03, 0.02, 0.018, P["eye"], outline=False)
-            mk.cbox(c, ex + fx * 0.006, ey + fy * 0.006, hz + 0.114, 0.012, 0.012, 0.014, P["pupil"], outline=False)
+        # Faixa dos olhos e máscara shinobi limpas (sem cubos saltados de olhos em 360°)
+        pass
     trail, amp, freq = mk.motion(c, 0.09)
     root = (bx - fx * 0.08, by - fy * 0.08, hz + 0.05)
     offs = mk.cloth_offsets(c, 3, 0.7, trail, amp * 1.8, freq, root, wind_gain=0.06)

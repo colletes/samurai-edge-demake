@@ -25,7 +25,7 @@ PALETTE = {
 }
 
 
-MATERIALS = {"kimono": "canvas", "kimono_dark": "canvas", "kimono_light": "canvas", "sash": "silk", "wrap": "canvas", "tabi": "canvas", "straw": "canvas", "tasuki": "canvas", "collar": "canvas", "saya": "lacquer", "saya_short": "lacquer"}  # chave da paleta -> textura de material (6.5.8)
+MATERIALS = {"kimono": "canvas", "kimono_dark": "canvas", "kimono_light": "canvas", "sash": "silk", "wrap": "canvas", "tabi": "canvas", "straw": "canvas", "tasuki": "canvas", "collar": "canvas", "saya": "lacquer", "saya_short": "lacquer", "steel": "steel", "edge": "steel", "tsuba": "metal", "gold": "gold"}  # chave da paleta -> textura de material (6.5.8)
 
 
 def pal() -> dict:
@@ -240,12 +240,7 @@ def draw_head(c):
     if mk.facing_camera(c):
         front = hw / 2 + 0.004
         mk.obox(c, (bx - fx * 0.01, by - fy * 0.01, hz + 0.03), (fx, fy, 0.0), hw / 2 + 0.012, hw + 0.008, 0.052, P["stubble"], outline=False)  # barba
-        for s in (-1.0, 1.0):
-            ex, ey = bx + fx * front + px * 0.04 * s, by + fy * front + py * 0.04 * s
-            mk.cbox(c, ex, ey, hz + 0.088, 0.026, 0.02, 0.022, P["eye"], outline=False)
-            mk.limb(c, (ex - px * 0.024 * s, ey - py * 0.024 * s, hz + 0.13), (ex + px * 0.024 * s, ey + py * 0.024 * s, hz + 0.112), 0.014, P["brow"], outline=False)
-        mk.cbox(c, bx + fx * front, by + fy * front, hz + 0.075, 0.016, 0.014, 0.03, P["skin_shadow"], outline=False)
-        mk.cbox(c, bx + fx * front, by + fy * front, hz + 0.05, 0.036, 0.012, 0.008, P["brow"], outline=False)
+        # Rosto severo como pele limpa (sem cubos saltados de olhos ou boca)
     mk.cbox(c, bx, by, hz + 0.125, 0.172, 0.172, 0.075, P["hair"])
     if not mk.facing_camera(c):
         _hair_volume(c)

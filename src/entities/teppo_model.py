@@ -19,7 +19,7 @@ PALETTE = {
 }
 
 
-MATERIALS = {"armor": "lacquer", "armor_dark": "lacquer", "iron": "brushed_metal", "iron_light": "brushed_metal", "pants": "canvas", "torso": "canvas", "hat": "lacquer", "belt": "leather", "wood": "planks", "wood_dark": "planks", "barrel": "brushed_metal", "horn": "lacquer"}  # chave da paleta -> textura de material (6.5.8)
+MATERIALS = {"armor": "metal", "armor_dark": "metal", "iron": "metal", "iron_light": "chrome", "pants": "canvas", "torso": "canvas", "hat": "metal", "belt": "leather", "wood": "planks", "wood_dark": "planks", "barrel": "metal", "horn": "lacquer", "gold": "gold"}  # chave da paleta -> textura de material (6.5.8)
 
 
 def pal() -> dict:

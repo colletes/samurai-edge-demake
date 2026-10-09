@@ -12,12 +12,16 @@ import pygame
 
 from src.effects import quality
 
-MIN_FACE_PX = 9     # arestas menores que isso (em pixels) ficam lisas
-MIN_GAP_PX = 3.5    # espaçamento mínimo entre linhas; abaixo disso o padrão é afinado
+MIN_FACE_PX = 3     # arestas menores que isso (em pixels) ficam lisas (3px permite micro-voxels detalhados)
+MIN_GAP_PX = 2.0    # espaçamento mínimo entre linhas; abaixo disso o padrão é afinado
 
 
 def _tone(color, k: float):
     return (max(0, min(255, int(color[0] * k))), max(0, min(255, int(color[1] * k))), max(0, min(255, int(color[2] * k))))
+
+
+def _light(shade, k=1.5, add=10):
+    return (min(255, int(shade[0] * k) + add), min(255, int(shade[1] * k) + add), min(255, int(shade[2] * k) + add))
 
 
 MAX_LINES = 40      # teto de chamadas de linha por face: telhados e paredes enormes custam caro no quadro
@@ -72,19 +76,33 @@ class _Face:
         u, v = 0.02 + 0.96 * u, 0.02 + 0.96 * v  # fica um tico para dentro do contorno
         return self.a[0] + self.ux * u + self.vx * v, self.a[1] + self.uy * u + self.vy * v
 
-    def line(self, color, u0, v0, u1, v1):
-        pygame.draw.line(self.surface, color, self.pt(u0, v0), self.pt(u1, v1), 1)
+    def line(self, color, u0, v0, u1, v1, width=1):
+        pygame.draw.line(self.surface, color, self.pt(u0, v0), self.pt(u1, v1), max(1, int(width)))
 
     def dot(self, color, u, v, size=1):
         x, y = self.pt(u, v)
         self.surface.fill(color, (int(x), int(y), size, size))
 
-    def const_line(self, color, axis: str, value: float, start=0.0, end=1.0):
+    def quad(self, color, u0: float, v0: float, u1: float, v1: float):
+        """Preenche uma faixa ou retângulo em UV [u0, u1] x [v0, v1] mapeado para os pixels da face."""
+        p0 = self.pt(u0, v0)
+        p1 = self.pt(u1, v0)
+        p2 = self.pt(u1, v1)
+        p3 = self.pt(u0, v1)
+        pygame.draw.polygon(self.surface, color, (p0, p1, p2, p3))
+
+    def poly(self, color, pts_uv):
+        """Preenche polígono arbitrário em UV na face."""
+        pts = [self.pt(u, v) for u, v in pts_uv]
+        if len(pts) >= 3:
+            pygame.draw.polygon(self.surface, color, pts)
+
+    def const_line(self, color, axis: str, value: float, start=0.0, end=1.0, width=1):
         """Linha com u (axis 'u') ou v (axis 'v') constante, de start a end no outro eixo."""
         if axis == "u":
-            self.line(color, value, start, value, end)
+            self.line(color, value, start, value, end, width=width)
         else:
-            self.line(color, start, value, end, value)
+            self.line(color, start, value, end, value, width=width)
 
 
 def _planks(f: _Face):
@@ -217,14 +235,10 @@ def _weave(f: _Face):
 
 
 def _gloss(f: _Face):
-    """Reflexo de couro e látex: uma faixa clara inclinada e um ponto de brilho."""
-    light = (min(255, int(f.shade[0] * 1.6) + 12), min(255, int(f.shade[1] * 1.6) + 10), min(255, int(f.shade[2] * 1.6) + 18))
-    f.line(light, 0.22, 0.12, 0.34, 0.88)
-    f.dot(light, 0.28, 0.5, 2)
-
-
-def _light(shade, k=1.5, add=10):
-    return (min(255, int(shade[0] * k) + add), min(255, int(shade[1] * k) + add), min(255, int(shade[2] * k) + add))
+    """Reflexo lustroso de curvatura suave com hotspot."""
+    f.quad(_light(f.shade, 1.4, 25), 0.20, 0.08, 0.45, 0.92)
+    f.line(_light(f.shade, 1.85, 60), 0.28, 0.08, 0.36, 0.92, width=1)
+    f.dot((255, 255, 255), 0.32, 0.42, size=2)
 
 
 def _silk(f: _Face):
@@ -239,23 +253,71 @@ def _silk(f: _Face):
 
 
 def _latex(f: _Face):
-    """Látex: faixa de reflexo larga e dura, um segundo reflexo fino, o ponto de brilho e a borda escurecida."""
-    light, rim = _light(f.shade, 1.9, 22), _tone(f.shade, 0.7)
-    f.line(light, 0.2, 0.08, 0.32, 0.92)
-    f.line(light, 0.25, 0.08, 0.37, 0.92)
-    f.line(_light(f.shade, 1.4, 12), 0.62, 0.2, 0.67, 0.8)
-    f.dot(_light(f.shade, 2.4, 40), 0.28, 0.45, 2)
-    f.line(rim, 0.94, 0.0, 0.94, 1.0)
+    """
+    Látex / Vinil brilhante (PBR: Roughness ~0.08, alto contraste especular, rim Fresnel):
+    - Faixa de reflexo especular de alta intensidade com núcleo branco puro (255, 255, 255).
+    - Reflexo Fresnel de borda (rim light) nas arestas de ângulo rasante.
+    - Hotspot focalizado com brilho secundário suave e corte nítido de sombra.
+    """
+    if f.kind == "top":
+        # Topo de voxel zenital: reflexo circular/diamante de estúdio
+        f.quad(_light(f.shade, 1.45, 45), 0.16, 0.16, 0.72, 0.72)
+        f.line(_light(f.shade, 1.9, 90), 0.20, 0.20, 0.68, 0.68, width=2)
+        f.dot((255, 255, 255), 0.42, 0.42, size=2)
+        return
+
+    # Faces laterais (+X / +Y): curvatura vertical/diagonal pronunciada
+    soft_sheen = _light(f.shade, 1.42, 38)
+    intense_spec = _light(f.shade, 1.85, 95)
+    rim_fresnel = _light(f.shade, 1.65, 75)
+    dark_contour = _tone(f.shade, 0.62)
+
+    # 1. Faixa externa de brilho acetinado
+    f.quad(soft_sheen, 0.18, 0.04, 0.46, 0.96)
+    # 2. Faixa interna de alta intensidade especular
+    f.quad(intense_spec, 0.25, 0.04, 0.38, 0.96)
+    # 3. Núcleo branco puro no centro do feixe de luz
+    f.line((255, 255, 255), 0.30, 0.04, 0.33, 0.96, width=1)
+    # 4. Ponto de reflexo especular absoluto (hotspot)
+    f.dot((255, 255, 255), 0.31, 0.42, size=2)
+    # 5. Efeito Fresnel rasante na borda externa (rim lighting de silhueta)
+    f.line(rim_fresnel, 0.04, 0.02, 0.04, 0.98, width=1)
+    # 6. Reflexo secundário sutil de rebatimento no lado oposto
+    f.line(_light(f.shade, 1.25, 22), 0.68, 0.12, 0.72, 0.88, width=1)
+    # 7. Linha de sombra profunda de oclusão ao lado do brilho para máximo contraste
+    f.line(dark_contour, 0.48, 0.06, 0.50, 0.94, width=1)
 
 
 def _leather(f: _Face):
-    """Couro: grão salpicado, uma costura tracejada na borda e um vinco claro."""
-    dark, light = _tone(f.shade, 0.72), _light(f.shade, 1.25, 6)
-    n = max(4, min(10, int(f.lu * f.lv / 160)))
-    for k in range(n):
-        f.dot(dark if k % 2 else light, f.random(), f.random())
+    """
+    Couro tratado e polido / Lustroso (PBR: Roughness ~0.28, sheen suave, granulação tátil):
+    - Faixa de brilho lustroso contínua ao longo da curvatura da bota, cinto ou colete.
+    - Realce de borda chanfrada encerada.
+    - Microtextura orgânica pontilhada de poros e costura artesanal tracejada.
+    """
+    sheen_soft = _light(f.shade, 1.35, 26)
+    sheen_bright = _light(f.shade, 1.68, 52)
+    edge_waxed = _light(f.shade, 1.45, 22)
+    dark_pore = _tone(f.shade, 0.70)
+    light_pore = _light(f.shade, 1.22, 12)
+
+    # 1. Faixa larga de brilho de couro polido/hidratado (sheen)
+    f.quad(sheen_soft, 0.20, 0.05, 0.46, 0.95)
+    f.quad(sheen_bright, 0.27, 0.05, 0.38, 0.95)
+    f.line(_light(f.shade, 1.92, 75), 0.32, 0.05, 0.34, 0.95, width=1)
+    f.dot(_light(f.shade, 2.1, 95), 0.33, 0.38, size=2)
+
+    # 2. Borda encerada polida (bevel)
+    f.line(edge_waxed, 0.05, 0.04, 0.05, 0.96, width=1)
+
+    # 3. Micro-poros orgânicos discretos para relevo de couro
+    n_pores = max(3, min(8, int(f.lu * f.lv / 180)))
+    for k in range(n_pores):
+        f.dot(dark_pore if k % 2 else light_pore, f.uniform(0.52, 0.92), f.random())
+
+    # 4. Costura artesanal pontilhada reforçada na margem direita
     for i in range(0, 8, 2):
-        f.line(_light(f.shade, 1.5, 12), 0.08, i / 8.0, 0.08, (i + 1) / 8.0)
+        f.line(_light(f.shade, 1.5, 16), 0.92, i / 8.0, 0.92, (i + 0.6) / 8.0, width=1)
 
 
 def _velvet(f: _Face):
@@ -300,22 +362,109 @@ def _knit(f: _Face):
                 f.line(dark, cu, cv + 0.4 / nv, cu + 0.4 / nu, cv - 0.4 / nv)
 
 
+def _metal(f: _Face):
+    """
+    Metal Polido & Aço (PBR: Conductor, Metallic 1.0, reflexo de horizonte e estrias anisotrópicas):
+    - Reflexo de céu (porção superior clara) e horizonte de solo (corte escuro).
+    - Estria vertical anisotrópica espelhada de alto brilho com gume chanfrado (255, 255, 255).
+    - Hotspot intenso de reflexão direta da fonte de luz.
+    """
+    sky_refl = _light(f.shade, 1.55, 50)
+    ground_refl = _light(f.shade, 1.22, 18)
+    horizon_dark = _tone(f.shade, 0.52)
+    spec_streak = _light(f.shade, 1.95, 95)
+
+    if f.kind == "top":
+        # Placa superior com chanfro de luz nas 2 arestas superiores
+        f.line((255, 255, 255), 0.04, 0.04, 0.96, 0.04, width=1)
+        f.line((255, 255, 255), 0.04, 0.04, 0.04, 0.96, width=1)
+        f.quad(_light(f.shade, 1.5, 45), 0.15, 0.15, 0.85, 0.85)
+        f.dot((255, 255, 255), 0.38, 0.38, size=2)
+        return
+
+    # 1. Reflexão de céu na metade superior
+    f.quad(sky_refl, 0.04, 0.04, 0.96, 0.46)
+    # 2. Linha nítida do horizonte metálico
+    f.line(horizon_dark, 0.04, 0.48, 0.96, 0.48, width=1)
+    # 3. Reflexão da metade inferior
+    f.quad(ground_refl, 0.04, 0.50, 0.96, 0.92)
+
+    # 4. Chanfro superior e lateral de aresta em branco puro (bevel glint)
+    f.line((255, 255, 255), 0.04, 0.04, 0.96, 0.04, width=1)
+    f.line((255, 255, 255), 0.04, 0.04, 0.04, 0.48, width=1)
+
+    # 5. Faixa anisotrópica vertical reluzente
+    f.quad(spec_streak, 0.26, 0.04, 0.38, 0.96)
+    f.line((255, 255, 255), 0.31, 0.04, 0.33, 0.96, width=1)
+    # 6. Hotspots brancos concentrados
+    f.dot((255, 255, 255), 0.32, 0.22, size=2)
+    f.dot((255, 255, 255), 0.32, 0.70, size=1)
+
+
+def _chrome(f: _Face):
+    """Cromo espelhado de altíssima refletividade (variação ultra-nítida de metal)."""
+    _metal(f)
+
+
+def _steel(f: _Face):
+    """Aço laminado / lâminas de katana, adagas e floretes."""
+    _metal(f)
+
+
+def _gold(f: _Face):
+    """
+    Ouro Polido (PBR: Conductor com coloração metálica dourada rica):
+    - Reflexos em amarelo-dourado vibrante e núcleo platina-ouro (255, 250, 195).
+    - Bevel e chanfros dourados cintilantes.
+    """
+    gold_sky = (min(255, int(f.shade[0] * 1.55) + 60), min(255, int(f.shade[1] * 1.50) + 50), min(255, int(f.shade[2] * 1.05) + 15))
+    gold_spec = (min(255, int(f.shade[0] * 1.85) + 85), min(255, int(f.shade[1] * 1.80) + 80), min(255, int(f.shade[2] * 1.20) + 35))
+    gold_core = (255, 250, 195)
+    gold_dark = _tone(f.shade, 0.60)
+
+    if f.kind == "top":
+        f.line(gold_core, 0.04, 0.04, 0.96, 0.04, width=1)
+        f.line(gold_core, 0.04, 0.04, 0.04, 0.96, width=1)
+        f.quad(gold_sky, 0.15, 0.15, 0.85, 0.85)
+        f.dot(gold_core, 0.38, 0.38, size=2)
+        return
+
+    # Reflexos dourados
+    f.quad(gold_sky, 0.04, 0.04, 0.96, 0.46)
+    f.line(gold_dark, 0.04, 0.48, 0.96, 0.48, width=1)
+    f.quad(_tone(gold_sky, 0.8), 0.04, 0.50, 0.96, 0.92)
+
+    # Aresta superior cintilante
+    f.line(gold_core, 0.04, 0.04, 0.96, 0.04, width=1)
+    # Faixa anisotrópica
+    f.quad(gold_spec, 0.26, 0.04, 0.40, 0.96)
+    f.line(gold_core, 0.32, 0.04, 0.34, 0.96, width=1)
+    f.dot((255, 255, 240), 0.33, 0.24, size=2)
+
+
 def _brushed_metal(f: _Face):
-    """Metal escovado: riscos finos e longos ao longo da face e um brilho claro."""
-    dark, light = _tone(f.shade, 0.84), _light(f.shade, 1.45, 14)
+    """Metal escovado: riscos finos e longos ao longo da face com faixa de reflexo brilhante."""
+    dark, light = _tone(f.shade, 0.78), _light(f.shade, 1.55, 28)
+    # Faixa de brilho do metal
+    f.quad(_light(f.shade, 1.50, 35), 0.24, 0.04, 0.42, 0.96)
+    f.line((255, 255, 255), 0.32, 0.04, 0.34, 0.96, width=1)
+    # Riscos anisotrópicos
     n = max(3, min(_count(f.vlen, 0.04, f.lv), 9))
     for j in range(1, n):
         v = j / n
         a = f.uniform(0.0, 0.3)
-        f.line(dark if j % 2 else light, a, v, min(1.0, a + f.uniform(0.4, 0.8)), v)
-    f.line(_light(f.shade, 1.9, 24), 0.12, 0.08, 0.3, 0.9)
+        f.line(dark if j % 2 else light, a, v, min(1.0, a + f.uniform(0.4, 0.8)), v, width=1)
+    # Bevel superior
+    f.line((255, 255, 255), 0.04, 0.04, 0.96, 0.04, width=1)
+    f.dot((255, 255, 255), 0.33, 0.28, size=2)
 
 
 def _lacquer(f: _Face):
-    """Laca: um reflexo longo e nítido e uma linha de sombra funda ao lado."""
-    f.line(_light(f.shade, 1.8, 18), 0.18, 0.06, 0.28, 0.94)
-    f.line(_tone(f.shade, 0.6), 0.34, 0.06, 0.44, 0.94)
-    f.dot(_light(f.shade, 2.2, 36), 0.22, 0.3, 2)
+    """Laca japonesa (urushi): reflexo nítido de espelho, faixa de transição e brilho pontual."""
+    f.quad(_light(f.shade, 1.4, 30), 0.16, 0.04, 0.34, 0.96)
+    f.line(_light(f.shade, 1.95, 75), 0.22, 0.04, 0.26, 0.96, width=1)
+    f.line(_tone(f.shade, 0.55), 0.36, 0.04, 0.40, 0.96, width=1)
+    f.dot((255, 255, 255), 0.24, 0.32, size=2)
 
 
 PATTERNS = {
@@ -323,7 +472,7 @@ PATTERNS = {
     "cloth": _cloth, "plaster": _plaster, "foliage": _foliage, "marble": _marble, "stripes": _stripes,
     "pleats": _pleats, "weave": _weave, "gloss": _gloss,
     "silk": _silk, "latex": _latex, "leather": _leather, "velvet": _velvet, "brocade": _brocade, "canvas": _canvas, "knit": _knit,
-    "brushed_metal": _brushed_metal, "lacquer": _lacquer,
+    "brushed_metal": _brushed_metal, "metal": _metal, "chrome": _chrome, "steel": _steel, "gold": _gold, "lacquer": _lacquer,
 }
 
 

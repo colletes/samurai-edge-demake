@@ -185,19 +185,9 @@ def panels(c, anchor, count, seg, width, depth_, colors, phase=0.0, up=None, spr
     return last
 
 
-def face(c, eye, brow, mouth, skin_shadow, eye_z=0.088, brow_z=0.13, spacing=0.036, brow_tilt=0.0, mouth_w=0.026, nose=True):
-    """Olhos, sobrancelhas, nariz e boca; só aparecem quando o rosto está voltado para a câmera."""
-    if not facing_camera(c):
-        return
-    hz, hw = c.head_z, c.head_w
-    front = hw / 2 + 0.004
-    for s in (-1.0, 1.0):
-        ex, ey = c.base_x + c.fx * front + c.px * spacing * s, c.base_y + c.fy * front + c.py * spacing * s
-        cbox(c, ex, ey, hz + eye_z, 0.024, 0.02, 0.022, eye, outline=False)
-        limb(c, (ex - c.px * 0.022 * s, ey - c.py * 0.022 * s, hz + brow_z - brow_tilt), (ex + c.px * 0.022 * s, ey + c.py * 0.022 * s, hz + brow_z + brow_tilt), 0.011, brow, outline=False)
-    if nose:
-        cbox(c, c.base_x + c.fx * front, c.base_y + c.fy * front, hz + 0.062, 0.012, 0.012, 0.012, skin_shadow, outline=False)
-    cbox(c, c.base_x + c.fx * front, c.base_y + c.fy * front, hz + 0.043, mouth_w, 0.012, 0.009, mouth, outline=False)
+def face(c, eye=None, brow=None, mouth=None, skin_shadow=None, eye_z=0.088, brow_z=0.13, spacing=0.036, brow_tilt=0.0, mouth_w=0.026, nose=False):
+    """Rosto estilizado limpo com tom de pele natural do personagem, sem cubos saltados de olhos ou boca."""
+    return
 
 
 def hair_volume(c, color, size=0.15, height=0.12, back=0.036):

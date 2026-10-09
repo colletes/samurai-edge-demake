@@ -15,7 +15,10 @@ from src.config import (
 from src.entities.samurai import (
     Samurai, STATE_IDLE, STATE_WALK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD
 )
-from src.entities.projectile import KyudoArrowProjectile, RopeArrowProjectile, HamayaArrowProjectile
+from src.entities.projectile import (
+    KyudoArrowProjectile, RopeArrowProjectile, HamayaArrowProjectile,
+    SacredArrowVolleyProjectile
+)
 from src.entities.voxel_models import render_voxel_humanoid
 from src.effects.particles import SparkParticle
 
@@ -48,21 +51,59 @@ class KyudoArcher(Samurai):
         self.arrow_cooldown = 1.20
         self.arrow_cooldown_timer = 0.0
 
-        # Ação Secundária: Flecha Ritual Sagrada Hamaya (破魔矢)
-        self.hamaya_cooldown = 3.6
-        self.hamaya_cooldown_timer = 0.0
+        # Ação Secundária: Chuva de Flechas Sagradas em Arco (Salva Sagrada - Mecanismo de mira e cooldown idênticos à Anne)
+        self.volley_cooldown = 4.5
+        self.volley_cooldown_timer = 4.5  # Inicia com 4.5s no round para evitar nuke instantâneo no spawn (idêntico à Anne)
+        self.is_aiming_volley = False
+        self.volley_target_wx = self.wx + 3.0
+        self.volley_target_wy = self.wy
+        self.volley_reticle_pulse = 0.0
 
         # Ação Secundária Retrocompatível: Barreira dos Ventos Kami (Ofuda Barrier)
         self.ofuda_barrier_timer = 0.0
         self.ofuda_barrier_duration = 0.85
         self.ofuda_cooldown = 3.2
         self.ofuda_cooldown_timer = 0.0
+        self.ofuda_orbit_angle = 0.0
+
         # Terceira Ação: Esquiva Ágil Miko
         self.is_agile_dodge = True
         self.roll_speed = 10.5
         self.roll_duration = 0.22
         self.roll_recovery_duration = 0.12
         self.roll_cooldown_duration = 0.35
+
+    @property
+    def sacred_volley_cooldown(self) -> float:
+        return self.volley_cooldown
+
+    @sacred_volley_cooldown.setter
+    def sacred_volley_cooldown(self, val: float):
+        self.volley_cooldown = val
+
+    @property
+    def sacred_volley_cooldown_timer(self) -> float:
+        return self.volley_cooldown_timer
+
+    @sacred_volley_cooldown_timer.setter
+    def sacred_volley_cooldown_timer(self, val: float):
+        self.volley_cooldown_timer = val
+
+    @property
+    def hamaya_cooldown(self) -> float:
+        return self.volley_cooldown
+
+    @hamaya_cooldown.setter
+    def hamaya_cooldown(self, val: float):
+        self.volley_cooldown = val
+
+    @property
+    def hamaya_cooldown_timer(self) -> float:
+        return self.volley_cooldown_timer
+
+    @hamaya_cooldown_timer.setter
+    def hamaya_cooldown_timer(self, val: float):
+        self.volley_cooldown_timer = val
 
     def can_act(self) -> bool:
         return (
@@ -72,31 +113,74 @@ class KyudoArcher(Samurai):
             and self.dash_recovery_timer <= 0
         )
 
-    def trigger_hamaya_shot(self, target_wx: float, target_wy: float, projectiles: list = None, particles: list = None):
-        """
-        Ação Secundária Sagrada: Hamaya (破魔矢)
-        Dispara flecha ritual de luz dourada que perfura obstáculos sólidos e anula projéteis inimigos no caminho.
-        """
-        if not self.can_act() or self.hamaya_cooldown_timer > 0:
+    def start_sacred_volley(self, target_wx: float, target_wy: float):
+        """Inicia a mira em arco da Chuva de Flechas Sagradas (Hold). Tomoe pode se mover livremente."""
+        if not self.is_alive or self.volley_cooldown_timer > 0:
             return
+        self.is_aiming_volley = True
+        self.volley_target_wx = target_wx
+        self.volley_target_wy = target_wy
 
-        self.set_facing(target_wx, target_wy)
-        self.state = STATE_RECOVERY
-        self.state_timer = 0.22
-        self.hamaya_cooldown_timer = self.hamaya_cooldown
+    def start_volley_strike(self, target_wx: float, target_wy: float):
+        self.start_sacred_volley(target_wx, target_wy)
 
-        proj_list = projectiles if projectiles is not None else getattr(self, "projectiles_ref", None)
-        if proj_list is not None:
-            bx = self.wx + self.facing_x * 0.70
-            by = self.wy + self.facing_y * 0.70
-            hamaya = HamayaArrowProjectile(bx, by, wz=0.55, dir_x=self.facing_x, dir_y=self.facing_y, owner=self)
-            proj_list.append(hamaya)
+    def update_sacred_volley(self, dt: float, target_wx: float, target_wy: float):
+        """Atualiza o retículo de mira da chuva de flechas enquanto o botão secundário for mantido pressionado."""
+        if not self.is_alive or not self.is_aiming_volley:
+            self.is_aiming_volley = False
+            return
+        self.volley_reticle_pulse += dt * 8.0
+        self.volley_target_wx += (target_wx - self.volley_target_wx) * min(1.0, dt * 10.0)
+        self.volley_target_wy += (target_wy - self.volley_target_wy) * min(1.0, dt * 10.0)
+
+    def update_volley_strike(self, dt: float, target_wx: float, target_wy: float):
+        self.update_sacred_volley(dt, target_wx, target_wy)
+
+    def release_sacred_volley(self, projectiles: list, particles: list = None):
+        """Dispara a salva de flechas sagradas em arco ao soltar o botão secundário (Release)."""
+        if not self.is_aiming_volley or not self.is_alive:
+            self.is_aiming_volley = False
+            return
+        self.is_aiming_volley = False
+        self.volley_cooldown_timer = self.volley_cooldown
+        self.sacred_volley_cooldown_timer = self.volley_cooldown
+        self.hamaya_cooldown_timer = self.volley_cooldown
+
+        from src.entities.projectile import SacredArrowVolleyProjectile
+        projectiles.append(SacredArrowVolleyProjectile(self.wx, self.wy, self.volley_target_wx, self.volley_target_wy, owner=self))
 
         if particles is not None:
             for _ in range(12):
-                particles.append(SparkParticle(self.wx + self.facing_x * 0.7, self.wy + self.facing_y * 0.7, 0.45, color=(255, 230, 90)))
+                particles.append(SparkParticle(self.wx, self.wy, 0.45, color=(255, 230, 90)))
             for _ in range(6):
-                particles.append(SparkParticle(self.wx, self.wy, 0.5, color=(255, 255, 240)))
+                particles.append(SparkParticle(self.wx, self.wy, 0.55, color=(255, 255, 240)))
+
+    def release_volley_strike(self, projectiles: list, particles: list = None):
+        self.release_sacred_volley(projectiles, particles)
+
+    def trigger_quick_volley(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None):
+        """Disparo Imediato da Salva de Flechas Sagradas em Arco (Tap rápido ou IA)."""
+        if not self.is_alive or self.volley_cooldown_timer > 0 or projectiles is None:
+            return
+        self.volley_cooldown_timer = self.volley_cooldown
+        self.sacred_volley_cooldown_timer = self.volley_cooldown
+        self.hamaya_cooldown_timer = self.volley_cooldown
+        self.is_aiming_volley = False
+
+        from src.entities.projectile import SacredArrowVolleyProjectile
+        projectiles.append(SacredArrowVolleyProjectile(self.wx, self.wy, target_wx, target_wy, owner=self))
+
+        if particles is not None:
+            for _ in range(12):
+                particles.append(SparkParticle(self.wx, self.wy, 0.45, color=(255, 230, 90)))
+            for _ in range(6):
+                particles.append(SparkParticle(self.wx, self.wy, 0.55, color=(255, 255, 240)))
+
+    def trigger_hamaya_shot(self, target_wx: float, target_wy: float, projectiles: list = None, particles: list = None):
+        """Retrocompatibilidade: dispara a salva rápida de flechas sagradas em arco."""
+        proj_list = projectiles if projectiles is not None else getattr(self, "projectiles_ref", None)
+        if proj_list is not None:
+            self.trigger_quick_volley(target_wx, target_wy, proj_list, particles)
 
     def trigger_ofuda_barrier(self, particles: list = None):
         """Ação Secundária: Barreira dos Ventos Kami — talismãs sagrados giratórios que repelem projéteis e empurram oponentes."""
@@ -263,8 +347,10 @@ class KyudoArcher(Samurai):
         if self.rope_timer > 0:
             self.rope_timer -= dt
 
-        if self.hamaya_cooldown_timer > 0:
-            self.hamaya_cooldown_timer -= dt
+        if self.volley_cooldown_timer > 0:
+            self.volley_cooldown_timer = max(0.0, self.volley_cooldown_timer - dt)
+            self.sacred_volley_cooldown_timer = self.volley_cooldown_timer
+            self.hamaya_cooldown_timer = self.volley_cooldown_timer
 
         proj_list = projectiles if projectiles is not None else getattr(self, "projectiles_ref", None)
         if self.state == STATE_BOW_DRAW:
@@ -378,6 +464,72 @@ class KyudoArcher(Samurai):
             pygame.draw.rect(surface, charge_col, (bx - bar_w // 2, by, int(bar_w * charge_ratio), bar_h), border_radius=2)
             pygame.draw.rect(surface, COLOR_GOLD, (bx - bar_w // 2 - 1, by - 1, bar_w + 2, bar_h + 2), 1, border_radius=2)
 
+        # Retículo de mira de arco sagrado (Mecanismo idêntico à Anne: Selo Shinto Isométrico)
+        if getattr(self, "is_aiming_volley", False) and self.is_alive:
+            cx, cy = camera.apply(self.volley_target_wx, self.volley_target_wy, 0.0)
+            top_x, top_y = camera.apply(self.volley_target_wx, self.volley_target_wy, 4.5)
+
+            # Trajetória balística zenital pontilhada vindo dos céus (idêntico à Anne)
+            dash_steps = 7
+            for i in range(dash_steps):
+                if i % 2 == 0:
+                    t1 = i / dash_steps
+                    t2 = (i + 1) / dash_steps
+                    p1 = (int(top_x + (cx - top_x) * t1), int(top_y + (cy - top_y) * t1))
+                    p2 = (int(top_x + (cx - top_x) * t2), int(top_y + (cy - top_y) * t2))
+                    pygame.draw.line(surface, (255, 215, 60), p1, p2, 1)
+
+            # Arco parabólico pontilhado conectando a arqueira ao ponto de impacto
+            arc_steps = 8
+            for i in range(arc_steps):
+                if i % 2 == 0:
+                    ta = i / arc_steps
+                    tb = (i + 1) / arc_steps
+                    xa = self.wx + (self.volley_target_wx - self.wx) * ta
+                    ya = self.wy + (self.volley_target_wy - self.wy) * ta
+                    za = 0.65 * (1.0 - ta) + 4.5 * 4.0 * ta * (1.0 - ta)
+                    xb = self.wx + (self.volley_target_wx - self.wx) * tb
+                    yb = self.wy + (self.volley_target_wy - self.wy) * tb
+                    zb = 0.65 * (1.0 - tb) + 4.5 * 4.0 * tb * (1.0 - tb)
+                    pa = camera.apply(xa, ya, za)
+                    pb = camera.apply(xb, yb, zb)
+                    pygame.draw.line(surface, (255, 235, 120), (int(pa[0]), int(pa[1])), (int(pb[0]), int(pb[1])), 1)
+
+            rx = int(28 + 3 * math.sin(self.volley_reticle_pulse * 2.0))
+            ry = max(10, rx // 2)
+
+            # Brilho suave translúcido no piso sob a mira
+            glow_surf = pygame.Surface((rx * 2 + 16, ry * 2 + 16), pygame.SRCALPHA)
+            pygame.draw.ellipse(glow_surf, (255, 215, 60, 45), (8, 8, rx * 2, ry * 2))
+            surface.blit(glow_surf, (cx - rx - 8, cy - ry - 8))
+
+            # Anel externo dourado sagrado
+            pygame.draw.ellipse(surface, (255, 215, 60), (cx - rx, cy - ry, rx * 2, ry * 2), 2)
+
+            # Anel interno carmim xintoísta
+            rx_in = rx - 7
+            ry_in = max(7, rx_in // 2)
+            pygame.draw.ellipse(surface, (220, 50, 40), (cx - rx_in, cy - ry_in, rx_in * 2, ry_in * 2), 1)
+
+            # 4 Pontos cardeais do selo sagrado girando suavemente
+            rot = self.volley_reticle_pulse * 0.9
+            for k in range(4):
+                angle = rot + k * (math.pi / 2)
+                ox = int(rx * math.cos(angle))
+                oy = int(ry * math.sin(angle))
+                # Marcadores de luz sagrada na borda
+                pygame.draw.circle(surface, (255, 245, 180), (cx + ox, cy + oy), 2)
+                # Hastes finas apontando para fora
+                out_ox = int((rx + 5) * math.cos(angle))
+                out_oy = int((ry + 3) * math.sin(angle))
+                pygame.draw.line(surface, (255, 215, 60), (cx + ox, cy + oy), (cx + out_ox, cy + out_oy), 1)
+
+            # Mira central de precisão e rubi sagrado central
+            pygame.draw.line(surface, (255, 230, 90), (cx - 7, cy), (cx + 7, cy), 1)
+            pygame.draw.line(surface, (255, 230, 90), (cx, cy - 4), (cx, cy + 4), 1)
+            pygame.draw.circle(surface, (255, 245, 180), (cx, cy), 3)
+            pygame.draw.circle(surface, (220, 40, 30), (cx, cy), 1)
+
         render_voxel_humanoid(
             surface, camera,
             self.wx, self.wy, self.wz,
@@ -387,7 +539,7 @@ class KyudoArcher(Samurai):
             walk_timer=self.walk_cycle,
             alpha=self.alpha,
             is_moving=self.is_moving,
-            extra_props={"is_drawing": (self.state == STATE_BOW_DRAW or self.is_charging_rope)}
+            extra_props={"is_drawing": (self.state == STATE_BOW_DRAW or self.is_charging_rope or getattr(self, "is_aiming_volley", False))}
         )
 
         # Indicador de retesamento do arco Yumi (mira precisa)

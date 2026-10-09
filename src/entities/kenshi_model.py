@@ -27,7 +27,7 @@ DETAILED = {
 }
 
 
-MATERIALS = {"kimono": "silk", "kimono_dark": "silk", "obi": "silk", "collar": "silk", "ribbon": "silk", "saya": "lacquer"}  # chave da paleta -> textura de material (6.5.8)
+MATERIALS = {"kimono": "silk", "kimono_dark": "silk", "obi": "silk", "collar": "silk", "ribbon": "silk", "saya": "lacquer", "steel": "steel", "edge": "steel", "gold": "gold", "cuff": "gold", "hakama": "pleats"}  # chave da paleta -> textura de material (6.5.8)
 
 
 def pal() -> dict:
@@ -115,6 +115,14 @@ def _ponytail(c):
     P = pal()
     root = _tail_root(c)
     trail, amp, freq = mk.motion(c, 0.09)
+    # Laço vermelho na base do rabo
+    mk.cbox(c, root[0], root[1], root[2] - 0.02, 0.05, 0.05, 0.05, P["ribbon"])
+    for s in (-1.0, 1.0):
+        mk.obox(c, (root[0], root[1], root[2] + 0.002), (c.px * s * 0.9, c.py * s * 0.9, 0.35), 0.075, 0.03, 0.045, P["ribbon"])
+    offs_ribbon = cloth.chain_offsets(2, c.walk_timer, 2.1, trail, (c.px, c.py), amp=amp * 1.6, freq=freq * 1.2, wind=cloth.wind_at(root[0], root[1]))
+    for i, o in enumerate(offs_ribbon):
+        mk.cbox(c, root[0] - c.fx * 0.03 + o[0], root[1] - c.fy * 0.03 + o[1], root[2] - 0.06 - 0.05 * i + o[2], 0.026, 0.02, 0.055, P["ribbon"], outline=False)
+
     offs = cloth.chain_offsets(4, c.walk_timer, 0.4, trail, (c.px, c.py), amp=amp * 1.6, freq=freq * 0.9, wind=cloth.wind_at(root[0], root[1]),
                                wind_gain=0.05)
     f = (c.fx, c.fy)
@@ -242,17 +250,8 @@ def draw_head(c):
     """Rosto, cabelo castanho-ruivo com franja de lado, mechas laterais e laço vermelho; o rabo vem de `draw_behind`/`draw_front`."""
     P = pal()
     bx, by, hz, fx, fy, px, py, hw = c.base_x, c.base_y, c.head_z, c.fx, c.fy, c.px, c.py, c.head_w
-    if mk.facing_camera(c):
-        front = hw / 2 + 0.004
-        for s in (-1.0, 1.0):
-            ex, ey = bx + fx * front + px * 0.034 * s, by + fy * front + py * 0.034 * s
-            mk.cbox(c, ex, ey, hz + 0.083, 0.024, 0.02, 0.032, P["eye"], outline=False)
-            mk.cbox(c, ex + fx * 0.004 + px * 0.004 * s, ey + fy * 0.004 + py * 0.004 * s, hz + 0.105, 0.009, 0.009, 0.009, (255, 255, 255), outline=False)
-            mk.limb(c, (ex - px * 0.019 * s, ey - py * 0.019 * s, hz + 0.128 - 0.004 * s), (ex + px * 0.019 * s, ey + py * 0.019 * s, hz + 0.128 + 0.004 * s),
-                    0.009, P["hair_dark"], outline=False)
-        mk.cbox(c, bx + fx * front, by + fy * front, hz + 0.062, 0.012, 0.012, 0.012, P["skin_shadow"], outline=False)
-        mk.cbox(c, bx + fx * front, by + fy * front, hz + 0.043, 0.026, 0.012, 0.011, P["lip"], outline=False)
-    # calota, volume de trás e franja
+    # Rosto severo limpo como pele (sem cubos saltados de olhos ou lábios)
+    # Calota, volume de trás e franja
     mk.cbox(c, bx, by, hz + 0.115, 0.168, 0.168, 0.08, P["hair"])
     if not mk.facing_camera(c):
         _hair_volume(c)
@@ -266,13 +265,6 @@ def draw_head(c):
         mk.cbox(c, bx + px * 0.077 * s + o[0], by + py * 0.077 * s + o[1], hz - 0.035, 0.038, 0.04, 0.17, P["hair"], outline=False)
     if not _behind(c, _tail_root(c)):
         _ponytail(c)
-    root = _tail_root(c)  # laço vermelho e as pontas da fita
-    mk.cbox(c, root[0], root[1], root[2] - 0.02, 0.05, 0.05, 0.05, P["ribbon"])
-    for s in (-1.0, 1.0):
-        mk.obox(c, (root[0], root[1], root[2] + 0.002), (px * s * 0.9, py * s * 0.9, 0.35), 0.075, 0.03, 0.045, P["ribbon"])
-    offs = cloth.chain_offsets(2, c.walk_timer, 2.1, trail, (px, py), amp=amp * 1.6, freq=freq * 1.2, wind=cloth.wind_at(root[0], root[1]))
-    for i, o in enumerate(offs):
-        mk.cbox(c, root[0] - fx * 0.03 + o[0], root[1] - fy * 0.03 + o[1], root[2] - 0.06 - 0.05 * i + o[2], 0.026, 0.02, 0.055, P["ribbon"], outline=False)
 
 
 def draw_front(c, arm_l, arm_r):

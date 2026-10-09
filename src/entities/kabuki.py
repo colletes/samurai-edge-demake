@@ -128,6 +128,7 @@ class PoisonCloud:
                                 "ryuu_timer", "dash_recovery_timer", "jump_timer", "jump_cooldown_timer",
                                 "chain_timer", "mine_timer", "bomb_timer", "smoke_timer", "rope_timer",
                                 "arrow_cooldown_timer", "ofuda_cooldown_timer", "cannon_cooldown_timer",
+                                "volley_cooldown_timer", "sacred_volley_cooldown_timer",
                                 "flintlock_timer", "cape_timer", "trap_timer", "zeroshiki_timer",
                                 "shuriken_timer", "thrust_timer", "kama_timer", "backstep_timer"
                             ):

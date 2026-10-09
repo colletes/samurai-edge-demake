@@ -41,6 +41,10 @@ class Musketeer(Samurai):
         self.roll_recovery_duration = 0.20
         self.roll_cooldown_duration = 0.60
 
+    def on_round_start(self):
+        """Inicia o cooldown inicial da pederneira no momento exato em que o round começa."""
+        self.flintlock_timer = 1.0
+
     def can_act(self) -> bool:
         return (
             self.is_alive

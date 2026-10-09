@@ -47,17 +47,12 @@ def _motion(c):
 
 
 def draw_head(c):
-    """Rosto branco com sombra vermelha nos olhos, sobrancelhas e lábios; shimada com kanzashi, pente e borlas."""
+    """Rosto kabuki limpo com pó branco tradicional oshiroi, sem olhos ou boca saltados; shimada com kanzashi e pente."""
     bx, by, hz, fx, fy, px, py, hw = c.base_x, c.base_y, c.head_z, c.fx, c.fy, c.px, c.py, c.head_w
     _box(c, bx - 0.04, by - 0.04, c.neck_z - 0.005, 0.08, 0.08, 0.07, WHITE, outline=False)  # nuca branca
     _box(c, bx - hw / 2 - 0.006, by - hw / 2 - 0.006, hz + 0.03, hw + 0.012, hw + 0.012, 0.14, WHITE)
-    front = hw / 2 + 0.012
-    for s in (-1.0, 1.0):
-        ex, ey = bx + fx * front + px * 0.036 * s, by + fy * front + py * 0.036 * s
-        _box(c, ex - 0.017, ey - 0.017, hz + 0.093, 0.034, 0.034, 0.022, EYE_RED, outline=False)
-        _box(c, ex - 0.008, ey - 0.008, hz + 0.099, 0.016, 0.016, 0.012, BLACK, outline=False)
-        _box(c, ex - 0.014, ey - 0.014, hz + 0.123, 0.028, 0.028, 0.007, BLACK, outline=False)
-    _box(c, bx + fx * front - 0.014, by + fy * front - 0.014, hz + 0.052, 0.028, 0.028, 0.011, LIP_RED, outline=False)
+    # Sombra sutil de queixo
+    _box(c, bx + fx * (hw / 2) - 0.035, by + fy * (hw / 2) - 0.035, hz + 0.01, 0.07, 0.07, 0.04, (230, 226, 220), outline=False)
 
     # cabelo laqueado: calota, laterais (tabo), coque shimada atrás e coque no topo
     _box(c, bx - 0.082, by - 0.082, hz + 0.14, 0.164, 0.164, 0.075, BLACK)

@@ -113,6 +113,35 @@ class TestPhase2HudAndRoundStart(unittest.TestCase):
         self.assertGreater(surf_ready.get_width(), 20)
         self.assertGreater(surf_start.get_width(), 20)
 
+    def test_initial_cooldown_starts_at_round_start(self):
+        """Verifica se os combatentes com cooldown inicial (Anne e Julie) iniciam no round_start."""
+        anne = PirateSwordswoman(0, 0)
+        julie = Musketeer(0, 0)
+
+        # Na criação, possuem os timers iniciais
+        self.assertEqual(anne.cannon_cooldown_timer, 4.5)
+        self.assertEqual(julie.flintlock_timer, 1.0)
+
+        # Simulação: antes do round começar (intro e contagem), updates ocorrem com dt=0.0
+        from src.world.map_data import GameMap
+        g_map = GameMap()
+        anne.update(0.0, g_map)
+        julie.update(0.0, g_map)
+        self.assertEqual(anne.cannon_cooldown_timer, 4.5)
+        self.assertEqual(julie.flintlock_timer, 1.0)
+
+        # Simulação: no momento exato em que o round inicia (on_round_start é chamado)
+        anne.on_round_start()
+        julie.on_round_start()
+        self.assertEqual(anne.cannon_cooldown_timer, 4.5)
+        self.assertEqual(julie.flintlock_timer, 1.0)
+
+        # Simulação: com a luta em andamento (dt normal), os timers começam a decrescer
+        anne.update(0.5, g_map)
+        julie.update(0.5, g_map)
+        self.assertAlmostEqual(anne.cannon_cooldown_timer, 4.0)
+        self.assertAlmostEqual(julie.flintlock_timer, 0.5)
+
 
 if __name__ == "__main__":
     unittest.main()

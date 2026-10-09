@@ -10,7 +10,7 @@ from src.config import (
     COLOR_BLUE_AURA
 )
 from src.isometric.iso_math import world_distance
-from src.effects.particles import SparkParticle
+from src.effects.particles import SparkParticle, FlameVoxelParticle
 
 class KunaiProjectile:
     def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, vz: float = 0.0, max_range: float = 6.8):
@@ -864,6 +864,204 @@ class HamayaArrowProjectile:
         # Halo de luz sagrada
         sx, sy = camera.apply(self.wx, self.wy, self.wz)
         pygame.draw.circle(surface, (255, 245, 180), (sx, sy), 5, 1)
+
+
+class SacredArrowVolleyProjectile:
+    """
+    Chuva / Salva de Flechas Sagradas em Arco (Hama-no-Ya Rain) disparada por Tomoe.
+    Projétil balístico em arco que lança múltiplas flechas sagradas dos céus sobre uma pequena área concentrada.
+    Causa dano letal (2 HP) aos alvos pegos no raio de impacto.
+    """
+    def __init__(self, start_wx: float, start_wy: float, target_wx: float, target_wy: float, owner):
+        self.wx = target_wx
+        self.wy = target_wy
+        self.target_wx = target_wx
+        self.target_wy = target_wy
+        self.start_wx = start_wx
+        self.start_wy = start_wy
+        self.start_wz = 0.65
+        self.owner = owner
+        self.radius = 1.35   # Pequena área concentrada
+        self.damage = 2      # Dano letal (2 HP)
+        self.is_active = True
+        self.has_impacted = False
+        self.damage_dealt = False
+        self.has_been_reflected = False
+        self.elapsed = 0.0
+        self.flight_duration = 0.42
+        self.linger_duration = 0.38
+        self.total_duration = self.flight_duration + self.linger_duration
+        self.impact_flash_timer = 0.35
+
+        # Criação de múltiplas flechas sagradas na salva (7 flechas)
+        self.arrows = []
+        num_arrows = 7
+        rng = random.Random(int((target_wx * 37.0 + target_wy * 73.0 + start_wx * 19.0) * 100))
+        for i in range(num_arrows):
+            angle = (i * (2.0 * math.pi / num_arrows)) + rng.uniform(-0.25, 0.25)
+            dist = rng.uniform(0.12, 0.65)
+            dest_x = target_wx + dist * math.cos(angle)
+            dest_y = target_wy + dist * math.sin(angle)
+            stagger = i * 0.016
+            apex = rng.uniform(4.5, 5.2)
+            self.arrows.append({
+                "dest_x": dest_x,
+                "dest_y": dest_y,
+                "stagger": stagger,
+                "apex": apex,
+                "landed": False,
+                "cur_wx": start_wx,
+                "cur_wy": start_wy,
+                "cur_wz": self.start_wz,
+                "prev_wx": start_wx,
+                "prev_wy": start_wy,
+                "prev_wz": self.start_wz,
+            })
+
+    def update(self, dt: float, game_map=None, particles: list = None, camera=None, fighters: list = None) -> bool:
+        if not self.is_active:
+            return False
+
+        self.elapsed += dt
+
+        # Atualiza a posição de cada flecha ao longo de sua trajetória parabólica em arco
+        all_landed = True
+        for a in self.arrows:
+            effective_time = self.elapsed - a["stagger"]
+            if effective_time < 0.0:
+                all_landed = False
+                continue
+            progress = min(1.0, effective_time / self.flight_duration)
+            if progress < 1.0:
+                all_landed = False
+                a["prev_wx"] = a["cur_wx"]
+                a["prev_wy"] = a["cur_wy"]
+                a["prev_wz"] = a["cur_wz"]
+                # Interpolação no plano horizontal
+                a["cur_wx"] = self.start_wx + (a["dest_x"] - self.start_wx) * progress
+                a["cur_wy"] = self.start_wy + (a["dest_y"] - self.start_wy) * progress
+                # Altura parabólica em arco
+                a["cur_wz"] = self.start_wz * (1.0 - progress) + a["apex"] * 4.0 * progress * (1.0 - progress)
+
+                # Rastro cintilante sagrado de kami durante o voo
+                if particles is not None and random.random() < 0.45:
+                    particles.append(SparkParticle(a["cur_wx"], a["cur_wy"], a["cur_wz"], color=(255, 235, 110)))
+            else:
+                if not a["landed"]:
+                    a["landed"] = True
+                    a["cur_wx"] = a["dest_x"]
+                    a["cur_wy"] = a["dest_y"]
+                    a["cur_wz"] = 0.0
+                    # Partículas ao cravar no solo
+                    if particles is not None:
+                        for _ in range(3):
+                            particles.append(SparkParticle(a["dest_x"], a["dest_y"], 0.25, color=(255, 240, 150)))
+
+        # Impacto da salva na área quando as primeiras flechas tocam o solo
+        if not self.has_impacted and (self.elapsed >= self.flight_duration or all_landed):
+            self.has_impacted = True
+            if camera and hasattr(camera, "add_shake"):
+                camera.add_shake(12.0)
+            if particles is not None:
+                for _ in range(24):
+                    particles.append(FlameVoxelParticle(self.target_wx, self.target_wy, wz=0.15))
+                for _ in range(18):
+                    particles.append(SparkParticle(self.target_wx, self.target_wy, 0.45, color=(255, 220, 80)))
+                for _ in range(12):
+                    particles.append(SparkParticle(self.target_wx, self.target_wy, 0.55, color=(255, 255, 240)))
+
+            # Aplica dano letal (2 HP) se fighters fornecidos diretamente
+            if fighters and not self.damage_dealt:
+                self.damage_dealt = True
+                for f in fighters:
+                    if getattr(f, "is_alive", False) and f is not self.owner:
+                        dist = math.hypot(f.wx - self.target_wx, f.wy - self.target_wy)
+                        if dist < (self.radius + getattr(f, "radius", 0.35)):
+                            f.take_hit((0.0, 0.0), damage=self.damage)
+
+        if self.has_impacted:
+            self.impact_flash_timer -= dt
+
+        if self.elapsed >= self.total_duration:
+            self.is_active = False
+            return False
+
+        return self.is_active
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+
+        # 1. Selo sagrado e sombra no solo da área de impacto
+        cx, cy = camera.apply(self.target_wx, self.target_wy, 0.0)
+        rx = int(self.radius * 24)
+        ry = max(8, rx // 2)
+
+        # Círculo sagrado translúcido no piso sob a mira durante o voo
+        if not self.has_impacted:
+            progress = min(1.0, self.elapsed / self.flight_duration)
+            aura_surf = pygame.Surface((rx * 2 + 16, ry * 2 + 16), pygame.SRCALPHA)
+            alpha = int(40 + 50 * progress)
+            pygame.draw.ellipse(aura_surf, (255, 220, 80, alpha), (8, 8, rx * 2, ry * 2))
+            pygame.draw.ellipse(aura_surf, (255, 240, 180, alpha + 30), (8, 8, rx * 2, ry * 2), 2)
+            surface.blit(aura_surf, (cx - rx - 8, cy - ry - 8))
+        else:
+            # Clarão de impacto inicial e anel de purificação xintoísta expandindo
+            progress = max(0.0, min(1.0, 1.0 - (self.impact_flash_timer / 0.35)))
+            exp_w = int(self.radius * 32 * (0.8 + 0.4 * progress))
+            exp_h = max(2, exp_w // 2)
+            alpha_val = max(0, min(255, int((1.0 - progress) * 220)))
+            exp_surf = pygame.Surface((exp_w * 2 + 16, exp_h * 2 + 16), pygame.SRCALPHA)
+            pygame.draw.ellipse(exp_surf, (255, 230, 80, alpha_val), (8, 8, exp_w * 2, exp_h * 2))
+            pygame.draw.ellipse(exp_surf, (255, 255, 240, min(255, alpha_val + 35)), (8 + exp_w // 4, 8 + exp_h // 4, int(exp_w * 1.5), int(exp_h * 1.5)))
+            surface.blit(exp_surf, (cx - exp_w - 8, cy - exp_h - 8))
+
+        # 2. Renderização de cada flecha sagrada individual
+        for a in self.arrows:
+            if self.elapsed < a["stagger"]:
+                continue
+
+            wx, wy, wz = a["cur_wx"], a["cur_wy"], a["cur_wz"]
+
+            if not a["landed"]:
+                # Sombra no solo correspondente à flecha em voo
+                sx_g, sy_g = camera.apply(wx, wy, 0.0)
+                sh_progress = max(0.1, 1.0 - (wz / 6.0))
+                sh_r = max(2, int(5 * sh_progress))
+                pygame.draw.ellipse(surface, (10, 10, 12, int(140 * sh_progress)), (sx_g - sh_r, sy_g - sh_r // 2, sh_r * 2, sh_r))
+
+                # Posição da flecha na tela
+                sx, sy = camera.apply(wx, wy, wz)
+                # Vetor de movimento para orientação realista da ponta
+                dx = a["cur_wx"] - a["prev_wx"]
+                dy = a["cur_wy"] - a["prev_wy"]
+                dz = a["cur_wz"] - a["prev_wz"]
+                mag = math.hypot(dx, dy, dz)
+                if mag > 0.001:
+                    dir_x, dir_y, dir_z = dx / mag, dy / mag, dz / mag
+                else:
+                    dir_x, dir_y, dir_z = 0.0, 0.0, -1.0
+
+                sx_tail, sy_tail = camera.apply(wx - dir_x * 0.35, wy - dir_y * 0.35, wz - dir_z * 0.35)
+
+                # Haste branca sagrada
+                pygame.draw.line(surface, (250, 248, 240), (int(sx_tail), int(sy_tail)), (int(sx), int(sy)), 2)
+                # Ponta dourada de purificação
+                pygame.draw.circle(surface, COLOR_GOLD, (int(sx), int(sy)), 3)
+                # Brilho sagrado
+                pygame.draw.circle(surface, (255, 255, 230), (int(sx), int(sy)), 1)
+                # Penas cerimoniais douradas na cauda
+                pygame.draw.circle(surface, (255, 230, 120), (int(sx_tail), int(sy_tail)), 2)
+            else:
+                # Flecha cravada no solo
+                sx_tip, sy_tip = camera.apply(a["dest_x"], a["dest_y"], 0.0)
+                sx_tail, sy_tail = camera.apply(a["dest_x"] - 0.15, a["dest_y"] - 0.15, 0.40)
+                # Haste no chão
+                pygame.draw.line(surface, (240, 235, 220), (int(sx_tail), int(sy_tail)), (int(sx_tip), int(sy_tip)), 2)
+                # Ponta de ouro fincada
+                pygame.draw.circle(surface, COLOR_GOLD, (int(sx_tip), int(sy_tip)), 2)
+                # Penas sagradas
+                pygame.draw.circle(surface, (255, 225, 110), (int(sx_tail), int(sy_tail)), 2)
 
 
 class RopeArrowProjectile:

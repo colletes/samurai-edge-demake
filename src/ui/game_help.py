@@ -577,19 +577,19 @@ FIGHTERS_GUIDE_DATA = [
         "pt": {
             "name": "TOMOE",
             "title": "Arqueira Miko",
-            "style": "Kyudo Sagrado & Flecha de Corda",
+            "style": "Kyudo Sagrado & Flechas Sagradas",
             "vel": "[4/5] Ágil e Concentrada",
             "dano": "Flecha Yumi Fatal (Alcance Máximo)",
-            "especial": "Flecha de Corda (Zip Mobility)",
+            "especial": "Chuva Sagrada (Disparo em Arco)",
             "keys_p1": "[E] Retesar e Atirar (Ataque)",
-            "keys_p2": "[R] Flecha de Corda (Especial)",
+            "keys_p2": "[R] Chuva Sagrada (Especial)",
             "conceito": (
                 "Sacerdotisa miko do santuário nas montanhas, mestre na arte marcial meditativa do arco e flecha (Kyudo). "
                 "Sua presença transmite serenidade, foco inabalável e disparos mortais milimétricos."
             ),
             "habilidades": (
-                "• Disparo Yumi [E]: Segure/pressione para retesar o arco e soltar uma flecha mortal (1-Hit Kill).\n"
-                "• Flecha de Corda [R]: Dispara flecha atrelada a corda de cânhamo para puxar alvos ou reposicionar-se."
+                "• Disparo Yumi [E]: Pressione para disparar uma flecha mortal de longo alcance (1-Hit Kill).\n"
+                "• Chuva Sagrada [R]: Disparo em arco de várias flechas sagradas em uma pequena área com dano letal (2 HP). Segure para mirar e solte para disparar (idêntico à Anne)."
             ),
             "estrategia_ofensiva": (
                 "• Mantenha a maior distância possível do inimigo; seu arco tem alcance superior a qualquer espada.\n"
