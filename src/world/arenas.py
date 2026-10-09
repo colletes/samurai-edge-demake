@@ -820,7 +820,7 @@ GASHADOKURO_SPEC = ArenaSpec(
     cols=MAP_COLS,
     rows=MAP_ROWS,
     bg_color=(18, 8, 12),
-    music="bgm_shadow_cave",  # troca por bgm_gashadokuro quando a trilha existir (8.2.4)
+    music="bgm_gashadokuro",
     wind=WindSpec(1, 0.3, 0.2, 0.5),
     tile_styles={
         TILE_GY_SOIL: TileStyle("flat", ((58, 44, 40), (52, 39, 36)), pattern="parity", edge=(30, 22, 22), surface="earth"),

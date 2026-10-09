@@ -100,4 +100,5 @@ class MusicTrack(str, Enum):
     CHAR_SELECT_THEME = "bgm_char_select" # Tema da seleção de personagens
     BAMBOO_THEME = "bgm_bamboo"           # Tema da Floresta de Bambu e Lago Zen
     KYOTO_THEME = "bgm_kyoto"             # Tema da Avenida Bakumatsu em chamas
+    GASHADOKURO_THEME = "bgm_gashadokuro" # Tema da batalha contra Oni Gashadokuro (Arcade Boss)
     DEATH_THEME = "bgm_death"             # Tema da cena de morte no round
