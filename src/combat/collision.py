@@ -877,6 +877,18 @@ class CombatSystem:
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(0, 0.5, 0.8, 200)
                         ctrl_mgr.rumble_player(1, 0.6, 0.8, 180)
+                elif p2.state == "CAPE_FLOURISH":
+                    for _ in range(12):
+                        particles.append(SparkParticle(p2.wx, p2.wy, 0.65, color=(100, 180, 255)))
+                    banners.append(FloatingBanner("CAPE RIPOSTE!", p2.wx, p2.wy, wz=1.75, color=(100, 180, 255)))
+                    camera.add_shake(7.0)
+                    p1.stun(0.65)
+                    p1.wx = max(1.0, min(game_map.cols - 1.0, p1.wx + p2.facing_x * 1.4))
+                    p1.wy = max(1.0, min(game_map.rows - 1.0, p1.wy + p2.facing_y * 1.4))
+                    self._play_sound("parry")
+                    if ctrl_mgr:
+                        ctrl_mgr.rumble_player(0, 0.5, 0.7, 180)
+                        ctrl_mgr.rumble_player(1, 0.5, 0.7, 180)
                 elif getattr(p1, "is_rifle_butt", False):
                     # Coronhada agressiva do Teppo: causa 1 de dano, afasta 1.6m e atordoa o adversário
                     hit, dead = p2.take_hit(p1.slash_dir, damage=1)
@@ -956,6 +968,18 @@ class CombatSystem:
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(1, 0.5, 0.8, 200)
                         ctrl_mgr.rumble_player(0, 0.6, 0.8, 180)
+                elif p1.state == "CAPE_FLOURISH":
+                    for _ in range(12):
+                        particles.append(SparkParticle(p1.wx, p1.wy, 0.65, color=(100, 180, 255)))
+                    banners.append(FloatingBanner("CAPE RIPOSTE!", p1.wx, p1.wy, wz=1.75, color=(100, 180, 255)))
+                    camera.add_shake(7.0)
+                    p2.stun(0.65)
+                    p2.wx = max(1.0, min(game_map.cols - 1.0, p2.wx + p1.facing_x * 1.4))
+                    p2.wy = max(1.0, min(game_map.rows - 1.0, p2.wy + p1.facing_y * 1.4))
+                    self._play_sound("parry")
+                    if ctrl_mgr:
+                        ctrl_mgr.rumble_player(1, 0.5, 0.7, 180)
+                        ctrl_mgr.rumble_player(0, 0.5, 0.7, 180)
                 elif getattr(p2, "is_rifle_butt", False):
                     # Coronhada agressiva do Teppo: causa 1 de dano, afasta 1.6m e atordoa o adversário
                     hit, dead = p1.take_hit(p2.slash_dir, damage=1)

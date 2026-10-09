@@ -108,7 +108,7 @@ class Musketeer(Samurai):
             return
         super().trigger_roll(dir_x, dir_y, particles)
 
-    def trigger_cape_flip(self, dir_x: float, dir_y: float, particles: list = None, opponent=None):
+    def trigger_cape_flip(self, dir_x: float, dir_y: float, particles: list = None, opponent=None, banners: list = None):
         """
         Floreio de Capa & Coup de Pied: salto curto com giro da capa que desvia projéteis
         e repele oponentes a curta distância.
@@ -150,6 +150,9 @@ class Musketeer(Samurai):
                     opponent.stun(0.35)
                 opponent.wx += self.facing_x * 2.0
                 opponent.wy += self.facing_y * 2.0
+                if banners is not None:
+                    from src.effects.particles import FloatingBanner
+                    banners.append(FloatingBanner("CAPE REPEL!", opponent.wx, opponent.wy, wz=1.75, color=(100, 180, 255)))
 
     def trigger_secondary(self, aim_x: float, aim_y: float, projectiles: list, particles: list = None, opponent=None) -> str | None:
         """Ação Secundária contextual: tiro de pederneira quando pronto; com a pistola recarregando, o floreio de capa."""
@@ -168,7 +171,17 @@ class Musketeer(Samurai):
             mag = math.hypot(dx, dy)
             if mag > 0.001:
                 dir_x, dir_y = dx / mag, dy / mag
-        self.trigger_cape_flip(dir_x, dir_y, particles=particles, opponent=opponent)
+        self.trigger_cape_flip(dir_x, dir_y, particles=particles, opponent=opponent, banners=banners)
+
+    def trigger_parry(self, target_wx: float = None, target_wy: float = None, opponent = None, particles: list = None, banners: list = None):
+        """Parry de esgrima: executa a Capa Riposte com prioridade; se em cooldown, assume guarda En Garde."""
+        if self.cape_timer <= 0 and self.can_act():
+            self.trigger_cape_flourish(target_wx, target_wy, opponent=opponent, particles=particles, banners=banners)
+        elif self.can_move() and self.dash_recovery_timer <= 0:
+            if target_wx is not None and target_wy is not None:
+                self.set_facing(target_wx, target_wy)
+            self.state = STATE_PARRY
+            self.state_timer = 0.40
 
     def trigger_cloak_riposte(self, target_wx: float = None, target_wy: float = None, projectiles: list = None, particles: list = None, opponent = None, banners: list = None):
         """Compatibilidade para chamadas legadas: redireciona para o floreio de capa/esquiva."""

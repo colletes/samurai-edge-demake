@@ -293,12 +293,13 @@ class Samurai:
         if not self.is_alive:
             return False, False
 
-        # Se estiver em esquiva / roll com i-frames ativos
-        if self.state in (STATE_ROLL, STATE_DASH, "SHUKUCHI", "KAWARIMI_ROLL", "DODGE") and (self.is_invulnerable_dodge or getattr(self, "is_invulnerable_dodge", False)):
+        # Se estiver em esquiva / roll com i-frames ativos (incluindo Floreio de Capa da Julie)
+        if (self.state in (STATE_ROLL, STATE_DASH, "SHUKUCHI", "KAWARIMI_ROLL", "DODGE", "CAPE_FLOURISH")
+                and (self.is_invulnerable_dodge or getattr(self, "is_invulnerable_dodge", False))):
             return False, False
 
         # Se estiver em postura de parry e de frente para o ataque
-        if self.state == STATE_PARRY:
+        if self.state in (STATE_PARRY, "CAPE_FLOURISH"):
             dot = self.facing_x * slash_dir[0] + self.facing_y * slash_dir[1]
             if dot < -0.2: # O ataque veio de frente!
                 return False, False # Defendido com sucesso!
