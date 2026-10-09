@@ -796,8 +796,8 @@ class CharacterSelectScreen:
                 move_cursor(target_player, d_dir[0], d_dir[1])
                 return False
 
-            # Confirmação: Botão 0 (✕ Cruz / A)
-            if ctrl_mgr.is_event_menu_confirm(event, player_idx) or event.button == 0:
+            # Confirmação: Botão 0 (✕ Cruz / A) OU Botão 2 (▢ Quadrado / X)
+            if ctrl_mgr.is_event_menu_confirm(event, player_idx) or event.button in (0, 2):
                 res = handle_confirm(target_player)
                 if res:
                     return res
@@ -808,8 +808,8 @@ class CharacterSelectScreen:
                 if res:
                     return res
                 return False
-            # Alternar modo 1P vs IA / 2P Versus: Botão 2 (▢ Quadrado / X)
-            elif event.button == 2:
+            # Alternar modo 1P vs IA / 2P Versus: Select / Touchpad / L1 / R1
+            elif event.button in (4, 9, 10):
                 self.vs_ai = not self.vs_ai
                 self.selection_step = "P1"
                 self.p1_ready = False
@@ -953,8 +953,8 @@ class CharacterSelectScreen:
                     return res
                 return False
 
-            # Teclas de Confirmação Universais de Teclado (SPACE e RETURN / ENTER)
-            if event.key in (pygame.K_SPACE, pygame.K_RETURN):
+            # Teclas de Confirmação Universais de Teclado (SPACE, RETURN / ENTER e Ataque)
+            if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_e, pygame.K_j):
                 if self.vs_ai:
                     res = handle_confirm("P1")
                 else:

@@ -43,7 +43,7 @@ def navigation(event, ctrl_mgr=None):
                  pygame.K_UP: (0, -1), pygame.K_w: (0, -1), pygame.K_DOWN: (0, 1), pygame.K_s: (0, 1)}
         if event.key in moves:
             return ("move",) + moves[event.key]
-        if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+        if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE, pygame.K_e, pygame.K_j):
             return ("confirm",)
         if event.key == pygame.K_ESCAPE:
             return ("cancel",)
@@ -53,7 +53,7 @@ def navigation(event, ctrl_mgr=None):
         if motion:
             return ("move", motion[0], motion[1])
         if event.type == pygame.JOYBUTTONDOWN:
-            if (ctrl_mgr is not None and ctrl_mgr.is_event_menu_confirm(event)) or event.button == 0:
+            if (ctrl_mgr is not None and ctrl_mgr.is_event_menu_confirm(event)) or event.button in (0, 2):
                 return ("confirm",)
             if (ctrl_mgr is not None and ctrl_mgr.is_event_menu_cancel(event)) or event.button == 1:
                 return ("cancel",)
@@ -66,6 +66,11 @@ def _backdrop(surface: pygame.Surface):
 
 
 def _centered(surface, font, text, color, cx, y, max_w=None):
+    if "{icon:" in text:
+        from src.ui.svg_icon_renderer import render_text_with_icons
+        h = font.get_height()
+        rect = render_text_with_icons(surface, font, text, cx, y + h // 2, text_color=color, icon_size=max(16, h - 2), shadow=False)
+        return rect.height
     img = pm.fit_text(font, text, color, max_w) if max_w else pm.render_ink(font, text, color)
     surface.blit(img, (cx - img.get_width() // 2, y))
     return img.get_height()
@@ -280,7 +285,7 @@ class ArcadeBracketScreen:
             _centered(surface, get_text_font(15), t(key), RED, cx + 250, panel.y + 304)
 
         if self.confirm_abandon:
-            hint = t("arcade_abandon_confirm") + "   [ESC] OK   [ENTER] ✕"
+            hint = t("arcade_abandon_confirm_prompt")
         else:
             hint = t("arcade_continue_prompt") if self.banner == "defeat" else t("arcade_start_fight")
         _centered(surface, get_text_font(18), hint, pm.INK, cx, SCREEN_HEIGHT - 62)

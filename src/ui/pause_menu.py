@@ -80,7 +80,7 @@ class PauseMenu:
                 self._move(-1)
             elif event.key in (pygame.K_DOWN, pygame.K_s):
                 self._move(1)
-            elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+            elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE, pygame.K_e, pygame.K_j):
                 return self._choose(self.selected)
 
         elif event.type == pygame.MOUSEMOTION:
@@ -102,7 +102,7 @@ class PauseMenu:
                     self._move(motion[1])
                 return None
             if event.type == pygame.JOYBUTTONDOWN and ctrl_mgr is not None:
-                if ctrl_mgr.is_event_menu_confirm(event) or event.button == 0:
+                if ctrl_mgr.is_event_menu_confirm(event) or event.button in (0, 2):
                     return self._choose(self.selected)
                 if ctrl_mgr.is_event_menu_cancel(event) or ctrl_mgr.is_event_menu_pause(event) or event.button in (1, 6, 7):
                     return ACTION_RESUME

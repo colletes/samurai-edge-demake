@@ -98,6 +98,28 @@ def _draw_vector_fallback(icon_name: str, width: int, height: int) -> pygame.Sur
         pygame.draw.rect(surf, (80, 95, 110), cross_h, 1, border_radius=2)
         pygame.draw.rect(surf, (80, 95, 110), cross_v, 1, border_radius=2)
 
+    elif icon_name in ("xbox_x", "xbox_a", "xbox_b", "xbox_y", "nintendo_y", "nintendo_b", "x", "a", "b", "y"):
+        # Botões estilo Xbox e Nintendo
+        pygame.gfxdraw.filled_circle(surf, cx, cy, radius, COLOR_PS_BG)
+        colors = {
+            "xbox_x": (0, 127, 255),    # Azul
+            "x": (0, 127, 255),
+            "xbox_a": (16, 185, 129),   # Verde
+            "a": (16, 185, 129),
+            "xbox_b": (239, 68, 68),    # Vermelho
+            "b": (239, 68, 68),
+            "xbox_y": (245, 158, 11),   # Amarelo
+            "y": (245, 158, 11),
+            "nintendo_y": (225, 230, 238),
+            "nintendo_b": (225, 230, 238),
+        }
+        col = colors.get(icon_name, COLOR_PS_BORDER)
+        pygame.gfxdraw.aacircle(surf, cx, cy, radius, col)
+        letter = icon_name.split("_")[-1].upper()
+        font = pygame.font.Font(None, max(12, int(height * 0.76)))
+        txt = font.render(letter, True, col)
+        surf.blit(txt, (cx - txt.get_width() // 2, cy - txt.get_height() // 2))
+
     elif icon_name == "options":
         # Botão Options
         rect = pygame.Rect(1, 1, width - 2, height - 2)
@@ -161,3 +183,125 @@ def get_playstation_icon_name_for_button(button_index: int) -> str | None:
         14: "dpad",       # D-Pad Direita
     }
     return mapping.get(button_index)
+
+def resolve_icon_name(token: str) -> str:
+    """
+    Resolve identificadores genéricos como 'attack', 'confirm', 'dash', 'square', 'cancel'
+    para o nome do ícone correspondente ao controle ativo ou PlayStation por padrão.
+    """
+    tok = token.lower().strip()
+    dev = None
+    try:
+        from src.input import get_controller_manager
+        mgr = get_controller_manager()
+        dev = mgr.get_controller_for_player(0)
+    except Exception:
+        pass
+
+    if tok in ("attack", "atk", "square"):
+        if dev:
+            if dev.is_xbox:
+                return "xbox_x"
+            elif dev.is_nintendo:
+                return "nintendo_y"
+        return "square"
+    elif tok in ("confirm", "ok", "cross"):
+        if dev:
+            if dev.is_xbox:
+                return "xbox_a"
+            elif dev.is_nintendo:
+                return "nintendo_b"
+        return "cross"
+    elif tok in ("cancel", "back", "circle", "dash", "roll"):
+        if dev:
+            if dev.is_xbox:
+                return "xbox_b"
+            elif dev.is_nintendo:
+                return "nintendo_a"
+        return "circle"
+    return tok
+
+import re
+_ICON_TAG_RE = re.compile(r'\{icon:([^}]+)\}')
+
+def render_text_with_icons(
+    surface: pygame.Surface,
+    font: pygame.font.Font,
+    text: str,
+    center_x: int,
+    center_y: int,
+    text_color: tuple[int, int, int] = (255, 255, 255),
+    icon_size: int = 20,
+    alpha: int = 255,
+    shadow: bool = True,
+    shadow_color: tuple[int, int, int] = (10, 10, 10),
+    shadow_offset: tuple[int, int] = (1, 1),
+) -> pygame.Rect:
+    """
+    Renderiza um texto contendo tokens como '{icon:attack}', '{icon:square}', '{icon:cross}',
+    substituindo-os perfeitamente por ícones vetoriais com alinhamento visual, suporte a
+    sombra e transparência alpha. Centralizado em (center_x, center_y).
+    """
+    if not text:
+        return pygame.Rect(center_x, center_y, 0, 0)
+
+    parts = _ICON_TAG_RE.split(text)
+    font_h = font.get_height()
+    line_h = max(font_h, icon_size)
+
+    items = []
+    total_w = 0
+
+    for i, piece in enumerate(parts):
+        if not piece:
+            continue
+        if i % 2 == 1:
+            icon_name = resolve_icon_name(piece)
+            icon_surf = get_button_icon_surface(icon_name, icon_size, icon_size)
+            item_w = icon_size + 4
+            items.append(("icon", icon_surf, item_w))
+            total_w += item_w
+        else:
+            t_w, _ = font.size(piece)
+            items.append(("text", piece, t_w))
+            total_w += t_w
+
+    if total_w == 0:
+        return pygame.Rect(center_x, center_y, 0, 0)
+
+    pad = 4
+    comp_surf = pygame.Surface((total_w + pad * 2, line_h + pad * 2), pygame.SRCALPHA)
+
+    if shadow:
+        cur_x = pad + shadow_offset[0]
+        cur_y_base = pad + shadow_offset[1]
+        for itype, obj, iw in items:
+            if itype == "text":
+                sh_surf = font.render(obj, True, shadow_color)
+                ty = cur_y_base + (line_h - font_h) // 2
+                comp_surf.blit(sh_surf, (cur_x, ty))
+            elif itype == "icon":
+                sh_rect = pygame.Rect(cur_x + 2, cur_y_base + (line_h - icon_size) // 2, icon_size, icon_size)
+                pygame.draw.circle(comp_surf, (shadow_color[0], shadow_color[1], shadow_color[2], 180), sh_rect.center, icon_size // 2)
+            cur_x += iw
+
+    cur_x = pad
+    cur_y_base = pad
+    for itype, obj, iw in items:
+        if itype == "text":
+            t_surf = font.render(obj, True, text_color)
+            ty = cur_y_base + (line_h - font_h) // 2
+            comp_surf.blit(t_surf, (cur_x, ty))
+        elif itype == "icon":
+            iy = cur_y_base + (line_h - icon_size) // 2
+            comp_surf.blit(obj, (cur_x + 2, iy))
+        cur_x += iw
+
+    if alpha < 255:
+        comp_surf.set_alpha(max(0, min(255, alpha)))
+
+    dest_x = center_x - comp_surf.get_width() // 2
+    dest_y = center_y - comp_surf.get_height() // 2
+    surface.blit(comp_surf, (dest_x, dest_y))
+    return pygame.Rect(dest_x, dest_y, comp_surf.get_width(), comp_surf.get_height())
+

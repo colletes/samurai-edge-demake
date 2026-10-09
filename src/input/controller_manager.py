@@ -667,12 +667,30 @@ class ControllerManager:
         return ctrl.is_action_pressed(event.button, action)
 
     def is_event_menu_confirm(self, event: pygame.event.Event, player_idx: int = 0) -> bool:
-        """Verifica se o evento é uma confirmação de menu (✕ no PS, A no Xbox, B/A no Switch)."""
-        return self.is_event_action(event, player_idx, ACTION_CONFIRM)
+        """
+        Verifica se o evento é uma confirmação de menu.
+        Aceita o botão de confirmação padrão (✕ no PS, A no Xbox) E o ataque primário (▢ no PS, X no Xbox),
+        igual ao X do DualSense em todos os menus.
+        """
+        if event.type != pygame.JOYBUTTONDOWN:
+            return False
+        return (
+            self.is_event_action(event, player_idx, ACTION_CONFIRM)
+            or self.is_event_action(event, player_idx, ACTION_ATTACK)
+            or (getattr(event, "button", None) in (0, 2))
+        )
 
     def is_event_menu_cancel(self, event: pygame.event.Event, player_idx: int = 0) -> bool:
-        """Verifica se o evento é um comando de voltar nos menus (○ no PS, B no Xbox, A/B no Switch)."""
-        return self.is_event_action(event, player_idx, ACTION_CANCEL)
+        """
+        Verifica se o evento é um comando de voltar/cancelar nos menus (○ no PS, B no Xbox, A/B no Switch).
+        Função do botão Círculo idêntica à do ESC do teclado em todos os menus.
+        """
+        if event.type != pygame.JOYBUTTONDOWN:
+            return False
+        return (
+            self.is_event_action(event, player_idx, ACTION_CANCEL)
+            or (getattr(event, "button", None) == 1)
+        )
 
     def is_event_menu_pause(self, event: pygame.event.Event, player_idx: int = 0) -> bool:
         """Verifica se o evento é abertura de menu/pausa (Options no PS, Menu no Xbox, + no Switch)."""

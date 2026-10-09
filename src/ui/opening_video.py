@@ -77,9 +77,10 @@ class OpeningVideoScreen:
                 ctrl_mgr.is_event_menu_pause(event, 1) or
                 event.button in (6, 7)):
                 should_skip = True
-            # Botao Cross / A / Confirmar
+            # Botão Confirmar (Cruz / Quadrado) ou Cancelar (Círculo)
             elif (ctrl_mgr.is_event_menu_confirm(event) or
-                  event.button == 0):
+                  ctrl_mgr.is_event_menu_cancel(event) or
+                  event.button in (0, 1, 2)):
                 should_skip = True
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

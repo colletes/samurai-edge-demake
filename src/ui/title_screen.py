@@ -79,8 +79,10 @@ class SumieTitleScreen:
                 self.selected_mode = (self.selected_mode - 1) % 3
             elif event.key in (pygame.K_DOWN, pygame.K_s):
                 self.selected_mode = (self.selected_mode + 1) % 3
-            elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+            elif event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_e, pygame.K_j):
                 return self._activate_current_mode()
+            elif event.key == pygame.K_ESCAPE:
+                return "QUIT"
 
         elif event.type == pygame.JOYBUTTONDOWN:
             from src.input.controller_manager import get_dpad_motion_from_event
@@ -91,7 +93,7 @@ class SumieTitleScreen:
                     self.selected_mode = (self.selected_mode + dy) % 3
                 return None
 
-            if ctrl_mgr.is_event_menu_confirm(event) or event.button == 0:
+            if ctrl_mgr.is_event_menu_confirm(event) or event.button in (0, 2):
                 return self._activate_current_mode()
             elif ctrl_mgr.is_event_menu_cancel(event) or event.button == 1:
                 return "QUIT"

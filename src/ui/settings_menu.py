@@ -225,7 +225,7 @@ class SettingsMenu:
                     self.selected_index = (self.selected_index + 7) % len(self.items)
                 return True
 
-            if ctrl_mgr.is_event_menu_confirm(event) or event.button == 0:
+            if ctrl_mgr.is_event_menu_confirm(event) or event.button in (0, 2):
                 action_key, _, _ = self.items[self.selected_index]
                 self.waiting_for_key_action = action_key
                 return True

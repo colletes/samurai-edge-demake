@@ -83,11 +83,14 @@ from src.arcade import arcade_save
 from src.edition import is_demo, DEMO_ARENA
 from src.arcade.arcade_mode import ArcadeRun, FIGHT_WON, FIGHT_LOST, NEXT_OPPONENT, FightKind
 from src.arcade.arcade_screens import ArcadeDifficultyScreen, ArcadeBracketScreen, ArcadeResultScreen
+from src.arcade.arcade_credits import ArcadeCreditsScreen
 from src.ui.settings_menu import SettingsMenu, format_key_name
 from src.ui.character_select import CharacterSelectScreen
 from src.ui.title_screen import SumieTitleScreen
 from src.ui.opening_video import OpeningVideoScreen
 from src.ui.arena_select import ArenaSelectScreen
+from src.ui.portraits import preload_portraits
+from src.ui.svg_icon_renderer import render_text_with_icons
 from src.ui.loading_screen import LoadingScreen
 from src.ui.fonts import get_title_font, get_text_font
 from src.i18n import t
@@ -109,6 +112,7 @@ class GameState(Enum):
     ARCADE_DIFFICULTY = "arcade_difficulty"
     ARCADE_CHAR_SELECT = "arcade_char_select"
     ARCADE_BRACKET = "arcade_bracket"
+    ARCADE_CREDITS = "arcade_credits"
     ARCADE_RESULT = "arcade_result"
 
 # Compatibilidade com código existente
@@ -120,6 +124,7 @@ STATE_DUEL_PLAYING = GameState.DUEL_PLAYING.value
 STATE_ARCADE_DIFFICULTY = GameState.ARCADE_DIFFICULTY.value
 STATE_ARCADE_CHAR_SELECT = GameState.ARCADE_CHAR_SELECT.value
 STATE_ARCADE_BRACKET = GameState.ARCADE_BRACKET.value
+STATE_ARCADE_CREDITS = GameState.ARCADE_CREDITS.value
 STATE_ARCADE_RESULT = GameState.ARCADE_RESULT.value
 
 def create_fighter(char_id: str, wx: float, wy: float):
@@ -547,6 +552,7 @@ def run_game():
     title_screen = SumieTitleScreen()
 
     loading_screen.update(0.72, "Carregando retratos e atributos dos 12 guerreiros...", delay_ms=50)
+    preload_portraits()
     char_select_screen = CharacterSelectScreen(ai_difficulty=ai_difficulty)
 
     loading_screen.update(0.90, "Sintonizando arenas e cenários dinâmicos...", delay_ms=40)
@@ -611,6 +617,7 @@ def run_game():
     round_clock = 0.0
     arcade_difficulty_screen = ArcadeDifficultyScreen()
     arcade_bracket = ArcadeBracketScreen()
+    arcade_credits_screen = ArcadeCreditsScreen()
     arcade_result_screen = ArcadeResultScreen()
 
     static_render_queue = []
@@ -763,9 +770,9 @@ def run_game():
             rank = arcade_save.add_high_score(data, arcade_run)
             data["current_run"] = None
             arcade_save.save(data)
-            arcade_result_screen.open(arcade_run, rank, data["high_scores"])
+            arcade_credits_screen.open(arcade_run, rank, data["high_scores"])
             sound_mgr.play_music(MusicTrack.TITLE_THEME)
-            game_state = STATE_ARCADE_RESULT
+            game_state = STATE_ARCADE_CREDITS
         else:
             save_arcade_run()
             open_arcade_bracket("cleared", gained)
@@ -1033,6 +1040,26 @@ def run_game():
                 arcade_bracket.update(dt)
                 arcade_bracket.render(screen)
                 pygame.display.flip()
+            continue
+
+        if game_state == STATE_ARCADE_CREDITS:
+            for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
+                if event.type == pygame.QUIT:
+                    running = False
+                    continue
+                if arcade_credits_screen.handle_event(event, ctrl_mgr) == "DONE":
+                    play_sfx(SoundEvent.MENU_SELECT)
+                    arcade_result_screen.open(arcade_credits_screen.run, arcade_credits_screen.rank, arcade_credits_screen.high_scores)
+                    game_state = STATE_ARCADE_RESULT
+                    break
+            if game_state == STATE_ARCADE_CREDITS:
+                if arcade_credits_screen.update(dt) == "DONE":
+                    arcade_result_screen.open(arcade_credits_screen.run, arcade_credits_screen.rank, arcade_credits_screen.high_scores)
+                    game_state = STATE_ARCADE_RESULT
+                else:
+                    arcade_credits_screen.render(screen)
+                    pygame.display.flip()
             continue
 
         if game_state == STATE_ARCADE_RESULT:
@@ -2235,15 +2262,15 @@ def run_game():
                 w_msg = t("victory_text", name=w_fighter.name.upper())
                 w_color = get_fighter_color(w_fighter)
             v_surf = font_large.render(w_msg, True, w_color)
-            sub_surf = font_mid.render(t("next_round_hint"), True, COLOR_WHITE)
+            hint_msg = t("next_round_hint")
             if arcade_run is not None:
                 hint_key = {"won": "arcade_next_fight", "lost": "arcade_continue_hint"}.get(arcade_fight_over, "rematch_prompt")
-                sub_surf = font_mid.render(t(hint_key), True, COLOR_WHITE)
+                hint_msg = t(hint_key)
 
             center_x = SCREEN_WIDTH // 2
             center_y = SCREEN_HEIGHT // 2 - 40
             screen.blit(v_surf, (center_x - v_surf.get_width() // 2, center_y))
-            screen.blit(sub_surf, (center_x - sub_surf.get_width() // 2, center_y + 48))
+            render_text_with_icons(screen, font_mid, hint_msg, center_x, center_y + 48, COLOR_WHITE, icon_size=20)
 
         # Entregável 7.4: letterbox e banner do vencedor durante a pose de vitória
         if outcome_seq.phase == "victory" and victory_f is not None:

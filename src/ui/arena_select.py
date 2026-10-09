@@ -181,7 +181,7 @@ class ArenaSelectScreen:
                 self._move(0, -1)
             elif event.key in (pygame.K_DOWN, pygame.K_s):
                 self._move(0, 1)
-            elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+            elif event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_e, pygame.K_j):
                 return self._confirm()
             elif event.key == pygame.K_ESCAPE:
                 return "BACK"
@@ -191,7 +191,7 @@ class ArenaSelectScreen:
             if d_dir:
                 self._move(d_dir[0], d_dir[1])
                 return None
-            if ctrl_mgr.is_event_menu_confirm(event) or event.button == 0:
+            if ctrl_mgr.is_event_menu_confirm(event) or event.button in (0, 2):
                 return self._confirm()
             elif ctrl_mgr.is_event_menu_cancel(event) or event.button == 1:
                 return "BACK"

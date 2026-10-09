@@ -818,8 +818,14 @@ class GameHelpModal:
             if event.button in (1, 6):
                 self.close()
                 return True
-            # Alternar idioma: Triângulo (3) ou Quadrado (2)
-            elif event.button in (2, 3):
+            # Confirmar / Selecionar seção: Cruz (0) ou Quadrado (2)
+            elif event.button in (0, 2):
+                if self.current_tab == self.TAB_FIGHTERS:
+                    self.fighter_sub_section = (self.fighter_sub_section + 1) % 4
+                    self.scroll_y = 0.0
+                return True
+            # Alternar idioma: Triângulo (3)
+            elif event.button == 3:
                 toggle_lang()
                 self.scroll_y = 0.0
                 return True
