@@ -181,7 +181,7 @@ class ChiyoKunoichi(Samurai):
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
 
-    def render_voxel(self, surface: pygame.Surface, camera, shadow: bool = True):
+    def render(self, surface: pygame.Surface, camera, shadow: bool = True):
         # Efeito visual de vórtice escarlate durante a Dança Mai
         if self.state == "MAI_DANCE":
             cx, cy = camera.apply(self.wx, self.wy, 0.3)
@@ -197,3 +197,6 @@ class ChiyoKunoichi(Samurai):
             self.is_alive, char_type="chiyo", walk_timer=self.walk_cycle,
             alpha=self.alpha, is_moving=self.is_moving
         )
+
+    render_voxel = render
+

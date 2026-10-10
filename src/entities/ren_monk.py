@@ -233,7 +233,7 @@ class RenMonk(Samurai):
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
 
-    def render_voxel(self, surface: pygame.Surface, camera, shadow: bool = True):
+    def render(self, surface: pygame.Surface, camera, shadow: bool = True):
         # Renderizar aura de Kiai translúcida expandindo no solo
         if self.kiai_aura_active and self.kiai_aura_radius > 0.1:
             cx, cy = camera.apply(self.wx, self.wy, 0.05)
@@ -253,3 +253,6 @@ class RenMonk(Samurai):
             self.is_alive, char_type="ren", walk_timer=self.walk_cycle,
             alpha=self.alpha, is_moving=self.is_moving
         )
+
+    render_voxel = render
+
