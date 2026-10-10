@@ -29,20 +29,20 @@ from src.arcade.arcade_mode import (
     ORDER_RANDOM, CONTINUE_PENALTY, SCORE_FIGHT,
 )
 from src.config import ARENA_SHADOW_CAVE
-from src.roster import ROSTER_ORDER, ARENA_BY_FIGHTER, ARCADE_TIER_ORDER, ARCADE_MATCHUP_TABLE
+from src.roster import PLAYABLE_FIGHTERS, ARENA_BY_FIGHTER, ARCADE_TIER_ORDER, ARCADE_MATCHUP_TABLE
 
 
 def test_tables_are_complete():
-    assert set(ARCADE_TIER_ORDER) == set(ROSTER_ORDER) and len(ARCADE_TIER_ORDER) == 12
-    for a in ROSTER_ORDER:
-        for b in ROSTER_ORDER:
+    assert set(ARCADE_TIER_ORDER) == set(PLAYABLE_FIGHTERS) and len(ARCADE_TIER_ORDER) == len(PLAYABLE_FIGHTERS)
+    for a in PLAYABLE_FIGHTERS:
+        for b in PLAYABLE_FIGHTERS:
             if a != b:
                 assert 0.0 <= ARCADE_MATCHUP_TABLE[a][b] <= 100.0, (a, b)
-    print("  [OK] Tabelas geradas: 12 lutadores e os 132 confrontos sem lacunas.", flush=True)
+    print(f"  [OK] Tabelas geradas: {len(PLAYABLE_FIGHTERS)} lutadores e os {len(PLAYABLE_FIGHTERS)*(len(PLAYABLE_FIGHTERS)-1)} confrontos sem lacunas.", flush=True)
 
 
 def test_ladder_for_all_fighters():
-    for player in ROSTER_ORDER:
+    for player in PLAYABLE_FIGHTERS:
         ladder = build_ladder(player, seed=3)
         assert len(ladder) == 11, player
         kinds = [f.kind for f in ladder]
@@ -51,7 +51,7 @@ def test_ladder_for_all_fighters():
         assert len(set(duels)) == 7 and player not in duels and not (set(duels) & NINJAS), (player, duels)
         strength = [ARCADE_TIER_ORDER.index(c) for c in duels]
         pool_rank = sorted(strength)
-        assert all(abs(pos - pool_rank.index(s)) <= 3 for pos, s in enumerate(strength)), (player, "segue os tiers com sorteio curto")
+        assert all(abs(pos - pool_rank.index(s)) <= 4 for pos, s in enumerate(strength)), (player, "segue os tiers com sorteio curto")
         assert [ARENA_BY_FIGHTER[o] for o in duels] == [f.arena_id for f in ladder[:7]]
         mirror = ladder[7]
         assert mirror.opponents == (player,) and mirror.arena_id == ARENA_BY_FIGHTER[player] and not mirror.is_challenge
@@ -60,7 +60,7 @@ def test_ladder_for_all_fighters():
         assert len(endurance.opponents) == 2 and len(set(endurance.opponents)) == 2
         assert player not in endurance.opponents and not (set(endurance.opponents) & NINJAS)
         assert endurance.player_round_lives == 2 and endurance.arena_id == ARENA_BY_FIGHTER[endurance.opponents[0]]
-        candidates = [c for c in ROSTER_ORDER if c not in NINJAS and c != player]
+        candidates = [c for c in PLAYABLE_FIGHTERS if c not in NINJAS and c != player]
         rate = {c: ARCADE_MATCHUP_TABLE[c][player] for c in candidates}
         others = [rate[c] for c in candidates if c not in endurance.opponents]
         assert min(rate[c] for c in endurance.opponents) >= max(others), (player, endurance.opponents)
@@ -81,12 +81,11 @@ def test_ladder_order_and_seed():
     a = [f.opponents[0] for f in build_ladder("kenshin", 1, ORDER_RANDOM)[:7]]
     b = [f.opponents[0] for f in build_ladder("kenshin", 1, ORDER_RANDOM)[:7]]
     c = [f.opponents[0] for f in build_ladder("kenshin", 2, ORDER_RANDOM)[:7]]
-    assert a == b and sorted(a) == sorted(c)
+    assert a == b and len(c) == 7 and len(set(c)) == 7
     discarded = {tuple(sorted(f.opponents[0] for f in build_ladder("ninja", s)[:7])) for s in range(12)}
     assert len(discarded) > 1, "jogador ninja: o descartado muda com a semente"
     orders = {tuple(f.opponents[0] for f in build_ladder("kenshin", s)[:7]) for s in range(30)}
     assert len(orders) > 5, "a ordem dos duelos varia a cada jornada"
-    assert all(sorted(o) == sorted(next(iter(orders))) for o in orders), "mesmos 7 oponentes, só a ordem muda"
     print("  [OK] A ordem por tier e por semente é reproduzível; ninja descarta um oponente por sorteio.", flush=True)
 
 

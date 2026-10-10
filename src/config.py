@@ -130,6 +130,11 @@ COLOR_KASUMI_HAIR = (215, 220, 230)        # Trança longa prateada de Kasumi
 COLOR_OKUNI_KIMONO = (195, 35, 75)         # Quimono carmim de sacerdotisa/dançarina
 COLOR_TOMOE_HAKAMA = (175, 25, 35)         # Hakama vermelho cerimonial da arqueira Miko
 
+# Cores dos Guerreiros do Ciclo 1 (Ren & Chiyo)
+COLOR_REN_AURA = (245, 175, 45)            # Aura açafrão dourada Shaolin
+COLOR_CHIYO_AURA = (60, 220, 180)          # Aura esmeralda das lâminas gêmeas
+
+
 # Identificadores de Personagens (12 Guerreiros: 6 Mulheres e 6 Homens)
 CHAR_KENSHIN = "kenshin"
 CHAR_MUSASHI = "musashi"
@@ -148,6 +153,18 @@ CHAR_ARCHER = "archer"
 CHAR_TOMOE = "archer"
 CHAR_PIRATE = "pirate"
 CHAR_MUSKETEER = "musketeer"
+CHAR_REN = "ren"
+CHAR_CHIYO = "chiyo"
+CHAR_BENKEI = "benkei"
+CHAR_ORIN = "orin"
+CHAR_GORO = "goro"
+CHAR_ICHI = "ichi"
+CHAR_VALERIUS = "valerius"
+CHAR_SEIMEI = "seimei"
+CHAR_DAIKI = "daiki"
+CHAR_AOI = "aoi"
+CHAR_RAIDEN = "raiden"
+CHAR_HENDRIKA = "hendrika"
 CHAR_BOSS = "gashadokuro"  # Oni Gashadokuro, chefe do Arcade (não é um lutador do elenco)
 CHAR_RANDOM = "random_fighter"  # carta de sorteio na seleção de personagens (não é um lutador)
 
@@ -213,6 +230,8 @@ ARENA_KABUKI_STAGE = "kabuki_stage"
 ARENA_MOUNTAIN_SHRINE = "mountain_shrine"
 ARENA_PIRATE_DECK = "pirate_deck"
 ARENA_BAROQUE_COURT = "baroque_court"
+ARENA_SHAOLIN = "shaolin_temple"
+ARENA_HIGANBANA = "higanbana_garden"
 ARENA_GASHADOKURO = "gashadokuro_graveyard"  # arena do chefe do Arcade, fora das telas de seleção
 ARENA_RANDOM = "random"
 

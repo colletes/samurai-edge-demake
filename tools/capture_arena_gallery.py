@@ -17,13 +17,37 @@ import pygame
 pygame.init()
 pygame.display.set_mode((1280, 720))
 
-import main
 from src.config import SCREEN_HEIGHT, SCREEN_WIDTH
 from src.isometric.camera import Camera
 from src.world.arenas import arena_ids, create_arena
 
 OUT = os.path.join(ROOT, "docs", "screenshots", "arenas")
 AZIMUTHS = (0, 45, 135)
+
+
+def _build_static_render_queue(current_map):
+    queue = []
+    for bamboo in getattr(current_map, "bamboos", []):
+        queue.append((bamboo.wx + bamboo.wy, "bamboo", bamboo))
+    for rock in getattr(current_map, "rocks", []):
+        queue.append((rock.wx + rock.wy, "rock", rock))
+    if getattr(current_map, "well", None):
+        queue.append((current_map.well.wx + current_map.well.wy, "well", current_map.well))
+    for tree in getattr(current_map, "trees", []):
+        queue.append((tree.wx + tree.wy, "tree", tree))
+    for tg in getattr(current_map, "torii_gates", []):
+        queue.append((tg.wx + tg.wy, "torii", tg))
+    for b in getattr(current_map, "buildings", []):
+        queue.append((b.wx + b.wy + getattr(b, "depth", 0.5) * 0.5, "building", b))
+    for l in getattr(current_map, "lanterns", []):
+        queue.append((l.wx + l.wy, "lantern", l))
+    return queue
+
+
+def _static_item_center(item_type: str, obj) -> tuple[float, float]:
+    if item_type == "building":
+        return obj.wx + getattr(obj, "width", 0.5) * 0.5, obj.wy + getattr(obj, "depth", 0.5) * 0.5
+    return obj.wx, obj.wy
 
 
 def capture(arena_id: str, azimuth: float) -> pygame.Surface:
@@ -34,7 +58,7 @@ def capture(arena_id: str, azimuth: float) -> pygame.Surface:
     cam = arena.attach_camera(Camera(11.0, 11.0)) or Camera(11.0, 11.0)
     cam.set_azimuth(math.radians(azimuth))
     arena.render_terrain(surf, cam, 1.0)
-    queue = [(cam.depth(*main.static_item_center(t, o)), t, o) for _, t, o in main.build_static_render_queue(arena)]
+    queue = [(cam.depth(*_static_item_center(t, o)), t, o) for _, t, o in _build_static_render_queue(arena)]
     queue.sort(key=lambda item: item[0])
     for _, kind, obj in queue:
         if kind in ("bamboo", "building", "lantern") or getattr(obj, "animated", False):

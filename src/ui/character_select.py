@@ -19,6 +19,8 @@ from src.config import (
     COLOR_SAITOU_LIGHT_BLUE, CHAR_SAITOU,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
     CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER, CHAR_RANDOM,
+    CHAR_REN, CHAR_CHIYO, CHAR_BENKEI, CHAR_ORIN, CHAR_GORO, CHAR_ICHI,
+    CHAR_VALERIUS, CHAR_SEIMEI, CHAR_DAIKI, CHAR_AOI, CHAR_RAIDEN, CHAR_HENDRIKA,
     COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA, get_asset_path
 )
 
@@ -268,6 +270,17 @@ def draw_enso_circle(surface, cx: int, cy: int, radius: int, color, anim_time: f
     pygame.draw.circle(surface, color, (cx + radius - 2, cy - 4), 2)
 
 
+def draw_mystery_silhouette(surface: pygame.Surface, cx: int, cy: int, radius: int = 20):
+    """Desenha uma silhueta de sombra indefinida no estilo Sumi-E para personagens em produção."""
+    orb = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+    pygame.draw.circle(orb, (16, 15, 18, 235), (radius, radius), radius)
+    # Ombros e vestes em nanquim escuro
+    pygame.draw.ellipse(orb, (36, 34, 40, 240), (2, radius + 2, (radius - 2) * 2, radius))
+    # Cabeça / capuz encobrindo o rosto
+    pygame.draw.circle(orb, (44, 42, 48, 240), (radius, radius - 3), int(radius * 0.52))
+    surface.blit(orb, (cx - radius, cy - radius))
+
+
 def draw_round_help_button(surface, font, rect: pygame.Rect, anim_time: float):
     """Ícone de ajuda circular: disco claro, aro dourado e '?' dourado, com brilho ao passar o mouse."""
     hovered = rect.collidepoint(pygame.mouse.get_pos())
@@ -395,7 +408,7 @@ class CharacterSelectScreen:
         self._characters_lang = None
         self._characters_cache = []
         self.petals = pm.PetalField()
-        pm.prewarm([(194, 200, i * 7 + 3) for i in range(12)])
+        pm.prewarm([(190, 104, i * 7 + 3) for i in range(24)])
 
     @property
     def characters(self):
@@ -436,25 +449,31 @@ class CharacterSelectScreen:
         return idx
 
     def is_locked(self, idx: int) -> bool:
-        """Na demo só Kenshi e Tomoe podem ser escolhidos (a carta Aleatório também fica bloqueada)."""
-        return is_demo() and self.characters[idx]["id"] not in DEMO_FIGHTERS
+        """Indica se a carta está bloqueada (na demo ou se o personagem ainda está em desenvolvimento)."""
+        if idx == self.random_idx or idx >= len(self.characters):
+            return False
+        char_info = self.characters[idx]
+        if not char_info.get("ready", True):
+            return True
+        return is_demo() and char_info["id"] not in DEMO_FIGHTERS
 
     def _raw_grid_step(self, idx: int, dx: int, dy: int) -> int:
-        """Move o cursor na grade 6x2 de guerreiros mais a carta Aleatório numa terceira linha."""
+        """Move o cursor na grade 6x4 de guerreiros mais a carta Aleatório numa quinta linha."""
         cols, rnd = 6, self.random_idx
         if idx == rnd:
-            row, col = 2, self._last_col
+            row, col = 4, self._last_col
         else:
             row, col = divmod(idx, cols)
             self._last_col = col
         if dy:
-            row = (row + dy) % 3
-        if dx and row != 2:
+            row = (row + dy) % 5
+        if dx and row != 4:
             col = (col + dx) % cols
-        return rnd if row == 2 else row * cols + col
+        return rnd if row == 4 else row * cols + col
 
     def _build_fighters(self):
         return [
+            # 12 Veteranos (Prontos)
             {
                 "id": CHAR_KENSHIN,
                 "name": t("char_kenshi_name"),
@@ -466,6 +485,7 @@ class CharacterSelectScreen:
                 "special_desc": t("char_kenshi_special"),
                 "keys_p1": t("char_kenshi_keys_p1"),
                 "keys_p2": t("char_kenshi_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_MUSASHI,
@@ -478,6 +498,7 @@ class CharacterSelectScreen:
                 "special_desc": t("char_musashi_special"),
                 "keys_p1": t("char_musashi_keys_p1"),
                 "keys_p2": t("char_musashi_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_NINJA,
@@ -490,6 +511,7 @@ class CharacterSelectScreen:
                 "special_desc": t("char_hanzo_special"),
                 "keys_p1": t("char_hanzo_keys_p1"),
                 "keys_p2": t("char_hanzo_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_AMERICAN,
@@ -502,6 +524,7 @@ class CharacterSelectScreen:
                 "special_desc": t("char_joe_special"),
                 "keys_p1": t("char_joe_keys_p1"),
                 "keys_p2": t("char_joe_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_SAITOU,
@@ -514,6 +537,7 @@ class CharacterSelectScreen:
                 "special_desc": t("char_saitou_special"),
                 "keys_p1": t("char_saitou_keys_p1"),
                 "keys_p2": t("char_saitou_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_RIFLE,
@@ -526,6 +550,7 @@ class CharacterSelectScreen:
                 "special_desc": t("char_teppo_special"),
                 "keys_p1": t("char_teppo_keys_p1"),
                 "keys_p2": t("char_teppo_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_PURPLE,
@@ -538,6 +563,7 @@ class CharacterSelectScreen:
                 "special_desc": t("char_murasaki_special"),
                 "keys_p1": t("char_murasaki_keys_p1"),
                 "keys_p2": t("char_murasaki_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_GRAY,
@@ -550,6 +576,7 @@ class CharacterSelectScreen:
                 "special_desc": t("char_kasumi_special"),
                 "keys_p1": t("char_kasumi_keys_p1"),
                 "keys_p2": t("char_kasumi_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_KABUKI,
@@ -562,6 +589,7 @@ class CharacterSelectScreen:
                 "special_desc": t("char_okuni_special"),
                 "keys_p1": t("char_okuni_keys_p1"),
                 "keys_p2": t("char_okuni_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_ARCHER,
@@ -574,6 +602,7 @@ class CharacterSelectScreen:
                 "special_desc": t("char_tomoe_special"),
                 "keys_p1": t("char_tomoe_keys_p1"),
                 "keys_p2": t("char_tomoe_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_PIRATE,
@@ -586,6 +615,7 @@ class CharacterSelectScreen:
                 "special_desc": t("char_anne_special"),
                 "keys_p1": t("char_anne_keys_p1"),
                 "keys_p2": t("char_anne_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_MUSKETEER,
@@ -598,7 +628,166 @@ class CharacterSelectScreen:
                 "special_desc": t("char_julie_special"),
                 "keys_p1": t("char_julie_keys_p1"),
                 "keys_p2": t("char_julie_keys_p2"),
-            }
+                "ready": True,
+            },
+            # Ciclo 1 (Prontos)
+            {
+                "id": CHAR_REN,
+                "name": t("char_ren_name"),
+                "title": t("char_ren_title"),
+                "style": t("char_ren_style"),
+                "color": (235, 175, 50),
+                "speed_stars": t("char_ren_speed"),
+                "damage_desc": t("char_ren_damage"),
+                "special_desc": t("char_ren_special"),
+                "keys_p1": t("char_ren_keys_p1"),
+                "keys_p2": t("char_ren_keys_p2"),
+                "ready": True,
+            },
+            {
+                "id": CHAR_CHIYO,
+                "name": t("char_chiyo_name"),
+                "title": t("char_chiyo_title"),
+                "style": t("char_chiyo_style"),
+                "color": (210, 45, 60),
+                "speed_stars": t("char_chiyo_speed"),
+                "damage_desc": t("char_chiyo_damage"),
+                "special_desc": t("char_chiyo_special"),
+                "keys_p1": t("char_chiyo_keys_p1"),
+                "keys_p2": t("char_chiyo_keys_p2"),
+                "ready": True,
+            },
+            # Ciclos 2 a 6 (Em desenvolvimento)
+            {
+                "id": CHAR_BENKEI,
+                "name": "???",
+                "title": "",
+                "style": "",
+                "color": (170, 90, 60),
+                "speed_stars": "",
+                "damage_desc": "",
+                "special_desc": "",
+                "keys_p1": "",
+                "keys_p2": "",
+                "ready": False,
+            },
+            {
+                "id": CHAR_ORIN,
+                "name": "???",
+                "title": "",
+                "style": "",
+                "color": (220, 110, 160),
+                "speed_stars": "",
+                "damage_desc": "",
+                "special_desc": "",
+                "keys_p1": "",
+                "keys_p2": "",
+                "ready": False,
+            },
+            {
+                "id": CHAR_GORO,
+                "name": "???",
+                "title": "",
+                "style": "",
+                "color": (120, 150, 80),
+                "speed_stars": "",
+                "damage_desc": "",
+                "special_desc": "",
+                "keys_p1": "",
+                "keys_p2": "",
+                "ready": False,
+            },
+            {
+                "id": CHAR_ICHI,
+                "name": "???",
+                "title": "",
+                "style": "",
+                "color": (180, 175, 170),
+                "speed_stars": "",
+                "damage_desc": "",
+                "special_desc": "",
+                "keys_p1": "",
+                "keys_p2": "",
+                "ready": False,
+            },
+            {
+                "id": CHAR_VALERIUS,
+                "name": "???",
+                "title": "",
+                "style": "",
+                "color": (140, 70, 180),
+                "speed_stars": "",
+                "damage_desc": "",
+                "special_desc": "",
+                "keys_p1": "",
+                "keys_p2": "",
+                "ready": False,
+            },
+            {
+                "id": CHAR_SEIMEI,
+                "name": "???",
+                "title": "",
+                "style": "",
+                "color": (80, 160, 210),
+                "speed_stars": "",
+                "damage_desc": "",
+                "special_desc": "",
+                "keys_p1": "",
+                "keys_p2": "",
+                "ready": False,
+            },
+            {
+                "id": CHAR_DAIKI,
+                "name": "???",
+                "title": "",
+                "style": "",
+                "color": (190, 150, 90),
+                "speed_stars": "",
+                "damage_desc": "",
+                "special_desc": "",
+                "keys_p1": "",
+                "keys_p2": "",
+                "ready": False,
+            },
+            {
+                "id": CHAR_AOI,
+                "name": "???",
+                "title": "",
+                "style": "",
+                "color": (60, 170, 150),
+                "speed_stars": "",
+                "damage_desc": "",
+                "special_desc": "",
+                "keys_p1": "",
+                "keys_p2": "",
+                "ready": False,
+            },
+            {
+                "id": CHAR_RAIDEN,
+                "name": "???",
+                "title": "",
+                "style": "",
+                "color": (220, 140, 50),
+                "speed_stars": "",
+                "damage_desc": "",
+                "special_desc": "",
+                "keys_p1": "",
+                "keys_p2": "",
+                "ready": False,
+            },
+            {
+                "id": CHAR_HENDRIKA,
+                "name": "???",
+                "title": "",
+                "style": "",
+                "color": (90, 180, 120),
+                "speed_stars": "",
+                "damage_desc": "",
+                "special_desc": "",
+                "keys_p1": "",
+                "keys_p2": "",
+                "ready": False,
+            },
         ]
 
     def cycle_ai_difficulty(self):
@@ -648,22 +837,24 @@ class CharacterSelectScreen:
 
     def _start_reveal(self):
         """Inicia a roleta que revela quem o Aleatório sorteou (P1 e/ou oponente)."""
-        n = len(ROSTER_ORDER)
+        playable_indices = [i for i, c in enumerate(self.characters) if c.get("ready", True) and c["id"] != CHAR_RANDOM]
         targets = {}
         for player, idx in (("P1", self.p1_choice_idx), ("P2", self.p2_choice_idx)):
             if idx == self.random_idx and (player == "P1" or not self.arcade_mode):
-                targets[player] = random.randrange(n)
+                targets[player] = random.choice(playable_indices) if playable_indices else 0
         self.reveal = {"t": 0.0, "roulette": 1.1, "hold": 0.55, "targets": targets, "last_step": {}}
 
     def _update_reveal(self, dt: float) -> bool:
         """Avança a roleta; devolve True quando o sorteio terminou e a partida deve começar."""
         rv = self.reveal
         rv["t"] += dt
-        n = len(ROSTER_ORDER)
+        playable_indices = [i for i, c in enumerate(self.characters) if c.get("ready", True) and c["id"] != CHAR_RANDOM]
+        n = len(playable_indices) if playable_indices else 1
         progress = min(1.0, rv["t"] / rv["roulette"])
         for player, target in rv["targets"].items():
             total_steps = 2 * n + target
-            idx = int(total_steps * (1.0 - (1.0 - progress) ** 2.4)) % n
+            step_idx = int(total_steps * (1.0 - (1.0 - progress) ** 2.4)) % n
+            idx = playable_indices[step_idx] if playable_indices else 0
             if progress >= 1.0:
                 idx = target
             if rv["last_step"].get(player) != idx:
@@ -732,6 +923,16 @@ class CharacterSelectScreen:
                 self.selection_step = "P1"
                 self.p1_ready = False
                 self.p2_ready = False
+                return False
+
+            target_idx = self.p1_choice_idx if (self.vs_ai and self.selection_step == "P1") or (not self.vs_ai and player == "P1") else self.p2_choice_idx
+            if self.is_locked(target_idx):
+                try:
+                    from src.audio.sound_events import SoundEvent
+                    from src.audio.sound_manager import SoundManager
+                    SoundManager.get_instance().play(SoundEvent.SWORD_CLASH)
+                except Exception:
+                    pass
                 return False
 
             if self.vs_ai:
@@ -818,7 +1019,8 @@ class CharacterSelectScreen:
             # Abrir Guia / Ajuda: Botão 3 (△ Triângulo / Y)
             elif event.button == 3:
                 active_idx = self.p1_choice_idx if (not self.vs_ai or self.selection_step == "P1") else self.p2_choice_idx
-                self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=min(active_idx, len(ROSTER_ORDER) - 1))
+                if active_idx < len(self.characters) and self.characters[active_idx].get("ready", True):
+                    self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=min(active_idx, 11))
                 return False
 
         elif event.type == pygame.JOYHATMOTION:
@@ -902,7 +1104,8 @@ class CharacterSelectScreen:
                 return False
             elif event.key == pygame.K_f:
                 active_idx = self.p1_choice_idx if (not self.vs_ai or self.selection_step == "P1") else self.p2_choice_idx
-                self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=min(active_idx, len(ROSTER_ORDER) - 1))
+                if active_idx < len(self.characters) and self.characters[active_idx].get("ready", True):
+                    self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=min(active_idx, 11))
                 return False
             elif event.key == pygame.K_l:
                 toggle_lang()
@@ -1105,17 +1308,23 @@ class CharacterSelectScreen:
         return False
 
     def get_selected_characters(self) -> tuple[str, str, bool]:
+        playable_ids = [c["id"] for c in self.characters if c.get("ready", True) and c["id"] != CHAR_RANDOM]
         def pick(idx: int) -> str:
-            # Sem a roleta (ex.: chamada direta), o Aleatório ainda resolve para um dos 12 guerreiros
-            return random.choice(ROSTER_ORDER) if idx == self.random_idx else self.characters[idx]["id"]
+            if idx == self.random_idx:
+                return random.choice(playable_ids) if playable_ids else CHAR_KENSHIN
+            char_id = self.characters[idx]["id"]
+            if not self.characters[idx].get("ready", True):
+                return random.choice(playable_ids) if playable_ids else CHAR_KENSHIN
+            return char_id
         return pick(self.p1_choice_idx), pick(self.p2_choice_idx), self.vs_ai
 
-    def _render_locked_overlay(self, surface, rect, font):
-        """Escurece a carta bloqueada da demo e marca que ela só existe na versão completa."""
+    def _render_locked_overlay(self, surface, rect, font, is_demo_lock: bool = False):
+        """Escurece a carta bloqueada e exibe aviso de bloqueio/desenvolvimento."""
         shade = pygame.Surface(rect.size, pygame.SRCALPHA)
-        shade.fill((12, 10, 14, 170))
+        shade.fill((10, 10, 14, 175 if is_demo_lock else 150))
         surface.blit(shade, rect.topleft)
-        label = font.render(t("demo_locked_card"), True, (225, 205, 160))
+        text = t("demo_locked_card") if is_demo_lock else t("char_locked_badge")
+        label = font.render(text, True, (225, 205, 160))
         surface.blit(label, (rect.centerx - label.get_width() // 2, rect.centery - label.get_height() // 2))
 
     def _render_random_card(self, surface, rect, idx, char_info, parch, font_name, font_small, font_tiny, font_stamp):
@@ -1133,25 +1342,27 @@ class CharacterSelectScreen:
         else:
             draw_sumie_card(surface, rect, is_p1, is_p2, self.vs_ai, self.selection_step, self.anim_timer)
 
-        cx, cy = rect.x + 34, rect.centery
+        cx, cy = rect.x + 24, rect.centery
         ring = COLOR_HANKO_RED if is_p1 else (COLOR_HANKO_BLUE if is_p2 else char_info["color"])
-        draw_enso_circle(surface, cx, cy, 20, ring, self.anim_timer)
-        q_font = get_title_font(26)
+        draw_enso_circle(surface, cx, cy, 14, ring, self.anim_timer)
+        q_font = get_title_font(18)
         q = q_font.render("?", True, pm.darken(char_info["color"], 0.55) if parch else char_info["color"])
-        surface.blit(q, q.get_rect(center=(cx, cy + 1)))
+        surface.blit(q, q.get_rect(center=(cx, cy)))
 
-        text_left = rect.x + 68
+        text_left = rect.x + 46
         name_col = pm.darken(char_info["color"], 0.55) if parch else char_info["color"]
         name_s = font_name.render(char_info["name"], True, name_col)
-        surface.blit(name_s, (text_left, rect.y + 6))
-        title_col, style_col = (pm.INK_SOFT, pm.INK) if parch else ((185, 180, 175), (220, 215, 210))
-        surface.blit(pm.fit_text(font_small, char_info["title"], title_col, rect.right - text_left - 12), (text_left, rect.y + 24))
+        surface.blit(name_s, (text_left, rect.centery - name_s.get_height() // 2))
+
+        title_col = pm.INK_SOFT if parch else (185, 180, 175)
+        title_s = pm.fit_text(font_small, char_info["title"], title_col, rect.right - text_left - name_s.get_width() - 80)
+        surface.blit(title_s, (text_left + name_s.get_width() + 14, rect.centery - title_s.get_height() // 2))
 
         p2_label = "IA" if self.vs_ai else "P2"
         if is_p1:
-            draw_hanko_stamp(surface, font_stamp, "P1", rect.right - 62, rect.y + 11, size=24, color=COLOR_HANKO_RED, border_w=1)
+            draw_hanko_stamp(surface, font_stamp, "P1", rect.right - 54, rect.y + 6, size=24, color=COLOR_HANKO_RED, border_w=1)
         if is_p2:
-            draw_hanko_stamp(surface, font_stamp, p2_label, rect.right - 34, rect.y + 11, size=24, color=COLOR_HANKO_BLUE, border_w=1)
+            draw_hanko_stamp(surface, font_stamp, p2_label, rect.right - 28, rect.y + 6, size=24, color=COLOR_HANKO_BLUE, border_w=1)
 
     def render(self, surface: pygame.Surface, font_large: pygame.font.Font, font_mid: pygame.font.Font, font_small: pygame.font.Font):
         # 1. Carregar tipografia oriental autêntica
@@ -1248,7 +1459,7 @@ class CharacterSelectScreen:
             draw_kanban_menu_button(surface, font_zen_small, mode_text, mode_hint, self.mode_btn_rect, is_mode_focused, True, self.anim_timer)
 
         # 5. Banner Indicador de Etapa / Instrução
-        step_y = 90
+        step_y = 80
         lang = get_lang()
         if self.vs_ai:
             if self.selection_step == "P1":
@@ -1275,28 +1486,28 @@ class CharacterSelectScreen:
         draw_brush_divider(surface, step_x - 140, step_y + 11, step_x - 16, color=div_color)
         draw_brush_divider(surface, step_x + step_s.get_width() + 16, step_y + 11, step_x + step_s.get_width() + 140, color=div_color)
 
-        # 6. Grade Simétrica 6x2 (6 cards na Linha 1, 6 cards na Linha 2)
-        card_w = 194
-        card_h = 200
-        spacing_x = 12
-        spacing_y = 12
+        # 6. Grade 6x4 (24 combatentes: Linhas 0-1 veteranos, Linhas 2-3 novos) + Linha 4 (Aleatório)
+        card_w = 190
+        card_h = 102
+        spacing_x = 10
+        spacing_y = 6
 
         total_w = 6 * card_w + 5 * spacing_x
         start_x = (SCREEN_WIDTH - total_w) // 2
-        start_y = 124
+        start_y = 108
 
         self.card_rects.clear()
         self.info_btn_rects.clear()
 
         for idx, char_info in enumerate(self.characters):
             if char_info["id"] == CHAR_RANDOM:
-                # Carta Aleatório: faixa estreita na terceira linha, no fim da grade
-                rand_rect = pygame.Rect(SCREEN_WIDTH // 2 - 260, start_y + 2 * (card_h + spacing_y), 520, 48)
-                self.card_rects.append(pygame.Rect(0, 0, 0, 0) if self.is_locked(idx) else rand_rect)
+                # Carta Aleatório: faixa na quinta linha
+                rand_rect = pygame.Rect(SCREEN_WIDTH // 2 - 250, start_y + 4 * (card_h + spacing_y), 500, 36)
+                self.card_rects.append(rand_rect)
                 self.info_btn_rects.append(pygame.Rect(0, 0, 0, 0))
                 self._render_random_card(surface, rand_rect, idx, char_info, parch, font_oriental_name, font_zen_small, font_zen_tiny, font_zen_stamp)
                 if self.is_locked(idx):
-                    self._render_locked_overlay(surface, rand_rect, font_zen_small)
+                    self._render_locked_overlay(surface, rand_rect, font_zen_small, is_demo_lock=is_demo() and char_info["id"] not in DEMO_FIGHTERS)
                 continue
 
             row = idx // 6
@@ -1305,16 +1516,19 @@ class CharacterSelectScreen:
             cy = start_y + row * (card_h + spacing_y)
 
             rect = pygame.Rect(cx, cy, card_w, card_h)
-            self.card_rects.append(pygame.Rect(0, 0, 0, 0) if self.is_locked(idx) else rect)
+            self.card_rects.append(rect)
 
             is_p1 = (self.p1_choice_idx == idx)
             is_p2 = (self.p2_choice_idx == idx)
+            is_ready = char_info.get("ready", True)
+            is_locked_card = self.is_locked(idx)
+            is_demo_lock = is_demo() and char_info["id"] not in DEMO_FIGHTERS
 
             if parch:
                 pm.draw_paper_card(surface, rect, seed=idx * 7 + 3)
                 if is_p1 or is_p2:
                     sel_col = COLOR_HANKO_RED if is_p1 else COLOR_HANKO_BLUE
-                    pm.draw_brush_highlight(surface, pygame.Rect(rect.x + 62, rect.y + 5, card_w - 94, 26),
+                    pm.draw_brush_highlight(surface, pygame.Rect(rect.x + 58, rect.y + 4, card_w - 74, 24),
                                             pm.SEAL_RED if is_p1 else pm.SEAL_BLUE, seed=idx + 2)
                     pulse = 0.5 + 0.5 * math.sin(self.anim_timer * 6.0)
                     border = pm.make_ink_border(rect, sel_col, width=2, seed=idx + 5)
@@ -1323,14 +1537,14 @@ class CharacterSelectScreen:
             else:
                 draw_sumie_card(surface, rect, is_p1, is_p2, self.vs_ai, self.selection_step, self.anim_timer)
 
-            # Badges Hanko P1 / IA (no canto superior esquerdo do cartão no pergaminho, para não cobrir o nome)
+            # Badges Hanko P1 / IA
             p2_label = "IA" if self.vs_ai else "P2"
             if parch:
-                ssz = 22
-                first_x, second_x, sy = rect.x - 5, rect.x + 19, rect.y - 7
+                ssz = 18
+                first_x, second_x, sy = rect.x - 4, rect.x + 16, rect.y - 6
             else:
-                ssz = 24
-                first_x, second_x, sy = rect.right - 58, rect.right - 30, rect.y + 6
+                ssz = 18
+                first_x, second_x, sy = rect.right - 44, rect.right - 22, rect.y + 4
             if is_p1 and is_p2:
                 draw_hanko_stamp(surface, font_zen_stamp, "P1", first_x, sy, size=ssz, color=COLOR_HANKO_RED, border_w=1)
                 draw_hanko_stamp(surface, font_zen_stamp, p2_label, second_x, sy, size=ssz, color=COLOR_HANKO_BLUE, border_w=1)
@@ -1341,106 +1555,84 @@ class CharacterSelectScreen:
 
             # Retrato Circular com Anel Ensō
             char_id = char_info["id"]
-            portrait_cx = rect.x + 36
-            portrait_cy = rect.y + 36
+            portrait_cx = rect.x + 28
+            portrait_cy = rect.y + 28
             ring_color = COLOR_HANKO_RED if is_p1 else (COLOR_HANKO_BLUE if is_p2 else char_info["color"])
-            draw_enso_circle(surface, portrait_cx, portrait_cy, 26, ring_color, self.anim_timer)
 
-            portrait_surf = get_portrait(char_id, size=(50, 50), circular=True)
-            if portrait_surf is not None:
-                surface.blit(portrait_surf, (portrait_cx - 25, portrait_cy - 25))
+            portrait_surf = get_portrait(char_id, size=(42, 42), circular=True) if is_ready else None
+            if not is_ready:
+                # Sombra indefinida com símbolo de interrogação para personagens em desenvolvimento
+                draw_mystery_silhouette(surface, portrait_cx, portrait_cy, radius=20)
+                draw_enso_circle(surface, portrait_cx, portrait_cy, 20, (75, 70, 68), self.anim_timer)
+                q_font = get_title_font(18)
+                q_surf = q_font.render("?", True, (190, 180, 160))
+                surface.blit(q_surf, q_surf.get_rect(center=(portrait_cx, portrait_cy)))
             else:
-                cam = PreviewCamera(portrait_cx, portrait_cy + 15)
-                if char_id == CHAR_KENSHIN:
-                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="kenshin")
-                elif char_id == CHAR_MUSASHI:
-                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="musashi")
-                elif char_id == CHAR_NINJA:
-                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="yellow_ninja", extra_props={"has_kunai": True})
-                elif char_id == CHAR_AMERICAN:
-                    render_voxel_humanoid(surface, cam, -0.20, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="american_ninja")
-                    render_voxel_doberman(surface, cam, 0.35, -0.10, 0, 1.0, 0.0, "IDLE", 0.0, True)
-                elif char_id == CHAR_GRAY:
-                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="kasumi")
-                elif char_id == CHAR_PURPLE:
-                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="murasaki")
-                elif char_id == CHAR_SAITOU:
-                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="saitou")
-                elif char_id == CHAR_RIFLE:
-                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="rifleman")
-                elif char_id == CHAR_KABUKI:
-                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="okuni")
-                elif char_id == CHAR_ARCHER:
-                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="tomoe")
-                elif char_id == CHAR_PIRATE:
-                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="pirate")
-                elif char_id == CHAR_MUSKETEER:
-                    render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type="musketeer")
+                draw_enso_circle(surface, portrait_cx, portrait_cy, 21, ring_color, self.anim_timer)
+                if portrait_surf is not None:
+                    surface.blit(portrait_surf, (portrait_cx - 21, portrait_cy - 21))
+                else:
+                    draw_mystery_silhouette(surface, portrait_cx, portrait_cy, radius=20)
 
             # Nome, Título e Estilo ao lado do Retrato
-            text_left = rect.x + 68
-            if parch:
-                name_col = (252, 244, 226) if (is_p1 or is_p2) else pm.darken(char_info["color"], 0.55)
-                title_col, style_col = pm.INK_SOFT, pm.INK
+            text_left = rect.x + 52
+            if not is_ready:
+                name_display = "???"
+                name_col = (140, 135, 130) if parch else (120, 115, 110)
+                name_surf = font_oriental_name.render(name_display, True, name_col)
+                surface.blit(name_surf, (text_left, rect.y + 14))
             else:
-                name_col, title_col, style_col = char_info["color"], (185, 180, 175), (220, 215, 210)
-            name_surf = font_oriental_name.render(char_info["name"], True, name_col)
-            surface.blit(name_surf, (text_left, rect.y + 8))
+                name_display = char_info["name"]
+                if parch:
+                    name_col = (252, 244, 226) if (is_p1 or is_p2) else pm.darken(char_info["color"], 0.55)
+                else:
+                    name_col = char_info["color"]
+                name_surf = font_oriental_name.render(name_display, True, name_col)
+                surface.blit(name_surf, (text_left, rect.y + 4))
 
-            title_s = pm.fit_text(font_zen_small, char_info["title"], title_col, rect.right - text_left - 6)
-            surface.blit(title_s, (text_left, rect.y + 30))
+                title_col = pm.INK_SOFT if parch else (185, 180, 175)
+                title_s = pm.fit_text(font_zen_small, char_info["title"], title_col, rect.right - text_left - 6)
+                surface.blit(title_s, (text_left, rect.y + 22))
 
-            style_s = pm.fit_text(font_zen_tiny, char_info["style"], style_col, rect.right - text_left - 6)
-            surface.blit(style_s, (text_left, rect.y + 49))
+            if is_ready:
+                style_col = pm.INK if parch else (220, 215, 210)
+                style_s = pm.fit_text(font_zen_tiny, char_info["style"], style_col, rect.right - text_left - 6)
+                surface.blit(style_s, (text_left, rect.y + 38))
 
             # Pincelada divisória
-            draw_brush_divider(surface, rect.x + 8, rect.y + 70, rect.right - 8, color=(120, 100, 78) if parch else (75, 70, 65))
+            draw_brush_divider(surface, rect.x + 6, rect.y + 54, rect.right - 6, color=(120, 100, 78) if parch else (75, 70, 65))
 
-            # Atributos e Estatísticas
-            stats_y = rect.y + 76
-            if parch:
-                vel_col, dmg_col, esp_col = pm.GOLD_INK, (150, 40, 30), (30, 70, 125)
+            if is_ready:
+                # Combatente pronto: estatísticas compactas e botão de ajuda
+                stats_y = rect.y + 58
+                vel_col = pm.GOLD_INK if parch else COLOR_GOLD
+                dmg_col = (150, 40, 30) if parch else (240, 205, 195)
+                esp_col = (30, 70, 125) if parch else (200, 220, 240)
+
+                line_stats = pm.fit_text(font_zen_tiny, f"{t('char_stat_speed')}: {char_info['speed_stars']} | {char_info['damage_desc']}", vel_col, card_w - 12)
+                line_esp = pm.fit_text(font_zen_tiny, f"{char_info['special_desc']}", esp_col, card_w - 32)
+                surface.blit(line_stats, (rect.x + 6, stats_y))
+                surface.blit(line_esp, (rect.x + 6, stats_y + 16))
+
+                # Botão [ ? ] como Selo Hanko pequeno
+                info_btn = pygame.Rect(rect.right - 22, stats_y + 12, 18, 22)
+                self.info_btn_rects.append(info_btn)
+                draw_hanko_stamp(surface, font_zen_small, "?", info_btn.x, info_btn.y, size=18,
+                                 color=COLOR_HANKO_RED if parch else COLOR_GOLD, border_w=1)
+                if is_locked_card:
+                    self._render_locked_overlay(surface, rect, font_zen_small, is_demo_lock=is_demo_lock)
             else:
-                vel_col, dmg_col, esp_col = COLOR_GOLD, (240, 205, 195), (200, 220, 240)
-            line_vel = pm.fit_text(font_zen_tiny, f"{t('char_stat_speed')}: {char_info['speed_stars']}", vel_col, card_w - 14)
-            line_dmg = pm.fit_text(font_zen_tiny, f"{t('char_stat_damage')}: {char_info['damage_desc']}", dmg_col, card_w - 14)
-            line_esp = pm.fit_text(font_zen_tiny, f"{t('char_stat_special')}: {char_info['special_desc']}", esp_col, card_w - 14)
-
-            surface.blit(line_vel, (rect.x + 8, stats_y))
-            surface.blit(line_dmg, (rect.x + 8, stats_y + 18))
-            surface.blit(line_esp, (rect.x + 8, stats_y + 36))
-
-            # Caixa de Comandos / Teclas em Laca Negra
-            ctrl_box = pygame.Rect(rect.x + 6, rect.bottom - 46, card_w - 38, 38)
-            if parch:
-                strip = pygame.Surface(ctrl_box.size, pygame.SRCALPHA)
-                strip.fill((120, 92, 52, 70))
-                surface.blit(strip, ctrl_box.topleft)
-                pygame.draw.rect(surface, (96, 72, 44), ctrl_box, 1, border_radius=3)
-                p1_ink, p2_ink = (150, 34, 28), (28, 66, 138)
-            else:
-                pygame.draw.rect(surface, COLOR_LACQUER_DARK, ctrl_box, border_radius=4)
-                pygame.draw.rect(surface, (55, 50, 48), ctrl_box, 1, border_radius=4)
-                p1_ink, p2_ink = (255, 200, 180), (180, 220, 255)
-
-            # Formatar comandos para evitar overflow
-            p1_prefix = f"{t('p1_controls_prefix')}: "
-            p2_prefix = f"{t('p2_controls_prefix')}: "
-            p1_cmd = format_command_text(char_info['keys_p1'], max_width=ctrl_box.width - 10 - font_zen_tiny.size(p1_prefix)[0], font=font_zen_tiny)
-            p2_cmd = format_command_text(char_info['keys_p2'], max_width=ctrl_box.width - 10 - font_zen_tiny.size(p2_prefix)[0], font=font_zen_tiny)
-
-            p1_key_label = font_zen_tiny.render(f"{p1_prefix}{p1_cmd}", True, p1_ink)
-            p2_key_label = font_zen_tiny.render(f"{p2_prefix}{p2_cmd}", True, p2_ink)
-            surface.blit(p1_key_label, (ctrl_box.x + 4, ctrl_box.y + 3))
-            surface.blit(p2_key_label, (ctrl_box.x + 4, ctrl_box.y + 19))
-
-            # Botão [ ? ] como Selo Hanko pequeno
-            info_btn = pygame.Rect(rect.right - 28, rect.bottom - 46, 22, 38)
-            self.info_btn_rects.append(info_btn)
-            draw_hanko_stamp(surface, font_zen_mid, "?", info_btn.x, info_btn.y + 7, size=24,
-                             color=COLOR_HANKO_RED if parch else COLOR_GOLD, border_w=1)
-            if self.is_locked(idx):
-                self._render_locked_overlay(surface, rect, font_zen_small)
+                self.info_btn_rects.append(pygame.Rect(0, 0, 0, 0))
+                # Combatente bloqueado / em desenvolvimento: selo refinado "EM BREVE"
+                badge_text = t("demo_locked_card") if is_demo_lock else t("char_locked_badge")
+                badge_col = (165, 135, 80) if parch else (210, 190, 130)
+                badge_s = font_zen_small.render(badge_text, True, badge_col)
+                badge_rect = pygame.Rect(rect.centerx - badge_s.get_width() // 2 - 10, rect.y + 64, badge_s.get_width() + 20, 24)
+                badge_bg = pygame.Surface((badge_rect.width, badge_rect.height), pygame.SRCALPHA)
+                badge_bg.fill((30, 24, 18, 120) if parch else (15, 14, 18, 180))
+                surface.blit(badge_bg, badge_rect.topleft)
+                pygame.draw.rect(surface, (140, 115, 75) if parch else (90, 85, 78), badge_rect, 1, border_radius=4)
+                surface.blit(badge_s, (badge_rect.centerx - badge_s.get_width() // 2, badge_rect.centery - badge_s.get_height() // 2))
 
         # 7. Botão Grande de Ação: pergaminho com vara + pincelada vermelha (ou laca escarlate no fallback)
         start_w = 420

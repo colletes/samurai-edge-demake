@@ -75,7 +75,7 @@ def build_ladder(player_char: str, seed: int = 0, order: str = ORDER_TIER) -> li
     """Monta as 11 lutas da jornada para o lutador escolhido."""
     rng = random.Random(seed)
     pool = _non_ninjas_without(player_char)  # do mais fraco ao mais forte
-    if len(pool) > DUEL_COUNT:  # jogador ninja: sobram 8 e um é descartado pela semente
+    while len(pool) > DUEL_COUNT:
         pool.remove(rng.choice(pool))
     if order == ORDER_RANDOM:
         rng.shuffle(pool)

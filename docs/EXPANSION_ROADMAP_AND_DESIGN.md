@@ -35,7 +35,7 @@ Cada um dos 6 ciclos seguirá rigorosamente o fluxo de entrega definido:
 ```mermaid
 flowchart LR
     Step1["1. Portraits HD-2D<br>(1 Homem + 1 Mulher)"] --> Step2["2. Modelos Voxel 3D<br>(Articulados & Armas)"]
-    Step2 --> Step3["3. Arenas<br>(Novas Arenas + 2 Revamps)"]
+    Step2 --> Step3["3. Arenas & Trilhas Sonoras<br>(2 Novas + 2 Revamps + Prompts Gemini BGM)"]
     Step3 --> Step4["4. Integração + Fatalities<br>(Assets + Fatalities dos Golpes)"]
     Step4 --> Step5["5. Balanceamento<br>(Torneios Headless & Merge Sort)"]
     Step5 --> Step6["6. Modo Arcade<br>(Prioridade & Escala de IA)"]
@@ -44,7 +44,7 @@ flowchart LR
 ### Protocolo de Cada Ciclo:
 1. **Design de Portrait**: Geração e desenho dos retratos de busto HD-2D circular e retangular em `assets/portraits/` para os dois novos personagens do ciclo.
 2. **Design de Modelo Voxel 3D**: Criação do rig paramétrico, proporções anatômicas (~5.7 cabeças), paleta de cores e articulações em `src/entities/voxel_models.py`.
-3. **Arenas (Novas + 2 Revamps)**: Criação das arenas temáticas da dupla e aplicação de revamp visual completo com partículas dinâmicas (faíscas, névoa, folhas, pó, brasas) em 2 arenas clássicas.
+3. **Arenas (Novas + 2 Revamps) & Prompts Musicais (Gemini)**: Criação das arenas temáticas da dupla e aplicação de revamp visual completo com partículas dinâmicas (faíscas, névoa, folhas, pó, brasas) em 2 arenas clássicas. **Inclusão obrigatória de Prompts Especializados para o Gemini gerar as trilhas sonoras (BGM)** de cada arena (instrumentação tradicional, andamento, camadas dinâmicas de combate, mood e referências acústicas).
 4. **Integração & Fatalities**: Implementação das classes dos lutadores, registro na tela de seleção e adição das **animações de morte elaboradas (Fatalities)** para os veteranos do ciclo e para a nova dupla.
 5. **Testes de Balanceamento**: Execução automatizada de baterias de 1500+ duelos em `simulate_tournament.py` com IA para assegurar taxa de vitória entre 45% e 55%.
 6. **Inclusão no Modo Arcade**: Inserção dos lutadores na árvore de duelos do Modo Arcade, bosses e regras de progressão de dificuldade.

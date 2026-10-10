@@ -18,15 +18,38 @@ from src.entities.projectile import (
 from src.entities.doberman import STATE_DOG_CHARGE, STATE_DOG_KNOCKED_OUT, STATE_DOG_BARK
 
 def _get_death_style_for_attacker(attacker, weapon: str | None = None):
-    """Estilo de morte pelo golpe recebido: `weapon` (kunai, shuriken, arrow) tem prioridade sobre o atacante."""
+    """Estilo de morte contextual pelo golpe recebido: reflete a natureza do ataque que gerou a morte."""
     if weapon in ("kunai", "shuriken"):
         return "KUNAI_PIN"
     if weapon == "arrow":
         return "ARROW_PIN"
     char_type = getattr(attacker, "char_type", "").lower()
     state = getattr(attacker, "state", "")
-    if "kenshin" in char_type or "red" in char_type:
+
+    # 1. Kenshi: Iai Flash (KENSHIN_SPLIT) vs Ryuu Tsui Sen (VERTICAL_BISECTION)
+    if "kenshin" in char_type or "kenshi" in char_type or "red" in char_type:
+        if state == "RYUU_TSUI_SEN":
+            return "VERTICAL_BISECTION"
         return "KENSHIN_SPLIT"
+
+    # 2. Musashi: Combo de 3 cortes (DUAL_IMPALE_X_SPREAD) vs Parry/Onda refletida (REFLECTED_TORSO_CLEAVE)
+    elif "musashi" in char_type or "blue" in char_type:
+        if state in ("PARRY", "REFLECT", "DEFENSE") or weapon == "wave":
+            return "REFLECTED_TORSO_CLEAVE"
+        return "DUAL_IMPALE_X_SPREAD"
+
+    # 3. Ren (Shaolin): Combo Marcial (HYAKURETSU_BODY_EXPLOSION) vs Kiai (WALL_SMASH_FATAL)
+    elif "ren" in char_type or "shaolin" in char_type:
+        if state == "KIAI_SHOUT":
+            return "WALL_SMASH_FATAL"
+        return "HYAKURETSU_BODY_EXPLOSION"
+
+    # 4. Chiyo (Kunoichi 2 Nodachi): Tesoura Dupla (TRIPLE_SCISSOR_CLEAVE) vs Dança Mai (MAI_X_CLEAVE)
+    elif "chiyo" in char_type or "nodachi" in char_type:
+        if state == "MAI_DANCE":
+            return "MAI_X_CLEAVE"
+        return "TRIPLE_SCISSOR_CLEAVE"
+
     elif "murasaki" in char_type or "purple" in char_type:
         return "MURASAKI_DECAP"
     elif "pirate" in char_type or "anne" in char_type:
@@ -172,6 +195,33 @@ class CombatSystem:
                                 banners.append(FloatingBanner("CAPE DEFLECTION!", def_fighter.wx, def_fighter.wy, wz=1.75, color=(100, 180, 255)))
                                 camera.add_shake(4.5)
                                 self._play_sound("dodge_whoosh")
+
+            # 6. Ren: Aura Mística de Kiai (repele projéteis em 360° com expansão)
+            elif (char_t == "ren" or getattr(def_fighter, "kiai_aura_active", False)) and getattr(def_fighter, "kiai_aura_active", False):
+                k_rad = getattr(def_fighter, "kiai_aura_radius", 2.0)
+                for proj in projectiles:
+                    if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter:
+                        dist = world_distance(def_fighter.wx, def_fighter.wy, proj.wx, proj.wy)
+                        if dist <= k_rad:
+                            proj.is_active = False
+                            for _ in range(16):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6, color=(255, 215, 60)))
+                            banners.append(FloatingBanner("KIAI REPULSION!", def_fighter.wx, def_fighter.wy, wz=1.8, color=(255, 215, 60)))
+                            camera.add_shake(5.5)
+                            self._play_sound("sword_clash")
+
+            # 7. Chiyo: Dança Mai com 2 Nodachi (deflexão em vórtice circular)
+            elif (char_t == "chiyo" or getattr(def_fighter, "mai_active", False)) and (def_fighter.state == "MAI_DANCE" or getattr(def_fighter, "mai_active", False)):
+                for proj in projectiles:
+                    if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter:
+                        dist = world_distance(def_fighter.wx, def_fighter.wy, proj.wx, proj.wy)
+                        if dist <= 1.8:
+                            proj.is_active = False
+                            for _ in range(14):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.55, color=(210, 40, 50)))
+                            banners.append(FloatingBanner("MAI DANCE PARRY!", def_fighter.wx, def_fighter.wy, wz=1.75, color=(220, 60, 70)))
+                            camera.add_shake(5.0)
+                            self._play_sound("sword_clash")
 
 
 

@@ -20,7 +20,7 @@ pygame.font.init()
 from src.config import (
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_SAITOU,
     CHAR_RIFLE, CHAR_PURPLE, CHAR_GRAY, CHAR_KABUKI, CHAR_ARCHER,
-    CHAR_PIRATE, CHAR_MUSKETEER
+    CHAR_PIRATE, CHAR_MUSKETEER, CHAR_REN, CHAR_CHIYO
 )
 from src.world.map_data import GameMap
 from src.world.kyoto_map import KyotoMap
@@ -35,6 +35,8 @@ from src.entities.kabuki import Kabuki
 from src.entities.kyudo_archer import KyudoArcher
 from src.entities.pirate import PirateSwordswoman
 from src.entities.musketeer import Musketeer
+from src.entities.ren_monk import RenMonk
+from src.entities.chiyo_kunoichi import ChiyoKunoichi
 from src.entities.pickups import PowderPouch
 from main import get_random_arena_spawns, get_kyoto_arena_spawns, create_fighter
 
@@ -51,6 +53,8 @@ ROSTER = [
     {"id": CHAR_ARCHER, "name": "Tomoe", "title": "Arqueira Miko (Arco Yumi)"},
     {"id": CHAR_PIRATE, "name": "Anne", "title": "Espadachim (Alfanje 180°)"},
     {"id": CHAR_MUSKETEER, "name": "Julie", "title": "Mosqueteira (Florete/Riposte)"},
+    {"id": CHAR_REN, "name": "Ren", "title": "Monge Shaolin (Kiai/Flurry)"},
+    {"id": CHAR_CHIYO, "name": "Chiyo", "title": "Lâminas Gêmeas (Dual Nodachi)"},
 ]
 
 CHAR_IDS = [char["id"] for char in ROSTER]
@@ -65,6 +69,8 @@ def update_fighter(f, dt, game_map, particles, projectiles, powder_pouches=None,
     elif isinstance(f, BlueSamurai):
         f.update(dt, game_map, particles, projectiles)
     elif isinstance(f, PirateSwordswoman):
+        f.update(dt, game_map, particles, opponent=opponent)
+    elif isinstance(f, (RenMonk, ChiyoKunoichi)):
         f.update(dt, game_map, particles, opponent=opponent)
     elif isinstance(f, (RedSamurai, SaitouSamurai, Rifleman, Kabuki, Musketeer)):
         f.update(dt, game_map, particles)

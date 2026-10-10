@@ -512,6 +512,16 @@ class SamuraiAI:
                 ai_fighter.trigger_gunpowder_blind(aim_x, aim_y, opponent=opponent)
                 return True
 
+            # Ren (Shaolin Monk): Grito Kiai de 360° repele projéteis e atordoa
+            if hasattr(ai_fighter, "trigger_kiai_shout") and getattr(ai_fighter, "kiai_timer", 0.0) <= 0:
+                ai_fighter.trigger_kiai_shout(opponent=opponent, game_map=game_map)
+                return True
+
+            # Chiyo (Twin Nodachi): Dança Mai giratória em vórtice de lâminas
+            if hasattr(ai_fighter, "trigger_nodachi_mai") and getattr(ai_fighter, "mai_timer", 0.0) <= 0:
+                ai_fighter.trigger_nodachi_mai(threat_x, threat_y, opponent=opponent)
+                return True
+
             # Demais combatentes com trigger_parry genérico
             if hasattr(ai_fighter, "trigger_parry") and ai_fighter.can_move():
                 ai_fighter.set_facing(threat_x, threat_y)
@@ -773,6 +783,24 @@ class SamuraiAI:
                     ai_fighter.trigger_fleche_thrust(opponent.wx, opponent.wy)
                     return
 
+            # Ren (Shaolin Monk): combo veloz de socos marciais e Kiai
+            if hasattr(ai_fighter, "trigger_punch_combo") and not melee_unsafe:
+                if dist <= 2.2 and random.random() < 0.70:
+                    ai_fighter.trigger_punch_combo(opponent.wx, opponent.wy)
+                    return
+                if getattr(ai_fighter, "kiai_timer", 0.0) <= 0 and dist <= 2.4 and random.random() < 0.40:
+                    ai_fighter.trigger_kiai_shout(opponent=opponent, game_map=game_map)
+                    return
+
+            # Chiyo (Twin Nodachi Kunoichi): tesoura dupla de longo alcance (2.3m) e Dança Mai
+            if hasattr(ai_fighter, "trigger_scissor_slash") and not melee_unsafe:
+                if 1.2 <= dist <= 2.35 and random.random() < 0.70:
+                    ai_fighter.trigger_scissor_slash(opponent.wx, opponent.wy)
+                    return
+                if getattr(ai_fighter, "mai_timer", 0.0) <= 0 and dist <= 2.1 and random.random() < 0.40:
+                    ai_fighter.trigger_nodachi_mai(opponent.wx, opponent.wy, opponent=opponent)
+                    return
+
             # Movimentação Não-Linear e Espaçamento
             if hasattr(ai_fighter, "trigger_shoot") and not getattr(ai_fighter, "has_ammo", False):
                 dx = ai_fighter.wx - opponent.wx
@@ -908,3 +936,7 @@ class SamuraiAI:
             fighter.trigger_cutlass_cleave(target.wx, target.wy)
         elif hasattr(fighter, "trigger_fleche_thrust"):
             fighter.trigger_fleche_thrust(target.wx, target.wy)
+        elif hasattr(fighter, "trigger_punch_combo"):
+            fighter.trigger_punch_combo(target.wx, target.wy)
+        elif hasattr(fighter, "trigger_scissor_slash"):
+            fighter.trigger_scissor_slash(target.wx, target.wy)

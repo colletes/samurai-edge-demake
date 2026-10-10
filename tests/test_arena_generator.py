@@ -1299,8 +1299,8 @@ def test_all_12_character_arenas_generate():
     from src.roster import ARENA_ORDER, FIGHTER_BY_ARENA
     from src.world.arenas import ARENA_SPECS
 
-    assert len(ARENA_ORDER) == 12 and set(arena_ids()) == set(ARENA_ORDER), "as 12 arenas do elenco estão registradas"
-    assert len(FIGHTER_BY_ARENA) == 12
+    assert len(ARENA_ORDER) == len(arena_ids()) and set(arena_ids()) == set(ARENA_ORDER), "as arenas do elenco estão registradas"
+    assert len(FIGHTER_BY_ARENA) == len(ARENA_ORDER)
     for arena_id in ARENA_ORDER:
         arena = create_arena(arena_id)
         spec = ARENA_SPECS[arena_id]

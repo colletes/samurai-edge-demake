@@ -5,96 +5,98 @@
 > - Total de Guerreiros Avaliados: 12
 > - Combinações Únicas de Duelos: 66 confrontos $\binom{12}{2}$
 > - Volume de Lutas por Combinação: 24 batalhas simétricas (12 com P1/P2 alternados)
-> - **Volume Total de Batalhas Simuladas**: **1584 batalhas**
-> - Tempo Total de Simulação Física: 6.29 segundos (251.8 lutas/segundo)
+> - **Volume Total de Batalhas Simuladas**: **910 batalhas**
+> - Tempo Total de Simulação Física: 5.03 segundos (180.9 lutas/segundo)
 
 ## 1. Tabela Geral de Desempenho & Tier List
 
 | Rank | Lutador | Arquétipo / Estilo | Vitórias | Derrotas | Empates | Winrate | Tier |
 |:---:|:---|:---|:---:|:---:|:---:|:---:|:---|
-| 1 | **Teppo** | Marksman (Tanegashima/Pólvora) | 189 | 66 | 9 | **71.6%** | S (Top Tier - Opressivo) |
-| 2 | **Tomoe** | Arqueira Miko (Arco Yumi) | 156 | 89 | 19 | **59.1%** | A (Forte / Vantajoso) |
-| 3 | **Joe** | American Ninja (Shuriken/Cão) | 153 | 100 | 11 | **58.0%** | A (Forte / Vantajoso) |
-| 4 | **Murasaki** | Kunoichi Foice (Kusarigama) | 140 | 108 | 16 | **53.0%** | B (Balanceado / Saudável) |
-| 5 | **Julie** | Mosqueteira (Florete/Riposte) | 140 | 111 | 13 | **53.0%** | B (Balanceado / Saudável) |
-| 6 | **Musashi** | Duas Lâminas (Combo/Parry) | 137 | 106 | 21 | **51.9%** | B (Balanceado / Saudável) |
-| 7 | **Kasumi** | Kunoichi Névoa (Bombas/Fumaça) | 124 | 131 | 9 | **47.0%** | B (Balanceado / Saudável) |
-| 8 | **Hanzo** | Ninja Mestre (Kunai) | 115 | 133 | 16 | **43.6%** | C (Desfavorecido / Técnico) |
-| 9 | **Kenshin** | Retalhador (Iai/Shukuchi) | 109 | 135 | 20 | **41.3%** | C (Desfavorecido / Técnico) |
-| 10 | **Saitou** | Lobo de Mibu (Gatotsu) | 105 | 141 | 18 | **39.8%** | C (Desfavorecido / Técnico) |
-| 11 | **Anne** | Espadachim (Alfanje 180°) | 85 | 165 | 14 | **32.2%** | C (Desfavorecido / Técnico) |
-| 12 | **Okuni** | Mestra dos Leques (Tessen/Kawarimi) | 40 | 208 | 16 | **15.2%** | D (Underpowered / Crítico) |
+| 1 | **Teppo** | Marksman (Tanegashima/Pólvora) | 90 | 30 | 10 | **69.2%** | A (Forte / Vantajoso) |
+| 2 | **Joe** | American Ninja (Shuriken/Cão) | 82 | 38 | 10 | **63.1%** | A (Forte / Vantajoso) |
+| 3 | **Tomoe** | Arqueira Miko (Arco Yumi) | 76 | 46 | 8 | **58.5%** | A (Forte / Vantajoso) |
+| 4 | **Musashi** | Duas Lâminas (Combo/Parry) | 72 | 49 | 9 | **55.4%** | A (Forte / Vantajoso) |
+| 5 | **Julie** | Mosqueteira (Florete/Riposte) | 69 | 53 | 8 | **53.1%** | B (Balanceado / Saudável) |
+| 6 | **Kasumi** | Kunoichi Névoa (Bombas/Fumaça) | 65 | 62 | 3 | **50.0%** | B (Balanceado / Saudável) |
+| 7 | **Anne** | Espadachim (Alfanje 180°) | 65 | 58 | 7 | **50.0%** | B (Balanceado / Saudável) |
+| 8 | **Hanzo** | Ninja Mestre (Kunai) | 59 | 63 | 8 | **45.4%** | B (Balanceado / Saudável) |
+| 9 | **Murasaki** | Kunoichi Foice (Kusarigama) | 58 | 69 | 3 | **44.6%** | C (Desfavorecido / Técnico) |
+| 10 | **Saitou** | Lobo de Mibu (Gatotsu) | 57 | 67 | 6 | **43.9%** | C (Desfavorecido / Técnico) |
+| 11 | **Kenshin** | Retalhador (Iai/Shukuchi) | 53 | 65 | 12 | **40.8%** | C (Desfavorecido / Técnico) |
+| 12 | **Chiyo** | Lâminas Gêmeas (Dual Nodachi) | 45 | 80 | 5 | **34.6%** | C (Desfavorecido / Técnico) |
+| 13 | **Ren** | Monge Shaolin (Kiai/Flurry) | 36 | 86 | 8 | **27.7%** | D (Underpowered / Crítico) |
+| 14 | **Okuni** | Mestra dos Leques (Tessen/Kawarimi) | 29 | 90 | 11 | **22.3%** | D (Underpowered / Crítico) |
 
 ## 2. Comparativo de Desempenho por Cenário (Bambu vs Kyoto)
 Impacto do layout (área aberta e reflexiva do lago vs via estreita de Kyoto com perigo ativo de carruagens e escombros):
 
 | Rank | Lutador | Winrate Geral | Winrate Bambu | Winrate Kyoto | Impacto Kyoto vs Bambu |
 |:---:|:---|:---:|:---:|:---:|:---:|
-| 1 | **Teppo** | **71.6%** | 73.5% | 69.7% | -3.8% |
-| 2 | **Tomoe** | **59.1%** | 61.4% | 56.8% | -4.5% |
-| 3 | **Joe** | **58.0%** | 62.1% | 53.8% | -8.3% |
-| 4 | **Murasaki** | **53.0%** | 52.3% | 53.8% | +1.5% |
-| 5 | **Julie** | **53.0%** | 62.9% | 43.2% | -19.7% |
-| 6 | **Musashi** | **51.9%** | 56.8% | 47.0% | -9.9% |
-| 7 | **Kasumi** | **47.0%** | 48.5% | 45.5% | -3.0% |
-| 8 | **Hanzo** | **43.6%** | 46.2% | 40.9% | -5.3% |
-| 9 | **Kenshin** | **41.3%** | 43.2% | 39.4% | -3.8% |
-| 10 | **Saitou** | **39.8%** | 43.2% | 36.4% | -6.8% |
-| 11 | **Anne** | **32.2%** | 31.8% | 32.6% | +0.8% |
-| 12 | **Okuni** | **15.2%** | 17.4% | 12.9% | -4.5% |
+| 1 | **Teppo** | **69.2%** | 80.0% | 58.5% | -21.5% |
+| 2 | **Joe** | **63.1%** | 66.2% | 60.0% | -6.2% |
+| 3 | **Tomoe** | **58.5%** | 60.0% | 56.9% | -3.1% |
+| 4 | **Musashi** | **55.4%** | 61.5% | 49.2% | -12.3% |
+| 5 | **Julie** | **53.1%** | 56.9% | 49.2% | -7.7% |
+| 6 | **Kasumi** | **50.0%** | 55.4% | 44.6% | -10.8% |
+| 7 | **Anne** | **50.0%** | 53.9% | 46.1% | -7.7% |
+| 8 | **Hanzo** | **45.4%** | 49.2% | 41.5% | -7.7% |
+| 9 | **Murasaki** | **44.6%** | 46.1% | 43.1% | -3.1% |
+| 10 | **Saitou** | **43.9%** | 47.7% | 40.0% | -7.7% |
+| 11 | **Kenshin** | **40.8%** | 38.5% | 43.1% | +4.6% |
+| 12 | **Chiyo** | **34.6%** | 35.4% | 33.9% | -1.5% |
+| 13 | **Ren** | **27.7%** | 29.2% | 26.1% | -3.1% |
+| 14 | **Okuni** | **22.3%** | 20.0% | 24.6% | +4.6% |
 
 ## 3. Matriz de Confrontos Head-to-Head (H2H 12x12)
 A tabela exibe a taxa percentual de vitórias da linha contra a coluna nas 24 lutas disputadas (12 em cada arena):
 
-| Lutador | Kenshi | Musash | Hanzo | Joe | Saitou | Teppo | Murasa | Kasumi | Okuni | Tomoe | Anne | Julie |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Kenshin** | — | 17% | 54% | 50% | 46% | 17% | 33% | 54% | 62% | 12% | 67% | 42% |
-| **Musashi** | 83% | — | 17% | 17% | 50% | 33% | 25% | 92% | 75% | 25% | 79% | 75% |
-| **Hanzo** | 33% | 83% | — | 21% | 38% | 25% | 38% | 33% | 67% | 50% | 54% | 38% |
-| **Joe** | 50% | 75% | 58% | — | 62% | 29% | 71% | 38% | 79% | 38% | 88% | 50% |
-| **Saitou** | 33% | 25% | 58% | 33% | — | 17% | 29% | 29% | 71% | 38% | 62% | 42% |
-| **Teppo** | 83% | 54% | 75% | 71% | 83% | — | 79% | 71% | 92% | 58% | 75% | 46% |
-| **Murasaki** | 62% | 62% | 62% | 29% | 71% | 12% | — | 54% | 83% | 42% | 54% | 50% |
-| **Kasumi** | 46% | 4% | 67% | 58% | 71% | 29% | 42% | — | 96% | 38% | 46% | 21% |
-| **Okuni** | 21% | 12% | 21% | 21% | 25% | 4% | 8% | 0% | — | 12% | 29% | 12% |
-| **Tomoe** | 71% | 71% | 46% | 58% | 58% | 42% | 33% | 54% | 88% | — | 71% | 58% |
-| **Anne** | 21% | 21% | 38% | 8% | 33% | 21% | 46% | 50% | 67% | 21% | — | 29% |
-| **Julie** | 58% | 17% | 58% | 50% | 50% | 46% | 46% | 71% | 88% | 38% | 62% | — |
+| Lutador | Kenshi | Musash | Hanzo | Joe | Saitou | Teppo | Murasa | Kasumi | Okuni | Tomoe | Anne | Julie | Ren | Chiyo |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Kenshin** | — | 30% | 50% | 20% | 30% | 30% | 30% | 60% | 70% | 20% | 20% | 30% | 70% | 70% |
+| **Musashi** | 70% | — | 40% | 40% | 60% | 30% | 70% | 70% | 70% | 40% | 50% | 60% | 50% | 70% |
+| **Hanzo** | 30% | 60% | — | 50% | 50% | 40% | 30% | 30% | 50% | 60% | 40% | 20% | 70% | 60% |
+| **Joe** | 80% | 60% | 50% | — | 90% | 10% | 70% | 60% | 90% | 60% | 40% | 50% | 80% | 80% |
+| **Saitou** | 50% | 20% | 50% | 10% | — | 20% | 40% | 60% | 60% | 70% | 20% | 50% | 70% | 50% |
+| **Teppo** | 60% | 50% | 50% | 60% | 80% | — | 90% | 80% | 80% | 50% | 80% | 50% | 80% | 90% |
+| **Murasaki** | 60% | 20% | 70% | 30% | 60% | 10% | — | 20% | 70% | 30% | 10% | 50% | 90% | 60% |
+| **Kasumi** | 40% | 30% | 70% | 30% | 40% | 20% | 80% | — | 60% | 40% | 80% | 30% | 70% | 60% |
+| **Okuni** | 20% | 20% | 40% | 0% | 40% | 20% | 30% | 30% | — | 10% | 30% | 0% | 10% | 40% |
+| **Tomoe** | 70% | 50% | 40% | 30% | 20% | 40% | 60% | 60% | 80% | — | 90% | 70% | 60% | 90% |
+| **Anne** | 50% | 50% | 40% | 50% | 80% | 20% | 90% | 20% | 70% | 10% | — | 30% | 90% | 50% |
+| **Julie** | 60% | 40% | 70% | 40% | 50% | 40% | 50% | 70% | 80% | 30% | 60% | — | 60% | 40% |
+| **Ren** | 30% | 30% | 30% | 20% | 30% | 10% | 10% | 20% | 70% | 30% | 10% | 30% | — | 40% |
+| **Chiyo** | 30% | 30% | 30% | 0% | 40% | 10% | 40% | 40% | 50% | 10% | 50% | 60% | 60% | — |
 
 ## 4. Resultado do Algoritmo Merge Sort de Duelos
 O Merge Sort executou uma ordenação por divisão e conquista onde cada decisão de precedência foi arbitrada pelo retrospecto direto de combates:
 
-1. **Teppo** — Winrate Geral: 71.6% (189V / 66D / 9E)
-2. **Joe** — Winrate Geral: 58.0% (153V / 100D / 11E)
-3. **Murasaki** — Winrate Geral: 53.0% (140V / 108D / 16E)
-4. **Tomoe** — Winrate Geral: 59.1% (156V / 89D / 19E)
-5. **Julie** — Winrate Geral: 53.0% (140V / 111D / 13E)
-6. **Kenshin** — Winrate Geral: 41.3% (109V / 135D / 20E)
-7. **Saitou** — Winrate Geral: 39.8% (105V / 141D / 18E)
-8. **Hanzo** — Winrate Geral: 43.6% (115V / 133D / 16E)
-9. **Musashi** — Winrate Geral: 51.9% (137V / 106D / 21E)
-10. **Anne** — Winrate Geral: 32.2% (85V / 165D / 14E)
-11. **Kasumi** — Winrate Geral: 47.0% (124V / 131D / 9E)
-12. **Okuni** — Winrate Geral: 15.2% (40V / 208D / 16E)
+1. **Teppo** — Winrate Geral: 69.2% (90V / 30D / 10E)
+2. **Joe** — Winrate Geral: 63.1% (82V / 38D / 10E)
+3. **Tomoe** — Winrate Geral: 58.5% (76V / 46D / 8E)
+4. **Kasumi** — Winrate Geral: 50.0% (65V / 62D / 3E)
+5. **Murasaki** — Winrate Geral: 44.6% (58V / 69D / 3E)
+6. **Saitou** — Winrate Geral: 43.9% (57V / 67D / 6E)
+7. **Kenshin** — Winrate Geral: 40.8% (53V / 65D / 12E)
+8. **Hanzo** — Winrate Geral: 45.4% (59V / 63D / 8E)
+9. **Musashi** — Winrate Geral: 55.4% (72V / 49D / 9E)
+10. **Chiyo** — Winrate Geral: 34.6% (45V / 80D / 5E)
+11. **Julie** — Winrate Geral: 53.1% (69V / 53D / 8E)
+12. **Anne** — Winrate Geral: 50.0% (65V / 58D / 7E)
+13. **Ren** — Winrate Geral: 27.7% (36V / 86D / 8E)
+14. **Okuni** — Winrate Geral: 22.3% (29V / 90D / 11E)
 
 ## 5. Avaliação Técnica Aprofundada do Balanceamento
 
 ### 5.1 Opressão e Dominância (Top Tiers)
-- **Teppo (71.6%) & Tomoe (59.1%)**:
+- **Teppo (69.2%) & Joe (63.1%)**:
   - As mecânicas de ataque com prioridade/precedência absoluta, alcance de projéteis instantâneos (snipers) ou frames defensivos de Parry/Riposte garantem uma taxa de vitória esmagadora contra lutadores de aproximação pura.
 
 ### 5.2 Vulnerabilidades Críticas (Bottom Tiers)
-- **Okuni (15.2%) & Anne (32.2%)**:
+- **Okuni (22.3%) & Ren (27.7%)**:
   - Lutadores que dependem de tempos longos de recarga parada (ex: recarga do arcabuz sem cobertura móvel), auto-dano/suicídio por fogo amigo de explosivos, ou windup de retesamento de arco sofrem punições instantâneas contra oponentes rápidos.
 
 ### 5.3 Dinâmica de Pedra-Papel-Tesoura e Polarização Extrema
-Foram detectados confrontos com polarização extrema (>= 87% de vitória para um lado):
-- **Musashi vs Kasumi**: Placar esmagador de 22 a 1 (91.7% de dominância)
-- **Joe vs Anne**: Placar esmagador de 21 a 2 (87.5% de dominância)
-- **Teppo vs Okuni**: Placar esmagador de 22 a 1 (91.7% de dominância)
-- **Kasumi vs Okuni**: Placar esmagador de 23 a 0 (95.8% de dominância)
-- **Tomoe vs Okuni**: Placar esmagador de 21 a 3 (87.5% de dominância)
-- **Julie vs Okuni**: Placar esmagador de 21 a 3 (87.5% de dominância)
+Não foram detectados confrontos com polarização extrema superior a 87%.
 
 ## 6. Propostas Concretas de Balance Patch (Recomendações de Design)
 Para equalizar o elenco e aproximar todos os combatentes da faixa saudável de 45% a 55% de winrate:

@@ -1,305 +1,355 @@
 {
   "difficulty": "normal",
-  "total_battles": 1584,
-  "sim_time": 6.29,
+  "total_battles": 910,
+  "sim_time": 5.03,
   "standings": [
     {
       "id": "kenshin",
       "name": "Kenshin",
-      "wins": 109,
-      "losses": 135,
-      "draws": 20,
-      "total_matches": 264,
-      "winrate": 41.29,
+      "wins": 53,
+      "losses": 65,
+      "draws": 12,
+      "total_matches": 130,
+      "winrate": 40.77,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins": 57,
-          "losses": 74,
-          "draws": 1,
-          "total": 132,
-          "winrate": 43.18
+          "wins": 25,
+          "losses": 40,
+          "draws": 0,
+          "total": 65,
+          "winrate": 38.46
         },
         "Kyoto Bakumatsu": {
-          "wins": 52,
-          "losses": 61,
-          "draws": 19,
-          "total": 132,
-          "winrate": 39.39
+          "wins": 28,
+          "losses": 25,
+          "draws": 12,
+          "total": 65,
+          "winrate": 43.08
         }
       }
     },
     {
       "id": "musashi",
       "name": "Musashi",
-      "wins": 137,
-      "losses": 106,
-      "draws": 21,
-      "total_matches": 264,
-      "winrate": 51.89,
+      "wins": 72,
+      "losses": 49,
+      "draws": 9,
+      "total_matches": 130,
+      "winrate": 55.38,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins": 75,
-          "losses": 57,
+          "wins": 40,
+          "losses": 25,
           "draws": 0,
-          "total": 132,
-          "winrate": 56.82
+          "total": 65,
+          "winrate": 61.54
         },
         "Kyoto Bakumatsu": {
-          "wins": 62,
-          "losses": 49,
-          "draws": 21,
-          "total": 132,
-          "winrate": 46.97
+          "wins": 32,
+          "losses": 24,
+          "draws": 9,
+          "total": 65,
+          "winrate": 49.23
         }
       }
     },
     {
       "id": "ninja",
       "name": "Hanzo",
-      "wins": 115,
-      "losses": 133,
-      "draws": 16,
-      "total_matches": 264,
-      "winrate": 43.56,
+      "wins": 59,
+      "losses": 63,
+      "draws": 8,
+      "total_matches": 130,
+      "winrate": 45.38,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins": 61,
-          "losses": 70,
-          "draws": 1,
-          "total": 132,
-          "winrate": 46.21
+          "wins": 32,
+          "losses": 33,
+          "draws": 0,
+          "total": 65,
+          "winrate": 49.23
         },
         "Kyoto Bakumatsu": {
-          "wins": 54,
-          "losses": 63,
-          "draws": 15,
-          "total": 132,
-          "winrate": 40.91
+          "wins": 27,
+          "losses": 30,
+          "draws": 8,
+          "total": 65,
+          "winrate": 41.54
         }
       }
     },
     {
       "id": "american",
       "name": "Joe",
-      "wins": 153,
-      "losses": 100,
-      "draws": 11,
-      "total_matches": 264,
-      "winrate": 57.95,
+      "wins": 82,
+      "losses": 38,
+      "draws": 10,
+      "total_matches": 130,
+      "winrate": 63.08,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins": 82,
-          "losses": 50,
+          "wins": 43,
+          "losses": 22,
           "draws": 0,
-          "total": 132,
-          "winrate": 62.12
+          "total": 65,
+          "winrate": 66.15
         },
         "Kyoto Bakumatsu": {
-          "wins": 71,
-          "losses": 50,
-          "draws": 11,
-          "total": 132,
-          "winrate": 53.79
+          "wins": 39,
+          "losses": 16,
+          "draws": 10,
+          "total": 65,
+          "winrate": 60.0
         }
       }
     },
     {
       "id": "saitou",
       "name": "Saitou",
-      "wins": 105,
-      "losses": 141,
-      "draws": 18,
-      "total_matches": 264,
-      "winrate": 39.77,
+      "wins": 57,
+      "losses": 67,
+      "draws": 6,
+      "total_matches": 130,
+      "winrate": 43.85,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins": 57,
-          "losses": 75,
+          "wins": 31,
+          "losses": 34,
           "draws": 0,
-          "total": 132,
-          "winrate": 43.18
+          "total": 65,
+          "winrate": 47.69
         },
         "Kyoto Bakumatsu": {
-          "wins": 48,
-          "losses": 66,
-          "draws": 18,
-          "total": 132,
-          "winrate": 36.36
+          "wins": 26,
+          "losses": 33,
+          "draws": 6,
+          "total": 65,
+          "winrate": 40.0
         }
       }
     },
     {
       "id": "rifleman",
       "name": "Teppo",
-      "wins": 189,
-      "losses": 66,
-      "draws": 9,
-      "total_matches": 264,
-      "winrate": 71.59,
+      "wins": 90,
+      "losses": 30,
+      "draws": 10,
+      "total_matches": 130,
+      "winrate": 69.23,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins": 97,
-          "losses": 35,
+          "wins": 52,
+          "losses": 13,
           "draws": 0,
-          "total": 132,
-          "winrate": 73.48
+          "total": 65,
+          "winrate": 80.0
         },
         "Kyoto Bakumatsu": {
-          "wins": 92,
-          "losses": 31,
-          "draws": 9,
-          "total": 132,
-          "winrate": 69.7
+          "wins": 38,
+          "losses": 17,
+          "draws": 10,
+          "total": 65,
+          "winrate": 58.46
         }
       }
     },
     {
       "id": "purple",
       "name": "Murasaki",
-      "wins": 140,
-      "losses": 108,
-      "draws": 16,
-      "total_matches": 264,
-      "winrate": 53.03,
+      "wins": 58,
+      "losses": 69,
+      "draws": 3,
+      "total_matches": 130,
+      "winrate": 44.62,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins": 69,
-          "losses": 63,
+          "wins": 30,
+          "losses": 35,
           "draws": 0,
-          "total": 132,
-          "winrate": 52.27
+          "total": 65,
+          "winrate": 46.15
         },
         "Kyoto Bakumatsu": {
-          "wins": 71,
-          "losses": 45,
-          "draws": 16,
-          "total": 132,
-          "winrate": 53.79
+          "wins": 28,
+          "losses": 34,
+          "draws": 3,
+          "total": 65,
+          "winrate": 43.08
         }
       }
     },
     {
       "id": "gray",
       "name": "Kasumi",
-      "wins": 124,
-      "losses": 131,
-      "draws": 9,
-      "total_matches": 264,
-      "winrate": 46.97,
+      "wins": 65,
+      "losses": 62,
+      "draws": 3,
+      "total_matches": 130,
+      "winrate": 50.0,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins": 64,
-          "losses": 68,
+          "wins": 36,
+          "losses": 29,
           "draws": 0,
-          "total": 132,
-          "winrate": 48.48
+          "total": 65,
+          "winrate": 55.38
         },
         "Kyoto Bakumatsu": {
-          "wins": 60,
-          "losses": 63,
-          "draws": 9,
-          "total": 132,
-          "winrate": 45.45
+          "wins": 29,
+          "losses": 33,
+          "draws": 3,
+          "total": 65,
+          "winrate": 44.62
         }
       }
     },
     {
       "id": "kabuki",
       "name": "Okuni",
-      "wins": 40,
-      "losses": 208,
-      "draws": 16,
-      "total_matches": 264,
-      "winrate": 15.15,
+      "wins": 29,
+      "losses": 90,
+      "draws": 11,
+      "total_matches": 130,
+      "winrate": 22.31,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins": 23,
-          "losses": 109,
+          "wins": 13,
+          "losses": 52,
           "draws": 0,
-          "total": 132,
-          "winrate": 17.42
+          "total": 65,
+          "winrate": 20.0
         },
         "Kyoto Bakumatsu": {
-          "wins": 17,
-          "losses": 99,
-          "draws": 16,
-          "total": 132,
-          "winrate": 12.88
+          "wins": 16,
+          "losses": 38,
+          "draws": 11,
+          "total": 65,
+          "winrate": 24.62
         }
       }
     },
     {
       "id": "archer",
       "name": "Tomoe",
-      "wins": 156,
-      "losses": 89,
-      "draws": 19,
-      "total_matches": 264,
-      "winrate": 59.09,
+      "wins": 76,
+      "losses": 46,
+      "draws": 8,
+      "total_matches": 130,
+      "winrate": 58.46,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins": 81,
-          "losses": 51,
+          "wins": 39,
+          "losses": 26,
           "draws": 0,
-          "total": 132,
-          "winrate": 61.36
+          "total": 65,
+          "winrate": 60.0
         },
         "Kyoto Bakumatsu": {
-          "wins": 75,
-          "losses": 38,
-          "draws": 19,
-          "total": 132,
-          "winrate": 56.82
+          "wins": 37,
+          "losses": 20,
+          "draws": 8,
+          "total": 65,
+          "winrate": 56.92
         }
       }
     },
     {
       "id": "pirate",
       "name": "Anne",
-      "wins": 85,
-      "losses": 165,
-      "draws": 14,
-      "total_matches": 264,
-      "winrate": 32.2,
+      "wins": 65,
+      "losses": 58,
+      "draws": 7,
+      "total_matches": 130,
+      "winrate": 50.0,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins": 42,
-          "losses": 90,
+          "wins": 35,
+          "losses": 30,
           "draws": 0,
-          "total": 132,
-          "winrate": 31.82
+          "total": 65,
+          "winrate": 53.85
         },
         "Kyoto Bakumatsu": {
-          "wins": 43,
-          "losses": 75,
-          "draws": 14,
-          "total": 132,
-          "winrate": 32.58
+          "wins": 30,
+          "losses": 28,
+          "draws": 7,
+          "total": 65,
+          "winrate": 46.15
         }
       }
     },
     {
       "id": "musketeer",
       "name": "Julie",
-      "wins": 140,
-      "losses": 111,
-      "draws": 13,
-      "total_matches": 264,
-      "winrate": 53.03,
+      "wins": 69,
+      "losses": 53,
+      "draws": 8,
+      "total_matches": 130,
+      "winrate": 53.08,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins": 83,
-          "losses": 49,
+          "wins": 37,
+          "losses": 28,
           "draws": 0,
-          "total": 132,
-          "winrate": 62.88
+          "total": 65,
+          "winrate": 56.92
         },
         "Kyoto Bakumatsu": {
-          "wins": 57,
-          "losses": 62,
-          "draws": 13,
-          "total": 132,
-          "winrate": 43.18
+          "wins": 32,
+          "losses": 25,
+          "draws": 8,
+          "total": 65,
+          "winrate": 49.23
+        }
+      }
+    },
+    {
+      "id": "ren",
+      "name": "Ren",
+      "wins": 36,
+      "losses": 86,
+      "draws": 8,
+      "total_matches": 130,
+      "winrate": 27.69,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins": 19,
+          "losses": 46,
+          "draws": 0,
+          "total": 65,
+          "winrate": 29.23
+        },
+        "Kyoto Bakumatsu": {
+          "wins": 17,
+          "losses": 40,
+          "draws": 8,
+          "total": 65,
+          "winrate": 26.15
+        }
+      }
+    },
+    {
+      "id": "chiyo",
+      "name": "Chiyo",
+      "wins": 45,
+      "losses": 80,
+      "draws": 5,
+      "total_matches": 130,
+      "winrate": 34.62,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins": 23,
+          "losses": 42,
+          "draws": 0,
+          "total": 65,
+          "winrate": 35.38
+        },
+        "Kyoto Bakumatsu": {
+          "wins": 22,
+          "losses": 38,
+          "draws": 5,
+          "total": 65,
+          "winrate": 33.85
         }
       }
     }
@@ -307,15 +357,17 @@
   "merge_sorted_roster": [
     "rifleman",
     "american",
-    "purple",
     "archer",
-    "musketeer",
-    "kenshin",
+    "gray",
+    "purple",
     "saitou",
+    "kenshin",
     "ninja",
     "musashi",
+    "chiyo",
+    "musketeer",
     "pirate",
-    "gray",
+    "ren",
     "kabuki"
   ],
   "matchups": {
@@ -324,23 +376,23 @@
       "c2": "musashi",
       "c1_name": "Kenshin",
       "c2_name": "Musashi",
-      "wins_c1": 4,
-      "wins_c2": 20,
+      "wins_c1": 3,
+      "wins_c2": 7,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 7.47,
+      "total_battles": 10,
+      "avg_time": 5.92,
       "arena_stats": {
         "Floresta de Bambu": {
           "wins_c1": 0,
-          "wins_c2": 12,
+          "wins_c2": 5,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 4,
-          "wins_c2": 8,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -349,23 +401,23 @@
       "c2": "ninja",
       "c1_name": "Kenshin",
       "c2_name": "Hanzo",
-      "wins_c1": 13,
-      "wins_c2": 8,
-      "draws": 3,
-      "total_battles": 24,
-      "avg_time": 5.53,
+      "wins_c1": 5,
+      "wins_c2": 3,
+      "draws": 2,
+      "total_battles": 10,
+      "avg_time": 8.69,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 8,
-          "wins_c2": 3,
-          "draws": 1,
-          "total": 12
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 5,
-          "wins_c2": 5,
+          "wins_c1": 2,
+          "wins_c2": 1,
           "draws": 2,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -374,23 +426,23 @@
       "c2": "american",
       "c1_name": "Kenshin",
       "c2_name": "Joe",
-      "wins_c1": 12,
-      "wins_c2": 12,
+      "wins_c1": 2,
+      "wins_c2": 8,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 4.21,
+      "total_battles": 10,
+      "avg_time": 1.51,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 5,
-          "wins_c2": 7,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 7,
-          "wins_c2": 5,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -399,23 +451,23 @@
       "c2": "saitou",
       "c1_name": "Kenshin",
       "c2_name": "Saitou",
-      "wins_c1": 11,
-      "wins_c2": 8,
-      "draws": 5,
-      "total_battles": 24,
-      "avg_time": 11.53,
+      "wins_c1": 3,
+      "wins_c2": 5,
+      "draws": 2,
+      "total_battles": 10,
+      "avg_time": 12.12,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 5,
-          "wins_c2": 7,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 6,
+          "wins_c1": 2,
           "wins_c2": 1,
-          "draws": 5,
-          "total": 12
+          "draws": 2,
+          "total": 5
         }
       }
     },
@@ -424,23 +476,23 @@
       "c2": "rifleman",
       "c1_name": "Kenshin",
       "c2_name": "Teppo",
-      "wins_c1": 4,
-      "wins_c2": 20,
-      "draws": 0,
-      "total_battles": 24,
-      "avg_time": 2.57,
+      "wins_c1": 3,
+      "wins_c2": 6,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 4.66,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 3,
-          "wins_c2": 9,
+          "wins_c1": 2,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
           "wins_c1": 1,
-          "wins_c2": 11,
-          "draws": 0,
-          "total": 12
+          "wins_c2": 3,
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -449,23 +501,23 @@
       "c2": "purple",
       "c1_name": "Kenshin",
       "c2_name": "Murasaki",
-      "wins_c1": 8,
-      "wins_c2": 15,
+      "wins_c1": 3,
+      "wins_c2": 6,
       "draws": 1,
-      "total_battles": 24,
-      "avg_time": 2.62,
+      "total_battles": 10,
+      "avg_time": 5.54,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 4,
-          "wins_c2": 8,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 4,
-          "wins_c2": 7,
+          "wins_c1": 2,
+          "wins_c2": 2,
           "draws": 1,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -474,23 +526,23 @@
       "c2": "gray",
       "c1_name": "Kenshin",
       "c2_name": "Kasumi",
-      "wins_c1": 13,
-      "wins_c2": 11,
+      "wins_c1": 6,
+      "wins_c2": 4,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 5.44,
+      "total_battles": 10,
+      "avg_time": 8.1,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 7,
-          "wins_c2": 5,
+          "wins_c1": 2,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 6,
-          "wins_c2": 6,
+          "wins_c1": 4,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -499,23 +551,23 @@
       "c2": "kabuki",
       "c1_name": "Kenshin",
       "c2_name": "Okuni",
-      "wins_c1": 15,
-      "wins_c2": 5,
-      "draws": 4,
-      "total_battles": 24,
-      "avg_time": 10.25,
+      "wins_c1": 7,
+      "wins_c2": 2,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 16.24,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 9,
-          "wins_c2": 3,
+          "wins_c1": 4,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 6,
-          "wins_c2": 2,
-          "draws": 4,
-          "total": 12
+          "wins_c1": 3,
+          "wins_c2": 1,
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -524,23 +576,23 @@
       "c2": "archer",
       "c1_name": "Kenshin",
       "c2_name": "Tomoe",
-      "wins_c1": 3,
-      "wins_c2": 17,
-      "draws": 4,
-      "total_battles": 24,
-      "avg_time": 6.74,
+      "wins_c1": 2,
+      "wins_c2": 7,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 4.42,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 2,
-          "wins_c2": 10,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
           "wins_c1": 1,
-          "wins_c2": 7,
-          "draws": 4,
-          "total": 12
+          "wins_c2": 3,
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -549,23 +601,23 @@
       "c2": "pirate",
       "c1_name": "Kenshin",
       "c2_name": "Anne",
-      "wins_c1": 16,
+      "wins_c1": 2,
       "wins_c2": 5,
       "draws": 3,
-      "total_battles": 24,
-      "avg_time": 8.64,
+      "total_battles": 10,
+      "avg_time": 12.19,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 10,
-          "wins_c2": 2,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 6,
-          "wins_c2": 3,
+          "wins_c1": 1,
+          "wins_c2": 1,
           "draws": 3,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -574,23 +626,73 @@
       "c2": "musketeer",
       "c1_name": "Kenshin",
       "c2_name": "Julie",
-      "wins_c1": 10,
-      "wins_c2": 14,
+      "wins_c1": 3,
+      "wins_c2": 6,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 8.59,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 2,
+          "wins_c2": 3,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 1,
+          "wins_c2": 3,
+          "draws": 1,
+          "total": 5
+        }
+      }
+    },
+    "kenshin_vs_ren": {
+      "c1": "kenshin",
+      "c2": "ren",
+      "c1_name": "Kenshin",
+      "c2_name": "Ren",
+      "wins_c1": 7,
+      "wins_c2": 3,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 4.14,
+      "total_battles": 10,
+      "avg_time": 5.87,
       "arena_stats": {
         "Floresta de Bambu": {
           "wins_c1": 4,
-          "wins_c2": 8,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 6,
-          "wins_c2": 6,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
+        }
+      }
+    },
+    "kenshin_vs_chiyo": {
+      "c1": "kenshin",
+      "c2": "chiyo",
+      "c1_name": "Kenshin",
+      "c2_name": "Chiyo",
+      "wins_c1": 7,
+      "wins_c2": 3,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 15.33,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -600,22 +702,22 @@
       "c1_name": "Musashi",
       "c2_name": "Hanzo",
       "wins_c1": 4,
-      "wins_c2": 20,
+      "wins_c2": 6,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 1.85,
+      "total_battles": 10,
+      "avg_time": 1.79,
       "arena_stats": {
         "Floresta de Bambu": {
           "wins_c1": 2,
-          "wins_c2": 10,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
           "wins_c1": 2,
-          "wins_c2": 10,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -625,22 +727,22 @@
       "c1_name": "Musashi",
       "c2_name": "Joe",
       "wins_c1": 4,
-      "wins_c2": 18,
-      "draws": 2,
-      "total_battles": 24,
-      "avg_time": 6.18,
+      "wins_c2": 6,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 4.72,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 0,
-          "wins_c2": 12,
+          "wins_c1": 2,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 4,
-          "wins_c2": 6,
-          "draws": 2,
-          "total": 12
+          "wins_c1": 2,
+          "wins_c2": 3,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -649,23 +751,23 @@
       "c2": "saitou",
       "c1_name": "Musashi",
       "c2_name": "Saitou",
-      "wins_c1": 12,
-      "wins_c2": 6,
-      "draws": 6,
-      "total_battles": 24,
-      "avg_time": 12.1,
+      "wins_c1": 6,
+      "wins_c2": 2,
+      "draws": 2,
+      "total_battles": 10,
+      "avg_time": 12.9,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 7,
-          "wins_c2": 5,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 5,
-          "wins_c2": 1,
-          "draws": 6,
-          "total": 12
+          "wins_c1": 3,
+          "wins_c2": 0,
+          "draws": 2,
+          "total": 5
         }
       }
     },
@@ -674,23 +776,23 @@
       "c2": "rifleman",
       "c1_name": "Musashi",
       "c2_name": "Teppo",
-      "wins_c1": 8,
-      "wins_c2": 13,
-      "draws": 3,
-      "total_battles": 24,
-      "avg_time": 7.76,
+      "wins_c1": 3,
+      "wins_c2": 5,
+      "draws": 2,
+      "total_battles": 10,
+      "avg_time": 12.63,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 6,
-          "wins_c2": 6,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
           "wins_c1": 2,
-          "wins_c2": 7,
-          "draws": 3,
-          "total": 12
+          "wins_c2": 1,
+          "draws": 2,
+          "total": 5
         }
       }
     },
@@ -699,23 +801,23 @@
       "c2": "purple",
       "c1_name": "Musashi",
       "c2_name": "Murasaki",
-      "wins_c1": 6,
-      "wins_c2": 15,
-      "draws": 3,
-      "total_battles": 24,
-      "avg_time": 7.28,
+      "wins_c1": 7,
+      "wins_c2": 2,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 5.57,
       "arena_stats": {
         "Floresta de Bambu": {
           "wins_c1": 3,
-          "wins_c2": 9,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 3,
-          "wins_c2": 6,
-          "draws": 3,
-          "total": 12
+          "wins_c1": 4,
+          "wins_c2": 0,
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -724,23 +826,23 @@
       "c2": "gray",
       "c1_name": "Musashi",
       "c2_name": "Kasumi",
-      "wins_c1": 22,
-      "wins_c2": 1,
-      "draws": 1,
-      "total_battles": 24,
-      "avg_time": 4.42,
+      "wins_c1": 7,
+      "wins_c2": 3,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.85,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 11,
+          "wins_c1": 4,
           "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 11,
-          "wins_c2": 0,
-          "draws": 1,
-          "total": 12
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -749,23 +851,23 @@
       "c2": "kabuki",
       "c1_name": "Musashi",
       "c2_name": "Okuni",
-      "wins_c1": 18,
-      "wins_c2": 3,
-      "draws": 3,
-      "total_battles": 24,
-      "avg_time": 8.28,
+      "wins_c1": 7,
+      "wins_c2": 2,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 13.05,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 10,
-          "wins_c2": 2,
+          "wins_c1": 4,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 8,
+          "wins_c1": 3,
           "wins_c2": 1,
-          "draws": 3,
-          "total": 12
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -774,23 +876,23 @@
       "c2": "archer",
       "c1_name": "Musashi",
       "c2_name": "Tomoe",
-      "wins_c1": 6,
-      "wins_c2": 17,
+      "wins_c1": 4,
+      "wins_c2": 5,
       "draws": 1,
-      "total_battles": 24,
-      "avg_time": 8.9,
+      "total_battles": 10,
+      "avg_time": 12.65,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 6,
-          "wins_c2": 6,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 0,
-          "wins_c2": 11,
+          "wins_c1": 1,
+          "wins_c2": 3,
           "draws": 1,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -799,23 +901,23 @@
       "c2": "pirate",
       "c1_name": "Musashi",
       "c2_name": "Anne",
-      "wins_c1": 19,
+      "wins_c1": 5,
       "wins_c2": 5,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 2.74,
+      "total_battles": 10,
+      "avg_time": 3.52,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 10,
+          "wins_c1": 3,
           "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 9,
+          "wins_c1": 2,
           "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -824,23 +926,73 @@
       "c2": "musketeer",
       "c1_name": "Musashi",
       "c2_name": "Julie",
-      "wins_c1": 18,
+      "wins_c1": 6,
       "wins_c2": 4,
-      "draws": 2,
-      "total_battles": 24,
-      "avg_time": 4.65,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 8.84,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 8,
-          "wins_c2": 4,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 10,
-          "wins_c2": 0,
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        }
+      }
+    },
+    "musashi_vs_ren": {
+      "c1": "musashi",
+      "c2": "ren",
+      "c1_name": "Musashi",
+      "c2_name": "Ren",
+      "wins_c1": 5,
+      "wins_c2": 3,
+      "draws": 2,
+      "total_battles": 10,
+      "avg_time": 10.2,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 2,
+          "wins_c2": 1,
           "draws": 2,
-          "total": 12
+          "total": 5
+        }
+      }
+    },
+    "musashi_vs_chiyo": {
+      "c1": "musashi",
+      "c2": "chiyo",
+      "c1_name": "Musashi",
+      "c2_name": "Chiyo",
+      "wins_c1": 7,
+      "wins_c2": 3,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 3.05,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -850,22 +1002,22 @@
       "c1_name": "Hanzo",
       "c2_name": "Joe",
       "wins_c1": 5,
-      "wins_c2": 14,
-      "draws": 5,
-      "total_battles": 24,
-      "avg_time": 8.46,
+      "wins_c2": 5,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 4.56,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 5,
-          "wins_c2": 7,
+          "wins_c1": 2,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 0,
-          "wins_c2": 7,
-          "draws": 5,
-          "total": 12
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -874,23 +1026,23 @@
       "c2": "saitou",
       "c1_name": "Hanzo",
       "c2_name": "Saitou",
-      "wins_c1": 9,
-      "wins_c2": 14,
-      "draws": 1,
-      "total_battles": 24,
-      "avg_time": 3.18,
+      "wins_c1": 5,
+      "wins_c2": 5,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.61,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 5,
-          "wins_c2": 7,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 4,
-          "wins_c2": 7,
-          "draws": 1,
-          "total": 12
+          "wins_c1": 2,
+          "wins_c2": 3,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -899,23 +1051,23 @@
       "c2": "rifleman",
       "c1_name": "Hanzo",
       "c2_name": "Teppo",
-      "wins_c1": 6,
-      "wins_c2": 18,
-      "draws": 0,
-      "total_battles": 24,
-      "avg_time": 1.2,
+      "wins_c1": 4,
+      "wins_c2": 5,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 4.92,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 2,
-          "wins_c2": 10,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 4,
-          "wins_c2": 8,
-          "draws": 0,
-          "total": 12
+          "wins_c1": 3,
+          "wins_c2": 1,
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -924,23 +1076,23 @@
       "c2": "purple",
       "c1_name": "Hanzo",
       "c2_name": "Murasaki",
-      "wins_c1": 9,
-      "wins_c2": 15,
+      "wins_c1": 3,
+      "wins_c2": 7,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 2.87,
+      "total_battles": 10,
+      "avg_time": 1.33,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 6,
-          "wins_c2": 6,
+          "wins_c1": 2,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 3,
-          "wins_c2": 9,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -949,23 +1101,23 @@
       "c2": "gray",
       "c1_name": "Hanzo",
       "c2_name": "Kasumi",
-      "wins_c1": 8,
-      "wins_c2": 16,
+      "wins_c1": 3,
+      "wins_c2": 7,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 1.28,
+      "total_battles": 10,
+      "avg_time": 1.53,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 5,
-          "wins_c2": 7,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 3,
-          "wins_c2": 9,
+          "wins_c1": 2,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -974,23 +1126,23 @@
       "c2": "kabuki",
       "c1_name": "Hanzo",
       "c2_name": "Okuni",
-      "wins_c1": 16,
-      "wins_c2": 5,
-      "draws": 3,
-      "total_battles": 24,
-      "avg_time": 7.67,
+      "wins_c1": 5,
+      "wins_c2": 4,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 8.73,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 8,
-          "wins_c2": 4,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 8,
-          "wins_c2": 1,
-          "draws": 3,
-          "total": 12
+          "wins_c1": 2,
+          "wins_c2": 2,
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -999,23 +1151,23 @@
       "c2": "archer",
       "c1_name": "Hanzo",
       "c2_name": "Tomoe",
-      "wins_c1": 12,
-      "wins_c2": 11,
-      "draws": 1,
-      "total_battles": 24,
-      "avg_time": 4.13,
+      "wins_c1": 6,
+      "wins_c2": 4,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.66,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 7,
-          "wins_c2": 5,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 5,
-          "wins_c2": 6,
-          "draws": 1,
-          "total": 12
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1024,23 +1176,23 @@
       "c2": "pirate",
       "c1_name": "Hanzo",
       "c2_name": "Anne",
-      "wins_c1": 13,
-      "wins_c2": 9,
+      "wins_c1": 4,
+      "wins_c2": 4,
       "draws": 2,
-      "total_battles": 24,
-      "avg_time": 5.55,
+      "total_battles": 10,
+      "avg_time": 8.21,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 8,
-          "wins_c2": 4,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 5,
-          "wins_c2": 5,
+          "wins_c1": 1,
+          "wins_c2": 2,
           "draws": 2,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -1049,23 +1201,73 @@
       "c2": "musketeer",
       "c1_name": "Hanzo",
       "c2_name": "Julie",
-      "wins_c1": 9,
-      "wins_c2": 14,
+      "wins_c1": 2,
+      "wins_c2": 7,
       "draws": 1,
-      "total_battles": 24,
-      "avg_time": 4.72,
+      "total_battles": 10,
+      "avg_time": 5.66,
       "arena_stats": {
         "Floresta de Bambu": {
           "wins_c1": 2,
-          "wins_c2": 10,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 7,
+          "wins_c1": 0,
           "wins_c2": 4,
           "draws": 1,
-          "total": 12
+          "total": 5
+        }
+      }
+    },
+    "ninja_vs_ren": {
+      "c1": "ninja",
+      "c2": "ren",
+      "c1_name": "Hanzo",
+      "c2_name": "Ren",
+      "wins_c1": 7,
+      "wins_c2": 3,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.74,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        }
+      }
+    },
+    "ninja_vs_chiyo": {
+      "c1": "ninja",
+      "c2": "chiyo",
+      "c1_name": "Hanzo",
+      "c2_name": "Chiyo",
+      "wins_c1": 6,
+      "wins_c2": 3,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 5.04,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 3,
+          "wins_c2": 1,
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -1074,23 +1276,23 @@
       "c2": "saitou",
       "c1_name": "Joe",
       "c2_name": "Saitou",
-      "wins_c1": 15,
-      "wins_c2": 8,
-      "draws": 1,
-      "total_battles": 24,
-      "avg_time": 2.91,
+      "wins_c1": 9,
+      "wins_c2": 1,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.44,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 9,
-          "wins_c2": 3,
+          "wins_c1": 4,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 6,
-          "wins_c2": 5,
-          "draws": 1,
-          "total": 12
+          "wins_c1": 5,
+          "wins_c2": 0,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1099,23 +1301,23 @@
       "c2": "rifleman",
       "c1_name": "Joe",
       "c2_name": "Teppo",
-      "wins_c1": 7,
-      "wins_c2": 17,
-      "draws": 0,
-      "total_battles": 24,
-      "avg_time": 1.87,
+      "wins_c1": 1,
+      "wins_c2": 6,
+      "draws": 3,
+      "total_battles": 10,
+      "avg_time": 12.03,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 3,
-          "wins_c2": 9,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 4,
-          "wins_c2": 8,
-          "draws": 0,
-          "total": 12
+          "wins_c1": 0,
+          "wins_c2": 2,
+          "draws": 3,
+          "total": 5
         }
       }
     },
@@ -1124,23 +1326,23 @@
       "c2": "purple",
       "c1_name": "Joe",
       "c2_name": "Murasaki",
-      "wins_c1": 17,
-      "wins_c2": 7,
+      "wins_c1": 7,
+      "wins_c2": 3,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 3.18,
+      "total_battles": 10,
+      "avg_time": 4.88,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 8,
-          "wins_c2": 4,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 9,
-          "wins_c2": 3,
+          "wins_c1": 4,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -1149,23 +1351,23 @@
       "c2": "gray",
       "c1_name": "Joe",
       "c2_name": "Kasumi",
-      "wins_c1": 9,
-      "wins_c2": 14,
+      "wins_c1": 6,
+      "wins_c2": 3,
       "draws": 1,
-      "total_battles": 24,
-      "avg_time": 4.16,
+      "total_battles": 10,
+      "avg_time": 4.88,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 5,
-          "wins_c2": 7,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 4,
-          "wins_c2": 7,
+          "wins_c1": 3,
+          "wins_c2": 1,
           "draws": 1,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -1174,23 +1376,23 @@
       "c2": "kabuki",
       "c1_name": "Joe",
       "c2_name": "Okuni",
-      "wins_c1": 19,
-      "wins_c2": 5,
-      "draws": 0,
-      "total_battles": 24,
-      "avg_time": 1.43,
+      "wins_c1": 9,
+      "wins_c2": 0,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 5.14,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 10,
-          "wins_c2": 2,
+          "wins_c1": 5,
+          "wins_c2": 0,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 9,
-          "wins_c2": 3,
-          "draws": 0,
-          "total": 12
+          "wins_c1": 4,
+          "wins_c2": 0,
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -1199,23 +1401,23 @@
       "c2": "archer",
       "c1_name": "Joe",
       "c2_name": "Tomoe",
-      "wins_c1": 9,
-      "wins_c2": 14,
+      "wins_c1": 6,
+      "wins_c2": 3,
       "draws": 1,
-      "total_battles": 24,
-      "avg_time": 2.96,
+      "total_battles": 10,
+      "avg_time": 4.65,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 5,
-          "wins_c2": 7,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 4,
-          "wins_c2": 7,
+          "wins_c1": 3,
+          "wins_c2": 1,
           "draws": 1,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -1224,23 +1426,23 @@
       "c2": "pirate",
       "c1_name": "Joe",
       "c2_name": "Anne",
-      "wins_c1": 21,
-      "wins_c2": 2,
+      "wins_c1": 4,
+      "wins_c2": 5,
       "draws": 1,
-      "total_battles": 24,
-      "avg_time": 4.18,
+      "total_battles": 10,
+      "avg_time": 4.65,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 11,
-          "wins_c2": 1,
+          "wins_c1": 2,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 10,
-          "wins_c2": 1,
+          "wins_c1": 2,
+          "wins_c2": 2,
           "draws": 1,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -1249,23 +1451,73 @@
       "c2": "musketeer",
       "c1_name": "Joe",
       "c2_name": "Julie",
-      "wins_c1": 12,
-      "wins_c2": 12,
+      "wins_c1": 5,
+      "wins_c2": 4,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 4.91,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 2,
+          "wins_c2": 2,
+          "draws": 1,
+          "total": 5
+        }
+      }
+    },
+    "american_vs_ren": {
+      "c1": "american",
+      "c2": "ren",
+      "c1_name": "Joe",
+      "c2_name": "Ren",
+      "wins_c1": 8,
+      "wins_c2": 2,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 2.92,
+      "total_battles": 10,
+      "avg_time": 1.28,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
+        }
+      }
+    },
+    "american_vs_chiyo": {
+      "c1": "american",
+      "c2": "chiyo",
+      "c1_name": "Joe",
+      "c2_name": "Chiyo",
+      "wins_c1": 8,
+      "wins_c2": 0,
+      "draws": 2,
+      "total_battles": 10,
+      "avg_time": 8.32,
       "arena_stats": {
         "Floresta de Bambu": {
           "wins_c1": 5,
-          "wins_c2": 7,
+          "wins_c2": 0,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 7,
-          "wins_c2": 5,
-          "draws": 0,
-          "total": 12
+          "wins_c1": 3,
+          "wins_c2": 0,
+          "draws": 2,
+          "total": 5
         }
       }
     },
@@ -1274,23 +1526,23 @@
       "c2": "rifleman",
       "c1_name": "Saitou",
       "c2_name": "Teppo",
-      "wins_c1": 4,
-      "wins_c2": 20,
+      "wins_c1": 2,
+      "wins_c2": 8,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 1.18,
+      "total_battles": 10,
+      "avg_time": 1.57,
       "arena_stats": {
         "Floresta de Bambu": {
           "wins_c1": 1,
-          "wins_c2": 11,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 3,
-          "wins_c2": 9,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -1299,23 +1551,23 @@
       "c2": "purple",
       "c1_name": "Saitou",
       "c2_name": "Murasaki",
-      "wins_c1": 7,
-      "wins_c2": 17,
+      "wins_c1": 4,
+      "wins_c2": 6,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 2.9,
+      "total_battles": 10,
+      "avg_time": 1.5,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 4,
-          "wins_c2": 8,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 3,
-          "wins_c2": 9,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -1324,23 +1576,23 @@
       "c2": "gray",
       "c1_name": "Saitou",
       "c2_name": "Kasumi",
-      "wins_c1": 7,
-      "wins_c2": 17,
+      "wins_c1": 6,
+      "wins_c2": 4,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 1.37,
+      "total_battles": 10,
+      "avg_time": 1.16,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 3,
-          "wins_c2": 9,
+          "wins_c1": 4,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 4,
-          "wins_c2": 8,
+          "wins_c1": 2,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -1349,23 +1601,23 @@
       "c2": "kabuki",
       "c1_name": "Saitou",
       "c2_name": "Okuni",
-      "wins_c1": 17,
-      "wins_c2": 6,
-      "draws": 1,
-      "total_battles": 24,
-      "avg_time": 6.51,
+      "wins_c1": 6,
+      "wins_c2": 4,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 5.22,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 8,
-          "wins_c2": 4,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 9,
+          "wins_c1": 3,
           "wins_c2": 2,
-          "draws": 1,
-          "total": 12
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1374,23 +1626,23 @@
       "c2": "archer",
       "c1_name": "Saitou",
       "c2_name": "Tomoe",
-      "wins_c1": 9,
-      "wins_c2": 14,
+      "wins_c1": 7,
+      "wins_c2": 2,
       "draws": 1,
-      "total_battles": 24,
-      "avg_time": 2.88,
+      "total_battles": 10,
+      "avg_time": 5.03,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 4,
-          "wins_c2": 8,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 5,
-          "wins_c2": 6,
+          "wins_c1": 4,
+          "wins_c2": 0,
           "draws": 1,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -1399,23 +1651,23 @@
       "c2": "pirate",
       "c1_name": "Saitou",
       "c2_name": "Anne",
-      "wins_c1": 15,
+      "wins_c1": 2,
       "wins_c2": 8,
-      "draws": 1,
-      "total_battles": 24,
-      "avg_time": 4.19,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.74,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 9,
-          "wins_c2": 3,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 6,
-          "wins_c2": 5,
-          "draws": 1,
-          "total": 12
+          "wins_c1": 1,
+          "wins_c2": 4,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1424,23 +1676,73 @@
       "c2": "musketeer",
       "c1_name": "Saitou",
       "c2_name": "Julie",
-      "wins_c1": 10,
-      "wins_c2": 12,
-      "draws": 2,
-      "total_battles": 24,
-      "avg_time": 4.34,
+      "wins_c1": 5,
+      "wins_c2": 5,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.54,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 6,
-          "wins_c2": 6,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
           "wins_c1": 4,
-          "wins_c2": 6,
-          "draws": 2,
-          "total": 12
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
+        }
+      }
+    },
+    "saitou_vs_ren": {
+      "c1": "saitou",
+      "c2": "ren",
+      "c1_name": "Saitou",
+      "c2_name": "Ren",
+      "wins_c1": 7,
+      "wins_c2": 3,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 2.22,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
+        }
+      }
+    },
+    "saitou_vs_chiyo": {
+      "c1": "saitou",
+      "c2": "chiyo",
+      "c1_name": "Saitou",
+      "c2_name": "Chiyo",
+      "wins_c1": 5,
+      "wins_c2": 4,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 4.73,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 2,
+          "wins_c2": 2,
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -1449,23 +1751,23 @@
       "c2": "purple",
       "c1_name": "Teppo",
       "c2_name": "Murasaki",
-      "wins_c1": 19,
-      "wins_c2": 3,
-      "draws": 2,
-      "total_battles": 24,
-      "avg_time": 4.28,
+      "wins_c1": 9,
+      "wins_c2": 1,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.26,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 10,
-          "wins_c2": 2,
+          "wins_c1": 5,
+          "wins_c2": 0,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 9,
+          "wins_c1": 4,
           "wins_c2": 1,
-          "draws": 2,
-          "total": 12
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1474,23 +1776,23 @@
       "c2": "gray",
       "c1_name": "Teppo",
       "c2_name": "Kasumi",
-      "wins_c1": 17,
-      "wins_c2": 7,
+      "wins_c1": 8,
+      "wins_c2": 2,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 1.17,
+      "total_battles": 10,
+      "avg_time": 2.79,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 8,
-          "wins_c2": 4,
+          "wins_c1": 4,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 9,
-          "wins_c2": 3,
+          "wins_c1": 4,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -1499,23 +1801,23 @@
       "c2": "kabuki",
       "c1_name": "Teppo",
       "c2_name": "Okuni",
-      "wins_c1": 22,
-      "wins_c2": 1,
-      "draws": 1,
-      "total_battles": 24,
-      "avg_time": 3.68,
+      "wins_c1": 8,
+      "wins_c2": 2,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.52,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 12,
-          "wins_c2": 0,
+          "wins_c1": 4,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 10,
+          "wins_c1": 4,
           "wins_c2": 1,
-          "draws": 1,
-          "total": 12
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1524,23 +1826,23 @@
       "c2": "archer",
       "c1_name": "Teppo",
       "c2_name": "Tomoe",
-      "wins_c1": 14,
-      "wins_c2": 10,
-      "draws": 0,
-      "total_battles": 24,
-      "avg_time": 1.41,
+      "wins_c1": 5,
+      "wins_c2": 4,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 7.46,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 7,
-          "wins_c2": 5,
+          "wins_c1": 4,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 7,
-          "wins_c2": 5,
-          "draws": 0,
-          "total": 12
+          "wins_c1": 1,
+          "wins_c2": 3,
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -1549,23 +1851,23 @@
       "c2": "pirate",
       "c1_name": "Teppo",
       "c2_name": "Anne",
-      "wins_c1": 18,
-      "wins_c2": 5,
-      "draws": 1,
-      "total_battles": 24,
-      "avg_time": 3.21,
+      "wins_c1": 8,
+      "wins_c2": 2,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.37,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 9,
-          "wins_c2": 3,
+          "wins_c1": 4,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 9,
-          "wins_c2": 2,
-          "draws": 1,
-          "total": 12
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1574,23 +1876,73 @@
       "c2": "musketeer",
       "c1_name": "Teppo",
       "c2_name": "Julie",
-      "wins_c1": 11,
-      "wins_c2": 11,
-      "draws": 2,
-      "total_battles": 24,
-      "avg_time": 4.32,
+      "wins_c1": 5,
+      "wins_c2": 4,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 5.62,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 6,
-          "wins_c2": 6,
+          "wins_c1": 3,
+          "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
+          "wins_c1": 2,
+          "wins_c2": 2,
+          "draws": 1,
+          "total": 5
+        }
+      }
+    },
+    "rifleman_vs_ren": {
+      "c1": "rifleman",
+      "c2": "ren",
+      "c1_name": "Teppo",
+      "c2_name": "Ren",
+      "wins_c1": 8,
+      "wins_c2": 1,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 4.72,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 4,
+          "wins_c2": 0,
+          "draws": 1,
+          "total": 5
+        }
+      }
+    },
+    "rifleman_vs_chiyo": {
+      "c1": "rifleman",
+      "c2": "chiyo",
+      "c1_name": "Teppo",
+      "c2_name": "Chiyo",
+      "wins_c1": 9,
+      "wins_c2": 1,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.81,
+      "arena_stats": {
+        "Floresta de Bambu": {
           "wins_c1": 5,
-          "wins_c2": 5,
-          "draws": 2,
-          "total": 12
+          "wins_c2": 0,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1599,23 +1951,23 @@
       "c2": "gray",
       "c1_name": "Murasaki",
       "c2_name": "Kasumi",
-      "wins_c1": 13,
-      "wins_c2": 10,
-      "draws": 1,
-      "total_battles": 24,
-      "avg_time": 2.65,
+      "wins_c1": 2,
+      "wins_c2": 8,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.28,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 5,
-          "wins_c2": 7,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 8,
-          "wins_c2": 3,
-          "draws": 1,
-          "total": 12
+          "wins_c1": 1,
+          "wins_c2": 4,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1624,23 +1976,23 @@
       "c2": "kabuki",
       "c1_name": "Murasaki",
       "c2_name": "Okuni",
-      "wins_c1": 20,
-      "wins_c2": 2,
-      "draws": 2,
-      "total_battles": 24,
-      "avg_time": 4.86,
+      "wins_c1": 7,
+      "wins_c2": 3,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.82,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 10,
+          "wins_c1": 3,
           "wins_c2": 2,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 10,
-          "wins_c2": 0,
-          "draws": 2,
-          "total": 12
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1649,23 +2001,23 @@
       "c2": "archer",
       "c1_name": "Murasaki",
       "c2_name": "Tomoe",
-      "wins_c1": 10,
-      "wins_c2": 8,
-      "draws": 6,
-      "total_battles": 24,
-      "avg_time": 9.78,
+      "wins_c1": 3,
+      "wins_c2": 6,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 8.05,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 7,
-          "wins_c2": 5,
+          "wins_c1": 2,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 3,
+          "wins_c1": 1,
           "wins_c2": 3,
-          "draws": 6,
-          "total": 12
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -1674,23 +2026,23 @@
       "c2": "pirate",
       "c1_name": "Murasaki",
       "c2_name": "Anne",
-      "wins_c1": 13,
-      "wins_c2": 11,
+      "wins_c1": 1,
+      "wins_c2": 9,
       "draws": 0,
-      "total_battles": 24,
-      "avg_time": 1.81,
+      "total_battles": 10,
+      "avg_time": 1.92,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 6,
-          "wins_c2": 6,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 7,
+          "wins_c1": 0,
           "wins_c2": 5,
           "draws": 0,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -1699,23 +2051,73 @@
       "c2": "musketeer",
       "c1_name": "Murasaki",
       "c2_name": "Julie",
-      "wins_c1": 12,
-      "wins_c2": 11,
-      "draws": 1,
-      "total_battles": 24,
-      "avg_time": 4.17,
+      "wins_c1": 5,
+      "wins_c2": 5,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.49,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 4,
-          "wins_c2": 8,
+          "wins_c1": 2,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 8,
-          "wins_c2": 3,
-          "draws": 1,
-          "total": 12
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        }
+      }
+    },
+    "purple_vs_ren": {
+      "c1": "purple",
+      "c2": "ren",
+      "c1_name": "Murasaki",
+      "c2_name": "Ren",
+      "wins_c1": 9,
+      "wins_c2": 1,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 2.07,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 5,
+          "wins_c2": 0,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
+        }
+      }
+    },
+    "purple_vs_chiyo": {
+      "c1": "purple",
+      "c2": "chiyo",
+      "c1_name": "Murasaki",
+      "c2_name": "Chiyo",
+      "wins_c1": 6,
+      "wins_c2": 4,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.7,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1724,23 +2126,23 @@
       "c2": "kabuki",
       "c1_name": "Kasumi",
       "c2_name": "Okuni",
-      "wins_c1": 23,
-      "wins_c2": 0,
+      "wins_c1": 6,
+      "wins_c2": 3,
       "draws": 1,
-      "total_battles": 24,
-      "avg_time": 2.76,
+      "total_battles": 10,
+      "avg_time": 4.9,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 12,
-          "wins_c2": 0,
+          "wins_c1": 4,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 11,
-          "wins_c2": 0,
+          "wins_c1": 2,
+          "wins_c2": 2,
           "draws": 1,
-          "total": 12
+          "total": 5
         }
       }
     },
@@ -1749,23 +2151,23 @@
       "c2": "archer",
       "c1_name": "Kasumi",
       "c2_name": "Tomoe",
-      "wins_c1": 9,
-      "wins_c2": 13,
-      "draws": 2,
-      "total_battles": 24,
-      "avg_time": 5.43,
+      "wins_c1": 4,
+      "wins_c2": 6,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.14,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 5,
-          "wins_c2": 7,
+          "wins_c1": 2,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 4,
-          "wins_c2": 6,
-          "draws": 2,
-          "total": 12
+          "wins_c1": 2,
+          "wins_c2": 3,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1774,23 +2176,23 @@
       "c2": "pirate",
       "c1_name": "Kasumi",
       "c2_name": "Anne",
-      "wins_c1": 11,
-      "wins_c2": 12,
-      "draws": 1,
-      "total_battles": 24,
-      "avg_time": 2.94,
+      "wins_c1": 8,
+      "wins_c2": 2,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.42,
       "arena_stats": {
         "Floresta de Bambu": {
           "wins_c1": 4,
-          "wins_c2": 8,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 7,
-          "wins_c2": 4,
-          "draws": 1,
-          "total": 12
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1799,23 +2201,73 @@
       "c2": "musketeer",
       "c1_name": "Kasumi",
       "c2_name": "Julie",
-      "wins_c1": 5,
-      "wins_c2": 17,
-      "draws": 2,
-      "total_battles": 24,
-      "avg_time": 4.13,
+      "wins_c1": 3,
+      "wins_c2": 7,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.74,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 3,
-          "wins_c2": 9,
+          "wins_c1": 2,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 1,
+          "wins_c2": 4,
+          "draws": 0,
+          "total": 5
+        }
+      }
+    },
+    "gray_vs_ren": {
+      "c1": "gray",
+      "c2": "ren",
+      "c1_name": "Kasumi",
+      "c2_name": "Ren",
+      "wins_c1": 7,
+      "wins_c2": 2,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 5.12,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 5,
+          "wins_c2": 0,
+          "draws": 0,
+          "total": 5
         },
         "Kyoto Bakumatsu": {
           "wins_c1": 2,
-          "wins_c2": 8,
-          "draws": 2,
-          "total": 12
+          "wins_c2": 2,
+          "draws": 1,
+          "total": 5
+        }
+      }
+    },
+    "gray_vs_chiyo": {
+      "c1": "gray",
+      "c2": "chiyo",
+      "c1_name": "Kasumi",
+      "c2_name": "Chiyo",
+      "wins_c1": 6,
+      "wins_c2": 4,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 5.15,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1824,23 +2276,23 @@
       "c2": "archer",
       "c1_name": "Okuni",
       "c2_name": "Tomoe",
-      "wins_c1": 3,
-      "wins_c2": 21,
-      "draws": 0,
-      "total_battles": 24,
-      "avg_time": 3.17,
+      "wins_c1": 1,
+      "wins_c2": 8,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 6.07,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 0,
-          "wins_c2": 12,
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 3,
-          "wins_c2": 9,
-          "draws": 0,
-          "total": 12
+          "wins_c1": 0,
+          "wins_c2": 4,
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -1849,23 +2301,23 @@
       "c2": "pirate",
       "c1_name": "Okuni",
       "c2_name": "Anne",
-      "wins_c1": 7,
-      "wins_c2": 16,
-      "draws": 1,
-      "total_battles": 24,
-      "avg_time": 4.9,
+      "wins_c1": 3,
+      "wins_c2": 7,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 3.03,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 5,
-          "wins_c2": 7,
+          "wins_c1": 0,
+          "wins_c2": 5,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 2,
-          "wins_c2": 9,
-          "draws": 1,
-          "total": 12
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1874,23 +2326,73 @@
       "c2": "musketeer",
       "c1_name": "Okuni",
       "c2_name": "Julie",
-      "wins_c1": 3,
-      "wins_c2": 21,
-      "draws": 0,
-      "total_battles": 24,
-      "avg_time": 1.62,
+      "wins_c1": 0,
+      "wins_c2": 8,
+      "draws": 2,
+      "total_battles": 10,
+      "avg_time": 8.81,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 0,
+          "wins_c2": 5,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 0,
+          "wins_c2": 3,
+          "draws": 2,
+          "total": 5
+        }
+      }
+    },
+    "kabuki_vs_ren": {
+      "c1": "kabuki",
+      "c2": "ren",
+      "c1_name": "Okuni",
+      "c2_name": "Ren",
+      "wins_c1": 1,
+      "wins_c2": 7,
+      "draws": 2,
+      "total_battles": 10,
+      "avg_time": 9.88,
       "arena_stats": {
         "Floresta de Bambu": {
           "wins_c1": 1,
-          "wins_c2": 11,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 2,
-          "wins_c2": 10,
+          "wins_c1": 0,
+          "wins_c2": 3,
+          "draws": 2,
+          "total": 5
+        }
+      }
+    },
+    "kabuki_vs_chiyo": {
+      "c1": "kabuki",
+      "c2": "chiyo",
+      "c1_name": "Okuni",
+      "c2_name": "Chiyo",
+      "wins_c1": 4,
+      "wins_c2": 5,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 6.76,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 1,
+          "wins_c2": 4,
           "draws": 0,
-          "total": 12
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 3,
+          "wins_c2": 1,
+          "draws": 1,
+          "total": 5
         }
       }
     },
@@ -1899,23 +2401,23 @@
       "c2": "pirate",
       "c1_name": "Tomoe",
       "c2_name": "Anne",
-      "wins_c1": 17,
-      "wins_c2": 5,
-      "draws": 2,
-      "total_battles": 24,
-      "avg_time": 6.57,
+      "wins_c1": 9,
+      "wins_c2": 1,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.38,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 9,
-          "wins_c2": 3,
+          "wins_c1": 5,
+          "wins_c2": 0,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 8,
-          "wins_c2": 2,
-          "draws": 2,
-          "total": 12
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1924,23 +2426,73 @@
       "c2": "musketeer",
       "c1_name": "Tomoe",
       "c2_name": "Julie",
-      "wins_c1": 14,
-      "wins_c2": 9,
-      "draws": 1,
-      "total_battles": 24,
-      "avg_time": 2.83,
+      "wins_c1": 7,
+      "wins_c2": 3,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 4.61,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 7,
-          "wins_c2": 5,
+          "wins_c1": 4,
+          "wins_c2": 1,
           "draws": 0,
-          "total": 12
+          "total": 5
         },
         "Kyoto Bakumatsu": {
-          "wins_c1": 7,
-          "wins_c2": 4,
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        }
+      }
+    },
+    "archer_vs_ren": {
+      "c1": "archer",
+      "c2": "ren",
+      "c1_name": "Tomoe",
+      "c2_name": "Ren",
+      "wins_c1": 6,
+      "wins_c2": 3,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 11.36,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 2,
+          "wins_c2": 3,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 4,
+          "wins_c2": 0,
           "draws": 1,
-          "total": 12
+          "total": 5
+        }
+      }
+    },
+    "archer_vs_chiyo": {
+      "c1": "archer",
+      "c2": "chiyo",
+      "c1_name": "Tomoe",
+      "c2_name": "Chiyo",
+      "wins_c1": 9,
+      "wins_c2": 1,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.29,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 5,
+          "wins_c2": 0,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
         }
       }
     },
@@ -1949,23 +2501,148 @@
       "c2": "musketeer",
       "c1_name": "Anne",
       "c2_name": "Julie",
-      "wins_c1": 7,
-      "wins_c2": 15,
-      "draws": 2,
-      "total_battles": 24,
-      "avg_time": 4.3,
+      "wins_c1": 3,
+      "wins_c2": 6,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 8.33,
       "arena_stats": {
         "Floresta de Bambu": {
-          "wins_c1": 3,
-          "wins_c2": 9,
+          "wins_c1": 2,
+          "wins_c2": 3,
           "draws": 0,
-          "total": 12
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 1,
+          "wins_c2": 3,
+          "draws": 1,
+          "total": 5
+        }
+      }
+    },
+    "pirate_vs_ren": {
+      "c1": "pirate",
+      "c2": "ren",
+      "c1_name": "Anne",
+      "c2_name": "Ren",
+      "wins_c1": 9,
+      "wins_c2": 1,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 2.08,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 5,
+          "wins_c2": 0,
+          "draws": 0,
+          "total": 5
         },
         "Kyoto Bakumatsu": {
           "wins_c1": 4,
-          "wins_c2": 6,
-          "draws": 2,
-          "total": 12
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
+        }
+      }
+    },
+    "pirate_vs_chiyo": {
+      "c1": "pirate",
+      "c2": "chiyo",
+      "c1_name": "Anne",
+      "c2_name": "Chiyo",
+      "wins_c1": 5,
+      "wins_c2": 5,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 1.79,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 2,
+          "wins_c2": 3,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        }
+      }
+    },
+    "musketeer_vs_ren": {
+      "c1": "musketeer",
+      "c2": "ren",
+      "c1_name": "Julie",
+      "c2_name": "Ren",
+      "wins_c1": 6,
+      "wins_c2": 3,
+      "draws": 1,
+      "total_battles": 10,
+      "avg_time": 5.32,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 4,
+          "wins_c2": 1,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 2,
+          "wins_c2": 2,
+          "draws": 1,
+          "total": 5
+        }
+      }
+    },
+    "musketeer_vs_chiyo": {
+      "c1": "musketeer",
+      "c2": "chiyo",
+      "c1_name": "Julie",
+      "c2_name": "Chiyo",
+      "wins_c1": 4,
+      "wins_c2": 6,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 5.54,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 2,
+          "wins_c2": 3,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 2,
+          "wins_c2": 3,
+          "draws": 0,
+          "total": 5
+        }
+      }
+    },
+    "ren_vs_chiyo": {
+      "c1": "ren",
+      "c2": "chiyo",
+      "c1_name": "Ren",
+      "c2_name": "Chiyo",
+      "wins_c1": 4,
+      "wins_c2": 6,
+      "draws": 0,
+      "total_battles": 10,
+      "avg_time": 2.49,
+      "arena_stats": {
+        "Floresta de Bambu": {
+          "wins_c1": 3,
+          "wins_c2": 2,
+          "draws": 0,
+          "total": 5
+        },
+        "Kyoto Bakumatsu": {
+          "wins_c1": 1,
+          "wins_c2": 4,
+          "draws": 0,
+          "total": 5
         }
       }
     }

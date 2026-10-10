@@ -269,13 +269,74 @@ class VoxelCorpse:
         style = self.death_style
         P = VoxelCorpsePiece
 
-        if style == "KENSHIN_SPLIT":
+        if style in ("KENSHIN_SPLIT", "DIAGONAL_KENSHIN_SPLIT"):
             # Tronco superior escorrega pelo corte diagonal e tomba; as pernas desabam logo depois
             self.bottom_half = P(x, y, 0.0, 0.30, 0.22, 0.52, self.col_pants, piece_type="bottom",
                                  region=lambda c: c.diagonal(upper=False), rot_target=80.0, rot_speed=140.0, rot_delay=0.25)
             self.top_half = P(x, y, WAIST_Z, 0.28, 0.20, 0.50, self.col_torso, vx=dx * 2.8, vy=dy * 2.8, vz=1.8,
                               piece_type="top", region=lambda c: c.diagonal(upper=True), rot_target=100.0, rot_speed=260.0)
             self.pieces.extend([self.bottom_half, self.top_half])
+
+        elif style == "VERTICAL_BISECTION":
+            # Ryuu Tsui Sen / Corte Aéreo: Bissecção vertical do crânio à virilha
+            self.left_half = P(x, y, 0.0, 0.18, 0.26, 0.85, self.col_torso,
+                               vx=-dy * 1.8 - dx * 0.4, vy=dx * 1.8 - dy * 0.4, vz=0.6,
+                               piece_type="half_left", region=lambda c: [(0, 0), (c.cx, 0), (c.cx, c.h), (0, c.h)],
+                               rot_target=-85.0, rot_speed=200.0, pivot="bottom")
+            self.right_half = P(x, y, 0.0, 0.18, 0.26, 0.85, self.col_torso,
+                                vx=dy * 1.8 - dx * 0.4, vy=-dx * 1.8 - dy * 0.4, vz=0.6,
+                                piece_type="half_right", region=lambda c: [(c.cx, 0), (c.w, 0), (c.w, c.h), (c.cx, c.h)],
+                                rot_target=85.0, rot_speed=200.0, pivot="bottom")
+            self.pieces.extend([self.left_half, self.right_half])
+            for _ in range(20):
+                self._add_blood_drop(spread=0.6)
+
+        elif style == "DUAL_IMPALE_X_SPREAD":
+            # Musashi 3-Cortes: Peito empalado e aberto em 'X' com jato de sangue
+            self.pieces.append(P(x, y, 0.0, 0.44, 0.34, 0.75, self.col_torso,
+                                 vx=dx * 2.2, vy=dy * 2.2, vz=1.4,
+                                 piece_type="impaled_body", region=lambda c: c.band(None, None),
+                                 rot_target=FALL_DEG, rot_speed=220.0))
+            for _ in range(18):
+                angle = random.uniform(0, math.pi * 2)
+                sp = random.uniform(1.6, 4.4)
+                self.pieces.append(P(x, y, CHEST_Z, 0.08, 0.08, 0.08, random.choice([self.col_torso, COLOR_BLOOD, (160, 20, 25)]),
+                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(2.0, 5.0),
+                                     rot_speed=random.uniform(-300, 300), piece_type="blood_gib"))
+
+        elif style == "REFLECTED_TORSO_CLEAVE":
+            # Musashi Parry: Corte refletido que divide o torso e o arremessa para trás
+            self.pieces.append(P(x, y, 0.0, 0.42, 0.30, 0.42, self.col_pants,
+                                 vx=-dx * 0.8, vy=-dy * 0.8, vz=0.4,
+                                 piece_type="bottom", region=lambda c: c.band(WAIST_Z, None),
+                                 rot_target=70.0, rot_speed=140.0, rot_delay=0.15))
+            self.pieces.append(P(x, y, WAIST_Z, 0.42, 0.30, 0.45, self.col_torso,
+                                 vx=dx * 3.5, vy=dy * 3.5, vz=2.0,
+                                 piece_type="top", region=lambda c: c.band(None, WAIST_Z),
+                                 rot_target=110.0, rot_speed=280.0))
+
+        elif style in ("HYAKURETSU_BODY_EXPLOSION", "WALL_SMASH_FATAL"):
+            # Ren Monge: Rajada de socos ou impacto do Kiai despedaça o corpo em dezenas de estilhaços
+            for _ in range(32):
+                angle = random.uniform(0, math.pi * 2)
+                speed = random.uniform(3.0, 8.0)
+                c = random.choice([self.col_torso, self.col_pants, COLOR_BLOOD, (245, 140, 35), (140, 20, 25)])
+                sz = random.uniform(0.09, 0.16)
+                self.pieces.append(P(x, y, random.uniform(0.1, 0.85), sz, sz, sz, c,
+                                     vx=math.cos(angle) * speed, vy=math.sin(angle) * speed, vz=random.uniform(3.5, 7.5),
+                                     rot_speed=random.uniform(-400, 400), piece_type="gib"))
+
+        elif style in ("TRIPLE_SCISSOR_CLEAVE", "MAI_X_CLEAVE"):
+            # Chiyo 2 Nodachi: Corte simultâneo no pescoço e cintura, dividindo em 3 partes simétricas
+            self.pieces.append(P(x, y, NECK_Z + 0.10, 0.16, 0.16, 0.16, self.col_hair,
+                                 vx=dx * 2.0 + random.uniform(-0.4, 0.4), vy=dy * 2.0 + random.uniform(-0.4, 0.4), vz=3.5,
+                                 rot_speed=300.0, piece_type="head", region=lambda c: c.band(None, NECK_Z), pivot="center", floor_z=0.15))
+            self.pieces.append(P(x, y, WAIST_Z, 0.38, 0.28, 0.35, self.col_torso,
+                                 vx=-dx * 1.5, vy=-dy * 1.5, vz=1.2,
+                                 piece_type="torso", region=lambda c: c.band(NECK_Z, WAIST_Z), rot_target=95.0, rot_speed=220.0))
+            self.pieces.append(P(x, y, 0.0, 0.38, 0.28, 0.48, self.col_pants,
+                                 vx=dx * 0.5, vy=dy * 0.5, vz=0.3,
+                                 piece_type="legs", region=lambda c: c.band(WAIST_Z, None), rot_target=75.0, rot_speed=130.0, rot_delay=0.25))
 
         elif style in ("MURASAKI_DECAP", "CLEAN_DECAP"):
             self.headless_body = P(x, y, 0.0, 0.28, 0.22, 0.85, self.col_torso, piece_type="body",

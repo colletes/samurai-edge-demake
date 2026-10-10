@@ -36,10 +36,11 @@ from src.config import (
     COLOR_BG, COLOR_WHITE, COLOR_GOLD, COLOR_RED_AURA, COLOR_BLUE_AURA, COLOR_YELLOW_AURA,
     KEY_RESTART, KEY_TOGGLE_AI, KEY_SETTINGS, DEFAULT_CONTROLS,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
-    CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER, CHAR_BOSS,
+    CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
+    CHAR_REN, CHAR_CHIYO, CHAR_BOSS,
     COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA, COLOR_SAITOU_AURA,
     COLOR_RIFLE_AURA, COLOR_KABUKI_AURA, COLOR_ARCHER_AURA,
-    COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA,
+    COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA, COLOR_REN_AURA, COLOR_CHIYO_AURA,
     ARENA_BAMBOO, ARENA_KYOTO, ARENA_RANDOM
 )
 from src.isometric.iso_math import input_to_world_direction
@@ -57,6 +58,8 @@ from src.entities.kabuki import Kabuki, PoisonCloud
 from src.entities.kyudo_archer import KyudoArcher
 from src.entities.pirate import PirateSwordswoman
 from src.entities.musketeer import Musketeer
+from src.entities.ren_monk import RenMonk
+from src.entities.chiyo_kunoichi import ChiyoKunoichi
 from src.entities.boss_oni import BossOni
 from src.entities.ai_controller import SamuraiAI
 from src.entities.pickups import PowderPouch
@@ -153,6 +156,10 @@ def create_fighter(char_id: str, wx: float, wy: float):
         return PirateSwordswoman(wx, wy)
     elif char_id == CHAR_MUSKETEER:
         return Musketeer(wx, wy)
+    elif char_id == CHAR_REN:
+        return RenMonk(wx, wy)
+    elif char_id == CHAR_CHIYO:
+        return ChiyoKunoichi(wx, wy)
     elif char_id == CHAR_BOSS:
         return BossOni(wx, wy)
     return RedSamurai(wx, wy)
@@ -186,6 +193,10 @@ def get_fighter_color(fighter):
         return COLOR_PIRATE_AURA
     elif isinstance(fighter, Musketeer):
         return COLOR_MUSKETEER_AURA
+    elif isinstance(fighter, RenMonk):
+        return COLOR_REN_AURA
+    elif isinstance(fighter, ChiyoKunoichi):
+        return COLOR_CHIYO_AURA
     return COLOR_WHITE
 
 def get_fighter_action_labels(fighter):
@@ -216,6 +227,10 @@ def get_fighter_action_labels(fighter):
         return "Alfanje 180°", "Pólvora nos Olhos"
     elif isinstance(fighter, Musketeer):
         return "Estocada Fleche", "Capa Riposte"
+    elif isinstance(fighter, RenMonk):
+        return "Flurry Shaolin", "Kiai Repulsão"
+    elif isinstance(fighter, ChiyoKunoichi):
+        return "Tesoura Nodachi", "Dança Mai"
     return "Ataque", "Especial"
 
 def get_fighter_cooldown_data(fighter) -> dict | None:
@@ -315,6 +330,16 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
         cd = getattr(fighter, "cape_cooldown", 2.4)
         return {"name": "Floreio Capa", "timer": timer, "max_cd": cd, "color": (80, 160, 255)}
 
+    elif isinstance(fighter, RenMonk):
+        timer = max(0.0, getattr(fighter, "kiai_timer", 0.0))
+        cd = getattr(fighter, "kiai_cooldown", 3.2)
+        return {"name": "Grito Kiai", "timer": timer, "max_cd": cd, "color": (245, 175, 45)}
+
+    elif isinstance(fighter, ChiyoKunoichi):
+        timer = max(0.0, getattr(fighter, "mai_timer", 0.0))
+        cd = getattr(fighter, "mai_cooldown", 2.8)
+        return {"name": "Dança Mai", "timer": timer, "max_cd": cd, "color": (60, 220, 180)}
+
     return None
 
 # Azimute atual da câmera, lido pelas conversões de entrada (W continua sendo "para cima na tela")
@@ -390,6 +415,12 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
     elif isinstance(fighter, Musketeer):
         fighter.trigger_fleche_thrust(aim_x, aim_y)
         play_sfx(SoundEvent.SWORD_SLASH)
+    elif isinstance(fighter, RenMonk):
+        fighter.trigger_punch_combo(aim_x, aim_y)
+        play_sfx(SoundEvent.SWORD_SLASH)
+    elif isinstance(fighter, ChiyoKunoichi):
+        fighter.trigger_scissor_slash(aim_x, aim_y)
+        play_sfx(SoundEvent.SWORD_SLASH)
 
 def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, poison_clouds: list, powder_traps: list, opponent=None, game_map=None, banners: list = None):
     """Executa a Ação Secundária (Técnica Especial / Defesa / Contra-ataque) do combatente."""
@@ -443,6 +474,14 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
             play_sfx(SoundEvent.FLINTLOCK_FIRE)
         elif result == "flip":
             play_sfx(SoundEvent.DODGE_WHOOSH)
+    elif isinstance(fighter, RenMonk):
+        # Ren: Grito Kiai de 360° que repele projéteis e atordoa
+        fighter.trigger_kiai_shout(particles=particles, banners=banners, opponent=opponent)
+        play_sfx(SoundEvent.DODGE_WHOOSH)
+    elif isinstance(fighter, ChiyoKunoichi):
+        # Chiyo: Dança Mai giratória com duas Nodachis em vórtice circular
+        fighter.trigger_nodachi_mai(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent)
+        play_sfx(SoundEvent.SWORD_SLASH)
 
 def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None, opponent=None, banners=None):
     """Executa a Terceira Ação (Roll / Dash dedicado) com invulnerabilidade temporária (i-frames)."""
@@ -1704,6 +1743,8 @@ def run_game():
                     f.update(f_dt, game_map, particles, projectiles)
                 elif isinstance(f, KyudoArcher):
                     f.update(f_dt, game_map, particles, projectiles)
+                elif isinstance(f, (RenMonk, ChiyoKunoichi)):
+                    f.update(f_dt, game_map, particles, opponent=opp)
                 else:
                     f.update(f_dt, game_map)
 

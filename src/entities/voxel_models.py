@@ -23,7 +23,7 @@ import math
 import pygame
 from src.isometric.iso_math import rotate_xy
 from src.isometric.voxel_renderer import draw_voxel_box, draw_oriented_voxel_box
-from src.entities import model_kit, okuni_model, kenshi_model, murasaki_model, musashi_model, hanzo_model, joe_model, saitou_model, teppo_model, kasumi_model, tomoe_model, anne_model, julie_model, pose_scripts
+from src.entities import model_kit, okuni_model, kenshi_model, murasaki_model, musashi_model, hanzo_model, joe_model, saitou_model, teppo_model, kasumi_model, tomoe_model, anne_model, julie_model, ren_model, chiyo_model, pose_scripts
 from src.isometric.voxel_rig import calc_leg_joints, calc_blade_slash_3d, calc_character_idle_pose
 from src.config import (
     COLOR_STEEL, COLOR_GOLD, COLOR_WHITE, COLOR_BLACK,
@@ -67,7 +67,8 @@ def is_female_character(char_type: str) -> bool:
     """Identifica se o combatente possui silhueta e anatomia humana feminina."""
     c = char_type.lower()
     return c in ("kenshin", "kenshi", "kasumi", "gray", "murasaki", "purple",
-                 "okuni", "kabuki", "tomoe", "archer", "anne", "pirate", "julie", "musketeer")
+                 "okuni", "kabuki", "tomoe", "archer", "anne", "pirate", "julie", "musketeer",
+                 "chiyo", "nodachi")
 
 
 def _canonical_char_type(char_type: str) -> str:
@@ -78,11 +79,13 @@ def _canonical_char_type(char_type: str) -> str:
     if "purple" in char_type or "murasaki" in char_type: return "murasaki"
     if "kenshin" in char_type or "kenshi" in char_type or "red" in char_type: return "kenshin"
     if "musashi" in char_type or "blue" in char_type: return "musashi"
+    if "ren" in char_type or "shaolin" in char_type: return "ren"
+    if "chiyo" in char_type or "nodachi" in char_type: return "chiyo"
     return char_type
 
 
 # Todos os lutadores com modelo próprio (ganchos por parte)
-MODEL_FIGHTERS = {"kenshin": kenshi_model, "murasaki": murasaki_model, "musashi": musashi_model, "ninja": hanzo_model, "american": joe_model, "saitou": saitou_model, "rifleman": teppo_model, "kasumi": kasumi_model, "tomoe": tomoe_model, "pirate": anne_model, "musketeer": julie_model}
+MODEL_FIGHTERS = {"kenshin": kenshi_model, "murasaki": murasaki_model, "musashi": musashi_model, "ninja": hanzo_model, "american": joe_model, "saitou": saitou_model, "rifleman": teppo_model, "kasumi": kasumi_model, "tomoe": tomoe_model, "pirate": anne_model, "musketeer": julie_model, "ren": ren_model, "chiyo": chiyo_model}
 
 
 def _material(model_c, color):
@@ -162,6 +165,8 @@ def _render_voxel_humanoid(
     elif "archer" in char_type or "kyudo" in char_type or "tomoe" in char_type: char_type = "tomoe"
     elif "pirate" in char_type or "anne" in char_type or "sayuri" in char_type: char_type = "pirate"
     elif "musketeer" in char_type or "julie" in char_type: char_type = "musketeer"
+    elif "ren" in char_type or "shaolin" in char_type: char_type = "ren"
+    elif "chiyo" in char_type or "nodachi" in char_type: char_type = "chiyo"
 
     # Morte com desmembramento ativo
     if state == "CORPSE_SLICED":
@@ -224,7 +229,7 @@ def _render_voxel_humanoid(
     back_to_camera = (back_rx + back_ry) > 0.0
 
     # Animação de ataque melee
-    is_melee = state in ("ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE")
+    is_melee = state in ("ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE", "KIAI", "NODACHI_DANCE")
     atk_progress = 0.0
     if is_melee:
         atk_dur = 0.20
@@ -235,6 +240,8 @@ def _render_voxel_humanoid(
         elif char_type == "purple": atk_dur = 0.16
         elif char_type == "ninja": atk_dur = 0.18
         elif char_type == "saitou": atk_dur = 0.25
+        elif char_type == "ren": atk_dur = 0.15
+        elif char_type == "chiyo": atk_dur = 0.22
 
         if state_timer > 0:
             atk_progress = max(0.0, min(1.0, 1.0 - (state_timer / atk_dur)))

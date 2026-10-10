@@ -5,7 +5,8 @@ Aqui ficam os dados de cada arena e o registro dos tipos de prop, estrutura e pe
 (`arena_generator.py`) sabe instanciar. Novas arenas (Entregável 6.3) são só novos specs.
 """
 from src.config import (
-    ARENA_BAMBOO, ARENA_KYOTO, ARENA_GANRYU, ARENA_IGA, ARENA_PIRATE_DECK, ARENA_SHADOW_CAVE, ARENA_MIST_TEMPLE, ARENA_FOREST_CAMP, ARENA_NAGASHINO, ARENA_KABUKI_STAGE, ARENA_MOUNTAIN_SHRINE, ARENA_BAROQUE_COURT, ARENA_GASHADOKURO, COLOR_BG, COLOR_KYOTO_BG,
+    ARENA_BAMBOO, ARENA_KYOTO, ARENA_GANRYU, ARENA_IGA, ARENA_PIRATE_DECK, ARENA_SHADOW_CAVE, ARENA_MIST_TEMPLE, ARENA_FOREST_CAMP, ARENA_NAGASHINO, ARENA_KABUKI_STAGE, ARENA_MOUNTAIN_SHRINE, ARENA_BAROQUE_COURT, ARENA_GASHADOKURO,
+    ARENA_SHAOLIN, ARENA_HIGANBANA, COLOR_BG, COLOR_KYOTO_BG,
     COLOR_GRASS, COLOR_GRASS_LIGHT, COLOR_EARTH, COLOR_WATER, COLOR_WATER_HIGHLIGHT,
     COLOR_KYOTO_STONE, COLOR_KYOTO_STONE_LIGHT, COLOR_KYOTO_STONE_DARK, COLOR_KYOTO_CURB, COLOR_KYOTO_PAVEMENT,
     MAP_COLS, MAP_ROWS,
@@ -466,11 +467,18 @@ SHADOW_CAVE_SPEC = ArenaSpec(
     playable_bounds=(2.0, 2.0, 20.0, 20.0),
     spawns=SpawnRule(x_range=(4.0, 18.0), margin=4.0, min_distance=7.0, fallback=((5.0, 11.0), (17.0, 11.0))),
     stage=StageSpec(11.0, 11.0),
-    drift_count=0,
+    drift_count=32,
+    drift_petals=0.1,
     lighting=LightingEnvironment(
-        ambient_color=(90, 70, 130), ambient_strength=0.35, vignette=0.45,
-        lights=tuple(LightSource(x, y, 0.9, (176, 120, 255), 3.4, flicker=0.2) for x, y in _CAVE_LANTERNS),
-        atmosphere=(AtmosphereEffect("mist", density=0.6),),
+        ambient_color=(65, 45, 95), ambient_strength=0.30, vignette=0.50,
+        lights=tuple(LightSource(x, y, 0.9, (190, 110, 255), 3.8, flicker=0.25) for x, y in _CAVE_LANTERNS)
+        + (LightSource(10.5, 10.5, 0.2, (220, 90, 255), 4.2, flicker=0.18),),
+        atmosphere=(
+            AtmosphereEffect("mist", density=0.85),
+            AtmosphereEffect("fog", density=0.45),
+            AtmosphereEffect("dust", density=0.55),
+            AtmosphereEffect("fireflies", density=0.35),
+        ),
     ),
 )
 
@@ -599,7 +607,7 @@ NAGASHINO_SPEC = ArenaSpec(
     rows=MAP_ROWS,
     bg_color=(98, 84, 96),
     music="bgm_nagashino_field",
-    wind=WindSpec(-1, 0.4, 0.9, 0.6),
+    wind=WindSpec(-1, 0.5, 1.2, 0.85),
     tile_styles={
         TILE_NAG_GRASS: TileStyle("flat", ((152, 150, 86), (140, 140, 78)), pattern="third", edge=(112, 112, 62), surface="grass"),
         TILE_NAG_MUD: TileStyle("flat", ((108, 82, 56), (94, 72, 50)), pattern="parity", edge=(70, 52, 36), speed_mult=0.6, surface="mud"),
@@ -623,11 +631,21 @@ NAGASHINO_SPEC = ArenaSpec(
     ),
     spawns=SpawnRule(x_range=(3.0, 19.0), margin=3.5, min_distance=7.0, fallback=((5.0, 4.8), (17.0, 18.5))),
     stage=StageSpec(10.5, 12.5),
-    drift_count=20,
+    drift_count=45,
     drift_petals=0.0,
     lighting=LightingEnvironment(
-        ambient_color=(255, 190, 140), ambient_strength=0.7, vignette=0.25,
-        lights=(), atmosphere=(AtmosphereEffect("smoke", density=0.5),),
+        ambient_color=(255, 170, 120), ambient_strength=0.68, vignette=0.32,
+        lights=(
+            LightSource(2.5, 6.8, 1.2, (255, 140, 50), 3.5, flicker=0.35),
+            LightSource(16.5, 6.8, 1.2, (255, 140, 50), 3.5, flicker=0.35),
+            LightSource(5.5, 14.8, 1.2, (255, 140, 50), 3.5, flicker=0.35),
+            LightSource(14.5, 14.8, 1.2, (255, 140, 50), 3.5, flicker=0.35),
+        ),
+        atmosphere=(
+            AtmosphereEffect("smoke", density=0.85),
+            AtmosphereEffect("embers", density=0.80),
+            AtmosphereEffect("dust", density=0.40),
+        ),
     ),
 )
 
@@ -791,6 +809,120 @@ BAROQUE_COURT_SPEC = ArenaSpec(
 )
 
 # ---------------------------------------------------------------------------
+# Pátio dos Sinos Shaolin (Ren)
+# ---------------------------------------------------------------------------
+TILE_SHAOLIN_BORDER = 61
+TILE_SHAOLIN_TERRACE = 62
+TILE_SHAOLIN_PAVING = 63
+TILE_SHAOLIN_GRAVEL = 64
+
+_SHAOLIN_LANTERNS = ((7.5, 4.5), (13.5, 4.5), (7.5, 16.5), (13.5, 16.5))
+_SHAOLIN_INCENSE = ((6.8, 6.8), (14.2, 6.8), (6.8, 14.2), (14.2, 14.2))
+_SHAOLIN_PINES = ((2.2, 2.2), (18.8, 2.2), (2.2, 18.8), (18.8, 18.8))
+_SHAOLIN_JIZO = ((4.5, 10.5), (16.5, 10.5))
+
+SHAOLIN_SPEC = ArenaSpec(
+    id=ARENA_SHAOLIN,
+    name="Pátio dos Sinos Shaolin",
+    cols=MAP_COLS,
+    rows=MAP_ROWS,
+    bg_color=(175, 145, 125),
+    music="bgm_shaolin_temple",
+    wind=WindSpec(1, 0.3, 0.45, 0.4),
+    tile_styles={
+        TILE_SHAOLIN_BORDER: TileStyle("flat", ((74, 62, 54), (66, 54, 46)), pattern="parity", edge=(48, 38, 32), surface="stone"),
+        TILE_SHAOLIN_TERRACE: TileStyle("flat", ((140, 122, 104), (128, 110, 94)), pattern="parity", edge=(96, 82, 70), surface="stone"),
+        TILE_SHAOLIN_PAVING: TileStyle("flat", ((186, 172, 152), (174, 160, 140)), pattern="rows", edge=(130, 118, 100), surface="stone"),
+        TILE_SHAOLIN_GRAVEL: TileStyle("flat", ((210, 195, 165), (198, 182, 152)), pattern="parity", edge=(152, 138, 112), surface="gravel"),
+    },
+    layers=(
+        FillLayer(TILE_SHAOLIN_BORDER),
+        RectLayer(TILE_SHAOLIN_TERRACE, 2, 19, 2, 19),
+        RectLayer(TILE_SHAOLIN_PAVING, 4, 17, 4, 17),
+        EllipseLayer(TILE_SHAOLIN_GRAVEL, cx=10.5, cy=10.5, radius=4.5),
+    ),
+    props=(
+        (PropSpec("shrine_bell", 4.2, 4.8), PropSpec("shrine_bell", 16.8, 16.2))
+        + tuple(PropSpec("incense", x, y) for x, y in _SHAOLIN_INCENSE)
+        + tuple(PropSpec("stone_lantern", x, y) for x, y in _SHAOLIN_LANTERNS)
+        + tuple(PropSpec("pine", x, y) for x, y in _SHAOLIN_PINES)
+        + tuple(PropSpec("jizo", x, y) for x, y in _SHAOLIN_JIZO)
+    ),
+    spawns=SpawnRule(x_range=(4.0, 17.0), margin=4.0, min_distance=7.0, fallback=((6.5, 10.5), (14.5, 10.5))),
+    stage=StageSpec(10.5, 10.5),
+    drift_count=42,
+    drift_petals=0.65,
+    lighting=LightingEnvironment(
+        ambient_color=(255, 230, 185), ambient_strength=0.88, vignette=0.15,
+        lights=tuple(LightSource(x, y, 0.9, (255, 210, 130), 2.8, flicker=0.10) for x, y in _SHAOLIN_LANTERNS),
+        atmosphere=(
+            AtmosphereEffect("incense", density=0.85),
+            AtmosphereEffect("sunbeams", density=0.50),
+            AtmosphereEffect("dust", density=0.45),
+        ),
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# Jardim dos Lírios Carmim (Chiyo)
+# ---------------------------------------------------------------------------
+TILE_HIGAN_GRASS = 65
+TILE_HIGAN_FLOWERS = 66
+TILE_HIGAN_STONE = 67
+TILE_HIGAN_WATER = 68
+
+_HIGAN_LANTERNS = ((8.5, 6.0), (12.5, 6.0), (8.5, 15.0), (12.5, 15.0))
+_HIGAN_BAMBOOS = (
+    (2.5, 5.0), (3.0, 9.0), (2.5, 13.0), (3.0, 16.5),
+    (18.5, 5.0), (18.0, 9.0), (18.5, 13.0), (18.0, 16.5),
+)
+_HIGAN_MIST = ((5.0, 7.0), (16.0, 7.0), (5.0, 14.0), (16.0, 14.0), (10.5, 10.5))
+_HIGAN_JIZO = ((6.0, 6.0), (15.0, 15.0))
+
+HIGANBANA_SPEC = ArenaSpec(
+    id=ARENA_HIGANBANA,
+    name="Jardim dos Lírios Carmim",
+    cols=MAP_COLS,
+    rows=MAP_ROWS,
+    bg_color=(18, 10, 24),
+    music="bgm_higanbana_garden",
+    wind=WindSpec(-1, 0.4, 0.7, 0.6),
+    tile_styles={
+        TILE_HIGAN_GRASS: TileStyle("flat", ((32, 26, 36), (26, 20, 30)), pattern="parity", edge=(16, 12, 20), surface="grass"),
+        TILE_HIGAN_FLOWERS: TileStyle("flat", ((178, 24, 46), (142, 18, 36)), pattern="third", edge=(108, 12, 26), surface="grass"),
+        TILE_HIGAN_STONE: TileStyle("flat", ((68, 64, 76), (56, 52, 64)), pattern="rows", edge=(38, 34, 44), surface="stone"),
+        TILE_HIGAN_WATER: TileStyle("water", ((22, 16, 32), (64, 38, 72)), edge=(14, 10, 20), depth=0.14, speed_mult=0.5, surface="water"),
+    },
+    layers=(
+        FillLayer(TILE_HIGAN_FLOWERS),
+        EllipseLayer(TILE_HIGAN_WATER, cx=10.5, cy=10.5, radius=8.2, sx=1.0, sy=0.9),
+        RectLayer(TILE_HIGAN_STONE, 9, 12, 0, 21),
+        EllipseLayer(TILE_HIGAN_STONE, cx=10.5, cy=10.5, radius=3.8),
+        EllipseLayer(TILE_HIGAN_FLOWERS, cx=10.5, cy=10.5, radius=2.2),
+    ),
+    props=(
+        (PropSpec("torii", 10.5, 2.5), PropSpec("torii", 10.5, 18.5))
+        + tuple(PropSpec("bamboo", x, y) for x, y in _HIGAN_BAMBOOS)
+        + tuple(PropSpec("stone_lantern", x, y) for x, y in _HIGAN_LANTERNS)
+        + tuple(PropSpec("mist", x, y, {"radius": 3.0}) for x, y in _HIGAN_MIST)
+        + tuple(PropSpec("jizo", x, y) for x, y in _HIGAN_JIZO)
+    ),
+    spawns=SpawnRule(x_range=(4.0, 17.0), margin=4.0, min_distance=7.0, fallback=((10.5, 6.5), (10.5, 14.5))),
+    stage=StageSpec(10.5, 10.5),
+    drift_count=55,
+    drift_petals=0.95,
+    lighting=LightingEnvironment(
+        ambient_color=(75, 52, 98), ambient_strength=0.38, vignette=0.45,
+        lights=tuple(LightSource(x, y, 0.9, (255, 100, 130), 3.2, flicker=0.22) for x, y in _HIGAN_LANTERNS),
+        atmosphere=(
+            AtmosphereEffect("mist", density=0.75),
+            AtmosphereEffect("fogbank", density=0.60),
+            AtmosphereEffect("fireflies", density=0.80),
+        ),
+    ),
+)
+
+# ---------------------------------------------------------------------------
 # Registro de arenas jogáveis
 # ---------------------------------------------------------------------------
 ARENA_SPECS: dict[str, ArenaSpec] = {
@@ -801,6 +933,8 @@ ARENA_SPECS: dict[str, ArenaSpec] = {
     ARENA_KABUKI_STAGE: KABUKI_STAGE_SPEC,
     ARENA_MOUNTAIN_SHRINE: MOUNTAIN_SHRINE_SPEC,
     ARENA_BAROQUE_COURT: BAROQUE_COURT_SPEC,
+    ARENA_SHAOLIN: SHAOLIN_SPEC,
+    ARENA_HIGANBANA: HIGANBANA_SPEC,
 }
 
 
