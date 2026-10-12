@@ -22,7 +22,7 @@ from src.ui.arena_preview import render_arena_preview
 from src.ui.portraits import get_portrait
 from src.ui.fonts import get_title_font, get_text_font
 from src.ui.font_manager import render_text_fx
-from src.ui.character_select import draw_scroll_frame, draw_enso_circle
+from src.ui.character_select import draw_scroll_frame, draw_enso_circle, draw_mystery_silhouette
 
 # Sufixo das chaves de texto das três primeiras arenas; as demais usam o próprio id (arena_<id>_subtitle etc.)
 _DETAIL_KEYS = {ARENA_BAMBOO: "bamboo", ARENA_KYOTO: "kyoto", ARENA_GANRYU: "ganryu", ARENA_RANDOM: "random"}
@@ -36,15 +36,17 @@ _HAZARD_COLORS = {
     ARENA_IGA: (240, 170, 80), ARENA_PIRATE_DECK: (120, 205, 235), ARENA_SHADOW_CAVE: (214, 130, 220), ARENA_MIST_TEMPLE: (255, 170, 90), ARENA_FOREST_CAMP: (240, 200, 110), ARENA_NAGASHINO: (255, 120, 60), ARENA_KABUKI_STAGE: (255, 196, 90), ARENA_MOUNTAIN_SHRINE: (255, 226, 150), ARENA_BAROQUE_COURT: (150, 210, 240),
     ARENA_SHAOLIN: (255, 210, 60), ARENA_HIGANBANA: (255, 60, 85),
 }
-_LOCKED_COLOR = (92, 92, 100)
+_LOCKED_COLOR = (108, 102, 96)
 
-GRID_COLS = 7
+GRID_COLS = 8
+GRID_ROWS = 3
 MARGIN_X = 40
-GAP = 12
-CARD_H = 128
-GRID_Y = 108
-PANEL_RECT = pygame.Rect(MARGIN_X, 392, SCREEN_WIDTH - 2 * MARGIN_X, 198)
-PREVIEW_SIZE = (328, 160)
+GAP_X = 10
+GAP_Y = 7
+CARD_H = 88
+GRID_Y = 82
+PANEL_RECT = pygame.Rect(MARGIN_X, 408, SCREEN_WIDTH - 2 * MARGIN_X, 194)
+PREVIEW_SIZE = (324, 158)
 
 
 class ArenaSelectScreen:
@@ -54,6 +56,7 @@ class ArenaSelectScreen:
         self.card_rects: list[pygame.Rect] = []
         self.locked_flash = 0.0
         self._axis_held = False
+        self._last_col = 3
         self._card_preview_cache: dict[tuple[str, tuple[int, int]], pygame.Surface] = {}
 
         # Artes de conceito disponíveis (as demais arenas usam a prévia gerada pelo próprio gerador)
@@ -114,14 +117,15 @@ class ArenaSelectScreen:
             card = {
                 "id": arena_id,
                 "fighter_id": fighter_id,
-                "fighter_name": t(FIGHTER_NAME_KEY[fighter_id]),
+                "fighter_name": "???" if locked else t(FIGHTER_NAME_KEY[fighter_id]),
                 "locked": locked,
                 "name": t(self._name_key(arena_id)),
+                "subtitle": t(f"arena_{detail}_subtitle"),
                 "theme_color": _LOCKED_COLOR if locked else _THEME_COLORS.get(arena_id, (96, 150, 176)),
                 "hazard_color": _HAZARD_COLORS.get(arena_id, COLOR_GOLD),
             }
             if not locked:
-                card.update(subtitle=t(f"arena_{detail}_subtitle"), hazard_level=t(f"arena_{detail}_hazard"),
+                card.update(hazard_level=t(f"arena_{detail}_hazard"),
                             features=t(f"arena_{detail}_features"), tactics=t(f"arena_{detail}_tactics"))
             cards.append(card)
         cards.append({
@@ -133,21 +137,19 @@ class ArenaSelectScreen:
         return cards
 
     # -------------------------------------------------------------- navegação
-    def _vertical_step(self, idx: int) -> int:
-        """Cima/baixo na grade: 7 cartas na linha 1; na linha 2, 5 arenas e o Aleatório ocupando as duas últimas colunas."""
-        rnd = self.random_idx
-        if idx == rnd:
-            return 5  # sobe para a coluna do meio do Aleatório
-        if idx < GRID_COLS:
-            return idx + GRID_COLS if idx + GRID_COLS < rnd else rnd
-        return idx - GRID_COLS
-
     def _move(self, dx: int, dy: int):
-        n = len(self.arenas)
-        if dx:
-            self.selected_idx = (self.selected_idx + dx) % n
+        """Navega pela grade 8x3 (24 arenas) + faixa da Arena Aleatória na linha 3."""
+        rnd = self.random_idx
+        if self.selected_idx == rnd:
+            row, col = GRID_ROWS, self._last_col
+        else:
+            row, col = divmod(self.selected_idx, GRID_COLS)
+            self._last_col = col
         if dy:
-            self.selected_idx = self._vertical_step(self.selected_idx)
+            row = (row + dy) % (GRID_ROWS + 1)
+        if dx and row != GRID_ROWS:
+            col = (col + dx) % GRID_COLS
+        self.selected_idx = rnd if row == GRID_ROWS else row * GRID_COLS + col
 
     def is_locked(self, idx: int | None = None) -> bool:
         return self.arenas[self.selected_idx if idx is None else idx]["locked"]
@@ -224,7 +226,7 @@ class ArenaSelectScreen:
                 if r.collidepoint(mx, my):
                     self.selected_idx = idx
                     return self._confirm()
-            start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 65, 320, 42)
+            start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 54, 320, 40)
             if start_btn.collidepoint(mx, my):
                 return self._confirm()
 
@@ -244,7 +246,7 @@ class ArenaSelectScreen:
     def _get_header_shade(self) -> pygame.Surface:
         shade = getattr(self, "_header_shade", None)
         if shade is None:
-            h = 104
+            h = 84
             shade = pygame.Surface((SCREEN_WIDTH, h), pygame.SRCALPHA)
             for y in range(h):
                 pygame.draw.line(shade, (6, 8, 8, int(190 * (1 - y / h) ** 1.2)), (0, y), (SCREEN_WIDTH, y))
@@ -252,10 +254,10 @@ class ArenaSelectScreen:
         return shade
 
     def _fit_text(self, text: str, color, max_w: int, size: int) -> pygame.Surface:
-        """Renderiza o texto reduzindo a fonte até caber em max_w (mínimo 10px)."""
+        """Renderiza o texto reduzindo a fonte até caber em max_w (mínimo 9px)."""
         while True:
             surf = get_text_font(size).render(text, True, color)
-            if surf.get_width() <= max_w or size <= 10:
+            if surf.get_width() <= max_w or size <= 9:
                 return surf
             size -= 1
 
@@ -286,8 +288,15 @@ class ArenaSelectScreen:
             for i in range(0, rect.width + rect.height, 14):
                 pygame.draw.line(surface, (28, 30, 36), (rect.x + min(i, rect.width), rect.y + max(0, i - rect.width)),
                                  (rect.x + max(0, i - rect.height), rect.y + min(i, rect.height)), 1)
-            label = get_title_font(18 if big else 12).render(t("arena_locked"), True, (150, 150, 160))
-            surface.blit(label, label.get_rect(center=rect.center))
+            badge_txt = t("arena_locked")
+            font_sz = 16 if big else 10
+            label = get_title_font(font_sz).render(badge_txt, True, (195, 175, 125))
+            badge_w = label.get_width() + (22 if big else 12)
+            badge_h = 26 if big else 16
+            badge_rect = pygame.Rect(rect.centerx - badge_w // 2, rect.centery - badge_h // 2, badge_w, badge_h)
+            pygame.draw.rect(surface, (28, 24, 20), badge_rect, border_radius=4)
+            pygame.draw.rect(surface, (130, 110, 75), badge_rect, 1, border_radius=4)
+            surface.blit(label, label.get_rect(center=badge_rect.center))
         else:
             surface.blit(image, rect.topleft)
             if arena["id"] == ARENA_RANDOM:
@@ -295,63 +304,82 @@ class ArenaSelectScreen:
                 glow = pygame.Surface(rect.size, pygame.SRCALPHA)
                 glow.fill((120, 80, 200, int(35 + 25 * pulse)))
                 surface.blit(glow, rect.topleft)
-                q = get_title_font(54 if big else 28).render("?", True, COLOR_GOLD)
+                q = get_title_font(48 if big else 20).render("?", True, COLOR_GOLD)
                 surface.blit(q, q.get_rect(center=rect.center))
         pygame.draw.rect(surface, (80, 90, 85), rect, 1, border_radius=6)
 
     def _draw_portrait(self, surface, arena: dict, cx: int, cy: int, radius: int, selected: bool):
-        """Retrato circular do lutador dono da arena, com anel ensō; o Aleatório mostra uma interrogação."""
+        """Retrato circular do lutador dono da arena, com anel ensō; bloqueados mostram silhueta misteriosa."""
         ring = COLOR_GOLD if selected else arena["theme_color"]
-        draw_enso_circle(surface, cx, cy, radius + 3, ring, self.anim_time)
         if arena["fighter_id"] is None:
+            draw_enso_circle(surface, cx, cy, radius + 2, ring, self.anim_time)
             pygame.draw.circle(surface, (22, 20, 30), (cx, cy), radius)
-            q = get_title_font(int(radius * 1.3)).render("?", True, COLOR_GOLD)
+            q = get_title_font(int(radius * 1.2)).render("?", True, COLOR_GOLD)
             surface.blit(q, q.get_rect(center=(cx, cy + 1)))
             return
+        if arena["locked"]:
+            draw_mystery_silhouette(surface, cx, cy, radius=radius)
+            draw_enso_circle(surface, cx, cy, radius, ring, self.anim_time)
+            q = get_title_font(max(12, int(radius * 0.95))).render("?", True, (190, 180, 160))
+            surface.blit(q, q.get_rect(center=(cx, cy)))
+            return
+        draw_enso_circle(surface, cx, cy, radius + 2, ring, self.anim_time)
         portrait = get_portrait(arena["fighter_id"], size=(radius * 2, radius * 2), circular=True)
         if portrait is not None:
             surface.blit(portrait, (cx - radius, cy - radius))
-        if arena["locked"]:
-            shade = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-            pygame.draw.circle(shade, (10, 10, 14, 120), (radius, radius), radius)
-            surface.blit(shade, (cx - radius, cy - radius))
 
     def _card_rect(self, idx: int) -> pygame.Rect:
-        card_w = (SCREEN_WIDTH - 2 * MARGIN_X - (GRID_COLS - 1) * GAP) // GRID_COLS
+        card_w = (SCREEN_WIDTH - 2 * MARGIN_X - (GRID_COLS - 1) * GAP_X) // GRID_COLS
         if idx == self.random_idx:
-            return pygame.Rect(MARGIN_X + 5 * (card_w + GAP), GRID_Y + CARD_H + GAP, 2 * card_w + GAP, CARD_H)
+            rand_w = 500
+            rand_y = GRID_Y + GRID_ROWS * (CARD_H + GAP_Y) + 2
+            return pygame.Rect(SCREEN_WIDTH // 2 - rand_w // 2, rand_y, rand_w, 32)
         row, col = divmod(idx, GRID_COLS)
-        return pygame.Rect(MARGIN_X + col * (card_w + GAP), GRID_Y + row * (CARD_H + GAP), card_w, CARD_H)
+        return pygame.Rect(MARGIN_X + col * (card_w + GAP_X), GRID_Y + row * (CARD_H + GAP_Y), card_w, CARD_H)
 
     def _draw_card(self, surface, idx: int, arena: dict):
         rect = self._card_rect(idx)
         self.card_rects.append(rect)
         is_sel = (idx == self.selected_idx)
-        draw_rect = rect.move(0, -4 if is_sel else 0)
         locked = arena["locked"]
 
-        pygame.draw.rect(surface, (34, 42, 38) if is_sel else (24, 28, 28), draw_rect, border_radius=9)
-        border = arena["theme_color"] if is_sel else (55, 62, 60)
-        pygame.draw.rect(surface, border, draw_rect, 3 if is_sel else 1, border_radius=9)
+        if idx == self.random_idx:
+            draw_rect = rect.move(0, -2 if is_sel else 0)
+            pygame.draw.rect(surface, (42, 36, 54) if is_sel else (26, 24, 34), draw_rect, border_radius=7)
+            border = COLOR_GOLD if is_sel else arena["theme_color"]
+            pygame.draw.rect(surface, border, draw_rect, 2 if is_sel else 1, border_radius=7)
+            self._draw_portrait(surface, arena, draw_rect.x + 22, draw_rect.centery, 12, is_sel)
+            name_s = get_title_font(15).render(arena["name"], True, COLOR_GOLD if is_sel else COLOR_WHITE)
+            sub_s = get_text_font(12).render(f"—  {arena['subtitle']}", True, (195, 190, 210))
+            total_w = name_s.get_width() + 10 + sub_s.get_width()
+            tx = draw_rect.centerx - total_w // 2 + 10
+            surface.blit(name_s, (tx, draw_rect.centery - name_s.get_height() // 2))
+            surface.blit(sub_s, (tx + name_s.get_width() + 10, draw_rect.centery - sub_s.get_height() // 2))
+            return
+
+        draw_rect = rect.move(0, -3 if is_sel else 0)
+        pygame.draw.rect(surface, (34, 42, 38) if is_sel else (24, 28, 28), draw_rect, border_radius=8)
+        border = (COLOR_GOLD if locked else arena["theme_color"]) if is_sel else (55, 62, 60)
+        pygame.draw.rect(surface, border, draw_rect, 2 if is_sel else 1, border_radius=8)
         if is_sel:
             pulse = 0.5 + 0.5 * math.sin(self.anim_time * 6.0)
             glow = tuple(int(c * pulse) for c in COLOR_GOLD)
-            pygame.draw.rect(surface, glow, draw_rect.inflate(6, 6), 2, border_radius=11)
+            pygame.draw.rect(surface, glow, draw_rect.inflate(4, 4), 1, border_radius=10)
 
-        art_rect = pygame.Rect(draw_rect.x + 6, draw_rect.y + 6, draw_rect.width - 12, 62)
+        art_rect = pygame.Rect(draw_rect.x + 5, draw_rect.y + 5, draw_rect.width - 10, 42)
         self._draw_art(surface, arena, art_rect, big=False)
 
         # Retrato do dono da arena sobre o canto inferior da prévia
-        self._draw_portrait(surface, arena, draw_rect.x + 32, art_rect.bottom - 2, 22, is_sel)
+        self._draw_portrait(surface, arena, draw_rect.x + 22, art_rect.bottom + 2, 15, is_sel)
 
         sub = arena["fighter_name"] if arena["fighter_id"] else ""
-        text_x = draw_rect.x + 62
-        sub_s = self._fit_text(sub, (130, 140, 135) if locked else (COLOR_GOLD if is_sel else (185, 195, 190)),
-                               draw_rect.right - text_x - 6, 13)
-        surface.blit(sub_s, (text_x, art_rect.bottom + 8))
-        name_col = (150, 150, 158) if locked else (COLOR_GOLD if is_sel else COLOR_WHITE)
-        name_s = self._fit_text(arena["name"], name_col, draw_rect.width - 14, 13)
-        surface.blit(name_s, (draw_rect.x + 8, draw_rect.bottom - 8 - name_s.get_height()))
+        text_x = draw_rect.x + 42
+        sub_col = (145, 140, 132) if locked else (COLOR_GOLD if is_sel else (185, 195, 190))
+        sub_s = self._fit_text(sub, sub_col, draw_rect.right - text_x - 5, 11)
+        surface.blit(sub_s, (text_x, art_rect.bottom + 2))
+        name_col = (175, 165, 145) if locked else (COLOR_GOLD if is_sel else COLOR_WHITE)
+        name_s = self._fit_text(arena["name"], name_col, draw_rect.width - 10, 11)
+        surface.blit(name_s, (draw_rect.x + 5, draw_rect.bottom - 5 - name_s.get_height()))
 
     def _draw_panel(self, surface, arena: dict, fonts: dict):
         """Detalhe da arena selecionada: arte grande, retrato do lutador, perigo, cenário e dica."""
@@ -368,17 +396,18 @@ class ArenaSelectScreen:
         self._draw_portrait(surface, arena, x0 + 34, panel.y + 52, 32, True)
         tx = x0 + 84
         max_w = panel.right - tx - 20
-        surface.blit(fonts["title"].render(arena["name"], True, COLOR_GOLD), (tx, panel.y + 18))
+        surface.blit(fonts["title"].render(arena["name"], True, COLOR_GOLD), (tx, panel.y + 16))
         if arena["fighter_id"] is not None:
-            owner = self._fit_text(t("arena_of_fighter", name=arena["fighter_name"].upper()), (170, 190, 200), max_w, 14)
-            surface.blit(owner, (tx, panel.y + 52))
+            owner_txt = t("arena_of_fighter", name=arena["fighter_name"].upper())
+            owner = self._fit_text(owner_txt, (170, 190, 200), max_w, 14)
+            surface.blit(owner, (tx, panel.y + 48))
+        surface.blit(self._fit_text(arena["subtitle"], (195, 185, 155) if arena["locked"] else (180, 190, 185), max_w, 14), (tx, panel.y + 70))
         if arena["locked"]:
-            surface.blit(fonts["title"].render(t("arena_locked"), True, (200, 200, 210)), (tx, panel.y + 86))
-            surface.blit(self._fit_text(t("arena_locked_hint"), (150, 155, 160), max_w, 15), (tx, panel.y + 120))
+            surface.blit(fonts["title"].render(f"[ {t('arena_locked')} ]", True, (215, 190, 130)), (x0, panel.y + 106))
+            surface.blit(self._fit_text(t("arena_locked_hint"), (160, 165, 170), panel.right - x0 - 24, 14), (x0, panel.y + 138))
             return
-        surface.blit(self._fit_text(arena["subtitle"], (180, 190, 185), max_w, 14), (tx, panel.y + 74))
 
-        y = panel.y + 104
+        y = panel.y + 102
         hz_label = fonts["body"].render(t("arena_hazard_label"), True, (160, 160, 165))
         surface.blit(hz_label, (x0, y))
         hz = self._fit_text(arena["hazard_level"], arena["hazard_color"], panel.right - x0 - hz_label.get_width() - 36, 14)
@@ -411,9 +440,9 @@ class ArenaSelectScreen:
         surface.blit(self._get_header_shade(), (0, 0))
         fx = dict(outline=True, outline_color=(10, 8, 6), outline_width=1, shadow=True, shadow_offset=(2, 2))
         header_surf = render_text_fx(font_oriental_title, t("select_arena_title"), COLOR_GOLD, **fx)
-        surface.blit(header_surf, header_surf.get_rect(midtop=(SCREEN_WIDTH // 2, 18)))
+        surface.blit(header_surf, header_surf.get_rect(midtop=(SCREEN_WIDTH // 2, 10)))
         sub_surf = render_text_fx(font_zen_sub, t("select_arena_subtitle"), (225, 228, 222), **fx)
-        surface.blit(sub_surf, sub_surf.get_rect(midtop=(SCREEN_WIDTH // 2, 62)))
+        surface.blit(sub_surf, sub_surf.get_rect(midtop=(SCREEN_WIDTH // 2, 48)))
 
         arenas = self.arenas
         self.card_rects = []
@@ -423,7 +452,7 @@ class ArenaSelectScreen:
 
         # Rodapé de confirmação (esmaecido para arena bloqueada)
         locked = self.is_locked()
-        start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 65, 320, 42)
+        start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 54, 320, 40)
         pygame.draw.rect(surface, (40, 40, 44) if locked else (30, 45, 35), start_btn, border_radius=8)
         pygame.draw.rect(surface, (110, 110, 118) if locked else COLOR_GOLD, start_btn, 2, border_radius=8)
         label = t("arena_locked") if locked else t("arena_start_button")

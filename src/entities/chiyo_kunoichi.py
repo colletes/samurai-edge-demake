@@ -30,13 +30,20 @@ class ChiyoKunoichi(Samurai):
         self.scissor_cooldown = 0.40
         self.scissor_timer = 0.0
 
-        # Ação Secundária: Dança Mai com as 2 Nodachi (Defesa, Distração e Contra-Ataque)
+        # Ação Secundária: Dança Mai com as 2 Kodachi (Esquiva/Parry Dançante de Janela Longa)
         self.mai_dance_cooldown = 3.0
         self.mai_dance_timer = 0.0
         self.mai_cooldown = 3.0
         self.mai_timer = 0.0
+        self.mai_dance_duration = 0.75       # Janela de 0.75s (maior que os 0.45s do Musashi)
+        self.mai_whiff_recovery = 0.45       # Desvantagem: 0.45s de exaustão vulnerável se dançar no vazio
         self.mai_active = False
+        self.mai_parried_anything = False
+        self.mai_exhausted = False
         self.mai_counter_ready = False
+        self.mai_spin_angle = 0.0
+        self.dance_dir_x = 1.0
+        self.dance_dir_y = 0.0
 
         # Esquiva ágil
         self.is_agile_dodge = True
@@ -50,37 +57,43 @@ class ChiyoKunoichi(Samurai):
         return (
             self.is_alive
             and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY)
+            and not getattr(self, "mai_exhausted", False)
             and self.roll_recovery_timer <= 0
             and self.dash_recovery_timer <= 0
         )
 
-    def trigger_scissor_strike(self, target_wx: float, target_wy: float):
-        """Ataque Primário: Tesoura Dupla com as 2 Nodachi (Alcance 2.3m)."""
+    def trigger_kodachi_strike(self, target_wx: float, target_wy: float):
+        """Ataque Primário: Corte Cruzado com as 2 Kodachi (Lâminas Curtas Duplas)."""
         if not self.can_act() or self.scissor_timer > 0:
             return
 
         self.set_facing(target_wx, target_wy)
+        self.combo_step = (getattr(self, "combo_step", 0) % 3) + 1
         self.state = STATE_ATTACK
-        self.state_timer = 0.20
+        self.state_timer = 0.14
         self.hitbox_active = True
-        self.hitbox_radius = 1.65  # Amplo raio do arco das espadas gigantes
+        self.hitbox_radius = 1.25  # Alcance preciso das Kodachi gêmeas
         self.hitbox_damage = 2     # Golpe letal
         self.slash_dir = (self.facing_x, self.facing_y)
-        # Avanço gracioso com as lâminas
-        self.wx += self.facing_x * 0.50
-        self.wy += self.facing_y * 0.50
-        self.hitbox_center = (self.wx + self.facing_x * 1.10, self.wy + self.facing_y * 1.10)
+        # Passo ágil e equilibrado com as lâminas curtas
+        self.wx += self.facing_x * 0.25
+        self.wy += self.facing_y * 0.25
+        self.hitbox_center = (self.wx + self.facing_x * 0.85, self.wy + self.facing_y * 0.85)
         self.scissor_timer = self.scissor_cooldown
 
     def trigger_primary_attack(self, target_wx: float, target_wy: float):
-        self.trigger_scissor_strike(target_wx, target_wy)
+        self.trigger_kodachi_strike(target_wx, target_wy)
 
-    trigger_scissor_slash = trigger_scissor_strike
+    trigger_scissor_strike = trigger_kodachi_strike
+    trigger_scissor_slash = trigger_kodachi_strike
 
     def trigger_mai_dance(self, target_wx: float = None, target_wy: float = None, opponent=None, projectiles: list = None, particles: list = None, banners: list = None):
         """
-        Ação Secundária: Dança Mai com as 2 Nodachi.
-        Chiyo inicia um vórtice giratório de lâminas que deflete projéteis e a protege de ataques corpo a corpo.
+        Ação Secundária: Dança Mai das Duas Kodachi (Parry/Esquiva Dançante).
+        - Janela longa de 0.75s (maior que os 0.45s do Musashi) em pirueta contínua de 360°.
+        - Apara ataques corpo a corpo (respondendo com um corte de raspão de 1 HP + recuo) e reflete projéteis.
+        - Desvantagem: Se a dança terminar no vazio sem aparar nenhum golpe/projétil, Chiyo fica
+          sem fôlego por 0.45s (exaustão vulnerável e lenta).
         """
         if not self.can_act() or self.mai_dance_timer > 0:
             return
@@ -89,22 +102,29 @@ class ChiyoKunoichi(Samurai):
             self.set_facing(target_wx, target_wy)
         self.mai_dance_timer = self.mai_dance_cooldown
         self.state = "MAI_DANCE"
-        self.state_timer = 0.38
-        self.is_invulnerable_dodge = True  # I-frames durante a dança
+        self.state_timer = self.mai_dance_duration
+        self.is_invulnerable_dodge = False  # Permite interceptar ataques no sistema de colisão como Parry Dançante
         self.mai_active = True
-        self.hitbox_active = True
-        self.hitbox_radius = 1.40
+        self.mai_parried_anything = False
+        self.mai_exhausted = False
+        self.mai_counter_ready = False
+        self.mai_spin_angle = 0.0
+        # Deslize lateral/diagonal gracioso de dança
+        self.dance_dir_x = self.facing_x * 0.65 - self.facing_y * 0.75
+        self.dance_dir_y = self.facing_y * 0.65 + self.facing_x * 0.75
+        self.hitbox_active = False
+        self.hitbox_radius = 1.30
         self.hitbox_damage = 1
         self.hitbox_center = (self.wx, self.wy)
 
         if banners is not None:
-            banners.append(FloatingBanner(self.wx, self.wy - 0.6, "MAI!", COLOR_CHIYO_AURA))
+            banners.append(FloatingBanner("DANÇA MAI!", self.wx, self.wy - 0.6, wz=1.7, color=COLOR_CHIYO_AURA))
 
-        # Partículas de pétalas e faíscas escarlates
+        # Partículas de pétalas de Higanbana e faíscas escarlates
         if particles is not None:
             for _ in range(18):
                 ang = random.uniform(0, math.pi * 2)
-                particles.append(SparkParticle(self.wx + math.cos(ang) * 0.4, self.wy + math.sin(ang) * 0.4, 0.35, color=(210, 40, 50)))
+                particles.append(SparkParticle(self.wx + math.cos(ang) * 0.45, self.wy + math.sin(ang) * 0.45, 0.38, color=(215, 38, 52)))
 
         try:
             from src.audio.sound_events import SoundEvent
@@ -113,16 +133,35 @@ class ChiyoKunoichi(Samurai):
         except Exception:
             pass
 
-        # Defletir projéteis próximos
+        # Defletir projéteis já próximos no instante inicial do giro
         if projectiles is not None:
             for proj in projectiles:
-                if getattr(proj, "owner", None) != self and getattr(proj, "active", True):
+                if getattr(proj, "owner", None) != self and getattr(proj, "is_active", getattr(proj, "active", True)):
                     dx = proj.wx - self.wx
                     dy = proj.wy - self.wy
-                    if math.hypot(dx, dy) <= 1.8:
+                    if math.hypot(dx, dy) <= 1.85:
                         proj.vx = -proj.vx * 1.2
                         proj.vy = -proj.vy * 1.2
+                        if hasattr(proj, "dir_x"):
+                            proj.dir_x = -proj.dir_x
+                            proj.dir_y = -proj.dir_y
                         proj.owner = self
+                        self.on_mai_parry_success()
+
+    def on_mai_parry_success(self, attacker=None, game_map=None):
+        """Chamado quando a Dança Mai apara um ataque ou reflete um projétil com sucesso."""
+        self.mai_parried_anything = True
+        self.mai_counter_ready = True
+        self.mai_exhausted = False
+        # Encerra o giro suavemente após o contra-corte e reduz o cooldown como recompensa
+        self.state_timer = min(self.state_timer, 0.20)
+        self.mai_dance_timer = max(0.9, self.mai_dance_timer - 1.2)
+        if attacker is not None and game_map is not None:
+            # Passo de seda: desliza graciosamente para fora da linha de ataque
+            glide_x = -self.facing_y * 0.65 - self.facing_x * 0.35
+            glide_y = self.facing_x * 0.65 - self.facing_y * 0.35
+            self.wx = max(1.0, min(game_map.cols - 1.0, self.wx + glide_x))
+            self.wy = max(1.0, min(game_map.rows - 1.0, self.wy + glide_y))
 
     def trigger_secondary_action(self, target_wx: float = None, target_wy: float = None, opponent=None, projectiles: list = None, particles: list = None, banners: list = None):
         self.trigger_mai_dance(target_wx, target_wy, opponent=opponent, projectiles=projectiles, particles=particles, banners=banners)
@@ -146,12 +185,12 @@ class ChiyoKunoichi(Samurai):
 
         if self.state in (STATE_ATTACK, "SCISSOR_SLASH"):
             self.state_timer -= dt
-            step = 5.8 * dt
+            step = 3.6 * dt
             new_wx = self.wx + self.facing_x * step
             new_wy = self.wy + self.facing_y * step
             self.wx = max(1.0, min(game_map.cols - 1.0, new_wx))
             self.wy = max(1.0, min(game_map.rows - 1.0, new_wy))
-            self.hitbox_center = (self.wx + self.facing_x * 1.15, self.wy + self.facing_y * 1.15)
+            self.hitbox_center = (self.wx + self.facing_x * 0.85, self.wy + self.facing_y * 0.85)
             if self.state_timer <= 0:
                 self.state = STATE_RECOVERY
                 self.state_timer = self.recovery_duration
@@ -162,40 +201,89 @@ class ChiyoKunoichi(Samurai):
             self.hitbox_active = False
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
+                self.mai_exhausted = False
 
-        # Fim da Dança Mai
+        # Coreografia contínua da Dança Mai (0.75s)
         elif self.state == "MAI_DANCE":
             self.state_timer -= dt
-            if particles is not None and random.random() < 0.35:
-                particles.append(SparkParticle(self.wx, self.wy, 0.25, color=(190, 30, 45)))
+            progress = 1.0 - max(0.0, self.state_timer / max(0.01, self.mai_dance_duration))
+            # Duas piruetas completas (720 graus) ao longo da dança
+            self.mai_spin_angle = progress * math.pi * 4.0
+
+            # Deslize bailado em curva suave
+            curve_vx = self.dance_dir_x * math.cos(progress * math.pi) * 1.85
+            curve_vy = self.dance_dir_y * math.cos(progress * math.pi) * 1.85
+            self.wx = max(1.0, min(game_map.cols - 1.0, self.wx + curve_vx * dt))
+            self.wy = max(1.0, min(game_map.rows - 1.0, self.wy + curve_vy * dt))
+            self.hitbox_center = (self.wx, self.wy)
+
+            if particles is not None and random.random() < 0.55:
+                p_ang = self.mai_spin_angle + random.uniform(-0.4, 0.4)
+                px = self.wx + math.cos(p_ang) * 0.55
+                py = self.wy + math.sin(p_ang) * 0.55
+                particles.append(SparkParticle(px, py, 0.32, color=(215, 36, 52)))
+
             if self.state_timer <= 0:
-                self.state = STATE_IDLE
                 self.is_invulnerable_dodge = False
                 self.mai_active = False
+                self.mai_spin_angle = 0.0
+                if not self.mai_parried_anything:
+                    # Desvantagem compensatória: Dançou no vazio -> perde o fôlego e fica vulnerável!
+                    self.state = STATE_RECOVERY
+                    self.state_timer = self.mai_whiff_recovery
+                    self.mai_exhausted = True
+                    self.apply_slow(self.mai_whiff_recovery + 0.15)
+                    if banners is not None:
+                        banners.append(FloatingBanner("SEM FÔLEGO!", self.wx, self.wy - 0.5, wz=1.6, color=(235, 165, 90)))
+                else:
+                    self.state = STATE_IDLE
+                    self.mai_exhausted = False
 
         elif self.state == STATE_ROLL:
             self.update_roll(dt, game_map)
 
         elif self.state == STATE_STUNNED:
             self.state_timer -= dt
+            self.mai_exhausted = False
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
 
     def render(self, surface: pygame.Surface, camera, shadow: bool = True):
-        # Efeito visual de vórtice escarlate durante a Dança Mai
+        # Efeito visual de fitas e pétalas giratórias durante a Dança Mai
         if self.state == "MAI_DANCE":
             cx, cy = camera.apply(self.wx, self.wy, 0.3)
-            r_px = int(32 * camera.zoom)
-            vortex_surf = pygame.Surface((r_px * 2 + 10, r_px * 2 + 10), pygame.SRCALPHA)
-            pygame.draw.circle(vortex_surf, (215, 38, 50, 110), (r_px + 5, r_px + 5), r_px, 2)
-            pygame.draw.circle(vortex_surf, (245, 120, 130, 90), (r_px + 5, r_px + 5), max(1, r_px - 6), 1)
-            surface.blit(vortex_surf, (cx - r_px - 5, cy - r_px - 5))
+            zoom = getattr(camera, "zoom", 1.0)
+            r_px = int(36 * zoom)
+            vortex_surf = pygame.Surface((r_px * 2 + 16, r_px * 2 + 16), pygame.SRCALPHA)
+            center = (r_px + 8, r_px + 8)
+            pygame.draw.circle(vortex_surf, (215, 38, 52, 125), center, r_px, 2)
+            pygame.draw.circle(vortex_surf, (255, 130, 145, 95), center, max(1, int(r_px * 0.72)), 1)
+            # Pétalas orbitais de Higanbana acompanhando o giro
+            for i in range(4):
+                a = self.mai_spin_angle + i * (math.pi / 2.0)
+                px_orb = int(center[0] + math.cos(a) * r_px * 0.88)
+                py_orb = int(center[1] + math.sin(a) * r_px * 0.55)
+                pygame.draw.circle(vortex_surf, (240, 45, 62, 195), (px_orb, py_orb), max(2, int(4 * zoom)))
+            surface.blit(vortex_surf, (cx - center[0], cy - center[1]))
+
+        # Durante a Dança Mai, gira a orientação visual em 360° para esculpir a pirueta
+        vis_fx, vis_fy = self.facing_x, self.facing_y
+        if self.state == "MAI_DANCE":
+            ca = math.cos(self.mai_spin_angle)
+            sa = math.sin(self.mai_spin_angle)
+            vis_fx = self.facing_x * ca - self.facing_y * sa
+            vis_fy = self.facing_x * sa + self.facing_y * ca
 
         render_voxel_humanoid(
             surface, camera, self.wx, self.wy, self.wz,
-            self.facing_x, self.facing_y, self.state, self.state_timer,
+            vis_fx, vis_fy, self.state, self.state_timer,
             self.is_alive, char_type="chiyo", walk_timer=self.walk_cycle,
-            alpha=self.alpha, is_moving=self.is_moving
+            alpha=self.alpha, is_moving=self.is_moving,
+            extra_props={
+                "combo_step": getattr(self, "combo_step", 3),
+                "mai_spin_angle": getattr(self, "mai_spin_angle", 0.0),
+                "mai_exhausted": getattr(self, "mai_exhausted", False),
+            }
         )
 
     render_voxel = render

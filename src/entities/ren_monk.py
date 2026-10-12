@@ -26,8 +26,10 @@ class RenMonk(Samurai):
         self.max_hp = 2
         self.hp = 2
 
-        # Combo de Artes Marciais (3 Golpes: Jab rápido, Chute Circular, Palma do Dragão)
+        # Combo de Artes Marciais (3 Golpes: Jab rápido, Palma de Ferro, Chute do Dragão Shaolin)
         self.combo_step = 0
+        self.combo_target_step = 0
+        self.combo_buffered = False
         self.combo_window_timer = 0.0
         self.attack_cooldown_timer = 0.0
 
@@ -45,7 +47,7 @@ class RenMonk(Samurai):
         self.roll_duration = 0.20
         self.roll_recovery_duration = 0.12
         self.roll_cooldown_duration = 0.32
-        self.recovery_duration = 0.20
+        self.recovery_duration = 0.16
 
     def can_act(self) -> bool:
         return (
@@ -55,53 +57,68 @@ class RenMonk(Samurai):
             and self.dash_recovery_timer <= 0
         )
 
+    def _start_combo_step(self, step: int, game_map=None):
+        """Inicia o passo específico (1, 2 ou 3) do combo marcial de Ren."""
+        self.combo_step = step
+        self.state = STATE_ATTACK
+        self.hitbox_active = True
+
+        if step == 1:
+            # Passo 1: Jab frontal veloz de direita
+            self.state_timer = 0.14
+            self.hitbox_radius = 1.18
+            self.hitbox_damage = 1
+            lunge = 0.14
+            offset = 0.85
+        elif step == 2:
+            # Passo 2: Palma de Ferro / Cruzado de esquerda
+            self.state_timer = 0.16
+            self.hitbox_radius = 1.32
+            self.hitbox_damage = 1
+            lunge = 0.18
+            offset = 0.92
+        else:
+            # Passo 3: Chute Alto do Dragão Shaolin (Golpe Finalizador com Chi)
+            self.state_timer = 0.24
+            self.combo_window_timer = 0.0
+            self.hitbox_radius = 1.48
+            self.hitbox_damage = 2
+            lunge = 0.24
+            offset = 1.00
+
+        # Micro-passo inicial controlado para garantir conexão fluida entre os 3 golpes
+        self.wx += self.facing_x * lunge
+        self.wy += self.facing_y * lunge
+        self.slash_dir = (self.facing_x, self.facing_y)
+        self.hitbox_center = (self.wx + self.facing_x * offset, self.wy + self.facing_y * offset)
+
     def trigger_punch_combo(self, target_wx: float, target_wy: float):
-        """Ataque Primário: Combo Shaolin ritmado de 3 acertos."""
-        if not self.is_alive or self.state in (STATE_STUNNED, STATE_DEAD):
+        """Ataque Primário: Combo Shaolin ritmado de 3 acertos (Soco -> Palma -> Chute)."""
+        if not self.is_alive or self.state in (STATE_STUNNED, STATE_DEAD, STATE_ROLL, "KIAI_SHOUT"):
             return
 
-        # Avançar o passo de combo
-        if self.combo_window_timer > 0 and self.combo_step < 3:
-            self.combo_step += 1
-        else:
-            if not self.can_act():
-                return
-            self.combo_step = 1
+        # Se já está executando um golpe do combo, enfileira (buffer) o próximo sem cancelar o golpe atual!
+        if self.state == STATE_ATTACK:
+            if self.combo_target_step < 3:
+                self.combo_target_step += 1
+                self.combo_buffered = True
+                self.set_facing(target_wx, target_wy)
+            return
+
+        if not self.can_act():
+            return
 
         self.set_facing(target_wx, target_wy)
-        self.state = STATE_ATTACK
 
-        if self.combo_step == 1:
-            # Passo 1: Jab frontal veloz
-            self.state_timer = 0.12
-            self.combo_window_timer = 0.38
-            self.hitbox_radius = 1.05
-            self.hitbox_active = True
-            self.hitbox_damage = 1
-            # Impulso frontal ágil
-            self.wx += self.facing_x * 0.40
-            self.wy += self.facing_y * 0.40
-        elif self.combo_step == 2:
-            # Passo 2: Chute circular alto
-            self.state_timer = 0.14
-            self.combo_window_timer = 0.40
-            self.hitbox_radius = 1.20
-            self.hitbox_active = True
-            self.hitbox_damage = 1
-            self.wx += self.facing_x * 0.50
-            self.wy += self.facing_y * 0.50
+        # Se está na janela de combo pós-golpe (em RECOVERY ou recém-saído), avança para o próximo hit
+        if self.combo_window_timer > 0 and 0 < self.combo_step < 3:
+            next_step = self.combo_step + 1
         else:
-            # Passo 3: Palma do Dragão Chi (Golpe Letal)
-            self.state_timer = 0.20
-            self.combo_window_timer = 0.0
-            self.hitbox_radius = 1.40
-            self.hitbox_active = True
-            self.hitbox_damage = 2
-            self.wx += self.facing_x * 0.70
-            self.wy += self.facing_y * 0.70
+            next_step = 1
 
-        self.slash_dir = (self.facing_x, self.facing_y)
-        self.hitbox_center = (self.wx + self.facing_x * 0.75, self.wy + self.facing_y * 0.75)
+        self.combo_target_step = next_step
+        self.combo_buffered = False
+        self._start_combo_step(next_step)
 
     def trigger_primary_attack(self, target_wx: float, target_wy: float):
         self.trigger_punch_combo(target_wx, target_wy)
@@ -131,7 +148,7 @@ class RenMonk(Samurai):
                 particles.append(SparkParticle(self.wx + math.cos(ang) * 0.3, self.wy + math.sin(ang) * 0.3, 0.4, color=COLOR_GOLD))
 
         if banners is not None:
-            banners.append(FloatingBanner(self.wx, self.wy - 0.6, "KIAI!", COLOR_GOLD))
+            banners.append(FloatingBanner("KIAI!", self.wx, self.wy - 0.6, wz=1.7, color=COLOR_GOLD))
 
         try:
             from src.audio.sound_events import SoundEvent
@@ -186,10 +203,12 @@ class RenMonk(Samurai):
         if self.kiai_timer > 0:
             self.kiai_timer = max(0.0, self.kiai_timer - dt)
 
-        if self.combo_window_timer > 0:
+        if self.state != STATE_ATTACK and self.combo_window_timer > 0:
             self.combo_window_timer = max(0.0, self.combo_window_timer - dt)
             if self.combo_window_timer <= 0:
                 self.combo_step = 0
+                self.combo_target_step = 0
+                self.combo_buffered = False
 
         # Atualizar expansão da onda de Kiai
         if self.kiai_aura_active:
@@ -201,23 +220,58 @@ class RenMonk(Samurai):
 
         if self.state == STATE_ATTACK:
             self.state_timer -= dt
-            step = 6.5 * dt
+            advance_spd = 3.2 if self.combo_step == 1 else (3.6 if self.combo_step == 2 else 4.2)
+            step = advance_spd * dt
             new_wx = self.wx + self.facing_x * step
             new_wy = self.wy + self.facing_y * step
-            self.wx = max(1.0, min(game_map.cols - 1.0, new_wx))
-            self.wy = max(1.0, min(game_map.rows - 1.0, new_wy))
-            self.hitbox_center = (self.wx + self.facing_x * 0.75, self.wy + self.facing_y * 0.75)
+
+            # Respeitar colisão com rochas/poço durante o avanço
+            hit_obstacle = False
+            for r in getattr(game_map, "rocks", ()):
+                c, _, _ = r.check_collision(new_wx, new_wy, self.radius)
+                if c:
+                    hit_obstacle = True
+                    break
+            if not hit_obstacle and getattr(game_map, "well", None):
+                c, _, _ = game_map.well.check_collision(new_wx, new_wy, self.radius)
+                if c:
+                    hit_obstacle = True
+
+            if not hit_obstacle:
+                self.wx = max(1.0, min(game_map.cols - 1.0, new_wx))
+                self.wy = max(1.0, min(game_map.rows - 1.0, new_wy))
+
+            offset = 0.85 if self.combo_step == 1 else (0.92 if self.combo_step == 2 else 1.00)
+            self.hitbox_center = (self.wx + self.facing_x * offset, self.wy + self.facing_y * offset)
+
             if self.state_timer <= 0:
-                self.state = STATE_RECOVERY
-                self.state_timer = self.recovery_duration
-                self.hitbox_active = False
+                # Se o jogador já apertou ataque durante o golpe atual, encadeia o próximo imediatamente!
+                if self.combo_step < self.combo_target_step and self.combo_step < 3:
+                    next_step = self.combo_step + 1
+                    self.combo_buffered = (next_step < self.combo_target_step)
+                    self._start_combo_step(next_step, game_map=game_map)
+                else:
+                    self.state = STATE_RECOVERY
+                    self.state_timer = self.recovery_duration
+                    self.hitbox_active = False
+                    self.combo_buffered = False
+                    # Abre janela generosa para encadear o próximo golpe manualmente se ainda não chegou ao 3º
+                    if self.combo_step < 3:
+                        self.combo_window_timer = 0.35
+                    else:
+                        self.combo_window_timer = 0.0
+                        self.combo_step = 0
+                        self.combo_target_step = 0
 
         elif self.state == STATE_RECOVERY:
             self.state_timer -= dt
             self.hitbox_active = False
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
-                self.combo_step = 0
+                if self.combo_window_timer <= 0:
+                    self.combo_step = 0
+                    self.combo_target_step = 0
+                    self.combo_buffered = False
 
         # Transição de KIAI_SHOUT para IDLE
         elif self.state == "KIAI_SHOUT":
@@ -251,7 +305,13 @@ class RenMonk(Samurai):
             surface, camera, self.wx, self.wy, self.wz,
             self.facing_x, self.facing_y, self.state, self.state_timer,
             self.is_alive, char_type="ren", walk_timer=self.walk_cycle,
-            alpha=self.alpha, is_moving=self.is_moving
+            alpha=self.alpha, is_moving=self.is_moving,
+            extra_props={
+                "combo_step": max(1, self.combo_step),
+                "hyakuretsu_phase": getattr(self, "hyakuretsu_phase", None),
+                "hyakuretsu_clock": getattr(self, "hyakuretsu_clock", 0.0),
+                "hyakuretsu_punch_count": getattr(self, "hyakuretsu_punch_count", 0),
+            }
         )
 
     render_voxel = render

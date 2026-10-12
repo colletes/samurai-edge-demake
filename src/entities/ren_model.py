@@ -75,23 +75,55 @@ def _smooth(x):
 
 def idle_arms(c):
     """
-    Postura Shaolin de combate:
-    - Mão esquerda aberta à frente na altura do peito em guarda protetora de palma (Bei Shou / Ping Zhang).
-    - Mão direita recuada fechada em punho junto ao quadril/costelas, pronta para o disparo.
+    Postura Shaolin de combate e poses cerimoniais (Intro/Victory):
+    - 'shaolin_salute': Saudação Baoquan (punho direito encostado na palma esquerda aberta diante do peito).
+    - 'kiai_roar': Postura de canalização de Kiai com punhos cerrados nas laterais do tronco.
+    - 'shaolin_bow': Reverência Gassho com palmas unidas em prece no centro do peito.
+    - Padrão: Mão esquerda à frente em guarda de palma (Ping Zhang) e punho direito engatilhado na cintura.
     """
     breathe = math.sin(c.walk_timer * 2.8) * 0.015
     tz = c.torso_z + breathe
+    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
+    pose = c.extra_props.get("pose") if c.extra_props else None
+
+    h_phase = c.extra_props.get("hyakuretsu_phase") if c.extra_props else None
+    if h_phase == "FLURRY":
+        h_clock = c.extra_props.get("hyakuretsu_clock", 0.0) if c.extra_props else 0.0
+        s1 = math.sin(h_clock * 68.0)
+        s2 = -s1
+        left = (bx + fx * (0.28 + max(0.0, s1) * 0.30) + px * 0.11, by + fy * (0.28 + max(0.0, s1) * 0.30) + py * 0.11, tz + 0.14 + s1 * 0.04)
+        right = (bx + fx * (0.28 + max(0.0, s2) * 0.30) - px * 0.11, by + fy * (0.28 + max(0.0, s2) * 0.30) - py * 0.11, tz + 0.14 + s2 * 0.04)
+        return left, right
+    if h_phase == "PAUSE":
+        # Pausa dramática pós-Hyakuretsu Ken ("Omae wa mou shindeiru"): mão esquerda em prece vertical no peito, punho direito recolhido
+        left = (bx + fx * 0.18 + px * 0.03, by + fy * 0.18 + py * 0.03, tz + 0.16)
+        right = (bx - fx * 0.06 - px * 0.16, by - fy * 0.06 - py * 0.16, tz + 0.05)
+        return left, right
+
+    if pose == "shaolin_salute":
+        left = (bx + fx * 0.20 + px * 0.03, by + fy * 0.20 + py * 0.03, tz + 0.14)
+        right = (bx + fx * 0.19 - px * 0.02, by + fy * 0.19 - py * 0.02, tz + 0.13)
+        return left, right
+    if pose == "kiai_roar":
+        left = (bx + fx * 0.10 + px * 0.22, by + fy * 0.10 + py * 0.22, tz + 0.08)
+        right = (bx + fx * 0.10 - px * 0.22, by + fy * 0.10 - py * 0.22, tz + 0.08)
+        return left, right
+    if pose == "shaolin_bow":
+        # Prece Dan Zhang de uma mão no peito + Palma do Lótus Dourado erguida ao céu
+        left = (bx + fx * 0.18 + px * 0.04, by + fy * 0.18 + py * 0.04, tz + 0.15)
+        right = (bx + fx * 0.06 - px * 0.14, by + fy * 0.06 - py * 0.14, tz + 0.38)
+        return left, right
 
     # Palma esquerda à frente
     left = (
-        c.base_x + c.fx * 0.22 + c.px * 0.08,
-        c.base_y + c.fy * 0.22 + c.py * 0.08,
+        bx + fx * 0.22 + px * 0.08,
+        by + fy * 0.22 + py * 0.08,
         tz + 0.14
     )
     # Punho direito engatilhado na cintura
     right = (
-        c.base_x - c.fx * 0.04 - c.px * 0.14,
-        c.base_y - c.fy * 0.04 - c.py * 0.14,
+        bx - fx * 0.04 - px * 0.14,
+        by - fy * 0.04 - py * 0.14,
         tz + 0.04
     )
     return left, right
@@ -120,11 +152,15 @@ def _step(c):
 
 def attack_arms(c):
     """
-    Sequência de golpes Shaolin (Combo 3-Hit):
+    Sequência de golpes Shaolin (Combo 3-Hit) ou Rajada dos Cem Punhos (Hyakuretsu Ken):
     - Passo 1: Soco direto rápido de direita (Straight Punch).
     - Passo 2: Palma de ferro ascendente de esquerda (Iron Palm Strike).
-    - Passo 3: Ataque duplo de palmas com projeção de Chi e Kiai.
+    - Passo 3: Chute Alto do Dragão Shaolin (braços em postura de contrabalanço marcial).
     """
+    h_phase = c.extra_props.get("hyakuretsu_phase") if c.extra_props else None
+    if h_phase in ("FLURRY", "PAUSE"):
+        return idle_arms(c)
+
     p = c.atk_progress
     step = _step(c)
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
@@ -146,8 +182,8 @@ def attack_arms(c):
         # Palma de ferro de esquerda
         reach = _smooth(p / 0.5) if p < 0.5 else _smooth((1.0 - p) / 0.5)
         left = (
-            bx + fx * (0.12 + reach * 0.42) + px * 0.03,
-            by + fy * (0.12 + reach * 0.42) + py * 0.03,
+            bx + fx * (0.12 + reach * 0.44) + px * 0.03,
+            by + fy * (0.12 + reach * 0.44) + py * 0.03,
             tz + 0.06 + reach * 0.16
         )
         right = (
@@ -156,17 +192,17 @@ def attack_arms(c):
             tz + 0.08
         )
     else:
-        # Golpe duplo ou Kiai
-        reach = math.sin(p * math.pi) * 0.42
+        # Passo 3: Chute Alto Shaolin — guarda de palma esquerda à frente e braço direito em contrabalanço
+        kick_arc = max(0.35, math.sin(p * math.pi))
         left = (
-            bx + fx * (0.16 + reach) + px * 0.08,
-            by + fy * (0.16 + reach) + py * 0.08,
-            tz + 0.15
+            bx + fx * (0.20 + kick_arc * 0.12) + px * 0.14,
+            by + fy * (0.20 + kick_arc * 0.12) + py * 0.14,
+            tz + 0.18
         )
         right = (
-            bx + fx * (0.16 + reach) - px * 0.08,
-            by + fy * (0.16 + reach) - py * 0.08,
-            tz + 0.15
+            bx - fx * (0.12 + kick_arc * 0.14) - px * 0.20,
+            by - fy * (0.12 + kick_arc * 0.14) - py * 0.20,
+            tz + 0.12 + kick_arc * 0.06
         )
     return left, right
 
@@ -187,11 +223,58 @@ def draw_behind(c):
                     c.neck_z + 0.02, bead_r * 2, bead_r * 2, bead_r * 2, P["bead_dark"], outline=False)
 
 
+def _draw_kicking_leg(c, hip_r, knee_r, foot_r):
+    """Desenha a perna direita articulada desferindo o Chute Alto Shaolin."""
+    P = pal()
+    # Coxa (calça cinza) e canela (perneira branca Shaolin) articuladas no chute alto
+    mk.limb(c, hip_r, knee_r, 0.125, P["pants"])
+    mk.limb(c, knee_r, foot_r, 0.095, P["gaiter"], outline=True)
+    # Pé com sandália Waraji na ponta do chute alto
+    mk.obox(c, foot_r, (c.fx, c.fy, 0.65), 0.14, 0.08, 0.055, P["sandal"])
+    mk.obox(c, (foot_r[0] - c.fx * 0.02, foot_r[1] - c.fy * 0.02, foot_r[2] + 0.01), (c.fx, c.fy, 0.65), 0.10, 0.075, 0.04, P["strap"], outline=False)
+
+
 def draw_legs(c):
     """
     Pernas com calça cinza-ardósia e perneiras brancas amarradas (Gaiters Shaolin).
+    No 3º golpe do combo (step == 3, fora da rajada de socos Hyakuretsu), executa um Chute Alto Shaolin.
     """
     P = pal()
+    h_phase = c.extra_props.get("hyakuretsu_phase") if c.extra_props else None
+    if c.is_melee and _step(c) == 3 and not h_phase:
+        # Perna esquerda ("L") plantada como base firme de apoio
+        ld_l = c.legs_data["L"]
+        th_l, sh_l, ft_l = ld_l["thigh"], ld_l["shin"], ld_l["foot"]
+        mk.obox(c, (ft_l[0] - c.fx * 0.05, ft_l[1] - c.fy * 0.05, ft_l[2]), (c.fx, c.fy, 0.0), 0.13, 0.075, 0.022, P["sandal"])
+        mk.obox(c, (ft_l[0] - c.fx * 0.03, ft_l[1] - c.fy * 0.03, ft_l[2] + 0.02), (c.fx, c.fy, 0.0), 0.11, 0.063, 0.045, P["gaiter_dark"])
+        mk.cbox(c, th_l[0], th_l[1], th_l[2], 0.14, 0.14, 0.22, P["pants"], texture="canvas")
+        mk.cbox(c, sh_l[0], sh_l[1], sh_l[2] + 0.08, 0.13, 0.13, 0.13, P["pants"], texture="canvas")
+        mk.cbox(c, sh_l[0], sh_l[1], sh_l[2] + 0.005, 0.10, 0.10, 0.16, P["gaiter"])
+        for dz in (0.04, 0.08, 0.12):
+            mk.cbox(c, sh_l[0], sh_l[1], sh_l[2] + dz, 0.106, 0.106, 0.014, P["strap"], outline=False)
+
+        # Perna direita ("R") erguida em Chute Alto Shaolin (Dragon Kick)
+        kick_arc = max(0.55, math.sin(c.atk_progress * math.pi))
+        hip_r = (c.base_x - c.px * 0.06, c.base_y - c.py * 0.06, c.pelvis_z + 0.05)
+        knee_r = (
+            hip_r[0] + c.fx * (0.28 * kick_arc) - c.px * 0.04,
+            hip_r[1] + c.fy * (0.28 * kick_arc) - c.py * 0.04,
+            c.pelvis_z + 0.18 * kick_arc
+        )
+        foot_r = (
+            hip_r[0] + c.fx * (0.66 * kick_arc) - c.px * (0.06 * kick_arc),
+            hip_r[1] + c.fy * (0.66 * kick_arc) - c.py * (0.06 * kick_arc),
+            c.torso_z + 0.34 * kick_arc
+        )
+        c.kick_foot = foot_r
+        if mk.behind(c, foot_r):
+            _draw_kicking_leg(c, hip_r, knee_r, foot_r)
+            c.kick_leg_front = None
+        else:
+            c.kick_leg_front = (hip_r, knee_r, foot_r)
+        return
+
+    c.kick_leg_front = None
     mk.legs(
         c,
         pants=P["pants"],
@@ -329,6 +412,9 @@ def draw_front(c, left_hand, right_hand):
     P = pal()
     fx, fy, px, py = c.fx, c.fy, c.px, c.py
 
+    if getattr(c, "kick_leg_front", None) is not None:
+        _draw_kicking_leg(c, *c.kick_leg_front)
+
     # Faixas nos punhos (Wrist wraps)
     for hand, side_name in ((left_hand, "left"), (right_hand, "right")):
         mk.cbox(c, hand[0], hand[1], hand[2] - 0.01, 0.065, 0.065, 0.05, P["wrist_wrap"], outline=True)
@@ -336,33 +422,121 @@ def draw_front(c, left_hand, right_hand):
     # Pulseira Mala de contas no pulso direito
     mk.cbox(c, right_hand[0], right_hand[1], right_hand[2] + 0.02, 0.075, 0.075, 0.022, P["bead"], outline=False)
 
+    h_phase = c.extra_props.get("hyakuretsu_phase") if c.extra_props else None
+    if h_phase == "FLURRY":
+        # Rajada dos Cem Punhos (Estilo Fist of the North Star / Hokuto Hyakuretsu Ken):
+        # Múltiplos punhos fantasmas e jatos dourados de Chi disparando em cone de alta frequência
+        h_clock = c.extra_props.get("hyakuretsu_clock", 0.0) if c.extra_props else 0.0
+        bx, by, tz = c.base_x, c.base_y, c.torso_z
+        offsets = (
+            (-0.22, 0.16, 0.0),
+            (0.22, 0.18, 0.9),
+            (-0.14, 0.04, 1.8),
+            (0.14, 0.06, 2.7),
+            (-0.26, 0.09, 3.6),
+            (0.26, 0.11, 4.5),
+            (-0.07, 0.22, 5.2),
+            (0.07, -0.02, 6.0),
+        )
+        for lat, dz, ph in offsets:
+            cyc = 0.5 + 0.5 * math.sin(h_clock * 58.0 + ph)
+            reach = 0.34 + cyc * 0.42
+            fx_pt = bx + fx * reach + px * lat
+            fy_pt = by + fy * reach + py * lat
+            fz_pt = tz + 0.08 + dz
+            # Punho fantasma com faixa branca e impacto de Chi dourado
+            mk.cbox(c, fx_pt, fy_pt, fz_pt, 0.058, 0.058, 0.052, P["skin"], outline=False)
+            mk.cbox(c, fx_pt - fx * 0.03, fy_pt - fy * 0.03, fz_pt, 0.062, 0.062, 0.045, P["wrist_wrap"], outline=False)
+            # Rastro de jato de Chi dourado
+            tail_x = bx + fx * 0.16 + px * (lat * 0.5)
+            tail_y = by + fy * 0.16 + py * (lat * 0.5)
+            tail_z = tz + 0.10 + dz * 0.6
+            r = 0.038
+            pts = (
+                (fx_pt + px * r, fy_pt + py * r, fz_pt + r),
+                (fx_pt - px * r, fy_pt - py * r, fz_pt - r),
+                (tail_x - px * r * 0.4, tail_y - py * r * 0.4, tail_z - r * 0.4),
+                (tail_x + px * r * 0.4, tail_y + py * r * 0.4, tail_z + r * 0.4),
+            )
+            mk.band(c, pts, P["chi_gold"] + (185,))
+            if cyc > 0.65:
+                mk.cbox(c, fx_pt + fx * 0.04, fy_pt + fy * 0.04, fz_pt, 0.075, 0.075, 0.075, P["chi_core"], outline=False)
+        return
+    elif h_phase == "PAUSE":
+        # Pausa dramática ("Omae wa mou shindeiru"): aura serena de Chi dourado na mão em prece
+        r = 0.11
+        pts = [
+            (left_hand[0] + px * r, left_hand[1] + py * r, left_hand[2]),
+            (left_hand[0], left_hand[1], left_hand[2] + r * 1.15),
+            (left_hand[0] - px * r, left_hand[1] - py * r, left_hand[2]),
+            (left_hand[0], left_hand[1], left_hand[2] - r * 0.9),
+        ]
+        mk.band(c, pts, P["chi_gold"] + (210,))
+        return
+
+    pose = c.extra_props.get("pose") if c.extra_props else None
+    if pose == "shaolin_salute":
+        # Halo de energia Chi dourada entre as mãos unidas em saudação
+        mid = mk.lerp(left_hand, right_hand, 0.5)
+        r = 0.085
+        pts = [
+            (mid[0] + px * r, mid[1] + py * r, mid[2]),
+            (mid[0], mid[1], mid[2] + r),
+            (mid[0] - px * r, mid[1] - py * r, mid[2]),
+            (mid[0], mid[1], mid[2] - r * 0.8),
+        ]
+        mk.band(c, pts, P["chi_gold"] + (165,))
+    elif pose == "shaolin_bow":
+        # Orbe de Lótus de Chi Dourado sobre a palma direita erguida ao céu
+        orb_c = (right_hand[0], right_hand[1], right_hand[2] + 0.08)
+        for r, col, alpha in ((0.11, P["chi_gold"], 180), (0.065, P["chi_core"], 235)):
+            pts = [
+                (orb_c[0] + px * r, orb_c[1] + py * r, orb_c[2]),
+                (orb_c[0], orb_c[1], orb_c[2] + r * 1.15),
+                (orb_c[0] - px * r, orb_c[1] - py * r, orb_c[2]),
+                (orb_c[0], orb_c[1], orb_c[2] - r * 0.95),
+            ]
+            mk.band(c, pts, col + (alpha,))
+    elif pose == "kiai_roar":
+        # Onda de choque de Kiai irradiando dos punhos e do Dantian
+        wc = (c.base_x + fx * 0.12, c.base_y + fy * 0.12, c.torso_z + 0.10)
+        for wave_r, alpha in ((0.28, 170), (0.18, 225)):
+            w_pts = [
+                (wc[0] + px * wave_r, wc[1] + py * wave_r, wc[2]),
+                (wc[0], wc[1], wc[2] + wave_r * 0.78),
+                (wc[0] - px * wave_r, wc[1] - py * wave_r, wc[2]),
+                (wc[0], wc[1], wc[2] - wave_r * 0.78),
+            ]
+            mk.band(c, w_pts, (P["chi_core"] if wave_r < 0.22 else P["chi_gold"]) + (alpha,))
+
     # Efeito visual de Ataque Melee (Chi / Kiai)
     if c.is_melee:
         step = _step(c)
-        strike_hand = right_hand if step == 1 else (left_hand if step == 2 else right_hand)
+        strike_pt = getattr(c, "kick_foot", right_hand) if step == 3 else (right_hand if step == 1 else left_hand)
         p = c.atk_progress
 
         # Rastro de impacto marcial com energia Chi (mk.band translúcido)
-        if 0.15 < p < 0.88:
-            r = 0.09 * math.sin(p * math.pi)
-            pt_center = (strike_hand[0] + fx * 0.08, strike_hand[1] + fy * 0.08, strike_hand[2])
-            prev_center = (strike_hand[0] - fx * 0.16, strike_hand[1] - fy * 0.16, strike_hand[2])
+        if 0.10 < p < 0.92:
+            r = (0.12 if step == 3 else 0.09) * math.sin(p * math.pi)
+            pt_center = (strike_pt[0] + fx * 0.10, strike_pt[1] + fy * 0.10, strike_pt[2])
+            prev_z = strike_pt[2] - 0.18 if step == 3 else strike_pt[2]
+            prev_center = (strike_pt[0] - fx * 0.18, strike_pt[1] - fy * 0.18, prev_z)
             a0 = (pt_center[0] + px * r, pt_center[1] + py * r, pt_center[2] + r)
             a1 = (pt_center[0] - px * r, pt_center[1] - py * r, pt_center[2] - r)
             b0 = (prev_center[0] + px * r * 0.5, prev_center[1] + py * r * 0.5, prev_center[2] + r * 0.5)
             b1 = (prev_center[0] - px * r * 0.5, prev_center[1] - py * r * 0.5, prev_center[2] - r * 0.5)
-            mk.band(c, (a0, a1, b1, b0), P["chi_gold"] + (200,))
-            mk.band(c, (mk.lerp(a0, a1, 0.3), mk.lerp(a0, a1, 0.7), mk.lerp(b0, b1, 0.7), mk.lerp(b0, b1, 0.3)), P["chi_core"] + (245,))
+            mk.band(c, (a0, a1, b1, b0), P["chi_gold"] + (210,))
+            mk.band(c, (mk.lerp(a0, a1, 0.3), mk.lerp(a0, a1, 0.7), mk.lerp(b0, b1, 0.7), mk.lerp(b0, b1, 0.3)), P["chi_core"] + (250,))
 
-        # Se for o golpe 3 ou estado de Kiai, onda de choque esférica de Chi
+        # Se for o golpe 3 (Chute Alto) ou estado de Kiai, onda de choque esférica de Chi
         if step == 3 or getattr(c, "state", "") == "KIAI":
-            wave_r = 0.26 * math.sin(p * math.pi)
+            wave_r = 0.28 * math.sin(p * math.pi)
             if wave_r > 0.05:
-                wc = (c.base_x + fx * 0.22, c.base_y + fy * 0.22, c.torso_z + 0.10)
+                wc = (strike_pt[0] + fx * 0.06, strike_pt[1] + fy * 0.06, strike_pt[2])
                 w_pts = [
                     (wc[0] + px * wave_r, wc[1] + py * wave_r, wc[2]),
-                    (wc[0] + fx * wave_r * 0.8, wc[1] + fy * wave_r * 0.8, wc[2] + wave_r * 0.6),
+                    (wc[0] + fx * wave_r * 0.85, wc[1] + fy * wave_r * 0.85, wc[2] + wave_r * 0.7),
                     (wc[0] - px * wave_r, wc[1] - py * wave_r, wc[2]),
-                    (wc[0] - fx * wave_r * 0.8, wc[1] - fy * wave_r * 0.8, wc[2] - wave_r * 0.6),
+                    (wc[0] - fx * wave_r * 0.6, wc[1] - fy * wave_r * 0.6, wc[2] - wave_r * 0.7),
                 ]
-                mk.band(c, w_pts, P["chi_gold"] + (180,))
+                mk.band(c, w_pts, P["chi_gold"] + (195,))

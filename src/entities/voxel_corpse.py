@@ -315,28 +315,60 @@ class VoxelCorpse:
                                  piece_type="top", region=lambda c: c.band(None, WAIST_Z),
                                  rot_target=110.0, rot_speed=280.0))
 
-        elif style in ("HYAKURETSU_BODY_EXPLOSION", "WALL_SMASH_FATAL"):
-            # Ren Monge: Rajada de socos ou impacto do Kiai despedaça o corpo em dezenas de estilhaços
-            for _ in range(32):
+        elif style == "HYAKURETSU_BODY_EXPLOSION":
+            # Ren Monge (Estilo Fist of the North Star / Hyakuretsu Ken):
+            # Após a pausa dramática, a pressão interna dos pontos vitais detona o corpo em 360° em câmera lenta!
+            self.pieces.append(P(x, y, NECK_Z + 0.12, 0.16, 0.16, 0.16, self.col_hair,
+                                 vx=dx * 1.6 + random.uniform(-1.2, 1.2), vy=dy * 1.6 + random.uniform(-1.2, 1.2), vz=4.8,
+                                 rot_speed=360.0, piece_type="head", region=lambda c: c.band(None, NECK_Z), pivot="center", floor_z=0.15))
+            self.pieces.append(P(x, y, WAIST_Z, 0.40, 0.28, 0.36, self.col_torso,
+                                 vx=dx * 2.8 - dy * 1.6, vy=dy * 2.8 + dx * 1.6, vz=3.4,
+                                 piece_type="shattered_torso", region=lambda c: c.band(NECK_Z, WAIST_Z),
+                                 rot_target=120.0, rot_speed=320.0))
+            self.pieces.append(P(x, y, 0.0, 0.38, 0.28, 0.44, self.col_pants,
+                                 vx=-dx * 1.4 + dy * 1.5, vy=-dy * 1.4 - dx * 1.5, vz=2.2,
+                                 piece_type="shattered_legs", region=lambda c: c.band(WAIST_Z, None),
+                                 rot_target=95.0, rot_speed=240.0))
+            for _ in range(36):
                 angle = random.uniform(0, math.pi * 2)
-                speed = random.uniform(3.0, 8.0)
-                c = random.choice([self.col_torso, self.col_pants, COLOR_BLOOD, (245, 140, 35), (140, 20, 25)])
-                sz = random.uniform(0.09, 0.16)
-                self.pieces.append(P(x, y, random.uniform(0.1, 0.85), sz, sz, sz, c,
-                                     vx=math.cos(angle) * speed, vy=math.sin(angle) * speed, vz=random.uniform(3.5, 7.5),
+                speed = random.uniform(3.2, 8.2)
+                c = random.choice([self.col_torso, self.col_pants, COLOR_BLOOD, (255, 195, 55), (165, 22, 30)])
+                sz = random.uniform(0.08, 0.16)
+                self.pieces.append(P(x, y, random.uniform(0.18, 0.88), sz, sz, sz, c,
+                                     vx=math.cos(angle) * speed, vy=math.sin(angle) * speed, vz=random.uniform(3.8, 8.2),
+                                     rot_speed=random.uniform(-420, 420), piece_type="gib"))
+
+        elif style == "WALL_SMASH_FATAL":
+            # Ren Monge (Kiai Letal): Rugido de Chi arremessa o corpo despedaçado para trás em alta velocidade
+            blast_mult = 6.2
+            self.pieces.append(P(x, y, WAIST_Z, 0.42, 0.30, 0.42, self.col_torso,
+                                 vx=dx * blast_mult, vy=dy * blast_mult, vz=2.8,
+                                 piece_type="shattered_torso", region=lambda c: c.band(None, WAIST_Z),
+                                 rot_target=115.0, rot_speed=340.0))
+            self.pieces.append(P(x, y, 0.0, 0.40, 0.28, 0.44, self.col_pants,
+                                 vx=dx * (blast_mult * 0.55), vy=dy * (blast_mult * 0.55), vz=1.1,
+                                 piece_type="shattered_legs", region=lambda c: c.band(WAIST_Z, None),
+                                 rot_target=85.0, rot_speed=210.0))
+            for _ in range(26):
+                angle = random.uniform(0, math.pi * 2)
+                speed = random.uniform(2.8, 7.5)
+                c = random.choice([self.col_torso, self.col_pants, COLOR_BLOOD, (245, 165, 45), (150, 22, 28)])
+                sz = random.uniform(0.08, 0.15)
+                self.pieces.append(P(x, y, random.uniform(0.15, 0.85), sz, sz, sz, c,
+                                     vx=dx * 2.2 + math.cos(angle) * speed, vy=dy * 2.2 + math.sin(angle) * speed, vz=random.uniform(3.2, 7.2),
                                      rot_speed=random.uniform(-400, 400), piece_type="gib"))
 
         elif style in ("TRIPLE_SCISSOR_CLEAVE", "MAI_X_CLEAVE"):
-            # Chiyo 2 Nodachi: Corte simultâneo no pescoço e cintura, dividindo em 3 partes simétricas
+            # Chiyo 2 Kodachi: Corte em tesoura cruzada no pescoço e cintura, dividindo em 3 partes simétricas
             self.pieces.append(P(x, y, NECK_Z + 0.10, 0.16, 0.16, 0.16, self.col_hair,
-                                 vx=dx * 2.0 + random.uniform(-0.4, 0.4), vy=dy * 2.0 + random.uniform(-0.4, 0.4), vz=3.5,
-                                 rot_speed=300.0, piece_type="head", region=lambda c: c.band(None, NECK_Z), pivot="center", floor_z=0.15))
+                                 vx=dx * 2.2 + dy * 0.8, vy=dy * 2.2 - dx * 0.8, vz=3.6,
+                                 rot_speed=320.0, piece_type="head", region=lambda c: c.band(None, NECK_Z), pivot="center", floor_z=0.15))
             self.pieces.append(P(x, y, WAIST_Z, 0.38, 0.28, 0.35, self.col_torso,
-                                 vx=-dx * 1.5, vy=-dy * 1.5, vz=1.2,
-                                 piece_type="torso", region=lambda c: c.band(NECK_Z, WAIST_Z), rot_target=95.0, rot_speed=220.0))
+                                 vx=-dy * 1.8 + dx * 0.8, vy=dx * 1.8 + dy * 0.8, vz=1.5,
+                                 piece_type="torso", region=lambda c: c.band(NECK_Z, WAIST_Z), rot_target=98.0, rot_speed=230.0))
             self.pieces.append(P(x, y, 0.0, 0.38, 0.28, 0.48, self.col_pants,
-                                 vx=dx * 0.5, vy=dy * 0.5, vz=0.3,
-                                 piece_type="legs", region=lambda c: c.band(WAIST_Z, None), rot_target=75.0, rot_speed=130.0, rot_delay=0.25))
+                                 vx=dy * 1.1, vy=-dx * 1.1, vz=0.4,
+                                 piece_type="legs", region=lambda c: c.band(WAIST_Z, None), rot_target=75.0, rot_speed=135.0, rot_delay=0.22))
 
         elif style in ("MURASAKI_DECAP", "CLEAN_DECAP"):
             self.headless_body = P(x, y, 0.0, 0.28, 0.22, 0.85, self.col_torso, piece_type="body",
@@ -465,6 +497,14 @@ class VoxelCorpse:
 
     # ------------------------------------------------------------------ simulação
     def update(self, dt: float, game_map, particles: list = None):
+        # No estilo Fist of the North Star (HYAKURETSU_BODY_EXPLOSION), a explosão pós-pausa ocorre em câmera lenta!
+        piece_dt = dt * 0.42 if (self.death_style == "HYAKURETSU_BODY_EXPLOSION" and self.timer < 1.8) else dt
+        if self.timer == 0.0 and self.death_style == "HYAKURETSU_BODY_EXPLOSION" and particles is not None:
+            from src.effects.particles import BloodParticle, SparkParticle
+            for _ in range(28):
+                particles.append(BloodParticle(self.wx + random.uniform(-0.2, 0.2), self.wy + random.uniform(-0.2, 0.2), random.uniform(0.3, 0.9)))
+            for _ in range(18):
+                particles.append(SparkParticle(self.wx + random.uniform(-0.25, 0.25), self.wy + random.uniform(-0.25, 0.25), random.uniform(0.3, 0.95), color=(255, 215, 70)))
         self.timer += dt
 
         # Spawn de geiser de sangue contínuo nos primeiros momentos da morte
@@ -481,7 +521,7 @@ class VoxelCorpse:
 
         # Atualizar física das peças individuais
         for p in self.pieces:
-            p.update(dt)
+            p.update(piece_dt)
             # Pedaços rolando deixam marcas de sangue no chão
             if not p.is_grounded and random.random() < 0.25:
                 self.blood_droplets.append({

@@ -17,7 +17,7 @@ Com o ajuste de nomes (**Valerius** no lugar de Faust, **Raiden** masculino, **H
 │ • Mulheres: Murasaki | Kasumi | Okuni | Tomoe | Anne | Julie                                     │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────┤
 │ NOVOS COMBATENTES (12 — 6 Ciclos de 1 Homem + 1 Mulher):                                         │
-│ • Ciclo 1: Ren (Monge Shaolin) [M]             & Chiyo (Kunoichi 2 Nodachi) [F]                  │
+│ • Ciclo 1: Ren (Monge Shaolin) [M]             & Chiyo (Kunoichi 2 Kodachi) [F]                  │
 │ • Ciclo 2: Benkei (Guardião Naginata) [M]       & O-Rin (Menestrel Shamisen) [F]                 │
 │ • Ciclo 3: Goro (Fazendeiro da Kuwa) [M]        & Ichi (Lâmina Cega Shikomizue) [F]              │
 │ • Ciclo 4: Valerius (Necromante Prussiano) [M]  & Seimei (Onmyoji dos Talismãs) [F]              │
@@ -93,7 +93,7 @@ Cada fatality é acionado de forma **contextual de acordo com o ataque que desfe
 | :-: | :--- | :--- | :--- | :--- |
 | **13** | **Ren** | **Primário** (*Combo 3 Dragões*) | **HYAKURETSU_BODY_EXPLOSION**: Sucessão de dezenas de socos em velocidade supersônica (estilo Hokuto no Ken), breve pausa dramática e explosão completa do corpo do rival. | Queda desmaiado por golpe de palma atordoante. |
 | | | **Secundário** (*Kiai da Montanha*) | **WALL_SMASH_FATAL**: Onda esférica de choque arremessa o rival contra obstáculos/armadilhas estilhaçando o corpo no impacto. | Empurrão defensivo sem fatality. |
-| **14** | **Chiyo** | **Primário** (*Tesoura 2 Nodachi*) | **TRIPLE_SCISSOR_CLEAVE**: As duas lâminas de 1,60m cortam simultaneamente na cintura e no pescoço, separando cabeça e tronco em três partes simétricas. | Desabamento de joelhos. |
+| **14** | **Chiyo** | **Primário** (*Cortes Cruzados 2 Kodachi*) | **TRIPLE_SCISSOR_CLEAVE**: As duas lâminas curtas Kodachi cortam simultaneamente na cintura e no pescoço em velocidade relâmpago, separando cabeça e tronco em três partes. | Desabamento de joelhos. |
 | | | **Secundário** (*Dança Mai*) | **MAI_X_CLEAVE**: Surge do vórtice de pós-imagens com corte giratório duplo fatiando o peito em 'X' profundo. | Queda com lâminas embainhadas. |
 | **15** | **Benkei** | **Primário** (*Varredura Naginata*) | **SWEEP_AND_CLEAVE**: Lâmina curva decepa as duas pernas na altura das coxas e na recuperação desce um corte vertical letal no peito. | Queda pesada por corte de ponta. |
 | | | **Secundário** (*Arremesso Lança*) | **SKEWERED_LANCE_FLAG**: A Naginata transpassa o tórax e crava no chão, erguendo o corpo em ângulo oblíquo como troféu de guerra. | Queda perfurada à distância. |
@@ -136,7 +136,7 @@ Cada fatality é acionado de forma **contextual de acordo com o ataque que desfe
 
 | Ciclo | Nova Dupla (1M + 1F) | Novas Arenas da Dupla | Revamp de 2 Arenas Atuais | Fatalities Implementados no Ciclo |
 | :---: | :--- | :--- | :--- | :--- |
-| **1** | **Ren** (Shaolin) & **Chiyo** (2 Nodachi) | Mosteiro das Nuvens & Jardim Carmesim | **Nagashino Field** & **Shadow Cave** | **Teppo**, **Anne**, **Ren**, **Chiyo** |
+| **1** | **Ren** (Shaolin) & **Chiyo** (2 Kodachi) | Mosteiro das Nuvens & Jardim Carmesim | **Nagashino Field** & **Shadow Cave** | **Teppo**, **Anne**, **Ren**, **Chiyo** |
 | **2** | **Benkei** (Naginata) & **O-Rin** (Shamisen) | Ponte Gojo & Beco Yoshiwara | **Forest Camp** & **Baroque Court** | **Kenshi**, **Musashi**, **Benkei**, **O-Rin** |
 | **3** | **Goro** (Fazendeiro) & **Ichi** (Lâmina Cega) | Arrozais Terraciados & Moinho na Chuva | **Ganryū Island** & **Iga Rooftops** | **Saitou**, **Hanzo**, **Goro**, **Ichi** |
 | **4** | **Valerius** (Necromante) & **Seimei** (Onmyoji) | Cemitério Barroco & Santuário Heian | **Mist Temple** & **Kabuki Stage** | **Murasaki**, **Kasumi**, **Valerius**, **Seimei** |

@@ -230,7 +230,7 @@ def get_fighter_action_labels(fighter):
     elif isinstance(fighter, RenMonk):
         return "Flurry Shaolin", "Kiai Repulsão"
     elif isinstance(fighter, ChiyoKunoichi):
-        return "Tesoura Nodachi", "Dança Mai"
+        return "Corte Kodachi", "Dança Mai"
     return "Ataque", "Especial"
 
 def get_fighter_cooldown_data(fighter) -> dict | None:
@@ -331,6 +331,9 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
         return {"name": "Floreio Capa", "timer": timer, "max_cd": cd, "color": (80, 160, 255)}
 
     elif isinstance(fighter, RenMonk):
+        if getattr(fighter, "combo_step", 0) > 0 and (getattr(fighter, "state", "") == "ATTACK" or getattr(fighter, "combo_window_timer", 0.0) > 0):
+            timer = max(getattr(fighter, "combo_window_timer", 0.0), getattr(fighter, "state_timer", 0.0))
+            return {"name": f"Combo {fighter.combo_step}/3", "timer": timer, "max_cd": 0.35, "color": (255, 215, 60)}
         timer = max(0.0, getattr(fighter, "kiai_timer", 0.0))
         cd = getattr(fighter, "kiai_cooldown", 3.2)
         return {"name": "Grito Kiai", "timer": timer, "max_cd": cd, "color": (245, 175, 45)}
@@ -419,7 +422,7 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
         fighter.trigger_punch_combo(aim_x, aim_y)
         play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, ChiyoKunoichi):
-        fighter.trigger_scissor_slash(aim_x, aim_y)
+        fighter.trigger_kodachi_strike(aim_x, aim_y)
         play_sfx(SoundEvent.SWORD_SLASH)
 
 def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, poison_clouds: list, powder_traps: list, opponent=None, game_map=None, banners: list = None):

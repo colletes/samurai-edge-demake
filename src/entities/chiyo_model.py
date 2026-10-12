@@ -99,23 +99,54 @@ def _smooth(x):
 
 def idle_arms(c):
     """
-    Postura marcial de guarda da Dança das Duas Nodachi:
-    - Braço direito recuado baixo, segurando a 1ª Nodachi apontando para trás e para baixo (pronta para o corte ascendente).
-    - Braço esquerdo erguido alto cruzando à frente, segurando a 2ª Nodachi em guarda defensiva angular (guarda de interceptação).
+    Postura marcial de guarda da Dança das Duas Kodachi e poses especiais (Intro/Victory):
+    - 'kodachi_draw': Mãos levadas acima dos ombros sacando as Kodachi gêmeas das bainhas nas costas.
+    - 'kodachi_x_pose': Ambas as mãos à frente cruzando as duas Kodachi em 'X' diante do peito.
+    - 'kodachi_victory': Mão esquerda erguida ao alto com a Kodachi apontando para o céu e direita aberta em guarda baixa.
+    - Padrão: Mão direita baixa/recuada e mão esquerda alta em guarda de interceptação.
     """
     breathe = math.sin(c.walk_timer * 2.8) * 0.015
     tz = c.torso_z + breathe
+    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
+    pose = c.extra_props.get("pose") if c.extra_props else None
+
+    if c.state == "MAI_DANCE":
+        # Braços abertos em espiral de dança com as duas Kodachi girando em 360°
+        spin = c.extra_props.get("mai_spin_angle", 0.0) if c.extra_props else 0.0
+        wave = math.sin(spin * 2.0) * 0.06
+        left = (bx + fx * 0.14 + px * 0.24, by + fy * 0.14 + py * 0.24, tz + 0.22 + wave)
+        right = (bx - fx * 0.14 - px * 0.24, by - fy * 0.14 - py * 0.24, tz + 0.14 - wave)
+        return left, right
+
+    if c.extra_props and c.extra_props.get("mai_exhausted"):
+        # Pose de fôlego curto após dançar no vazio (braços baixos e abertos)
+        left = (bx + fx * 0.06 + px * 0.16, by + fy * 0.06 + py * 0.16, tz + 0.02)
+        right = (bx + fx * 0.04 - px * 0.16, by + fy * 0.04 - py * 0.16, tz + 0.01)
+        return left, right
+
+    if pose == "kodachi_draw":
+        left = (bx - fx * 0.04 + px * 0.14, by - fy * 0.04 + py * 0.14, tz + 0.28)
+        right = (bx - fx * 0.04 - px * 0.14, by - fy * 0.04 - py * 0.14, tz + 0.28)
+        return left, right
+    if pose == "kodachi_x_pose":
+        left = (bx + fx * 0.20 + px * 0.08, by + fy * 0.20 + py * 0.08, tz + 0.14)
+        right = (bx + fx * 0.22 - px * 0.08, by + fy * 0.22 - py * 0.08, tz + 0.16)
+        return left, right
+    if pose == "kodachi_victory":
+        left = (bx + fx * 0.08 + px * 0.16, by + fy * 0.08 + py * 0.16, tz + 0.36)
+        right = (bx - fx * 0.10 - px * 0.22, by - fy * 0.10 - py * 0.22, tz + 0.05)
+        return left, right
 
     # Mão direita baixa e recuada
     right = (
-        c.base_x - c.fx * 0.12 - c.px * 0.14,
-        c.base_y - c.fy * 0.12 - c.py * 0.14,
+        bx - fx * 0.12 - px * 0.14,
+        by - fy * 0.12 - py * 0.14,
         tz + 0.04
     )
     # Mão esquerda alta na frente do torso
     left = (
-        c.base_x + c.fx * 0.16 + c.px * 0.10,
-        c.base_y + c.fy * 0.16 + c.py * 0.10,
+        bx + fx * 0.16 + px * 0.10,
+        by + fy * 0.16 + py * 0.10,
         tz + 0.20
     )
     return left, right
@@ -248,16 +279,16 @@ def draw_behind(c):
               (P["scarf"], P["scarf_dark"], P["scarf_dark"]),
               phase=0.4, side=-1.0, drag=(-fx * 0.05, -fy * 0.05))
 
-    # As duas grandes bainhas de Nodachi cruzadas nas costas
+    # As duas bainhas de Kodachi cruzadas nas costas
     (orig1, dir1), (orig2, dir2) = _sheath_frames(c)
-    nodachi_sheath_len = 0.72
+    kodachi_sheath_len = 0.44
 
     for orig, d in ((orig1, dir1), (orig2, dir2)):
         # Corpo da bainha laqueada negra
-        mk.obox(c, orig, d, nodachi_sheath_len, 0.048, 0.048, P["saya"], outline=True)
+        mk.obox(c, orig, d, kodachi_sheath_len, 0.042, 0.042, P["saya"], outline=True)
         # Boca da bainha (Kojiri) e ponteira com acabamento dourado
-        mk.obox(c, orig, d, 0.04, 0.054, 0.054, P["saya_gold"], outline=False)
-        mk.obox(c, mk.add(orig, d, nodachi_sheath_len - 0.04), d, 0.04, 0.052, 0.052, P["saya_gold"], outline=False)
+        mk.obox(c, orig, d, 0.035, 0.048, 0.048, P["saya_gold"], outline=False)
+        mk.obox(c, mk.add(orig, d, kodachi_sheath_len - 0.035), d, 0.035, 0.046, 0.046, P["saya_gold"], outline=False)
 
 
 def draw_legs(c):
@@ -405,49 +436,51 @@ def draw_head(c):
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# Renderizador Especializado das Duas Nodachis
+# Renderizador Especializado das Duas Kodachis (Lâminas Curtas Duplas)
 # ---------------------------------------------------------------------------------------------------------------------
 
-def _draw_nodachi_blade(c, hand, direction, length=0.86):
+def _draw_kodachi_blade(c, hand, direction, length=0.44):
     """
-    Desenha uma espada Nodachi proporcional:
-    - Longa empunhadura (tsuka) de ~0.24m atrás da mão com cordão preto e vermelho.
-    - Pommel (kashira) dourado.
-    - Guarda (tsuba) quadrada dourada.
-    - Lâmina longa de ~0.86m de aço prateado brilhante com fio afiado.
+    Desenha uma espada Kodachi ágil e balanceada:
+    - Empunhadura compacta (tsuka) de ~0.11m com cordão preto e vermelho.
+    - Pomo dourado (kashira).
+    - Guarda oval dourada (tsuba).
+    - Lâmina curta e cortante de ~0.44m de aço polido brilhante.
     """
     P = pal()
     d = mk.norm(direction)
-    grip_len = 0.24
-    guard_w = 0.08
+    grip_len = 0.11
+    guard_w = 0.048
 
     # Localização da Tsuba (guarda) logo à frente da mão
-    tsuba_pt = mk.add(hand, d, 0.05)
+    tsuba_pt = mk.add(hand, d, 0.04)
 
-    # 1. Empunhadura longa (Tsuka)
-    mk.obox(c, mk.add(tsuba_pt, d, -grip_len), d, grip_len, 0.038, 0.038, P["ito_black"])
+    # 1. Empunhadura compacta (Tsuka)
+    mk.obox(c, mk.add(tsuba_pt, d, -grip_len), d, grip_len, 0.032, 0.032, P["ito_black"])
     # Tranças carmim no cabo
-    mk.obox(c, mk.add(tsuba_pt, d, -grip_len * 0.55), d, 0.06, 0.04, 0.04, P["ito_red"], outline=False)
+    mk.obox(c, mk.add(tsuba_pt, d, -grip_len * 0.55), d, 0.035, 0.034, 0.034, P["ito_red"], outline=False)
     # Pomo de ouro (Kashira)
-    mk.obox(c, mk.add(tsuba_pt, d, -grip_len - 0.012), d, 0.02, 0.044, 0.044, P["gold"], outline=False)
+    mk.obox(c, mk.add(tsuba_pt, d, -grip_len - 0.010), d, 0.015, 0.036, 0.036, P["gold"], outline=False)
 
-    # 2. Guarda quadrada dourada (Tsuba)
-    mk.obox(c, mk.add(tsuba_pt, d, -0.008), d, 0.016, guard_w, guard_w, P["gold"])
+    # 2. Guarda oval dourada (Tsuba)
+    mk.obox(c, mk.add(tsuba_pt, d, -0.006), d, 0.012, guard_w, guard_w, P["gold"])
     # Habaki (colar dourado na base da lâmina)
-    mk.obox(c, mk.add(tsuba_pt, d, 0.008), d, 0.03, 0.045, 0.035, P["gold"], outline=False)
+    mk.obox(c, mk.add(tsuba_pt, d, 0.006), d, 0.022, 0.038, 0.028, P["gold"], outline=False)
 
-    # 3. Lâmina longa de Nodachi (Nagasa)
-    mk.obox(c, mk.add(tsuba_pt, d, 0.038), d, length, 0.048, 0.026, P["steel"])
+    # 3. Lâmina ágil de Kodachi (Nagasa)
+    mk.obox(c, mk.add(tsuba_pt, d, 0.028), d, length, 0.038, 0.022, P["steel"])
     # Fio de corte polido (Ha)
-    mk.obox(c, mk.add(tsuba_pt, d, 0.048), d, length - 0.02, 0.016, 0.03, P["edge"], outline=False)
+    mk.obox(c, mk.add(tsuba_pt, d, 0.036), d, length - 0.016, 0.014, 0.025, P["edge"], outline=False)
 
     # Retorna ponta da lâmina (Kissaki)
-    return mk.add(tsuba_pt, d, 0.038 + length)
+    return mk.add(tsuba_pt, d, 0.028 + length)
+
+_draw_nodachi_blade = _draw_kodachi_blade
 
 
 def draw_front(c, left_hand, right_hand):
     """
-    Desenha as duas Nodachis em combate e os rastros carmim nos ataques.
+    Desenha as duas Kodachis em combate e os rastros carmim nos ataques.
     """
     P = pal()
     fx, fy, px, py = c.fx, c.fy, c.px, c.py
@@ -463,41 +496,41 @@ def draw_front(c, left_hand, right_hand):
         p = c.atk_progress
 
         if step == 1:
-            # Nodachi direita corta para cima, esquerda mantém guarda
+            # Kodachi direita corta diagonalmente, esquerda em guarda ágil
             slash_d1 = mk.norm((fx * 0.70 + px * 0.20, fy * 0.70 + py * 0.20, 0.75 - p * 0.30))
             guard_d2 = mk.norm((fx * 0.40 - px * 0.40, fy * 0.40 - py * 0.40, 0.80))
-            tip1 = _draw_nodachi_blade(c, right_hand, slash_d1, length=0.90)
-            _draw_nodachi_blade(c, left_hand, guard_d2, length=0.84)
+            tip1 = _draw_kodachi_blade(c, right_hand, slash_d1, length=0.46)
+            _draw_kodachi_blade(c, left_hand, guard_d2, length=0.42)
 
             # Rastro carmim de corte usando faixa translúcida fluida (mk.band)
             if 0.15 < p < 0.88:
                 mid = mk.lerp(right_hand, tip1, 0.55)
-                prev_tip = (tip1[0] - fx * 0.16 - px * 0.08, tip1[1] - fy * 0.16 - py * 0.08, tip1[2] - 0.18)
-                prev_mid = (mid[0] - fx * 0.10 - px * 0.04, mid[1] - fy * 0.10 - py * 0.04, mid[2] - 0.10)
+                prev_tip = (tip1[0] - fx * 0.12 - px * 0.06, tip1[1] - fy * 0.12 - py * 0.06, tip1[2] - 0.14)
+                prev_mid = (mid[0] - fx * 0.08 - px * 0.03, mid[1] - fy * 0.08 - py * 0.03, mid[2] - 0.08)
                 mk.band(c, (mid, tip1, prev_tip, prev_mid), P["trail"] + (180,))
                 mk.band(c, (mk.lerp(mid, tip1, 0.6), tip1, prev_tip, mk.lerp(prev_mid, prev_tip, 0.6)), P["trail_core"] + (230,))
 
         elif step == 2:
-            # Nodachi esquerda corta em giro horizontal, direita acompanha
+            # Kodachi esquerda corta em giro horizontal, direita acompanha
             slash_d2 = mk.norm((fx * 0.85 - px * 0.35, fy * 0.85 - py * 0.35, -0.15))
             guard_d1 = mk.norm((-fx * 0.20 - px * 0.60, -fy * 0.20 - py * 0.60, -0.75))
-            _draw_nodachi_blade(c, right_hand, guard_d1, length=0.84)
-            tip2 = _draw_nodachi_blade(c, left_hand, slash_d2, length=0.90)
+            _draw_kodachi_blade(c, right_hand, guard_d1, length=0.42)
+            tip2 = _draw_kodachi_blade(c, left_hand, slash_d2, length=0.46)
 
             # Rastro carmim de corte circular
             if 0.15 < p < 0.88:
                 mid = mk.lerp(left_hand, tip2, 0.55)
-                prev_tip = (tip2[0] - fx * 0.12 + px * 0.16, tip2[1] - fy * 0.12 + py * 0.16, tip2[2] + 0.06)
-                prev_mid = (mid[0] - fx * 0.08 + px * 0.10, mid[1] - fy * 0.08 + py * 0.10, mid[2] + 0.04)
+                prev_tip = (tip2[0] - fx * 0.10 + px * 0.12, tip2[1] - fy * 0.10 + py * 0.12, tip2[2] + 0.05)
+                prev_mid = (mid[0] - fx * 0.06 + px * 0.08, mid[1] - fy * 0.06 + py * 0.08, mid[2] + 0.03)
                 mk.band(c, (mid, tip2, prev_tip, prev_mid), P["trail"] + (180,))
                 mk.band(c, (mk.lerp(mid, tip2, 0.6), tip2, prev_tip, mk.lerp(prev_mid, prev_tip, 0.6)), P["trail_core"] + (230,))
 
         else:
-            # Tesoura dupla: ambas as lâminas cruzando à frente
+            # Corte cruzado em X com ambas as Kodachis
             cross_d1 = mk.norm((fx * 0.75 + px * 0.35, fy * 0.75 + py * 0.35, -0.25))
             cross_d2 = mk.norm((fx * 0.75 - px * 0.35, fy * 0.75 - py * 0.35, 0.25))
-            tip1 = _draw_nodachi_blade(c, right_hand, cross_d1, length=0.88)
-            tip2 = _draw_nodachi_blade(c, left_hand, cross_d2, length=0.88)
+            tip1 = _draw_kodachi_blade(c, right_hand, cross_d1, length=0.45)
+            tip2 = _draw_kodachi_blade(c, left_hand, cross_d2, length=0.45)
 
             # Rastro cruzado em 'X'
             if 0.15 < p < 0.88:
@@ -506,11 +539,54 @@ def draw_front(c, left_hand, right_hand):
                 mk.band(c, (mid1, tip1, tip2, mid2), P["trail"] + (190,))
                 mk.band(c, (mk.lerp(mid1, tip1, 0.6), tip1, tip2, mk.lerp(mid2, tip2, 0.6)), P["trail_core"] + (240,))
     else:
-        # Poses Neutras (Idle / Caminhada)
-        # Nodachi direita apontando para trás e para baixo
-        dir_r = mk.norm((-fx * 0.55 - px * 0.35, -fy * 0.55 - py * 0.35, -0.75))
-        # Nodachi esquerda apontando para cima e para frente em guarda
-        dir_l = mk.norm((fx * 0.45 + px * 0.25, fy * 0.45 + py * 0.25, 0.85))
+        pose = c.extra_props.get("pose") if c.extra_props else None
+        if c.state == "MAI_DANCE":
+            # Dança Mai: Duas Kodachis abertas em espiral tangencial com fitas carmim giratórias
+            dir_r = mk.norm((-fx * 0.45 - px * 0.85, -fy * 0.45 - py * 0.85, 0.20))
+            dir_l = mk.norm((fx * 0.45 + px * 0.85, fy * 0.45 + py * 0.85, 0.35))
+            tip1 = _draw_kodachi_blade(c, right_hand, dir_r, length=0.46)
+            tip2 = _draw_kodachi_blade(c, left_hand, dir_l, length=0.46)
 
-        _draw_nodachi_blade(c, right_hand, dir_r, length=0.86)
-        _draw_nodachi_blade(c, left_hand, dir_l, length=0.86)
+            # Duplo rastro circular de fita carmim acompanhando a pirueta
+            mid1 = mk.lerp(right_hand, tip1, 0.45)
+            prev_tip1 = (tip1[0] - fx * 0.24 + px * 0.12, tip1[1] - fy * 0.24 + py * 0.12, tip1[2] - 0.06)
+            prev_mid1 = (mid1[0] - fx * 0.16 + px * 0.08, mid1[1] - fy * 0.16 + py * 0.08, mid1[2] - 0.04)
+            mk.band(c, (mid1, tip1, prev_tip1, prev_mid1), P["trail"] + (195,))
+            mk.band(c, (mk.lerp(mid1, tip1, 0.6), tip1, prev_tip1, mk.lerp(prev_mid1, prev_tip1, 0.6)), P["trail_core"] + (235,))
+
+            mid2 = mk.lerp(left_hand, tip2, 0.45)
+            prev_tip2 = (tip2[0] + fx * 0.24 - px * 0.12, tip2[1] + fy * 0.24 - py * 0.12, tip2[2] + 0.06)
+            prev_mid2 = (mid2[0] + fx * 0.16 - px * 0.08, mid2[1] + fy * 0.16 - py * 0.08, mid2[2] + 0.04)
+            mk.band(c, (mid2, tip2, prev_tip2, prev_mid2), P["trail"] + (195,))
+            mk.band(c, (mk.lerp(mid2, tip2, 0.6), tip2, prev_tip2, mk.lerp(prev_mid2, prev_tip2, 0.6)), P["trail_core"] + (235,))
+        elif pose == "kodachi_draw":
+            # Sacando as duas Kodachi das bainhas nas costas
+            dir_r = mk.norm((-fx * 0.25 + px * 0.55, -fy * 0.25 + py * 0.55, -0.78))
+            dir_l = mk.norm((-fx * 0.25 - px * 0.55, -fy * 0.25 - py * 0.55, -0.78))
+            _draw_kodachi_blade(c, right_hand, dir_r, length=0.40)
+            _draw_kodachi_blade(c, left_hand, dir_l, length=0.40)
+        elif pose == "kodachi_x_pose":
+            # Cruzando as duas Kodachi em 'X' reluzente diante do peito
+            dir_r = mk.norm((fx * 0.35 + px * 0.72, fy * 0.35 + py * 0.72, 0.58))
+            dir_l = mk.norm((fx * 0.35 - px * 0.72, fy * 0.35 - py * 0.72, 0.58))
+            tip1 = _draw_kodachi_blade(c, right_hand, dir_r, length=0.45)
+            tip2 = _draw_kodachi_blade(c, left_hand, dir_l, length=0.45)
+            mid1 = mk.lerp(right_hand, tip1, 0.55)
+            mid2 = mk.lerp(left_hand, tip2, 0.55)
+            mk.band(c, (mid1, tip1, tip2, mid2), P["trail"] + (135,))
+        elif pose == "kodachi_victory":
+            # Pose triunfante: Kodachi esquerda erguida ao céu, direita aberta em guarda baixa
+            dir_r = mk.norm((-fx * 0.35 - px * 0.75, -fy * 0.35 - py * 0.75, -0.55))
+            dir_l = mk.norm((-fx * 0.15 + px * 0.22, -fy * 0.15 + py * 0.22, 0.96))
+            _draw_kodachi_blade(c, right_hand, dir_r, length=0.45)
+            _draw_kodachi_blade(c, left_hand, dir_l, length=0.46)
+        else:
+            # Poses Neutras (Idle / Caminhada)
+            # Kodachi direita apontando para trás e para baixo
+            dir_r = mk.norm((-fx * 0.55 - px * 0.35, -fy * 0.55 - py * 0.35, -0.75))
+            # Kodachi esquerda apontando para cima e para frente em guarda
+            dir_l = mk.norm((fx * 0.45 + px * 0.25, fy * 0.45 + py * 0.25, 0.85))
+
+            _draw_kodachi_blade(c, right_hand, dir_r, length=0.44)
+            _draw_kodachi_blade(c, left_hand, dir_l, length=0.44)
+

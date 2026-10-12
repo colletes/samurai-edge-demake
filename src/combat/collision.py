@@ -40,13 +40,13 @@ def _get_death_style_for_attacker(attacker, weapon: str | None = None):
 
     # 3. Ren (Shaolin): Combo Marcial (HYAKURETSU_BODY_EXPLOSION) vs Kiai (WALL_SMASH_FATAL)
     elif "ren" in char_type or "shaolin" in char_type:
-        if state == "KIAI_SHOUT":
+        if state in ("KIAI", "KIAI_SHOUT"):
             return "WALL_SMASH_FATAL"
         return "HYAKURETSU_BODY_EXPLOSION"
 
-    # 4. Chiyo (Kunoichi 2 Nodachi): Tesoura Dupla (TRIPLE_SCISSOR_CLEAVE) vs Dança Mai (MAI_X_CLEAVE)
-    elif "chiyo" in char_type or "nodachi" in char_type:
-        if state == "MAI_DANCE":
+    # 4. Chiyo (Kunoichi 2 Kodachi): Tesoura Dupla (TRIPLE_SCISSOR_CLEAVE) vs Dança Mai (MAI_X_CLEAVE)
+    elif "chiyo" in char_type or "kodachi" in char_type or "nodachi" in char_type:
+        if state in ("MAI_DANCE", "MAI_RIPOSTE"):
             return "MAI_X_CLEAVE"
         return "TRIPLE_SCISSOR_CLEAVE"
 
@@ -82,12 +82,15 @@ class CombatSystem:
             dx, dy = attacker.facing_x, attacker.facing_y
             dist = math.hypot(dx, dy) or 1.0
         ux, uy = dx / dist, dy / dist
-        travel = HIT_KNOCKBACK_DISTANCE
+        if getattr(attacker, "char_type", "") == "ren" and getattr(attacker, "combo_step", 0) in (1, 2):
+            travel = 0.45
+        else:
+            travel = HIT_KNOCKBACK_DISTANCE
         pit_at = getattr(game_map, "pit_at", None)
         if pit_at is not None:
             # Um buraco no caminho captura o ferido em vez de ele "pular" por cima.
             step = 0.1
-            for i in range(1, int(HIT_KNOCKBACK_DISTANCE / step) + 1):
+            for i in range(1, int(travel / step) + 1):
                 if pit_at(victim.wx + ux * step * i, victim.wy + uy * step * i) is not None:
                     travel = step * i
                     break
@@ -275,11 +278,13 @@ class CombatSystem:
                 winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
 
                 if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.45 + target.radius):
-                    if target.state == STATE_PARRY:
-                        # Musashi pode refletir projéteis durante os primeiros 0.15s da parry
-                        if (target.__class__.__name__ == "BlueSamurai" and 
-                            getattr(target, "parry_reflect_active_timer", 0) > 0 and 
-                            not getattr(proj, "has_been_reflected", False)):
+                    if target.state in (STATE_PARRY, "MAI_DANCE"):
+                        # Musashi (primeiros 0.28s) ou Chiyo na Dança Mai refletem projéteis
+                        can_reflect = (
+                            target.state == "MAI_DANCE" or
+                            (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0)
+                        )
+                        if can_reflect and not getattr(proj, "has_been_reflected", False):
                             # REFLETE: inverte direção e muda dono
                             proj.vx = -proj.vx
                             proj.vy = -proj.vy
@@ -288,7 +293,11 @@ class CombatSystem:
                             proj.owner = target
                             proj.has_been_reflected = True
                             proj.dist_traveled = 0  # Reset distance to allow full range travel after reflection
-                            banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
+                            if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
+                                target.on_mai_parry_success()
+                                banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                            else:
+                                banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
                             camera.add_shake(6.0)
                             self._play_sound("parry")
                         else:
@@ -319,11 +328,12 @@ class CombatSystem:
                 target = p2 if proj.owner == p1 else p1
 
                 if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.45 + target.radius):
-                    if target.state == STATE_PARRY:
-                        # Musashi pode refletir projéteis durante os primeiros 0.15s da parry
-                        if (target.__class__.__name__ == "BlueSamurai" and 
-                            getattr(target, "parry_reflect_active_timer", 0) > 0 and 
-                            not getattr(proj, "has_been_reflected", False)):
+                    if target.state in (STATE_PARRY, "MAI_DANCE"):
+                        can_reflect = (
+                            target.state == "MAI_DANCE" or
+                            (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0)
+                        )
+                        if can_reflect and not getattr(proj, "has_been_reflected", False):
                             # REFLETE: inverte direção e muda dono
                             proj.vx = -proj.vx
                             proj.vy = -proj.vy
@@ -332,9 +342,14 @@ class CombatSystem:
                             proj.owner = target
                             proj.has_been_reflected = True
                             proj.dist_traveled = 0  # Reset distance to allow full range travel after reflection
-                            banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
+                            if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
+                                target.on_mai_parry_success()
+                                banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                            else:
+                                banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
                             camera.add_shake(6.0)
                             self._play_sound("parry")
+                            continue
                         else:
                             # Absorção normal de parry
                             for _ in range(8):
@@ -465,11 +480,12 @@ class CombatSystem:
                     if target_in_dodge:
                         pass  # Bala passa através sem detonar (o dodge garante i-frames totais)
                     else:
-                        if target.state == STATE_PARRY:
-                            # Musashi pode refletir projéteis durante os primeiros 0.15s da parry
-                            if (target.__class__.__name__ == "BlueSamurai" and 
-                                getattr(target, "parry_reflect_active_timer", 0) > 0 and 
-                                not getattr(proj, "has_been_reflected", False)):
+                        if target.state in (STATE_PARRY, "MAI_DANCE"):
+                            can_reflect = (
+                                target.state == "MAI_DANCE" or
+                                (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0)
+                            )
+                            if can_reflect and not getattr(proj, "has_been_reflected", False):
                                 # REFLETE: inverte direção e muda dono
                                 proj.vx = -proj.vx
                                 proj.vy = -proj.vy
@@ -478,7 +494,11 @@ class CombatSystem:
                                 proj.owner = target
                                 proj.has_been_reflected = True
                                 proj.dist_traveled = 0  # Reset distance to allow full range travel after reflection
-                                banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
+                                if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
+                                    target.on_mai_parry_success()
+                                    banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                                else:
+                                    banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
                                 camera.add_shake(6.0)
                                 self._play_sound("parry")
                             else:
@@ -523,11 +543,12 @@ class CombatSystem:
                 target = p2 if proj.owner == p1 else p1
                 winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
                 if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.50 + target.radius):
-                    if target.state == STATE_PARRY:
-                        # Musashi pode refletir projéteis durante os primeiros 0.15s da parry
-                        if (target.__class__.__name__ == "BlueSamurai" and 
-                            getattr(target, "parry_reflect_active_timer", 0) > 0 and 
-                            not getattr(proj, "has_been_reflected", False)):
+                    if target.state in (STATE_PARRY, "MAI_DANCE"):
+                        can_reflect = (
+                            target.state == "MAI_DANCE" or
+                            (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0)
+                        )
+                        if can_reflect and not getattr(proj, "has_been_reflected", False):
                             # REFLETE: inverte direção e muda dono
                             proj.vx = -proj.vx
                             proj.vy = -proj.vy
@@ -536,7 +557,11 @@ class CombatSystem:
                             proj.owner = target
                             proj.has_been_reflected = True
                             proj.dist_traveled = 0  # Reset distance to allow full range travel after reflection
-                            banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
+                            if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
+                                target.on_mai_parry_success()
+                                banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                            else:
+                                banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
                             camera.add_shake(6.0)
                             self._play_sound("parry")
                         else:
@@ -939,6 +964,28 @@ class CombatSystem:
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(0, 0.5, 0.7, 180)
                         ctrl_mgr.rumble_player(1, 0.5, 0.7, 180)
+                elif p2.state == "MAI_DANCE":
+                    # Dança Mai da Chiyo: apara o golpe em pirueta, cancela a exaustão e aplica contra-corte de 1 HP
+                    for _ in range(16):
+                        particles.append(SparkParticle(p2.wx, p2.wy, 0.65, color=(225, 42, 58)))
+                    banners.append(FloatingBanner("MAI CONTRA-CORTE!", p2.wx, p2.wy, wz=1.78, color=(235, 55, 75)))
+                    camera.add_shake(8.0)
+                    if hasattr(p2, "on_mai_parry_success"):
+                        p2.on_mai_parry_success(p1, game_map)
+                    p1.stun(0.48)
+                    p1.wx = max(1.0, min(game_map.cols - 1.0, p1.wx - p1.facing_x * 1.25))
+                    p1.wy = max(1.0, min(game_map.rows - 1.0, p1.wy - p1.facing_y * 1.25))
+                    self._play_sound("parry")
+                    hit_c, dead_c = p1.take_hit((p2.facing_x, p2.facing_y), damage=1)
+                    if dead_c:
+                        winner = "P2_WINS"
+                        self.hitstop_timer = 0.12
+                        self._play_sound("fatal_strike")
+                        if cinematic_director:
+                            cinematic_director.trigger_fatal_strike(p2, p1, "MAI_X_CLEAVE", (p2.facing_x, p2.facing_y))
+                    if ctrl_mgr:
+                        ctrl_mgr.rumble_player(0, 0.5, 0.7, 180)
+                        ctrl_mgr.rumble_player(1, 0.5, 0.7, 180)
                 elif getattr(p1, "is_rifle_butt", False):
                     # Coronhada agressiva do Teppo: causa 1 de dano, afasta 1.6m e atordoa o adversário
                     hit, dead = p2.take_hit(p1.slash_dir, damage=1)
@@ -966,7 +1013,7 @@ class CombatSystem:
                         else:
                             damage = 1
                     else:
-                        damage = 2
+                        damage = getattr(p1, "hitbox_damage", 2)
 
                     hit, dead = p2.take_hit(p1.slash_dir, damage=damage)
                     if dead or hit:
@@ -1030,6 +1077,28 @@ class CombatSystem:
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(1, 0.5, 0.7, 180)
                         ctrl_mgr.rumble_player(0, 0.5, 0.7, 180)
+                elif p1.state == "MAI_DANCE":
+                    # Dança Mai da Chiyo: apara o golpe em pirueta, cancela a exaustão e aplica contra-corte de 1 HP
+                    for _ in range(16):
+                        particles.append(SparkParticle(p1.wx, p1.wy, 0.65, color=(225, 42, 58)))
+                    banners.append(FloatingBanner("MAI CONTRA-CORTE!", p1.wx, p1.wy, wz=1.78, color=(235, 55, 75)))
+                    camera.add_shake(8.0)
+                    if hasattr(p1, "on_mai_parry_success"):
+                        p1.on_mai_parry_success(p2, game_map)
+                    p2.stun(0.48)
+                    p2.wx = max(1.0, min(game_map.cols - 1.0, p2.wx - p2.facing_x * 1.25))
+                    p2.wy = max(1.0, min(game_map.rows - 1.0, p2.wy - p2.facing_y * 1.25))
+                    self._play_sound("parry")
+                    hit_c, dead_c = p2.take_hit((p1.facing_x, p1.facing_y), damage=1)
+                    if dead_c:
+                        winner = "P1_WINS"
+                        self.hitstop_timer = 0.12
+                        self._play_sound("fatal_strike")
+                        if cinematic_director:
+                            cinematic_director.trigger_fatal_strike(p1, p2, "MAI_X_CLEAVE", (p1.facing_x, p1.facing_y))
+                    if ctrl_mgr:
+                        ctrl_mgr.rumble_player(1, 0.5, 0.7, 180)
+                        ctrl_mgr.rumble_player(0, 0.5, 0.7, 180)
                 elif getattr(p2, "is_rifle_butt", False):
                     # Coronhada agressiva do Teppo: causa 1 de dano, afasta 1.6m e atordoa o adversário
                     hit, dead = p1.take_hit(p2.slash_dir, damage=1)
@@ -1056,7 +1125,7 @@ class CombatSystem:
                         else:
                             damage = 1
                     else:
-                        damage = 2
+                        damage = getattr(p2, "hitbox_damage", 2)
 
                     hit, dead = p1.take_hit(p2.slash_dir, damage=damage)
                     if dead or hit:

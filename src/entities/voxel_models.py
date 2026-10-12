@@ -240,8 +240,10 @@ def _render_voxel_humanoid(
         elif char_type == "purple": atk_dur = 0.16
         elif char_type == "ninja": atk_dur = 0.18
         elif char_type == "saitou": atk_dur = 0.25
-        elif char_type == "ren": atk_dur = 0.15
-        elif char_type == "chiyo": atk_dur = 0.22
+        elif char_type == "ren":
+            r_step = extra_props.get("combo_step", 1) if extra_props else 1
+            atk_dur = 0.24 if r_step == 3 else (0.16 if r_step == 2 else 0.14)
+        elif char_type == "chiyo": atk_dur = 0.14
 
         if state_timer > 0:
             atk_progress = max(0.0, min(1.0, 1.0 - (state_timer / atk_dur)))

@@ -251,11 +251,23 @@ class CannonShotParticle:
 class FloatingBanner:
     """Textos estilizados de combate (CLASH, PARRY, IAI FLASH, VICTORY)."""
     def __init__(self, text: str, wx: float, wy: float, wz: float = 1.6, color=COLOR_WHITE, duration: float = 1.0):
-        self.text = text
-        self.wx = wx
-        self.wy = wy
-        self.wz = wz
-        self.color = color
+        # Suporte defensivo a ordens invertidas acidentais (ex: text, wx, wy, color)
+        if isinstance(text, (int, float)) and isinstance(wy, str):
+            # Chamada com (wx, wy, text, color)
+            self.wx, self.wy = float(text), float(wx)
+            self.text = wy
+            self.wz = 1.6
+            self.color = wz if isinstance(wz, (tuple, list)) else color
+        else:
+            self.text = str(text)
+            self.wx = float(wx)
+            self.wy = float(wy)
+            if isinstance(wz, (tuple, list)):
+                self.color = wz
+                self.wz = 1.6
+            else:
+                self.wz = float(wz)
+                self.color = color
         self.duration = duration
         self.age = 0.0
 
@@ -263,6 +275,7 @@ class FloatingBanner:
         self.age += dt
         self.wz += 0.4 * dt
         return self.age < self.duration
+
 
     def render(self, surface: pygame.Surface, camera, font: pygame.font.Font):
         sx, sy = camera.apply(self.wx, self.wy, self.wz)
