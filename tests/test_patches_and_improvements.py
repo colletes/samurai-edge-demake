@@ -92,6 +92,7 @@ def test_item_4_cooldown_hud_top_bar_data():
     assert data_k["max_cd"] == kasumi.mine_cooldown
 
     tomoe = KyudoArcher(10.0, 10.0)
+    tomoe.volley_cooldown_timer = 0.0  # a Chuva Sagrada nasce em recarga; zera para checar a Flecha de Corda
     tomoe.rope_timer = 1.0
     data_t = get_fighter_cooldown_data(tomoe)
     assert data_t is not None

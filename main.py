@@ -83,7 +83,7 @@ from src.ui.pause_menu import (
     PauseMenu, ACTION_RESUME, ACTION_SETTINGS, ACTION_ARENA, ACTION_FIGHTER, ACTION_MAIN_MENU, ACTION_QUIT, ACTION_ABANDON
 )
 from src.arcade import arcade_save
-from src.edition import is_demo, DEMO_ARENA
+from src.edition import is_demo, DEMO_ARENA, DEMO_ARENAS
 from src.arcade.arcade_mode import ArcadeRun, FIGHT_WON, FIGHT_LOST, NEXT_OPPONENT, FightKind
 from src.arcade.arcade_screens import ArcadeDifficultyScreen, ArcadeBracketScreen, ArcadeResultScreen
 from src.arcade.arcade_credits import ArcadeCreditsScreen
@@ -1161,7 +1161,10 @@ def run_game():
             if is_demo():
                 # Demo: não há escolha de cenário; depois dos lutadores vai direto à arena da Kenshi
                 if demo_start_pending:
-                    selected_arena_id = DEMO_ARENA
+                    from src.roster import ARENA_BY_FIGHTER
+                    selected_arena_id = ARENA_BY_FIGHTER.get(p1_char_id, DEMO_ARENA)
+                    if selected_arena_id not in DEMO_ARENAS:
+                        selected_arena_id = DEMO_ARENA
                     score_p1 = 0
                     score_p2 = 0
                     match_winner = None

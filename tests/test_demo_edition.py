@@ -16,7 +16,7 @@ pygame.init()
 pygame.display.set_mode((1280, 720))
 
 from src import edition
-from src.config import CHAR_KENSHIN, CHAR_ARCHER, ARENA_BAMBOO
+from src.config import CHAR_REN as CHAR_KENSHIN, CHAR_CHIYO as CHAR_ARCHER, ARENA_SHAOLIN, ARENA_HIGANBANA
 from src.i18n import set_lang
 from src.roster import ROSTER_ORDER, ARENA_BY_FIGHTER
 from src.ui.character_select import CharacterSelectScreen
@@ -38,7 +38,7 @@ def with_demo(value):
 
 def test_edition_constants():
     assert edition.DEMO_FIGHTERS == (CHAR_KENSHIN, CHAR_ARCHER)
-    assert edition.DEMO_ARENA == ARENA_BAMBOO == ARENA_BY_FIGHTER[CHAR_KENSHIN], "a arena da demo é a da Kenshi"
+    assert edition.DEMO_ARENAS == (ARENA_SHAOLIN, ARENA_HIGANBANA) and ARENA_BY_FIGHTER[CHAR_ARCHER] == ARENA_HIGANBANA and edition.DEMO_ARENA == ARENA_SHAOLIN == ARENA_BY_FIGHTER[CHAR_KENSHIN]
     with_demo(False)
     assert not edition.is_demo() or edition.IS_DEMO
     with_demo(True)
@@ -86,7 +86,7 @@ def test_character_select_only_two():
     assert cs.get_selected_characters() == (CHAR_KENSHIN, CHAR_ARCHER, False), "2P com Kenshi e Tomoe"
     with_demo(False)
     full = CharacterSelectScreen()
-    assert not any(full.is_locked(i) for i in range(len(full.characters))) and full.p2_choice_idx == 1
+    assert not any(full.is_locked(i) for i, c in enumerate(full.characters) if c.get("ready", True)) and full.p2_choice_idx == 1
     print("  [OK] Demo: só Kenshi e Tomoe são selecionáveis (1P e 2P); a versão completa libera os 12.", flush=True)
 
 

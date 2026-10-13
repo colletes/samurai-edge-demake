@@ -49,9 +49,9 @@ def test_complete_roster():
     # 1. Testar Tela de Seleção com 12 Guerreiros e Grade 6x2
     select_screen = CharacterSelectScreen()
     # 12 lutadores + a carta Aleatorio ao final (6.3.3)
-    assert len(select_screen.characters) == 13, f"Esperado 12 lutadores + Aleatorio, obtido {len(select_screen.characters)}"
+    assert len(select_screen.characters) == 25, f"Esperado 24 slots + Aleatorio, obtido {len(select_screen.characters)}"
     from src.config import CHAR_RANDOM
-    assert select_screen.characters[12]["id"] == CHAR_RANDOM
+    assert select_screen.characters[24]["id"] == CHAR_RANDOM
     
     # Testar seleção de P1 e P2 independentes no modo 2 Jogadores
     select_screen.vs_ai = False
@@ -81,7 +81,7 @@ def test_complete_roster():
     assert select_screen.p1_choice_idx == 7  # P1 continua em Kasumi!
 
     # Testar se os 12 personagens podem ser criados
-    for c in select_screen.characters[:12]:
+    for c in [c for c in select_screen.characters[:24] if c.get("ready", True)]:
         fighter = create_fighter(c["id"], 10.0, 10.0)
         assert fighter is not None
         assert fighter.is_alive == True
@@ -508,7 +508,7 @@ def test_complete_roster():
     assert not cs_screen.help_modal.is_open
     cs_screen.render(screen, pygame.font.Font(None, 36), font_test, pygame.font.Font(None, 16))
     visible_info_btns = [r for r in cs_screen.info_btn_rects if r.width > 0]
-    assert len(visible_info_btns) == 12, f"Esperado 12 botões de interrogação [?], obtido {len(visible_info_btns)}"
+    assert len(visible_info_btns) == 14, f"Esperado 14 botões de interrogação [?], obtido {len(visible_info_btns)}"
 
     # Tecla H abre o guia de regras
     cs_screen.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_h))
@@ -639,9 +639,9 @@ def test_complete_roster():
     # Voltar do primeiro card leva ao Aleatorio (ultimo), que sorteia apenas arenas liberadas
     from src.world.arenas import arena_ids
     arena_sel.selected_idx = 0
-    arena_sel.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LEFT))
-    assert arena_sel.selected_idx == 12
-    assert arena_sel.arenas[12]["id"] == ARENA_RANDOM
+    arena_sel.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_UP))
+    assert arena_sel.selected_idx == arena_sel.random_idx
+    assert arena_sel.arenas[arena_sel.random_idx]["id"] == ARENA_RANDOM
     assert arena_sel.get_resolved_arena_id() in arena_ids()
 
     # Testar tecla ESC voltando

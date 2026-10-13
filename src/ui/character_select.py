@@ -351,8 +351,8 @@ class CharacterSelectScreen:
         self._vs_ai = True if self.arcade_mode else value
 
     def __init__(self, ai_difficulty: str = "normal"):
-        self.p1_choice_idx = 0  # Kenshin
-        self.p2_choice_idx = ROSTER_ORDER.index(CHAR_ARCHER) if is_demo() else 1  # Musashi (na demo, Tomoe)
+        self.p1_choice_idx = ROSTER_ORDER.index(DEMO_FIGHTERS[0]) if is_demo() else 0  # Kenshin (na demo, Ren)
+        self.p2_choice_idx = ROSTER_ORDER.index(DEMO_FIGHTERS[1]) if is_demo() else 1  # Musashi (na demo, Chiyo)
         self.p1_ready = False
         self.p2_ready = False
         self.vs_ai = True
@@ -450,7 +450,9 @@ class CharacterSelectScreen:
 
     def is_locked(self, idx: int) -> bool:
         """Indica se a carta está bloqueada (na demo ou se o personagem ainda está em desenvolvimento)."""
-        if idx == self.random_idx or idx >= len(self.characters):
+        if idx == self.random_idx:
+            return is_demo()  # na demo o Aleatório também fica bloqueado
+        if idx >= len(self.characters):
             return False
         char_info = self.characters[idx]
         if not char_info.get("ready", True):
@@ -1507,7 +1509,8 @@ class CharacterSelectScreen:
                 self.info_btn_rects.append(pygame.Rect(0, 0, 0, 0))
                 self._render_random_card(surface, rand_rect, idx, char_info, parch, font_oriental_name, font_zen_small, font_zen_tiny, font_zen_stamp)
                 if self.is_locked(idx):
-                    self._render_locked_overlay(surface, rand_rect, font_zen_small, is_demo_lock=is_demo() and char_info["id"] not in DEMO_FIGHTERS)
+                    self._render_locked_overlay(surface, rand_rect, font_zen_small, is_demo_lock=is_demo())
+                    self.card_rects[-1] = pygame.Rect(0, 0, 0, 0)  # bloqueado: não recebe clique
                 continue
 
             row = idx // 6
@@ -1633,6 +1636,11 @@ class CharacterSelectScreen:
                 surface.blit(badge_bg, badge_rect.topleft)
                 pygame.draw.rect(surface, (140, 115, 75) if parch else (90, 85, 78), badge_rect, 1, border_radius=4)
                 surface.blit(badge_s, (badge_rect.centerx - badge_s.get_width() // 2, badge_rect.centery - badge_s.get_height() // 2))
+
+        if is_demo():
+            for i in range(len(self.card_rects)):
+                if self.is_locked(i):
+                    self.card_rects[i] = pygame.Rect(0, 0, 0, 0)  # bloqueado: não recebe clique
 
         # 7. Botão Grande de Ação: pergaminho com vara + pincelada vermelha (ou laca escarlate no fallback)
         start_w = 420

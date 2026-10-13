@@ -297,7 +297,7 @@ def test_silhouettes_and_budget():
 
 def test_arena_hidden_from_selection():
     assert ARENA_GASHADOKURO not in arena_ids() and ARENA_GASHADOKURO not in ARENA_SPECS
-    assert ARENA_GASHADOKURO not in ARENA_ORDER and len(arena_ids()) == 12
+    assert ARENA_GASHADOKURO not in ARENA_ORDER and len(arena_ids()) == 14
     gm = arena()
     assert len(gm.rocks) >= 6, "lápides para a elipse e o quique"
     print("  [OK] A arena do chefe existe, tem 6+ lápides e não aparece nas telas de seleção (12 arenas).", flush=True)
