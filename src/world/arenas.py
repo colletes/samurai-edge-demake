@@ -6,7 +6,7 @@ Aqui ficam os dados de cada arena e o registro dos tipos de prop, estrutura e pe
 """
 from src.config import (
     ARENA_BAMBOO, ARENA_KYOTO, ARENA_GANRYU, ARENA_IGA, ARENA_PIRATE_DECK, ARENA_SHADOW_CAVE, ARENA_MIST_TEMPLE, ARENA_FOREST_CAMP, ARENA_NAGASHINO, ARENA_KABUKI_STAGE, ARENA_MOUNTAIN_SHRINE, ARENA_BAROQUE_COURT, ARENA_GASHADOKURO,
-    ARENA_SHAOLIN, ARENA_HIGANBANA, COLOR_BG, COLOR_KYOTO_BG,
+    ARENA_SHAOLIN, ARENA_HIGANBANA, ARENA_GOJO_BRIDGE, ARENA_YOSHIWARA, COLOR_BG, COLOR_KYOTO_BG,
     COLOR_GRASS, COLOR_GRASS_LIGHT, COLOR_EARTH, COLOR_WATER, COLOR_WATER_HIGHLIGHT,
     COLOR_KYOTO_STONE, COLOR_KYOTO_STONE_LIGHT, COLOR_KYOTO_STONE_DARK, COLOR_KYOTO_CURB, COLOR_KYOTO_PAVEMENT,
     MAP_COLS, MAP_ROWS,
@@ -20,6 +20,7 @@ from src.world.bamboo import Bamboo
 from src.world.decor import (
     Bunting, Campfire, ForestTree, HangingChain, IncenseBurner, JizoStatue, KoiFish, MistBank, NoboriBanner, PaperLantern,
     ArcheryTarget, Fountain, HedgeBlock, MarbleStatue, PineTree, ScreenPanel, SnareTrap, StripedCurtain, SupplyCrate,
+    VoxelCricket, VoxelSparrow,
 )
 from src.world.hazards import ChainPendulum, FireworkMortars, RotatingStage, ShipRoll, TideSurge
 from src.world.solid_props import Cannon, PowderBarrel, ShrineBell, SolidProp
@@ -74,6 +75,8 @@ register_prop("marble_statue", lambda x, y, **p: MarbleStatue(x, y), "rocks")
 register_prop("fountain", lambda x, y, **p: Fountain(x, y), "rocks")
 register_prop("barrel", lambda x, y, **p: SolidProp(x, y, style="barrel", **p), "buildings")
 register_prop("cannon", lambda x, y, **p: Cannon(x, y, **p), "buildings")
+register_prop("cricket", lambda x, y, **p: VoxelCricket(x, y, **p), "lanterns")
+register_prop("sparrow", lambda x, y, **p: VoxelSparrow(x, y, **p), "lanterns")
 register_structure("arched_bridge", ArchedBridge)
 register_structure("roof_beam", RoofBeam)
 register_structure("plank_bridge", PlankBridge)
@@ -578,12 +581,17 @@ FOREST_CAMP_SPEC = ArenaSpec(
       + tuple(PropSpec("forest_tree", x, y) for x, y in _FOREST_TREES),
     spawns=SpawnRule(x_range=(5.0, 18.0), margin=5.0, min_distance=7.0, fallback=((6.0, 13.0), (16.0, 9.0))),
     stage=StageSpec(11.0, 12.8),
-    drift_count=30,
-    drift_petals=0.05,
+    drift_count=48,
+    drift_petals=0.75,
     lighting=LightingEnvironment(
-        ambient_color=(255, 248, 232), ambient_strength=0.95, vignette=0.05,
-        lights=(LightSource(11.0, 11.0, 0.6, (255, 160, 80), 3.0, flicker=0.3),),
-        atmosphere=(AtmosphereEffect("dust", density=0.4),),
+        ambient_color=(155, 185, 215), ambient_strength=0.62, vignette=0.22,
+        lights=(LightSource(11.0, 11.0, 0.6, (255, 160, 80), 3.5, flicker=0.35),),
+        atmosphere=(
+            AtmosphereEffect("embers", density=0.75),
+            AtmosphereEffect("smoke", density=0.45),
+            AtmosphereEffect("fireflies", density=0.35),
+            AtmosphereEffect("dust", density=0.30),
+        ),
     ),
 )
 
@@ -799,12 +807,16 @@ BAROQUE_COURT_SPEC = ArenaSpec(
     ),
     spawns=SpawnRule(x_range=(3.5, 18.5), margin=4.0, min_distance=7.0, fallback=((5.0, 11.0), (17.0, 11.0))),
     stage=StageSpec(11.0, 14.6),
-    drift_count=14,
-    drift_petals=0.5,
+    drift_count=42,
+    drift_petals=0.90,
     lighting=LightingEnvironment(
-        ambient_color=(255, 238, 210), ambient_strength=0.9, vignette=0.1,
-        lights=(), atmosphere=(AtmosphereEffect("sunbeams", density=0.4),
-                                AtmosphereEffect("steam", density=0.3, points=((11.0, 11.0, 1.9),))),
+        ambient_color=(255, 246, 228), ambient_strength=0.92, vignette=0.14,
+        lights=(),
+        atmosphere=(
+            AtmosphereEffect("sunbeams", density=0.50),
+            AtmosphereEffect("steam", density=0.70, points=((11.0, 11.0, 1.9),)),
+            AtmosphereEffect("mist", density=0.35),
+        ),
     ),
 )
 
@@ -820,6 +832,8 @@ _SHAOLIN_LANTERNS = ((7.5, 4.5), (13.5, 4.5), (7.5, 16.5), (13.5, 16.5))
 _SHAOLIN_INCENSE = ((6.8, 6.8), (14.2, 6.8), (6.8, 14.2), (14.2, 14.2))
 _SHAOLIN_PINES = ((2.2, 2.2), (18.8, 2.2), (2.2, 18.8), (18.8, 18.8))
 _SHAOLIN_JIZO = ((4.5, 10.5), (16.5, 10.5))
+_SHAOLIN_CRICKETS = ((5.5, 7.8), (15.2, 7.2), (6.8, 15.5), (14.5, 14.0), (10.5, 5.2), (11.0, 16.0))
+_SHAOLIN_SPARROWS = ((8.5, 9.2), (12.5, 11.8), (9.2, 12.2), (11.8, 8.5))
 
 SHAOLIN_SPEC = ArenaSpec(
     id=ARENA_SHAOLIN,
@@ -847,6 +861,8 @@ SHAOLIN_SPEC = ArenaSpec(
         + tuple(PropSpec("stone_lantern", x, y) for x, y in _SHAOLIN_LANTERNS)
         + tuple(PropSpec("pine", x, y) for x, y in _SHAOLIN_PINES)
         + tuple(PropSpec("jizo", x, y) for x, y in _SHAOLIN_JIZO)
+        + tuple(PropSpec("cricket", x, y, {"seed": 10 + i * 17}) for i, (x, y) in enumerate(_SHAOLIN_CRICKETS))
+        + tuple(PropSpec("sparrow", x, y, {"seed": 30 + i * 23}) for i, (x, y) in enumerate(_SHAOLIN_SPARROWS))
     ),
     spawns=SpawnRule(x_range=(4.0, 17.0), margin=4.0, min_distance=7.0, fallback=((6.5, 10.5), (14.5, 10.5))),
     stage=StageSpec(10.5, 10.5),
@@ -923,6 +939,130 @@ HIGANBANA_SPEC = ArenaSpec(
 )
 
 # ---------------------------------------------------------------------------
+# Ponte Gojo (Benkei) — Ciclo 2
+# ---------------------------------------------------------------------------
+TILE_GOJO_RIVER = 69
+TILE_GOJO_BANK = 70
+TILE_GOJO_PLANK = 71
+TILE_GOJO_CENTER = 72
+
+_GOJO_LANTERNS = ((4.5, 7.2), (10.5, 7.2), (16.5, 7.2), (4.5, 13.8), (10.5, 13.8), (16.5, 13.8))
+_GOJO_JIZO = ((2.0, 9.5), (2.0, 11.5), (19.5, 9.5), (19.5, 11.5))
+_GOJO_RAILING_POSTS = (
+    # Postes da mureta norte com vãos abertos entre 7..9 e 13..15
+    (3.5, 7.0), (5.5, 7.0), (9.5, 7.0), (11.5, 7.0), (15.5, 7.0), (17.5, 7.0),
+    # Postes da mureta sul com vãos abertos entre 7..9 e 13..15
+    (3.5, 14.0), (5.5, 14.0), (9.5, 14.0), (11.5, 14.0), (15.5, 14.0), (17.5, 14.0),
+)
+
+GOJO_BRIDGE_SPEC = ArenaSpec(
+    id=ARENA_GOJO_BRIDGE,
+    name="Ponte Gojo",
+    cols=MAP_COLS,
+    rows=MAP_ROWS,
+    bg_color=(14, 18, 28),
+    music="bgm_gojo_bridge",
+    wind=WindSpec(-1, 0.4, 0.6, 0.5),
+    tile_styles={
+        TILE_GOJO_RIVER: TileStyle("water", ((16, 22, 36), (36, 52, 78)), edge=(10, 14, 24), depth=0.25, speed_mult=0.45, surface="water"),
+        TILE_GOJO_BANK: TileStyle("flat", ((72, 66, 60), (60, 54, 48)), pattern="parity", edge=(40, 36, 32), surface="stone"),
+        TILE_GOJO_PLANK: TileStyle("flat", ((118, 88, 58), (104, 76, 48)), pattern="rows", edge=(72, 50, 32), surface="wood"),
+        TILE_GOJO_CENTER: TileStyle("flat", ((88, 64, 42), (78, 54, 34)), pattern="rows", edge=(54, 38, 24), surface="wood"),
+    },
+    layers=(
+        FillLayer(TILE_GOJO_RIVER),
+        RectLayer(TILE_GOJO_BANK, 0, 2, 0, 21),
+        RectLayer(TILE_GOJO_BANK, 19, 21, 0, 21),
+        RectLayer(TILE_GOJO_PLANK, 0, 21, 7, 14),
+        RectLayer(TILE_GOJO_CENTER, 0, 21, 9, 12),
+    ),
+    pits=(
+        PitZone(0.0, 0.0, float(MAP_COLS), 6.9, "VOID", railed=False, water=((16, 22, 36), (36, 52, 78))),
+        PitZone(0.0, 14.1, float(MAP_COLS), float(MAP_ROWS), "VOID", railed=False, water=((16, 22, 36), (36, 52, 78))),
+    ),
+    props=(
+        tuple(PropSpec("pillar", x, y, {"width": 0.45, "depth": 0.45, "height": 1.1, "color": (58, 44, 34)}) for x, y in _GOJO_RAILING_POSTS)
+        + tuple(PropSpec("stone_lantern", x, y) for x, y in _GOJO_LANTERNS)
+        + tuple(PropSpec("jizo", x, y) for x, y in _GOJO_JIZO)
+    ),
+    spawns=SpawnRule(x_range=(4.0, 17.0), margin=3.0, min_distance=7.0, fallback=((5.5, 10.5), (15.5, 10.5))),
+    stage=StageSpec(10.5, 10.5),
+    drift_count=48,
+    drift_petals=0.35,
+    lighting=LightingEnvironment(
+        ambient_color=(125, 140, 170), ambient_strength=0.46, vignette=0.36,
+        lights=tuple(LightSource(x, y, 0.9, (255, 195, 120), 2.8, flicker=0.12) for x, y in _GOJO_LANTERNS),
+        atmosphere=(
+            AtmosphereEffect("mist", density=0.80),
+            AtmosphereEffect("fogbank", density=0.60),
+            AtmosphereEffect("dust", density=0.30),
+        ),
+    ),
+)
+
+
+# ---------------------------------------------------------------------------
+# Beco Yoshiwara (O-Rin) — Ciclo 2
+# ---------------------------------------------------------------------------
+TILE_YOSHI_BUILDING = 73
+TILE_YOSHI_COBBLE = 74
+TILE_YOSHI_SIDEWALK = 75
+TILE_YOSHI_PUDDLE = 76
+
+_YOSHI_LANTERNS = ((6.8, 4.0), (14.2, 4.0), (6.8, 10.5), (14.2, 10.5), (6.8, 17.0), (14.2, 17.0))
+_YOSHI_CURTAINS = ((5.2, 8.5), (15.8, 8.5), (5.2, 13.5), (15.8, 13.5))
+_YOSHI_MACHIAS = (1.5, 5.5, 9.5, 13.5, 17.5)
+
+YOSHIWARA_SPEC = ArenaSpec(
+    id=ARENA_YOSHIWARA,
+    name="Beco Yoshiwara",
+    cols=MAP_COLS,
+    rows=MAP_ROWS,
+    bg_color=(22, 14, 26),
+    music="bgm_yoshiwara_alley",
+    wind=WindSpec(1, 0.2, 0.35, 0.3),
+    tile_styles={
+        TILE_YOSHI_BUILDING: TileStyle("flat", ((36, 26, 32), (28, 20, 24)), pattern="parity", edge=(18, 12, 16), surface="wood"),
+        TILE_YOSHI_COBBLE: TileStyle("flat", ((60, 56, 66), (50, 46, 54)), pattern="parity", edge=(34, 30, 38), surface="stone"),
+        TILE_YOSHI_SIDEWALK: TileStyle("flat", ((96, 74, 56), (82, 62, 46)), pattern="rows", edge=(54, 40, 30), surface="wood"),
+        TILE_YOSHI_PUDDLE: TileStyle("water", ((32, 20, 34), (68, 30, 48)), edge=(22, 14, 22), depth=0.08, speed_mult=0.90, surface="water"),
+    },
+    layers=(
+        FillLayer(TILE_YOSHI_BUILDING),
+        RectLayer(TILE_YOSHI_COBBLE, 5, 16, 0, 21),
+        RectLayer(TILE_YOSHI_SIDEWALK, 5, 6, 0, 21),
+        RectLayer(TILE_YOSHI_SIDEWALK, 15, 16, 0, 21),
+        EllipseLayer(TILE_YOSHI_PUDDLE, cx=10.5, cy=6.5, radius=2.6, sx=1.0, sy=0.8),
+        EllipseLayer(TILE_YOSHI_PUDDLE, cx=10.5, cy=14.5, radius=2.4, sx=1.0, sy=0.8),
+    ),
+    props=(
+        tuple(PropSpec("machiya", 0.8, by, {"width": 4.2, "depth": 3.6, "is_transparent": False, "seed": 300 + i * 29, "burning": False, "style": "yoshiwara"})
+              for i, by in enumerate(_YOSHI_MACHIAS))
+        + tuple(PropSpec("machiya", 17.0, by, {"width": 4.2, "depth": 3.6, "is_transparent": True, "seed": 400 + i * 31, "burning": False, "style": "yoshiwara"})
+                for i, by in enumerate(_YOSHI_MACHIAS))
+        + tuple(PropSpec("paper_lantern", x, y) for x, y in _YOSHI_LANTERNS)
+        + tuple(PropSpec("curtain", x, y) for x, y in _YOSHI_CURTAINS)
+        + _folding_screen(8.2, 7.5, "x")
+        + _folding_screen(12.8, 7.5, "x")
+        + _folding_screen(8.2, 13.5, "x")
+        + _folding_screen(12.8, 13.5, "x")
+    ),
+    spawns=SpawnRule(x_range=(7.0, 14.0), margin=3.0, min_distance=5.0, fallback=((8.0, 10.5), (13.0, 10.5))),
+    stage=StageSpec(10.5, 10.5),
+    drift_count=52,
+    drift_petals=0.85,
+    lighting=LightingEnvironment(
+        ambient_color=(68, 44, 76), ambient_strength=0.36, vignette=0.46,
+        lights=tuple(LightSource(x, y, 0.9, (255, 60, 85), 3.0, flicker=0.18) for x, y in _YOSHI_LANTERNS),
+        atmosphere=(
+            AtmosphereEffect("mist", density=0.72),
+            AtmosphereEffect("fireflies", density=0.45),
+            AtmosphereEffect("dust", density=0.35),
+        ),
+    ),
+)
+
+# ---------------------------------------------------------------------------
 # Registro de arenas jogáveis
 # ---------------------------------------------------------------------------
 ARENA_SPECS: dict[str, ArenaSpec] = {
@@ -935,6 +1075,8 @@ ARENA_SPECS: dict[str, ArenaSpec] = {
     ARENA_BAROQUE_COURT: BAROQUE_COURT_SPEC,
     ARENA_SHAOLIN: SHAOLIN_SPEC,
     ARENA_HIGANBANA: HIGANBANA_SPEC,
+    ARENA_GOJO_BRIDGE: GOJO_BRIDGE_SPEC,
+    ARENA_YOSHIWARA: YOSHIWARA_SPEC,
 }
 
 

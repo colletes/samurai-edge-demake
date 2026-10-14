@@ -95,8 +95,8 @@ Cada fatality é acionado de forma **contextual de acordo com o ataque que desfe
 | | | **Secundário** (*Kiai da Montanha*) | **WALL_SMASH_FATAL**: Onda esférica de choque arremessa o rival contra obstáculos/armadilhas estilhaçando o corpo no impacto. | Empurrão defensivo sem fatality. |
 | **14** | **Chiyo** | **Primário** (*Cortes Cruzados 2 Kodachi*) | **TRIPLE_SCISSOR_CLEAVE**: As duas lâminas curtas Kodachi cortam simultaneamente na cintura e no pescoço em velocidade relâmpago, separando cabeça e tronco em três partes. | Desabamento de joelhos. |
 | | | **Secundário** (*Dança Mai*) | **MAI_X_CLEAVE**: Surge do vórtice de pós-imagens com corte giratório duplo fatiando o peito em 'X' profundo. | Queda com lâminas embainhadas. |
-| **15** | **Benkei** | **Primário** (*Varredura Naginata*) | **SWEEP_AND_CLEAVE**: Lâmina curva decepa as duas pernas na altura das coxas e na recuperação desce um corte vertical letal no peito. | Queda pesada por corte de ponta. |
-| | | **Secundário** (*Arremesso Lança*) | **SKEWERED_LANCE_FLAG**: A Naginata transpassa o tórax e crava no chão, erguendo o corpo em ângulo oblíquo como troféu de guerra. | Queda perfurada à distância. |
+| **15** | **Benkei** | **Primário** (*Estocada Frontal Colossal*) | **ARMORED_HEART_IMPALE**: A lâmina pesada de Naginata perfura o tórax de ponta a ponta com o ímpeto da armadura de placas; Benkei ergue o rival pelo cabo e o projeta estatelado no chão com jorro arterial massivo. | Queda pesada por perfuração de ponta. |
+| | | **Secundário** (*Arremesso da Naginata*) | **SKEWERED_LANCE_FLAG**: A Naginata transpassa o tórax em arremesso supersônico e crava no solo, erguendo o corpo em ângulo oblíquo como troféu de guerra. | Queda perfurada à distância. |
 | **16** | **O-Rin** | **Primário** (*Lâminas Kamaitachi*) | **SONIC_SLICER**: Ondas de vácuo sônicas fatiam a vítima em 3 segmentos horizontais que deslizam em cascata após 1 segundo de silêncio. | Queda lenta ouvindo a última nota musical. |
 | | | **Secundário** (*Acorde Ressonante*) | **RESONANCE_BURST**: Onda grave de choque à queima-roupa estoura os tímpanos e crânio da vítima com sangramento arterial facial e colapso seco. | Colapso por choque sonoro. |
 | **17** | **Goro** | **Primário** (*Descida da Kuwa*) | **KUWA_SKULL_CLEAVE**: A enxada racha o crânio e crava na caixa torácica; Goro apoia a bota no peito para arrancar a lâmina com estalo ósseo. | Queda atordoado pelo peso do ferro. |
@@ -153,15 +153,70 @@ Ambas estão registradas em `ARENA_SPECS` (`src/world/arenas.py`), mapeadas em `
 | **Tática** | Bater no sino reverbera ondas sonoras; o piso limpo favorece esquivas rápidas. | Névoa e pétalas camuflam aproximações; a água rasa atrasa a corrida. |
 | **BGM** | *Courtyard of the Sacred Bronze Bells* — 118 BPM, Ré Dórico (`bgm_shaolin_temple`) | *Dance of the Crimson Spider Lilies* — 136 BPM, Fá# menor In-sen (`bgm_higanbana_garden`) |
 
+### 5.2 Ciclo 2 — ✅ Implementadas
+
+Ambas estão registradas em `ARENA_SPECS` (`src/world/arenas.py`), mapeadas em `ARENA_BY_FIGHTER` (`src/roster.py`) e com trilhas sonoras integradas (`bgm_gojo_bridge.mp3` e `bgm_yoshiwara_alley.mp3`).
+
+| | **Ponte Gojo** | **Beco Yoshiwara** |
+| :--- | :--- | :--- |
+| **ID / Constante** | `gojo_bridge` / `ARENA_GOJO_BRIDGE` | `yoshiwara_alley` / `ARENA_YOSHIWARA` |
+| **Subtítulo** | *A Travessia das Mil Lâminas* | *O Labirinto das Sombras Rubras* |
+| **Lutador** | **Benkei** (Guardião Naginata) | **O-Rin** (Menestrel Shamisen) |
+| **Perigo** | **ALTO (Queda Letal no Rio Kamo / Pits)** | **MODERADO (Obstáculos Destrutíveis / Biombos)** |
+| **Layout** | Ponte horizontal central de tábuas de carvalho rústico (faixa central entre o Rio Kamo). Vãos abertos nas muretas onde empurrões/golpes fortes causam queda fatal na correnteza. | Beco estreito longitudinal pavimentado em paralelepípedos úmidos pós-chuva com poças reflexivas. Fachadas de machiyas de dois andares delimitando paredes de madeira. |
+| **Props** | Muretas baixas de carvalho com vãos abertos, katanas e lanças troféu cravadas nos postes da ponte, lanternas de bronze com tochas, estátuas Jizo nas cabeceiras da ponte. | Biombos de papel shoji destrutíveis com colisão, lanternas chōchin vermelhas suspensas em beirais, cortinas noren ondulantes e barris de madeira. |
+| **Iluminação** | Noite fria de luar prateado (lua cheia de alto contraste, força 0.42, vinheta 0.35); tochas quentes de bronze projetando chamas com cintilação. | Noite chuvosa em chiaroscuro; iluminação rubra e âmbar intensa das lanternas vermelhas projetando sombras longas nas machiyas molhadas (força 0.50, vinheta 0.40). |
+| **Atmosfera & Partículas** | Névoa densa do rio subindo pelas frestas das tábuas, folhas secas sopradas pelo vento fluvial, poeira de madeira e respingos d'água; 48 partículas à deriva. | Gotejamento de chuva dos telhados, vapor subindo das pedras molhadas, faíscas e estilhaços de papel/madeira ao quebrar biombos; 52 partículas à deriva. |
+| **Tática** | Controle cirúrgico de espaçamento; empurrar o oponente em direção aos vãos abertos da mureta; arremesso de naginata contra postes sem risco de queda no rio. | Confinamento do beco favorece ricochetes e rajadas de Kamaitachi; destruir biombos para abrir espaço de esquiva ou prensar o oponente contra as paredes. |
+| **BGM** | *The Guardian of Gojo Bridge* — 108 BPM, Si Frígio (`bgm_gojo_bridge.mp3`) | *Echoes of the Crimson Pleasure Quarter* — 140 BPM, Sol# menor In-sen (`bgm_yoshiwara_alley.mp3`) |
+
+---
+
+### 5.3 Especificações de Combate e Balanceamento dos Guerreiros (Ciclo 2)
+
+```mermaid
+flowchart TD
+    subgraph Benkei["Benkei (Walking Tank Colossal)"]
+        B1["Ataque Primário (Armado): Estocada Frontal de Naginata<br>• Alcance 3.0 tiles | Alto Empurrão | Perfuração"]
+        B2["Ação Secundária: Arremesso de Naginata<br>• Projétil Pesado de Tela Cheia<br>• Física: Clamp Inteligente (Nunca cai em Pits)"]
+        B3["Ação Primária (Desarmado): Investida de Recuperação<br>• Corrida Teleguiada com Armadura<br>• Dano Zero, mas aplica STUN por Atropelamento"]
+        B1 -->|Arremessa Arma| B2
+        B2 -->|Sem Lâmina| B3
+        B3 -->|Alcança Naginata| B1
+    end
+    subgraph ORin["O-Rin (Zoner Acústica Pura)"]
+        O1["Ataque Primário: Kamaitachi (Lâminas Sônicas de Vácuo)<br>• Alcance 6.0 tiles | Rajadas Rítmicas de Shamisen"]
+        O2["Ação Secundária: Acorde Ressonante<br>• Onda Grave de Choque 360° | Repulsão e Desestabilização"]
+        O3["Mobilidade: Velocidade 4.9 | Evasão Fluida<br>• Fragilidade Física em Curta Distância"]
+    end
+```
+
+#### Fichas Técnicas de Gameplay:
+
+1. **Benkei (O Guardião da Ponte Gojo)**:
+   * **Arquétipo**: *Walking Tank*. Sem mecânica de parry técnico (foco em avanço implacável, armadura de placas pretas e domínio de espaço).
+   * **Velocidade de Deslocamento**: `4.0 tiles/s` (pesado, movimento firme).
+   * **Ataque Primário (Armado)**: *Estocada Frontal Colossal* — Alcance extraordinário de `3.0 tiles` (o maior alcance melee do jogo). Golpe perfurante de alto impacto que empurra o oponente diretamente contra perigos de cenário e abismos.
+   * **Ação Secundária**: *Arremesso da Naginata* — Projétil colossal de tela cheia que empala ou se crava em superfícies rígidas. **Física da Naginata**: Equipada com clamp de segurança que impede que caia em buracos ou água; se arremessada na direção do rio, crava-se na borda firme da ponte.
+   * **Ação Primária (Desarmado)**: *Investida Teleguiada de Recuperação* — Corrida rápida em direção à naginata cravada. O peso maciço da armadura atropela quem estiver na trajetória: não causa dano letal, mas inflige **STUN garantido**, abrindo janela de recuperação da arma.
+
+2. **O-Rin (A Menestrel Acústica do Beco Yoshiwara)**:
+   * **Arquétipo**: *Zoner Acústica Pura*. Nunca saca uma lâmina física; 100% de seus golpes são ondas sonoras e vácuo gerados pelo Tsugaru shamisen percussivo.
+   * **Visual & Features Marcantes**: Olhos penetrantes cor de âmbar dourado com delineado carmesim dramático (*kumadori* sutil de Yoshiwara), tatuagem floral de lírio-da-ressurreição (*Higanbana*) subindo pela clavícula até o pescoço, e brincos longos de sinos de prata (*suzu*) que vibram e ressoam em harmonia com os acordes acústicos.
+   * **Velocidade de Deslocamento**: `4.9 tiles/s` (ágil, passos leves sobre paralelepípedos).
+   * **Resistência**: Frágil em curta distância; punível se encurralada contra paredes.
+   * **Ataque Primário**: *Kamaitachi (Lâminas de Vácuo Sônico)* — Rajadas em leque rítmico que cortam o ar até `6.0 tiles` de distância, desferidas através de palhetadas agressivas (*banchi*).
+   * **Ação Secundária**: *Acorde Ressonante* — Onda expansiva de choque acústico à queima-roupa com alto knockback, servindo como ferramenta primordial de desarme e manutenção de distância.
+
 ---
 
 ## 📅 6. Resumo Executivo dos 6 Ciclos
 
-| Ciclo | Nova Dupla (1M + 1F) | Novas Arenas da Dupla | Revamp de 2 Arenas Atuais | Fatalities Implementados no Ciclo |
-| :---: | :--- | :--- | :--- | :--- |
-| **1** | **Ren** (Shaolin) & **Chiyo** (2 Kodachi) | **Pátio dos Sinos Shaolin** (`shaolin_temple`) & **Jardim dos Lírios Carmim** (`higanbana_garden`) | **Nagashino Field** & **Shadow Cave** | **Teppo**, **Anne**, **Ren**, **Chiyo** |
-| **2** | **Benkei** (Naginata) & **O-Rin** (Shamisen) | Ponte Gojo & Beco Yoshiwara | **Forest Camp** & **Baroque Court** | **Kenshi**, **Musashi**, **Benkei**, **O-Rin** |
-| **3** | **Goro** (Fazendeiro) & **Ichi** (Lâmina Cega) | Arrozais Terraciados & Moinho na Chuva | **Ganryū Island** & **Iga Rooftops** | **Saitou**, **Hanzo**, **Goro**, **Ichi** |
-| **4** | **Valerius** (Necromante) & **Seimei** (Onmyoji) | Cemitério Barroco & Santuário Heian | **Mist Temple** & **Kabuki Stage** | **Murasaki**, **Kasumi**, **Valerius**, **Seimei** |
-| **5** | **Daiki** (Bastão) & **Aoi** (Caçadora Ainu) | Floresta dos Pinheiros & Taiga de Ezo | **Storm Pirate Deck** & **Mountain Shrine** | **Okuni**, **Tomoe**, **Daiki**, **Aoi** |
-| **6** | **Raiden** (Sumô) & **Hendrika** (Alquimista) | Dohyo Sagrado & Armazém de Dejima | **Sacred Bamboo** & **Kyoto Bakumatsu** | **Joe**, **Julie**, **Raiden**, **Hendrika** |
+| Ciclo | Nova Dupla (1M + 1F) | Novas Arenas da Dupla | Revamp de 2 Arenas Atuais | Fatalities Implementados no Ciclo | Status |
+| :---: | :--- | :--- | :--- | :--- | :---: |
+| **1** | **Ren** (Shaolin) & **Chiyo** (2 Kodachi) | **Pátio dos Sinos Shaolin** (`shaolin_temple`) & **Jardim dos Lírios Carmim** (`higanbana_garden`) | **Nagashino Field** & **Shadow Cave** | **Teppo**, **Anne**, **Ren**, **Chiyo** | ✅ Concluído |
+| **2** | **Benkei** (Naginata) & **O-Rin** (Shamisen) | **Ponte Gojo** (`gojo_bridge`) & **Beco Yoshiwara** (`yoshiwara_alley`) | **Forest Camp** & **Baroque Court** | **Kenshi**, **Musashi**, **Benkei**, **O-Rin** | ✅ Concluído |
+| **3** | **Goro** (Fazendeiro) & **Ichi** (Lâmina Cega) | Arrozais Terraciados & Moinho na Chuva | **Ganryū Island** & **Iga Rooftops** | **Saitou**, **Hanzo**, **Goro**, **Ichi** | ⏳ Próximo |
+| **4** | **Valerius** (Necromante) & **Seimei** (Onmyoji) | Cemitério Barroco & Santuário Heian | **Mist Temple** & **Kabuki Stage** | **Murasaki**, **Kasumi**, **Valerius**, **Seimei** | 📅 Planejado |
+| **5** | **Daiki** (Bastão) & **Aoi** (Caçadora Ainu) | Floresta dos Pinheiros & Taiga de Ezo | **Storm Pirate Deck** & **Mountain Shrine** | **Okuni**, **Tomoe**, **Daiki**, **Aoi** | 📅 Planejado |
+| **6** | **Raiden** (Sumô) & **Hendrika** (Alquimista) | Dohyo Sagrado & Armazém de Dejima | **Sacred Bamboo** & **Kyoto Bakumatsu** | **Joe**, **Julie**, **Raiden**, **Hendrika** | 📅 Planejado |

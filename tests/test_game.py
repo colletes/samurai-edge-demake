@@ -480,8 +480,8 @@ def test_complete_roster():
     help_modal.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_TAB))
     assert help_modal.current_tab == GameHelpModal.TAB_FIGHTERS
 
-    # Navegação entre os 12 lutadores na aba de lutadores
-    assert len(FIGHTERS_GUIDE_DATA) == 12, f"Esperado 12 combatentes no guia, encontrado {len(FIGHTERS_GUIDE_DATA)}"
+    # Navegação entre os lutadores na aba de lutadores (veteranos + ciclos de expansão)
+    assert len(FIGHTERS_GUIDE_DATA) >= 12, f"Esperado pelo menos 12 combatentes no guia, encontrado {len(FIGHTERS_GUIDE_DATA)}"
     for f in FIGHTERS_GUIDE_DATA:
         assert len(f["pt"]["conceito"]) > 30, f"Conceito PT de {f['pt']['name']} deve ser descritivo!"
         assert len(f["pt"]["habilidades"]) > 20, f"Habilidades PT de {f['pt']['name']} devem ser descritivas!"
@@ -508,7 +508,8 @@ def test_complete_roster():
     assert not cs_screen.help_modal.is_open
     cs_screen.render(screen, pygame.font.Font(None, 36), font_test, pygame.font.Font(None, 16))
     visible_info_btns = [r for r in cs_screen.info_btn_rects if r.width > 0]
-    assert len(visible_info_btns) == 14, f"Esperado 14 botões de interrogação [?], obtido {len(visible_info_btns)}"
+    from src.roster import PLAYABLE_FIGHTERS
+    assert len(visible_info_btns) == len(PLAYABLE_FIGHTERS), f"Esperado {len(PLAYABLE_FIGHTERS)} botões de interrogação [?], obtido {len(visible_info_btns)}"
 
     # Tecla H abre o guia de regras
     cs_screen.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_h))

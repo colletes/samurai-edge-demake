@@ -86,25 +86,28 @@ class MachiyaFacade:
     - Chamas dinâmicas nos telhados (nascem, crescem e somem)
     - Suporte a modo translúcido (is_transparent=True para o Canto Sudeste)
     """
-    def __init__(self, wx: float, wy: float, width: float, depth: float, is_transparent: bool = False, seed: int = 0):
+    def __init__(self, wx: float, wy: float, width: float, depth: float, is_transparent: bool = False, seed: int = 0, burning: bool = True, style: str = "bakumatsu"):
         self.wx = wx
         self.wy = wy
         self.width = width
         self.depth = depth
         self.is_transparent = is_transparent
         self.seed = seed
+        self.burning = burning
+        self.style = style
 
         rng = random.Random(seed)
         self.flame_spots: list[DynamicFlameSpot] = []
-        num_spots = 4
-        for i in range(num_spots):
-            rx = 0.4 + (i + rng.uniform(-0.15, 0.15)) * ((width - 0.8) / max(1, num_spots - 1))
-            ry = depth * rng.uniform(0.25, 0.60)
-            period = rng.uniform(4.2, 7.2)
-            burn_time = rng.uniform(2.0, period * 0.65)
-            max_h = rng.uniform(0.65, 1.25)
-            shift = rng.uniform(0.0, 10.0)
-            self.flame_spots.append(DynamicFlameSpot(rx, ry, period, burn_time, max_h, shift))
+        if self.burning:
+            num_spots = 4
+            for i in range(num_spots):
+                rx = 0.4 + (i + rng.uniform(-0.15, 0.15)) * ((width - 0.8) / max(1, num_spots - 1))
+                ry = depth * rng.uniform(0.25, 0.60)
+                period = rng.uniform(4.2, 7.2)
+                burn_time = rng.uniform(2.0, period * 0.65)
+                max_h = rng.uniform(0.65, 1.25)
+                shift = rng.uniform(0.0, 10.0)
+                self.flame_spots.append(DynamicFlameSpot(rx, ry, period, burn_time, max_h, shift))
 
     def check_collision(self, px: float, py: float, p_radius: float = 0.3) -> tuple[bool, float, float]:
         """Colisão de círculo (lutador) contra o retângulo (AABB) da fachada, mesmo padrão de Rock/Well/Tree."""
@@ -184,28 +187,52 @@ class MachiyaFacade:
         draw_voxel_box(surface, camera, self.wx - 0.25, self.wy - 0.15, roof_z, self.width + 0.50, roof_d, 0.28, COLOR_KYOTO_ROOF_TILE, outline=True, alpha=roof_alpha, texture="roof_tile")
         draw_voxel_box(surface, camera, self.wx - 0.10, self.wy + roof_d * 0.32, roof_z + 0.26, self.width + 0.20, 0.30, 0.20, (52, 54, 58), outline=True, alpha=roof_alpha)
 
-        # 7. Chamas Dinâmicas nos Telhados (Nascem, crescem, diminuem e somem)
-        flame_alpha = 185 if self.is_transparent else 255
-        for spot in self.flame_spots:
-            fh = spot.get_height(time_val)
-            if fh > 0.04:
-                fx = self.wx + spot.rel_x
-                fy = self.wy + spot.rel_y
+        if self.burning:
+            # 7. Chamas Dinâmicas nos Telhados (Nascem, crescem, diminuem e somem)
+            flame_alpha = 185 if self.is_transparent else 255
+            for spot in self.flame_spots:
+                fh = spot.get_height(time_val)
+                if fh > 0.04:
+                    fx = self.wx + spot.rel_x
+                    fy = self.wy + spot.rel_y
 
-                # Núcleo amarelo brilhante
-                draw_voxel_box(surface, camera, fx - 0.20, fy - 0.20, roof_z + 0.32, 0.40, 0.40, fh * 0.55, COLOR_KYOTO_FIRE_CORE, outline=False, alpha=flame_alpha)
-                # Corpo laranja
-                draw_voxel_box(surface, camera, fx - 0.15, fy - 0.15, roof_z + 0.32 + fh * 0.45, 0.30, 0.30, fh * 0.45, COLOR_KYOTO_FIRE_MID, outline=False, alpha=flame_alpha)
-                # Ponta avermelhada
-                if fh > 0.35:
-                    draw_voxel_box(surface, camera, fx - 0.10, fy - 0.10, roof_z + 0.32 + fh * 0.85, 0.20, 0.20, fh * 0.25, COLOR_KYOTO_FIRE_EDGE, outline=False, alpha=flame_alpha)
+                    # Núcleo amarelo brilhante
+                    draw_voxel_box(surface, camera, fx - 0.20, fy - 0.20, roof_z + 0.32, 0.40, 0.40, fh * 0.55, COLOR_KYOTO_FIRE_CORE, outline=False, alpha=flame_alpha)
+                    # Corpo laranja
+                    draw_voxel_box(surface, camera, fx - 0.15, fy - 0.15, roof_z + 0.32 + fh * 0.45, 0.30, 0.30, fh * 0.45, COLOR_KYOTO_FIRE_MID, outline=False, alpha=flame_alpha)
+                    # Ponta avermelhada
+                    if fh > 0.35:
+                        draw_voxel_box(surface, camera, fx - 0.10, fy - 0.10, roof_z + 0.32 + fh * 0.85, 0.20, 0.20, fh * 0.25, COLOR_KYOTO_FIRE_EDGE, outline=False, alpha=flame_alpha)
 
-                # Fumaça ascendente quando o fogo está alto
-                if fh > 0.5:
-                    sm_phase = time_val * 2.5 + spot.phase_shift
-                    sm_z = roof_z + 1.2 + (sm_phase % 2.0)
-                    sm_alpha = max(0, int(130 * (1.0 - (sm_z - roof_z - 1.2) / 2.0)))
-                    draw_voxel_box(surface, camera, fx, fy, sm_z, 0.35, 0.35, 0.22, (60, 55, 55), outline=False, alpha=sm_alpha)
+                    # Fumaça ascendente quando o fogo está alto
+                    if fh > 0.5:
+                        sm_phase = time_val * 2.5 + spot.phase_shift
+                        sm_z = roof_z + 1.2 + (sm_phase % 2.0)
+                        sm_alpha = max(0, int(130 * (1.0 - (sm_z - roof_z - 1.2) / 2.0)))
+                        draw_voxel_box(surface, camera, fx, fy, sm_z, 0.35, 0.35, 0.22, (60, 55, 55), outline=False, alpha=sm_alpha)
+        else:
+            # Vida Noturna de Yoshiwara: Shoji iluminados com silhuetas de cortesãs e samurais
+            flicker = 0.88 + 0.12 * math.sin(time_val * 4.0 + self.seed)
+            shoji_col = (int(255 * flicker), int(215 * flicker), int(120 * flicker))
+            # Janelas iluminadas do 2º andar
+            win_w = (self.width - 0.9) / 2.0
+            for wi in range(2):
+                wx_pos = self.wx + 0.4 + wi * (win_w + 0.1)
+                draw_voxel_box(surface, camera, wx_pos, self.wy + self.depth - 0.62, p2_z + 0.20, win_w, 0.08, p2_h - 0.40, shoji_col, outline=True, alpha=alpha)
+                # Silhueta teatral negra sobre o papel iluminado (cortesã tocando shamisen ou bebendo sakê)
+                sil_x = wx_pos + win_w * 0.5
+                sil_z = p2_z + 0.28
+                # Silhueta de figura sentada
+                draw_voxel_box(surface, camera, sil_x - 0.10, self.wy + self.depth - 0.60, sil_z, 0.20, 0.04, 0.32, (32, 22, 20), outline=False, alpha=int(220 * flicker))
+                # Cabeça com coque/penteado tradicional
+                draw_voxel_box(surface, camera, sil_x - 0.06, self.wy + self.depth - 0.60, sil_z + 0.32, 0.12, 0.04, 0.14, (32, 22, 20), outline=False, alpha=int(220 * flicker))
+                if wi == 0:
+                    # Shamisen inclinado na mão da cortesã
+                    draw_voxel_box(surface, camera, sil_x + 0.05, self.wy + self.depth - 0.59, sil_z + 0.12, 0.04, 0.03, 0.28, (32, 22, 20), outline=False, alpha=int(220 * flicker))
+
+            # Noren carmim no 1º andar
+            noren_col = (195, 36, 48)
+            draw_voxel_box(surface, camera, self.wx + self.width * 0.35, self.wy + self.depth - engawa_d + 0.05, p1_z + 0.55, self.width * 0.30, 0.04, 0.55, noren_col, outline=False, alpha=alpha)
 
 
 class RunawayCarriage:

@@ -83,6 +83,7 @@ class SoundEvent(str, Enum, metaclass=_SoundEventMeta):
     CHAIN_RATTLE = "chain_rattle"          # Corrente de ferro balançando no teto (aviso do pêndulo da gruta)
     SHIP_CREAK = "ship_creak"              # Ranger de madeira do navio adernando (aviso do balanço)
     FALL = "fall"                          # Queda em buraco da arena (assobio descendente + baque distante)
+    HEARTBEAT = "heartbeat"                # Batimento cardíaco surdo de tensão visceral dos finishers
 
     # Interface & Apresentação de Partida
     ROUND_START = "round_start"            # Tambor Taiko de início de duelo

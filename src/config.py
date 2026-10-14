@@ -134,6 +134,10 @@ COLOR_TOMOE_HAKAMA = (175, 25, 35)         # Hakama vermelho cerimonial da arque
 COLOR_REN_AURA = (245, 175, 45)            # Aura açafrão dourada Shaolin
 COLOR_CHIYO_AURA = (60, 220, 180)          # Aura esmeralda das lâminas gêmeas
 
+# Cores dos Guerreiros do Ciclo 2 (Benkei & O-Rin)
+COLOR_BENKEI_AURA = (235, 175, 55)         # Aura bronze/ouro antigo sōhei
+COLOR_ORIN_AURA = (235, 75, 120)           # Aura magenta floral/sônica Yoshiwara
+
 
 # Identificadores de Personagens (12 Guerreiros: 6 Mulheres e 6 Homens)
 CHAR_KENSHIN = "kenshin"

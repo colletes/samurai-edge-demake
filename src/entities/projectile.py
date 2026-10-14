@@ -1403,4 +1403,477 @@ class MusashiWaveProjectile:
         surface.blit(wave_surf, (sx - wave_w // 2, sy - wave_h // 2))
 
 
+class NaginataProjectile:
+    """Naginata arremessada por Benkei.
+    Projétil pesado e maciço que penetra oponentes.
+    Ao parar ou atingir um obstáculo, crava-se no chão.
+    Garante que nunca caia em buracos ou água (clamp de terreno firme)."""
+
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, max_range: float = 7.5):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.owner = owner
+        self.original_owner = owner
+        self.dir_x = dir_x
+        self.dir_y = dir_y
+
+        speed = 15.5
+        self.vx = dir_x * speed
+        self.vy = dir_y * speed
+        self.vz = 0.0
+
+        self.state = "FLYING"  # "FLYING" ou "ON_GROUND"
+        self.max_range = max_range
+        self.dist_traveled = 0.0
+        self.is_active = True
+        self.pickup_delay = 0.20
+        self.damage = 2
+        self.pulse_timer = 0.0
+        self.has_hit_fighter = False
+
+    def update(self, dt: float, game_map, particles: list) -> bool:
+        if not self.is_active:
+            return False
+
+        self.pulse_timer += dt
+
+        if self.state == "FLYING":
+            step = math.hypot(self.vx * dt, self.vy * dt)
+            self.wx += self.vx * dt
+            self.wy += self.vy * dt
+            self.dist_traveled += step
+
+            # Partículas de velocidade de arremesso pesado
+            if particles is not None and random.random() < 0.6:
+                particles.append(SparkParticle(self.wx, self.wy, 0.15))
+
+            # Limites da arena
+            min_bound = 1.2
+            max_bound_x = (game_map.cols - 1.2) if (game_map and hasattr(game_map, "cols")) else 19.8
+            max_bound_y = (game_map.rows - 1.2) if (game_map and hasattr(game_map, "rows")) else 19.8
+
+            hit_bound = False
+            if self.wx <= min_bound or self.wx >= max_bound_x or self.wy <= min_bound or self.wy >= max_bound_y:
+                self.wx = max(min_bound, min(max_bound_x, self.wx))
+                self.wy = max(min_bound, min(max_bound_y, self.wy))
+                hit_bound = True
+
+            # Colisão com rochas ou construções
+            hit_obstacle = False
+            if hasattr(game_map, "rocks"):
+                for r in game_map.rocks:
+                    if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                        if world_distance(self.wx, self.wy, r.wx, r.wy) < 0.65:
+                            r.break_panel((self.dir_x, self.dir_y), particles)
+                    elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < getattr(r, "radius", 0.6):
+                        hit_obstacle = True
+                        break
+            if hasattr(game_map, "buildings"):
+                for b in game_map.buildings:
+                    c, _, _ = b.check_collision(self.wx, self.wy, 0.25)
+                    if c:
+                        hit_obstacle = True
+                        break
+
+            # Cortar bambus
+            if hasattr(game_map, "bamboos"):
+                for b in game_map.bamboos:
+                    if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.55:
+                        b.cut(self.dir_x, self.dir_y)
+                        if particles is not None:
+                            for _ in range(4):
+                                particles.append(SparkParticle(b.wx, b.wy, 0.2))
+
+            if hit_bound or hit_obstacle or self.dist_traveled >= self.max_range:
+                self._embed_into_ground(game_map, particles)
+        else:
+            # ON_GROUND: Espera apenas o Benkei recuperar
+            if self.pickup_delay > 0:
+                self.pickup_delay -= dt
+            else:
+                # Checar se Benkei (dono legítimo da Naginata) está sobre a arma
+                legit_owner = getattr(self, "original_owner", self.owner)
+                if legit_owner and getattr(legit_owner, "is_alive", True) and hasattr(legit_owner, "recover_naginata"):
+                    d = world_distance(self.wx, self.wy, legit_owner.wx, legit_owner.wy)
+                    if d < 0.65:
+                        legit_owner.recover_naginata()
+                        self.is_active = False
+                        if particles is not None:
+                            for _ in range(6):
+                                particles.append(SparkParticle(self.wx, self.wy, 0.25))
+                        return False
+
+        return self.is_active
+
+    def _embed_into_ground(self, game_map, particles):
+        """Crava a naginata no solo, garantindo que retroceda caso atinja buracos ou água."""
+        self.state = "ON_GROUND"
+        self.vx = 0.0
+        self.vy = 0.0
+        self.wz = 0.0
+
+        # Clamp de segurança absoluta contra buracos (Pits) e água
+        curr_x, curr_y = self.wx, self.wy
+        step_back_x = -self.dir_x * 0.25
+        step_back_y = -self.dir_y * 0.25
+
+        for _ in range(24):
+            is_unsafe = False
+            if hasattr(game_map, "pit_zones"):
+                for pz in game_map.pit_zones:
+                    if pz.contains(curr_x, curr_y):
+                        is_unsafe = True
+                        break
+            if hasattr(game_map, "pit_at") and game_map.pit_at(curr_x, curr_y) is not None:
+                is_unsafe = True
+            if hasattr(game_map, "is_pit") and game_map.is_pit(curr_x, curr_y):
+                is_unsafe = True
+            if hasattr(game_map, "get_tile_kind"):
+                kind = game_map.get_tile_kind(int(curr_x), int(curr_y))
+                if kind in ("water", "pit", "void"):
+                    is_unsafe = True
+
+            if not is_unsafe:
+                self.wx, self.wy = curr_x, curr_y
+                break
+            curr_x += step_back_x
+            curr_y += step_back_y
+
+        if particles is not None:
+            for _ in range(8):
+                particles.append(SparkParticle(self.wx, self.wy, 0.3))
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+
+        from src.isometric.voxel_renderer import draw_oriented_voxel_box, draw_voxel_box
+
+        if self.state == "FLYING":
+            # Naginata em voo supersônico
+            draw_oriented_voxel_box(
+                surface, camera,
+                self.wx, self.wy, max(0.2, self.wz + 0.35),
+                self.dir_x, self.dir_y, 0.05,
+                length=1.65, width=0.06, height=0.06,
+                color=(36, 26, 20), outline=True
+            )
+            # Lâmina na ponta
+            tip_x = self.wx + self.dir_x * 1.10
+            tip_y = self.wy + self.dir_y * 1.10
+            draw_oriented_voxel_box(
+                surface, camera,
+                tip_x, tip_y, max(0.2, self.wz + 0.35),
+                self.dir_x, self.dir_y, 0.05,
+                length=0.55, width=0.07, height=0.08,
+                color=COLOR_STEEL, outline=True
+            )
+        else:
+            # ON_GROUND: Cravada vertical/diagonal no solo com baliza dourada
+            sx_g, sy_g = camera.apply(self.wx, self.wy, 0.0)
+            pulse = 0.85 + 0.15 * math.sin(self.pulse_timer * 8.0)
+            beacon_r = int(18 * pulse)
+
+            beacon_surf = pygame.Surface((beacon_r * 2, beacon_r), pygame.SRCALPHA)
+            pygame.draw.ellipse(beacon_surf, (220, 175, 50, 110), (0, 0, beacon_r * 2, beacon_r))
+            pygame.draw.ellipse(beacon_surf, (255, 230, 120, 190), (0, 0, beacon_r * 2, beacon_r), 2)
+            surface.blit(beacon_surf, (sx_g - beacon_r, sy_g - beacon_r // 2))
+
+            # Haste cravada
+            draw_oriented_voxel_box(
+                surface, camera,
+                self.wx, self.wy, 0.0,
+                self.dir_x * 0.15, self.dir_y * 0.15, 0.95,
+                length=1.40, width=0.065, height=0.065,
+                color=(36, 26, 20), outline=True
+            )
+            # Tsuba e lâmina no topo
+            blade_base_z = 0.85
+            draw_voxel_box(
+                surface, camera,
+                self.wx - 0.04, self.wy - 0.04, blade_base_z,
+                0.08, 0.08, 0.03, COLOR_GOLD, outline=False
+            )
+            draw_oriented_voxel_box(
+                surface, camera,
+                self.wx + self.dir_x * 0.12, self.wy + self.dir_y * 0.12, blade_base_z + 0.02,
+                self.dir_x * 0.20, self.dir_y * 0.20, 0.90,
+                length=0.48, width=0.065, height=0.08,
+                color=COLOR_STEEL, outline=True
+            )
+
+
+class KamaitachiProjectile:
+    """Lâmina acústica de vácuo disparada pelo Shamisen da O-Rin.
+    Onda cortante em crescente de alta velocidade e alcance 6.0 tiles."""
+
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, max_range: float = 6.2):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.owner = owner
+        self.dir_x = dir_x
+        self.dir_y = dir_y
+
+        speed = 17.5
+        self.vx = dir_x * speed
+        self.vy = dir_y * speed
+
+        self.max_range = max_range
+        self.dist_traveled = 0.0
+        self.is_active = True
+        self.damage = 2
+        self.width = 1.3
+        self.pulse_timer = 0.0
+        self.has_been_reflected = False
+
+    def update(self, dt: float, game_map, particles: list) -> bool:
+        if not self.is_active:
+            return False
+
+        self.pulse_timer += dt
+        step = math.hypot(self.vx * dt, self.vy * dt)
+        self.wx += self.vx * dt
+        self.wy += self.vy * dt
+        self.dist_traveled += step
+
+        # Partículas de vácuo sônico ciano
+        if particles is not None and random.random() < 0.5:
+            from src.effects.particles import SparkParticle
+            particles.append(SparkParticle(self.wx, self.wy, 0.2))
+
+        # Limites da arena
+        min_bound = 1.2
+        max_bound_x = (game_map.cols - 1.2) if (game_map and hasattr(game_map, "cols")) else 19.8
+        max_bound_y = (game_map.rows - 1.2) if (game_map and hasattr(game_map, "rows")) else 19.8
+
+        if self.wx <= min_bound or self.wx >= max_bound_x or self.wy <= min_bound or self.wy >= max_bound_y:
+            self.is_active = False
+            return False
+
+        # Cortar bambus e colidir com rochas
+        if hasattr(game_map, "bamboos"):
+            for b in game_map.bamboos:
+                if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.55:
+                    b.cut(self.dir_x, self.dir_y)
+        if hasattr(game_map, "rocks"):
+            for r in game_map.rocks:
+                if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                    if world_distance(self.wx, self.wy, r.wx, r.wy) < 0.65:
+                        r.break_panel((self.dir_x, self.dir_y), particles)
+                elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < getattr(r, "radius", 0.6):
+                    self.is_active = False
+                    return False
+
+        if self.dist_traveled >= self.max_range:
+            self.is_active = False
+            return False
+
+        return True
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+
+        sx, sy = camera.apply(self.wx, self.wy, self.wz + 0.35)
+        pulse = 0.90 + 0.20 * math.sin(self.pulse_timer * 16.0)
+        w = int(self.width * 22 * pulse)
+        h = int(14 * pulse)
+
+        wave_surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        # Onda em crescente ciano esbranquiçado
+        pygame.draw.ellipse(wave_surf, (80, 220, 245, 185), (0, 0, w, h))
+        pygame.draw.ellipse(wave_surf, (220, 255, 255, 240), (w // 4, h // 4, w // 2, h // 2))
+
+        # Rotacionar no ângulo do vetor de disparo
+        ang_deg = -math.degrees(math.atan2(self.dir_y, self.dir_x)) - 45
+        rot_surf = pygame.transform.rotate(wave_surf, ang_deg)
+        rw, rh = rot_surf.get_size()
+        surface.blit(rot_surf, (sx - rw // 2, sy - rh // 2))
+
+
+class AcousticResonanceWave:
+    """Onda de Choque Ressonante 360° da O-Rin.
+    Expande radialmente, repele oponentes e desvia projéteis leves."""
+
+    def __init__(self, wx: float, wy: float, owner, max_radius: float = 2.8, duration: float = 0.32):
+        self.wx = wx
+        self.wy = wy
+        self.wz = 0.0
+        self.owner = owner
+        self.radius = 0.25
+        self.max_radius = max_radius
+        self.duration = duration
+        self.timer = 0.0
+        self.is_active = True
+        self.pushed_fighters = set()
+
+    def update(self, dt: float, projectiles: list, fighters: list = None, game_map = None) -> bool:
+        if not self.is_active:
+            return False
+
+        self.timer += dt
+        prog = min(1.0, self.timer / self.duration)
+        self.radius = 0.25 + (self.max_radius - 0.25) * prog
+
+        # 1. Desviar projéteis leves
+        if projectiles:
+            for p in projectiles:
+                if getattr(p, "is_active", False) and getattr(p, "owner", None) is not self.owner:
+                    dist = world_distance(self.wx, self.wy, getattr(p, "wx", 0.0), getattr(p, "wy", 0.0))
+                    if dist <= self.radius + 0.35:
+                        # Desviar projétil
+                        if not getattr(p, "has_been_reflected", False):
+                            p.has_been_reflected = True
+                            p.owner = self.owner
+                            if hasattr(p, "vx") and hasattr(p, "vy"):
+                                p.vx = -p.vx * 1.15
+                                p.vy = -p.vy * 1.15
+
+        # 2. Empurrão cinético nos oponentes
+        if fighters and game_map:
+            for f in fighters:
+                if f is not self.owner and getattr(f, "is_alive", True) and id(f) not in self.pushed_fighters:
+                    dist = world_distance(self.wx, self.wy, f.wx, f.wy)
+                    if dist <= self.radius + getattr(f, "radius", 0.35):
+                        self.pushed_fighters.add(id(f))
+                        dx = f.wx - self.wx
+                        dy = f.wy - self.wy
+                        dnorm = math.hypot(dx, dy)
+                        if dnorm > 0.01:
+                            dx /= dnorm
+                            dy /= dnorm
+                        else:
+                            dx, dy = 1.0, 0.0
+                        f.apply_forced_displacement(dx * 1.10, dy * 1.10, game_map)
+                        # Interrupção de whiff
+                        if getattr(f, "state", "") == "ATTACK":
+                            f.stun(0.25)
+
+        if self.timer >= self.duration:
+            self.is_active = False
+            return False
+
+        return True
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+
+        sx, sy = camera.apply(self.wx, self.wy, 0.0)
+        prog = min(1.0, self.timer / self.duration)
+        r_px = int(self.radius * 32)
+        alpha = int((1.0 - prog) * 210)
+
+        ring_surf = pygame.Surface((r_px * 2 + 10, r_px + 10), pygame.SRCALPHA)
+        # Anel ressonante magenta floral
+        pygame.draw.ellipse(ring_surf, (235, 75, 120, alpha // 2), (5, 5, r_px * 2, r_px))
+        pygame.draw.ellipse(ring_surf, (255, 185, 210, alpha), (5, 5, r_px * 2, r_px), 3)
+        surface.blit(ring_surf, (sx - r_px - 5, sy - r_px // 2 - 5))
+
+
+class SpiralResonanceProjectile:
+    """Onda Sônica Espiralada (Acorde de Ressonância Mortal da O-Rin).
+    Disparada em trios separados por 120°, avança em trajetória espiral curvada com velocidade angular,
+    expandindo o raio e causando corte acústico letal."""
+
+    def __init__(self, wx: float, wy: float, wz: float, initial_angle: float, owner,
+                 curve_direction: float = 1.0, speed: float = 11.5, angular_speed: float = 2.2,
+                 max_range: float = 7.0):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.owner = owner
+        self.original_owner = owner
+        self.current_angle = initial_angle
+        self.curve_direction = curve_direction
+        self.speed = speed
+        self.angular_speed = angular_speed
+        self.dir_x = math.cos(initial_angle)
+        self.dir_y = math.sin(initial_angle)
+        self.vx = self.dir_x * speed
+        self.vy = self.dir_y * speed
+
+        self.max_range = max_range
+        self.dist_traveled = 0.0
+        self.is_active = True
+        self.damage = 2
+        self.width = 1.45
+        self.pulse_timer = 0.0
+        self.has_been_reflected = False
+
+    def update(self, dt: float, game_map, particles: list) -> bool:
+        if not self.is_active:
+            return False
+
+        self.pulse_timer += dt
+        if not self.has_been_reflected:
+            self.current_angle += self.curve_direction * self.angular_speed * dt
+            self.dir_x = math.cos(self.current_angle)
+            self.dir_y = math.sin(self.current_angle)
+            self.vx = self.dir_x * self.speed
+            self.vy = self.dir_y * self.speed
+
+        step = math.hypot(self.vx * dt, self.vy * dt)
+        self.wx += self.vx * dt
+        self.wy += self.vy * dt
+        self.dist_traveled += step
+
+        # Partículas de ressonância floral/magenta
+        if particles is not None and random.random() < 0.55:
+            from src.effects.particles import SparkParticle
+            particles.append(SparkParticle(self.wx, self.wy, 0.25, color=(255, 100, 150)))
+
+        # Limites da arena
+        min_bound = 1.2
+        max_bound_x = (game_map.cols - 1.2) if (game_map and hasattr(game_map, "cols")) else 19.8
+        max_bound_y = (game_map.rows - 1.2) if (game_map and hasattr(game_map, "rows")) else 19.8
+
+        if self.wx <= min_bound or self.wx >= max_bound_x or self.wy <= min_bound or self.wy >= max_bound_y:
+            self.is_active = False
+            return False
+
+        # Cortar bambus e biombos
+        if hasattr(game_map, "bamboos"):
+            for b in game_map.bamboos:
+                if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.6:
+                    b.cut(self.dir_x, self.dir_y)
+        if hasattr(game_map, "rocks"):
+            for r in game_map.rocks:
+                if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                    if world_distance(self.wx, self.wy, r.wx, r.wy) < 0.70:
+                        r.break_panel((self.dir_x, self.dir_y), particles)
+                elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < getattr(r, "radius", 0.6):
+                    self.is_active = False
+                    return False
+
+        if self.dist_traveled >= self.max_range:
+            self.is_active = False
+            return False
+
+        return True
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+
+        sx, sy = camera.apply(self.wx, self.wy, self.wz + 0.35)
+        pulse = 0.90 + 0.22 * math.sin(self.pulse_timer * 18.0)
+        w = int(self.width * 24 * pulse)
+        h = int(16 * pulse)
+
+        wave_surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.ellipse(wave_surf, (235, 75, 140, 200), (0, 0, w, h))
+        pygame.draw.ellipse(wave_surf, (255, 210, 230, 240), (w // 5, h // 5, 3 * w // 5, 3 * h // 5))
+        pygame.draw.arc(wave_surf, (255, 230, 140, 230), (2, 2, w - 4, h - 4), 0, math.pi, 2)
+
+        ang_deg = -math.degrees(math.atan2(self.dir_y, self.dir_x)) - 45
+        rot_surf = pygame.transform.rotate(wave_surf, ang_deg)
+        rw, rh = rot_surf.get_size()
+        surface.blit(rot_surf, (sx - rw // 2, sy - rh // 2))
+
+
+
+
 

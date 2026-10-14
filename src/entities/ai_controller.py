@@ -522,6 +522,12 @@ class SamuraiAI:
                 ai_fighter.trigger_nodachi_mai(threat_x, threat_y, opponent=opponent)
                 return True
 
+            # O-Rin (Acoustic Minstrel): Pulso de choque acústico ressonante 360° repele oponentes e desvia projéteis
+            if hasattr(ai_fighter, "trigger_resonance_shockwave") and getattr(ai_fighter, "resonance_timer", 0.0) <= 0:
+                aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+                ai_fighter.trigger_resonance_shockwave(aim_x, aim_y, projectiles)
+                return True
+
             # Demais combatentes com trigger_parry genérico
             if hasattr(ai_fighter, "trigger_parry") and ai_fighter.can_move():
                 ai_fighter.set_facing(threat_x, threat_y)
@@ -801,8 +807,63 @@ class SamuraiAI:
                     ai_fighter.trigger_nodachi_mai(opponent.wx, opponent.wy, opponent=opponent)
                     return
 
+            # Benkei (Sōhei Warrior Monk): Colossal Thrust / Naginata Throw / Tackle Charge
+            if hasattr(ai_fighter, "trigger_naginata_thrust") and not melee_unsafe:
+                if getattr(ai_fighter, "is_unarmed", False):
+                    # Se desarmado, prioriza Tackle Charge no rival ou buscar arma
+                    if getattr(ai_fighter, "tackle_timer", 0.0) <= 0 and dist <= 3.8 and random.random() < 0.75:
+                        ai_fighter.trigger_tackle_charge(opponent.wx, opponent.wy)
+                        return
+                else:
+                    # Se armado e a longa distância (> 4.2m), arremessa a Naginata
+                    if getattr(ai_fighter, "throw_timer", 0.0) <= 0 and dist >= 4.2 and random.random() < 0.60:
+                        aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+                        ai_fighter.trigger_naginata_throw(aim_x, aim_y, projectiles)
+                        return
+                    # Alcance colossal de 3.0m
+                    if 1.4 <= dist <= 2.95 and random.random() < 0.75:
+                        ai_fighter.trigger_naginata_thrust(opponent.wx, opponent.wy)
+                        return
+
+            # O-Rin (Acoustic Courtesan Minstrel): Kamaitachi Vacuum Blades e Acorde Ressonante
+            if hasattr(ai_fighter, "trigger_kamaitachi_pluck"):
+                # Se oponente muito perto (< 2.2m), aciona Acorde Ressonante defensivo
+                if getattr(ai_fighter, "resonance_timer", 0.0) <= 0 and dist <= 2.2 and random.random() < 0.80:
+                    ai_fighter.trigger_resonance_shockwave(opponent.wx, opponent.wy, projectiles)
+                    return
+                # Ataque Kamaitachi a média/longa distância
+                if dist <= 6.2 and random.random() < 0.70:
+                    aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+                    ai_fighter.trigger_kamaitachi_pluck(aim_x, aim_y, projectiles)
+                    return
+
             # Movimentação Não-Linear e Espaçamento
-            if hasattr(ai_fighter, "trigger_shoot") and not getattr(ai_fighter, "has_ammo", False):
+            if hasattr(ai_fighter, "trigger_kamaitachi_pluck"):
+                # O-Rin é Pure Zoner: se oponente chegar a < 3.2m, recua para manter distância
+                if dist < 3.2:
+                    dx = ai_fighter.wx - opponent.wx
+                    dy = ai_fighter.wy - opponent.wy
+                    length = math.hypot(dx, dy)
+                    if length > 0.001:
+                        self.move_dir_x = dx / length
+                        self.move_dir_y = dy / length
+                else:
+                    dx = opponent.wx - ai_fighter.wx
+                    dy = opponent.wy - ai_fighter.wy
+                    if dist > 0.001:
+                        self.move_dir_x = -dy / dist
+                        self.move_dir_y = dx / dist
+            elif getattr(ai_fighter, "is_unarmed", False) and getattr(ai_fighter, "active_naginata_projectile", None):
+                # Benkei desarmado: corre em direção à Naginata cravada
+                proj = ai_fighter.active_naginata_projectile
+                if getattr(proj, "is_active", False):
+                    pdx = proj.wx - ai_fighter.wx
+                    pdy = proj.wy - ai_fighter.wy
+                    plen = math.hypot(pdx, pdy)
+                    if plen > 0.1:
+                        self.move_dir_x = pdx / plen
+                        self.move_dir_y = pdy / plen
+            elif hasattr(ai_fighter, "trigger_shoot") and not getattr(ai_fighter, "has_ammo", False):
                 dx = ai_fighter.wx - opponent.wx
                 dy = ai_fighter.wy - opponent.wy
                 length = math.hypot(dx, dy)
@@ -940,3 +1001,13 @@ class SamuraiAI:
             fighter.trigger_punch_combo(target.wx, target.wy)
         elif hasattr(fighter, "trigger_scissor_slash"):
             fighter.trigger_scissor_slash(target.wx, target.wy)
+        elif hasattr(fighter, "trigger_naginata_thrust"):
+            if getattr(fighter, "is_unarmed", False):
+                if hasattr(fighter, "trigger_tackle_charge") and getattr(fighter, "tackle_timer", 0.0) <= 0:
+                    fighter.trigger_tackle_charge(target.wx, target.wy)
+            else:
+                fighter.trigger_naginata_thrust(target.wx, target.wy)
+        elif hasattr(fighter, "trigger_kamaitachi_pluck"):
+            if projectiles is not None:
+                aim_x, aim_y = self._get_aim_target(fighter, target, target.wx, target.wy)
+                fighter.trigger_kamaitachi_pluck(aim_x, aim_y, projectiles)

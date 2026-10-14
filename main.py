@@ -37,10 +37,11 @@ from src.config import (
     KEY_RESTART, KEY_TOGGLE_AI, KEY_SETTINGS, DEFAULT_CONTROLS,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
     CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
-    CHAR_REN, CHAR_CHIYO, CHAR_BOSS,
+    CHAR_REN, CHAR_CHIYO, CHAR_BENKEI, CHAR_ORIN, CHAR_BOSS,
     COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA, COLOR_SAITOU_AURA,
     COLOR_RIFLE_AURA, COLOR_KABUKI_AURA, COLOR_ARCHER_AURA,
     COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA, COLOR_REN_AURA, COLOR_CHIYO_AURA,
+    COLOR_BENKEI_AURA, COLOR_ORIN_AURA,
     ARENA_BAMBOO, ARENA_KYOTO, ARENA_RANDOM
 )
 from src.isometric.iso_math import input_to_world_direction
@@ -60,6 +61,8 @@ from src.entities.pirate import PirateSwordswoman
 from src.entities.musketeer import Musketeer
 from src.entities.ren_monk import RenMonk
 from src.entities.chiyo_kunoichi import ChiyoKunoichi
+from src.entities.benkei import BenkeiSamurai
+from src.entities.orin import OrinMinstrel
 from src.entities.boss_oni import BossOni
 from src.entities.ai_controller import SamuraiAI
 from src.entities.pickups import PowderPouch
@@ -160,6 +163,10 @@ def create_fighter(char_id: str, wx: float, wy: float):
         return RenMonk(wx, wy)
     elif char_id == CHAR_CHIYO:
         return ChiyoKunoichi(wx, wy)
+    elif char_id == CHAR_BENKEI:
+        return BenkeiSamurai(wx, wy)
+    elif char_id == CHAR_ORIN:
+        return OrinMinstrel(wx, wy)
     elif char_id == CHAR_BOSS:
         return BossOni(wx, wy)
     return RedSamurai(wx, wy)
@@ -197,6 +204,10 @@ def get_fighter_color(fighter):
         return COLOR_REN_AURA
     elif isinstance(fighter, ChiyoKunoichi):
         return COLOR_CHIYO_AURA
+    elif isinstance(fighter, BenkeiSamurai):
+        return COLOR_BENKEI_AURA
+    elif isinstance(fighter, OrinMinstrel):
+        return COLOR_ORIN_AURA
     return COLOR_WHITE
 
 def get_fighter_action_labels(fighter):
@@ -231,6 +242,12 @@ def get_fighter_action_labels(fighter):
         return "Flurry Shaolin", "Kiai Repulsão"
     elif isinstance(fighter, ChiyoKunoichi):
         return "Corte Kodachi", "Dança Mai"
+    elif isinstance(fighter, BenkeiSamurai):
+        if getattr(fighter, "has_naginata", True):
+            return "Estocada Naginata", "Arremesso Haste"
+        return "Tackle Atropelo", "Recuperar Arma"
+    elif isinstance(fighter, OrinMinstrel):
+        return "Kamaitachi Sônico", "Ressonância 360°"
     return "Ataque", "Especial"
 
 def get_fighter_cooldown_data(fighter) -> dict | None:
@@ -343,6 +360,20 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
         cd = getattr(fighter, "mai_cooldown", 2.8)
         return {"name": "Dança Mai", "timer": timer, "max_cd": cd, "color": (60, 220, 180)}
 
+    elif isinstance(fighter, BenkeiSamurai):
+        if not getattr(fighter, "has_naginata", True):
+            return {"name": "Desarmado (Tackle)", "timer": 1.0, "max_cd": 1.0, "color": (235, 175, 55), "warning": True}
+        timer = max(0.0, getattr(fighter, "throw_timer", 0.0))
+        if timer > 0:
+            return {"name": "Arremesso", "timer": timer, "max_cd": getattr(fighter, "throw_cooldown", 1.8), "color": (235, 175, 55)}
+        return None
+
+    elif isinstance(fighter, OrinMinstrel):
+        timer = max(0.0, getattr(fighter, "resonance_timer", 0.0))
+        if timer > 0:
+            return {"name": "Ressonância", "timer": timer, "max_cd": getattr(fighter, "resonance_cooldown", 2.6), "color": (235, 75, 120)}
+        return None
+
     return None
 
 # Azimute atual da câmera, lido pelas conversões de entrada (W continua sendo "para cima na tela")
@@ -424,6 +455,12 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
     elif isinstance(fighter, ChiyoKunoichi):
         fighter.trigger_kodachi_strike(aim_x, aim_y)
         play_sfx(SoundEvent.SWORD_SLASH)
+    elif isinstance(fighter, BenkeiSamurai):
+        fighter.trigger_naginata_thrust(aim_x, aim_y)
+        play_sfx(SoundEvent.SWORD_SLASH)
+    elif isinstance(fighter, OrinMinstrel):
+        fighter.trigger_kamaitachi_pluck(aim_x, aim_y, projectiles, particles)
+        play_sfx(SoundEvent.SWORD_SLASH)
 
 def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, poison_clouds: list, powder_traps: list, opponent=None, game_map=None, banners: list = None):
     """Executa a Ação Secundária (Técnica Especial / Defesa / Contra-ataque) do combatente."""
@@ -485,6 +522,14 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
         # Chiyo: Dança Mai giratória com duas Nodachis em vórtice circular
         fighter.trigger_nodachi_mai(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent)
         play_sfx(SoundEvent.SWORD_SLASH)
+    elif isinstance(fighter, BenkeiSamurai):
+        # Benkei: Arremesso da Naginata
+        fighter.trigger_naginata_throw(aim_x, aim_y, projectiles, particles=particles)
+        play_sfx(SoundEvent.SWORD_SLASH)
+    elif isinstance(fighter, OrinMinstrel):
+        # O-Rin: Ressonância Acústica 360°
+        fighter.trigger_resonance_shockwave(aim_x, aim_y, projectiles, particles=particles, banners=banners)
+        play_sfx(SoundEvent.SWORD_CLASH)
 
 def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None, opponent=None, banners=None):
     """Executa a Terceira Ação (Roll / Dash dedicado) com invulnerabilidade temporária (i-frames)."""
@@ -822,6 +867,16 @@ def run_game():
 
     def request_restart():
         """Ponto único de reinício: decide entre revanche completa (partida encerrada) ou próximo round."""
+        if (cinematic_director.is_active or cinematic_director.is_frozen() or
+            getattr(cinematic_director, "freeze_timer", 0.0) > 0 or
+            getattr(cinematic_director, "delayed_death_timer", 0.0) > 0 or
+            getattr(cinematic_director, "bw_flash_timer", 0.0) > 0 or
+            getattr(cinematic_director, "hyakuretsu_flurry_timer", 0.0) > 0 or
+            getattr(cinematic_director, "hoist_timer", 0.0) > 0 or
+            getattr(cinematic_director, "sonic_silence_timer", 0.0) > 0 or
+            getattr(cinematic_director, "joe_pin_timer", 0.0) > 0 or
+            getattr(cinematic_director, "julie_flurry_timer", 0.0) > 0):
+            return
         if arcade_run is not None:
             if arcade_fight_over is not None:
                 if outcome_seq.active or outcome_seq.pending:
@@ -1442,13 +1497,13 @@ def run_game():
                 elif event.key == KEY_SETTINGS:
                     settings_menu.open()
                 elif event.key == KEY_RESTART:
-                    if round_winner is not None:
+                    if round_winner is not None and not (cinematic_director.is_active or cinematic_director.is_frozen()):
                         request_restart()
                 elif event.key == KEY_TOGGLE_AI and arcade_run is None:
                     vs_ai_mode = not vs_ai_mode
 
-                # Ao terminar um duelo, permitir que Quadrado / Ação Primária reinicie o duelo (mas nunca com duelo em andamento)
-                if round_winner is not None:
+                # Ao terminar um duelo, permitir que Quadrado / Ação Primária reinicie o duelo (mas nunca com duelo em andamento ou finisher rodando)
+                if round_winner is not None and not (cinematic_director.is_active or cinematic_director.is_frozen()):
                     if event.key in (KEY_RESTART, controls["P1_ATTACK"], controls["P2_ATTACK"]):
                         request_restart()
 
@@ -1487,7 +1542,7 @@ def run_game():
                 if ctrl_mgr.is_event_menu_pause(event, 0) or ctrl_mgr.is_event_menu_pause(event, 1) or (getattr(event, "button", None) == 6):
                     pause_menu.open(screen, arcade=arcade_run is not None, demo=is_demo())
                     break
-                elif round_winner is not None:
+                elif round_winner is not None and not (cinematic_director.is_active or cinematic_director.is_frozen()):
                     # Ao terminar o duelo, tanto restart quanto quadrado/ação primária reiniciam
                     if (ctrl_mgr.is_event_action(event, 0, "restart") or
                         ctrl_mgr.is_event_action(event, 0, "attack") or
@@ -1751,6 +1806,10 @@ def run_game():
                     f.update(f_dt, game_map, particles, projectiles)
                 elif isinstance(f, (RenMonk, ChiyoKunoichi)):
                     f.update(f_dt, game_map, particles, opponent=opp)
+                elif isinstance(f, BenkeiSamurai):
+                    f.update(f_dt, game_map, particles, opponent=opp, banners=banners)
+                elif isinstance(f, OrinMinstrel):
+                    f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles)
                 else:
                     f.update(f_dt, game_map)
 
@@ -1909,8 +1968,12 @@ def run_game():
             victory_f.hitbox_active = False
             for beat in cine_beats["victory"].advance(victory_p):
                 run_cine_beat(beat, victory_f)
-        if outcome_seq.active:
+        if cinematic_director.is_frozen():
+            cinematic_director.apply_camera(camera, dt)
+        elif outcome_seq.active:
             outcome_seq.apply_camera(camera, real_dt)
+        elif cinematic_director.is_active or cinematic_director.letterbox_prog > 0.01:
+            cinematic_director.apply_camera(camera, dt)
         else:
             camera.update(mid_x, mid_y, dt)
             if boss_fight and round_intro_timer <= 0:
@@ -2361,6 +2424,10 @@ def run_game():
         # Entregável 5.2: pergaminho vertical Sumi-E na abertura do round (a rotação é feita no azimute da câmera)
         if round_intro_timer > 0:
             round_intro.render(screen, round_intro_timer)
+
+        # Letterbox CinemaScope Anamórfico 2.39:1 no golpe fatal
+        if cinematic_director.letterbox_prog > 0.005:
+            cinematic_director.render_letterbox(screen)
 
         # Entregável 5.3: Tela final de partida Melhor-de-3 (com revanche rápida via Espaço)
         if match_winner is not None:

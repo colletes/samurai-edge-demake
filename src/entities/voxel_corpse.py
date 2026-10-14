@@ -20,7 +20,10 @@ WAIST_Z = 0.55       # altura da cintura nos modelos
 CHEST_Z = 0.72
 FALL_DEG = 88.0
 
-STUCK_WEAPON = {"SAITOU_IMPALE": "blade", "KUNAI_PIN": "kunai", "ARROW_PIN": "arrow", "STAB_FALL": "kunai"}
+STUCK_WEAPON = {
+    "SAITOU_IMPALE": "blade", "KUNAI_PIN": "kunai", "ARROW_PIN": "arrow", "STAB_FALL": "kunai",
+    "ARMORED_HEART_IMPALE": "naginata", "SKEWERED_LANCE_FLAG": "naginata", "NAGINATA_HOIST_SLAM": "naginata"
+}
 
 
 class _LayerCamera:
@@ -112,7 +115,7 @@ def sample_colors(sprite: pygame.Surface, count: int, min_y: int = 0, max_y: int
 
 def _draw_stuck(layer: pygame.Surface, kind: str, x: float, y: float, ax: float, ay: float):
     """Arma cravada no peito, com a ponta para fora voltada ao agressor (ax, ay = direção em tela)."""
-    length = {"arrow": 18, "kunai": 9, "blade": 22}[kind]
+    length = {"arrow": 18, "kunai": 9, "blade": 22, "naginata": 36}[kind]
     tail = (x + ax * length, y + ay * length)
     if kind == "arrow":
         pygame.draw.line(layer, (176, 132, 76), (x, y), tail, 2)
@@ -123,6 +126,15 @@ def _draw_stuck(layer: pygame.Surface, kind: str, x: float, y: float, ax: float,
     elif kind == "kunai":
         pygame.draw.line(layer, (190, 196, 206), (x, y), tail, 2)
         pygame.draw.circle(layer, (48, 48, 54), (int(tail[0]), int(tail[1])), 3, 1)
+    elif kind == "naginata":
+        # Haste longa de carvalho/ferro escuro
+        pygame.draw.line(layer, (42, 30, 22), (x, y), tail, 3)
+        # Detalhe de anel/habaki carmim
+        mid = (x + ax * 10, y + ay * 10)
+        pygame.draw.circle(layer, (185, 30, 35), (int(mid[0]), int(mid[1])), 3)
+        # Lâmina curva atravessando as costas
+        blade_tip = (x - ax * 16, y - ay * 16)
+        pygame.draw.line(layer, (230, 235, 245), (x, y), blade_tip, 3)
     else:
         pygame.draw.line(layer, (214, 219, 228), (x, y), tail, 3)
         hilt = (tail[0] - ax * 5, tail[1] - ay * 5)
@@ -394,6 +406,75 @@ class VoxelCorpse:
             self.acid_max_radius = 0.85
             self.pieces.append(P(x, y, 0.0, 0.40, 0.30, 0.70, (60, 180, 90), piece_type="melting_body",
                                  region=lambda c: c.band(None, None), squash="melt"))
+
+        elif style in ("ARMORED_HEART_IMPALE", "NAGINATA_HOIST_SLAM"):
+            # Benkei Estocada Colossal / Hoist & Slam: Tórax perfurado com jorro arterial massivo
+            self.pieces.append(P(x, y, 0.0, 0.46, 0.36, 0.78, self.col_torso, vx=dx * 0.4, vy=dy * 0.4, vz=0.1,
+                                 piece_type="impaled_body", region=lambda c: c.band(None, None),
+                                 rot_target=FALL_DEG, rot_speed=260.0))
+            for _ in range(32):
+                self._add_blood_drop(spread=0.9)
+
+        elif style == "WINDMILL_SHURIKEN_DECAP":
+            # Joe: Decapitação brutal com Shuriken Moinho gigante
+            self.pieces.append(P(x, y, NECK_Z + 0.12, 0.18, 0.18, 0.18, self.col_hair,
+                                 vx=dx * 2.4 - dy * 1.6, vy=dy * 2.4 + dx * 1.6, vz=3.6,
+                                 rot_speed=380.0, piece_type="head", region=lambda c: c.band(None, NECK_Z), pivot="center", floor_z=0.15))
+            self.pieces.append(P(x, y, 0.0, 0.44, 0.32, 0.68, self.col_torso,
+                                 vx=dx * 0.3, vy=dy * 0.3, vz=0.05,
+                                 piece_type="torso_headless", region=lambda c: c.band(NECK_Z, None),
+                                 rot_target=FALL_DEG, rot_speed=130.0, rot_delay=0.20))
+            for _ in range(28):
+                self._add_blood_drop(spread=0.8)
+
+        elif style == "RAPIER_FLURRY_POINTBLANK":
+            # Julie: Fuzilamento à queima-roupa com pistola pederneira
+            self.pieces.append(P(x, y, 0.0, 0.44, 0.34, 0.72, self.col_torso,
+                                 vx=dx * 4.6, vy=dy * 4.6, vz=2.4,
+                                 piece_type="fallen_body", region=lambda c: c.band(None, None),
+                                 rot_target=FALL_DEG, rot_speed=280.0))
+            for _ in range(30):
+                self._add_blood_drop(spread=0.9)
+
+        elif style == "SKEWERED_LANCE_FLAG":
+            # Benkei Arremesso de Naginata: Corpo transpassado e cravado em ângulo no solo
+            self.pieces.append(P(x, y, 0.0, 0.46, 0.36, 0.78, self.col_torso, vx=dx * 3.6, vy=dy * 3.6, vz=1.3,
+                                 piece_type="impaled_body", region=lambda c: c.band(None, None),
+                                 rot_target=65.0, rot_speed=160.0))
+            for _ in range(20):
+                self._add_blood_drop(spread=0.5)
+
+        elif style in ("KAMAITACHI_MINCE", "SONIC_SLICER"):
+            # O-Rin Ataque Primário: Retalhado em pedaços minúsculos por rajada de Kamaitachis
+            self.pieces.append(P(x, y, NECK_Z + 0.10, 0.14, 0.14, 0.14, self.col_hair,
+                                 vx=dx * 2.2 - dy * 1.8, vy=dy * 2.2 + dx * 1.8, vz=3.4,
+                                 rot_speed=380.0, piece_type="head", region=lambda c: c.band(None, NECK_Z), pivot="center", floor_z=0.15))
+            # Pedaços minúsculos de carne e roupa (minced pieces)
+            for _ in range(24):
+                angle = random.uniform(0, math.pi * 2)
+                speed = random.uniform(1.8, 5.2)
+                sz = random.uniform(0.06, 0.12)
+                col = random.choice([self.col_torso, self.col_pants, (160, 25, 25), (120, 20, 20)])
+                self.pieces.append(P(x, y, random.uniform(0.15, 0.75), sz, sz, sz, col,
+                                     vx=math.cos(angle) * speed, vy=math.sin(angle) * speed, vz=random.uniform(1.5, 4.5),
+                                     rot_speed=random.uniform(-400, 400), piece_type="gib"))
+            for _ in range(35):
+                self._add_blood_drop(spread=0.9)
+
+        elif style in ("RESONANCE_WIND_GALE", "RESONANCE_BURST"):
+            # O-Rin Ataque Secundário: Lâmina de vento bissecciona e carrega a metade superior a alta velocidade
+            # Metade superior (cabeça + tronco) voa a altíssima velocidade impulsionada pelo vendaval
+            self.pieces.append(P(x, y, WAIST_Z + 0.05, 0.42, 0.30, 0.45, self.col_torso,
+                                 vx=dx * 9.5, vy=dy * 9.5, vz=1.8,
+                                 piece_type="torso", region=lambda c: c.band(None, WAIST_Z),
+                                 rot_target=90.0, rot_speed=240.0, floor_z=0.20))
+            # Metade inferior (pernas) desaba no local
+            self.pieces.append(P(x, y, 0.0, 0.38, 0.28, 0.45, self.col_pants,
+                                 vx=-dx * 0.1, vy=-dy * 0.1, vz=0.05,
+                                 piece_type="legs", region=lambda c: c.band(WAIST_Z, None),
+                                 rot_target=75.0, rot_speed=120.0, rot_delay=0.12))
+            for _ in range(25):
+                self._add_blood_drop(spread=0.8)
 
         elif style in STUCK_WEAPON:
             # Perfurado: a arma fica cravada e o corpo é jogado para longe do agressor

@@ -358,17 +358,52 @@ class SnareTrap:
 class ScreenPanel(Rock):
     """
     Um painel de biombo dourado (byōbu). Três painéis em zigue-zague formam um biombo que bloqueia o movimento e
-    para projéteis; cada painel é uma rocha pequena, então a cobertura segue o desenho.
+    para projéteis; destrutível por golpes melee ou projéteis pesados.
     """
 
     def __init__(self, wx: float, wy: float, axis: str = "x", tilt: float = 1.0):
         super().__init__(wx, wy, radius=0.5, height=1.7)
         self.axis = axis
         self.tilt = tilt
+        self.is_broken = False
+        self.splinters = []
+
+    def break_panel(self, slash_dir: tuple[float, float] = (1.0, 0.0), particles: list = None):
+        """Destrói o painel de biombo, estilhaçando madeira e papel shoji."""
+        if self.is_broken:
+            return
+        self.is_broken = True
+        self.radius = 0.0  # desativa colisão física
+        self.height = 0.12
+
+        # Gerar estilhaços visuais no chão
+        dx, dy = slash_dir
+        for _ in range(8):
+            ox = random.uniform(-0.35, 0.35) + dx * 0.15
+            oy = random.uniform(-0.35, 0.35) + dy * 0.15
+            self.splinters.append((ox, oy, random.choice([(214, 176, 72), (44, 30, 26), (230, 220, 195)])))
+
+        if particles is not None:
+            from src.effects.particles import SparkParticle
+            for _ in range(12):
+                particles.append(SparkParticle(self.wx, self.wy, 0.35, color=(240, 205, 120)))
 
     def render(self, surface: pygame.Surface, camera):
         x, y = self.wx, self.wy
         gx, gy = camera.apply(x, y, 0.0)
+
+        if self.is_broken:
+            # Painel destruído: armação de madeira partida e retalhos de papel dourado no solo
+            pygame.draw.ellipse(surface, (45, 30, 22), (gx - 24, gy - 10, 48, 20))
+            w, t = 0.75, 0.12
+            if self.axis == "x":
+                draw_voxel_box(surface, camera, x - w / 2, y - t / 2, 0.01, w, t, 0.05, (44, 30, 26), outline=False)
+            else:
+                draw_voxel_box(surface, camera, x - t / 2, y - w / 2, 0.01, t, w, 0.05, (44, 30, 26), outline=False)
+            for ox, oy, col in self.splinters:
+                draw_voxel_box(surface, camera, x + ox - 0.08, y + oy - 0.08, 0.02, 0.16, 0.16, 0.04, col, outline=False)
+            return
+
         pygame.draw.ellipse(surface, (70, 46, 34), (gx - 22, gy - 8, 44, 16))
         w, t = 0.84, 0.10
         off = 0.16 * self.tilt
@@ -386,12 +421,13 @@ class ScreenPanel(Rock):
 
 
 class StripedCurtain:
-    """Cortina do teatro kabuki (jōshiki-maku): faixas verticais preto, caqui e verde, pendurada em plano de mundo."""
+    """Cortina do teatro kabuki / noren de Yoshiwara: faixas verticais translúcidas penduradas."""
 
     PALETTE = ((28, 26, 30), (230, 104, 42), (44, 124, 74))
 
-    def __init__(self, wx: float, wy: float, length: float = 6.0, axis: str = "x", height: float = 3.2, drop: float = 3.0):
+    def __init__(self, wx: float, wy: float, length: float = 6.0, axis: str = "x", height: float = 3.2, drop: float = 3.0, alpha: int = 115):
         self.wx, self.wy, self.length, self.axis, self.height, self.drop = wx, wy, length, axis, height, drop
+        self.alpha = alpha
         self.cx = wx + (length / 2 if axis == "x" else 0.0)
         self.cy = wy + (length / 2 if axis == "y" else 0.0)
 
@@ -399,13 +435,34 @@ class StripedCurtain:
         n = max(3, int(self.length / 0.8))
         top, bottom = self.height, self.height - self.drop
         draw = lambda a, z, sway=0.0: camera.apply(self.wx + (a if self.axis == "x" else sway), self.wy + (a if self.axis == "y" else sway), z)
-        pygame.draw.line(surface, (70, 50, 34), draw(0.0, top + 0.05), draw(self.length, top + 0.05), 4)
+        p_top_start = draw(0.0, top + 0.05)
+        p_top_end = draw(self.length, top + 0.05)
+        pygame.draw.line(surface, (70, 50, 34), p_top_start, p_top_end, 4)
+
+        quads = []
+        min_x, max_x = surface.get_width(), 0
+        min_y, max_y = surface.get_height(), 0
         for i in range(n):
             a0, a1 = self.length * i / n, self.length * (i + 1) / n
             sway = 0.05 * math.sin(time_val * 1.4 + i * 0.7)
-            quad = [draw(a0, top), draw(a1, top), draw(a1, bottom + sway), draw(a0, bottom + sway)]
-            pygame.draw.polygon(surface, self.PALETTE[i % 3], quad)
-            pygame.draw.polygon(surface, (16, 14, 18), quad, 1)
+            q = [draw(a0, top), draw(a1, top), draw(a1, bottom + sway), draw(a0, bottom + sway)]
+            quads.append((q, self.PALETTE[i % 3]))
+            for pt in q:
+                min_x = min(min_x, pt[0])
+                max_x = max(max_x, pt[0])
+                min_y = min(min_y, pt[1])
+                max_y = max(max_y, pt[1])
+
+        bw = int(max_x - min_x + 8)
+        bh = int(max_y - min_y + 8)
+        if bw > 0 and bh > 0:
+            c_surf = pygame.Surface((bw, bh), pygame.SRCALPHA)
+            ox, oy = min_x - 4, min_y - 4
+            for q, col in quads:
+                local_q = [(pt[0] - ox, pt[1] - oy) for pt in q]
+                pygame.draw.polygon(c_surf, (*col, self.alpha), local_q)
+                pygame.draw.polygon(c_surf, (16, 14, 18, int(self.alpha * 0.7)), local_q, 1)
+            surface.blit(c_surf, (ox, oy))
 
 
 class ArcheryTarget(Rock):
@@ -537,3 +594,83 @@ class IncenseBurner:
         draw_voxel_box(surface, camera, x - 0.21, y - 0.21, 0.44, 0.42, 0.42, 0.06, (178, 138, 66), outline=False)
         glow = 0.6 + 0.4 * math.sin(time_val * 3.0 + x)
         draw_voxel_box(surface, camera, x - 0.08, y - 0.08, 0.50, 0.16, 0.16, 0.05, (int(255 * glow), int(90 * glow), 40), outline=False)
+
+
+class VoxelCricket:
+    """Grilo em arte voxel que habita o templo e jardins da floresta.
+    Salta suavemente pelo piso e canta com sutis partículas sonoras."""
+
+    def __init__(self, wx: float, wy: float, seed: int = 12):
+        self.home_x = wx
+        self.home_y = wy
+        self.seed = seed
+        self.color = random.Random(seed).choice([(52, 68, 38), (44, 58, 32), (64, 52, 36)])
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        t = time_val + self.seed * 3.7
+        cycle = t % 4.0
+        hop_phase = max(0.0, min(1.0, (cycle - 2.8) / 0.5)) if cycle >= 2.8 and cycle < 3.3 else 0.0
+
+        angle = math.sin(self.seed * 7.1) * 3.14
+        hop_dist = 0.55 * hop_phase
+        x = self.home_x + math.cos(angle) * (math.sin(t * 0.3) * 0.8 + hop_dist)
+        y = self.home_y + math.sin(angle) * (math.cos(t * 0.3) * 0.8 + hop_dist)
+        z = math.sin(hop_phase * math.pi) * 0.28 if hop_phase > 0 else 0.0
+
+        gx, gy = camera.apply(x, y, 0.0)
+        pygame.draw.ellipse(surface, (20, 24, 20), (gx - 5, gy - 2, 10, 4))
+
+        draw_voxel_box(surface, camera, x - 0.06, y - 0.06, z, 0.12, 0.12, 0.08, self.color, outline=False)
+        draw_voxel_box(surface, camera, x - 0.03, y - 0.03, z + 0.06, 0.06, 0.06, 0.05, (70, 85, 45), outline=False)
+
+        if cycle < 1.0 and int(t * 8) % 3 == 0:
+            rx = int(camera.zoom * 8)
+            ry = int(rx * 0.5)
+            chirp_surf = pygame.Surface((rx * 2 + 4, ry * 2 + 4), pygame.SRCALPHA)
+            pygame.draw.ellipse(chirp_surf, (200, 240, 140, 90), (2, 2, rx * 2, ry * 2), 1)
+            surface.blit(chirp_surf, (gx - rx - 2, gy - ry - 2))
+
+
+class VoxelSparrow:
+    """Pássaro silvestre em voxel (Pardal dos templos montanhosos).
+    Cisca no cascalho dos jardins zen e revoa graciosamente quando há aproximação."""
+
+    def __init__(self, wx: float, wy: float, seed: int = 42):
+        self.home_x = wx
+        self.home_y = wy
+        self.seed = seed
+        self.feather_col = random.Random(seed).choice([(138, 92, 58), (120, 80, 52), (150, 106, 68)])
+        self.chest_col = (225, 218, 204)
+        self.beak_col = (235, 180, 45)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        t = time_val + self.seed * 5.3
+        flight_cycle = (t * 0.25) % 1.0
+        is_flying = flight_cycle > 0.65
+
+        if is_flying:
+            flight_prog = (flight_cycle - 0.65) / 0.35
+            fly_angle = flight_prog * math.pi * 2.0
+            x = self.home_x + math.cos(fly_angle) * 1.8
+            y = self.home_y + math.sin(fly_angle) * 1.2
+            z = 0.5 + math.sin(flight_prog * math.pi) * 1.2
+            wing_flap = math.sin(t * 35.0) * 0.12
+        else:
+            hop = max(0.0, math.sin(t * 1.8) - 0.7) * 0.2
+            x = self.home_x + math.sin(t * 0.5) * 0.25
+            y = self.home_y + math.cos(t * 0.5) * 0.25
+            z = hop
+            wing_flap = 0.0
+
+        gx, gy = camera.apply(x, y, 0.0)
+        s_size = max(4, int(12 * (1.0 - min(1.0, z / 2.0))))
+        pygame.draw.ellipse(surface, (25, 28, 25), (gx - s_size // 2, gy - s_size // 4, s_size, max(2, s_size // 2)))
+
+        draw_voxel_box(surface, camera, x - 0.08, y - 0.08, z, 0.16, 0.16, 0.12, self.feather_col, outline=False)
+        draw_voxel_box(surface, camera, x - 0.06, y - 0.06, z, 0.12, 0.12, 0.07, self.chest_col, outline=False)
+        draw_voxel_box(surface, camera, x - 0.05, y - 0.05, z + 0.09, 0.10, 0.10, 0.09, self.feather_col, outline=False)
+        draw_voxel_box(surface, camera, x + 0.05, y - 0.02, z + 0.11, 0.05, 0.04, 0.04, self.beak_col, outline=False)
+        if is_flying:
+            draw_voxel_box(surface, camera, x - 0.14, y - 0.05, z + 0.06 + wing_flap, 0.06, 0.14, 0.03, self.feather_col, outline=False)
+            draw_voxel_box(surface, camera, x + 0.08, y - 0.05, z + 0.06 - wing_flap, 0.06, 0.14, 0.03, self.feather_col, outline=False)
+

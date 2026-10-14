@@ -10,9 +10,11 @@ from src.config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_GOLD, COLOR_WHITE, COLOR_BG,
     COLOR_RED_AURA, COLOR_BLUE_AURA, COLOR_YELLOW_AURA, COLOR_STEEL,
     COLOR_SAITOU_LIGHT_BLUE, COLOR_PURPLE_AURA, COLOR_PIRATE_AURA,
-    COLOR_MUSKETEER_AURA, CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA,
+    COLOR_MUSKETEER_AURA, COLOR_REN_AURA, COLOR_CHIYO_AURA, COLOR_BENKEI_AURA, COLOR_ORIN_AURA,
+    CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA,
     CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE, CHAR_SAITOU, CHAR_RIFLE,
-    CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER
+    CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
+    CHAR_REN, CHAR_CHIYO, CHAR_BENKEI, CHAR_ORIN
 )
 from src.isometric.iso_math import world_to_iso
 from src.entities.voxel_models import render_voxel_humanoid, render_voxel_doberman
@@ -746,6 +748,224 @@ FIGHTERS_GUIDE_DATA = [
             "estrategia_defensiva": (
                 "• How to defeat Julie: The Fleche travels along a narrow straight line; clean lateral sidesteps "
                 "expose her back to punishment. She rolls away and deflects projectiles mid-roll: shoot when she is recovering."
+            )
+        }
+    },
+    {
+        "id": CHAR_REN,
+        "color": COLOR_REN_AURA,
+        "char_type": "ren",
+        "pt": {
+            "name": "REN",
+            "title": "O Monge Shaolin",
+            "style": "Punhos de Ferro & Kiai",
+            "vel": "[5/5] Relâmpago",
+            "dano": "Combo 3 Golpes (Socos e Chutes)",
+            "especial": "Grito Kiai (Barreira 360°)",
+            "keys_p1": "[E] Combo Punhos | [R] Kiai",
+            "keys_p2": "[U] Combo Punhos | [I] Kiai",
+            "conceito": (
+                "Monge budista peregrino do templo Shaolin. Especialista em artes marciais desarmadas, "
+                "combina velocidade de socos inigualável com o poder espiritual do Kiai."
+            ),
+            "habilidades": (
+                "• Combo Shaolin [E]: Sequência fluida de 3 golpes (Jab, Palma e Chute Dragão).\n"
+                "• Grito Kiai [R]: Emite um pulso de energia mística que repele projéteis e atordoa oponentes."
+            ),
+            "estrategia_ofensiva": (
+                "• Use a velocidade de 5.4 para pressionar incessantemente os oponentes armados.\n"
+                "• Dispare o Kiai para anular projéteis e fechar a distância com segurança."
+            ),
+            "estrategia_defensiva": (
+                "• Como vencer Ren: Ren precisa colar no corpo a corpo; mantenha distância com armas de longo alcance ou estocadas."
+            )
+        },
+        "en": {
+            "name": "REN",
+            "title": "Shaolin Monk",
+            "style": "Iron Fists & Kiai",
+            "vel": "[5/5] Lightning Speed",
+            "dano": "3-Hit Martial Combo",
+            "especial": "Kiai Shout (360° Barrier)",
+            "keys_p1": "[E] Fist Combo | [R] Kiai",
+            "keys_p2": "[U] Fist Combo | [I] Kiai",
+            "conceito": (
+                "Wandering Buddhist Shaolin monk. Unarmed martial artist fusing unmatched fist speed with spiritual shockwaves."
+            ),
+            "habilidades": (
+                "• Shaolin Combo [E]: Fluid 3-hit sequence (Jab, Palm Strike, Dragon Kick).\n"
+                "• Kiai Shout [R]: Mystic energy wave reflecting projectiles and shoving foes."
+            ),
+            "estrategia_ofensiva": (
+                "• Pressure armed rivals with high movement speed and fast combo cancels.\n"
+                "• Counter projectile zoners with well-timed Kiai shockwaves."
+            ),
+            "estrategia_defensiva": (
+                "• How to defeat Ren: Keep spacing outside his short unarmed melee reach with long blades or polearms."
+            )
+        }
+    },
+    {
+        "id": CHAR_CHIYO,
+        "color": COLOR_CHIYO_AURA,
+        "char_type": "chiyo",
+        "pt": {
+            "name": "CHIYO",
+            "title": "A Kunoichi das Duas Kodachi",
+            "style": "Duas Kodachi em Tesoura",
+            "vel": "[4/5] Ágil",
+            "dano": "Corte Duplo Tesoura",
+            "especial": "Dança Mai (Parry Dançante)",
+            "keys_p1": "[E] Kodachi | [R] Dança Mai",
+            "keys_p2": "[U] Kodachi | [I] Dança Mai",
+            "conceito": (
+                "Kunoichi graciosa e acrobática que maneja duas lâminas Kodachi com agilidade cirúrgica e técnica evasiva."
+            ),
+            "habilidades": (
+                "• Corte Tesoura [E]: Golpe duplo rápido e letal com as duas lâminas curtas.\n"
+                "• Dança Mai [R]: Giro acrobático defensivo que deflete ataques e contra-ataca em seguida."
+            ),
+            "estrategia_ofensiva": (
+                "• Use a Dança Mai para aparar golpes agressivos e punir o adversário com cortes cruzados."
+            ),
+            "estrategia_defensiva": (
+                "• Como vencer Chiyo: Evite atacar impulsivamente durante a Dança Mai; espere a janela de recuperação."
+            )
+        },
+        "en": {
+            "name": "CHIYO",
+            "title": "Twin Kodachi Kunoichi",
+            "style": "Dual Kodachi Scissor Cuts",
+            "vel": "[4/5] Agile",
+            "dano": "Scissor Cross Cuts",
+            "especial": "Mai Dance (Whirling Parry)",
+            "keys_p1": "[E] Kodachi | [R] Mai Dance",
+            "keys_p2": "[U] Kodachi | [I] Mai Dance",
+            "conceito": (
+                "Graceful kunoichi master of dual kodachi blades, excelling at evasive spins and counter-strikes."
+            ),
+            "habilidades": (
+                "• Scissor Cut [E]: Fast, lethal double-blade cross slice.\n"
+                "• Mai Dance [R]: Whirling evasive dance that deflects incoming blades."
+            ),
+            "estrategia_ofensiva": (
+                "• Bait opponents into swinging, absorb their blow with Mai Dance, then punish immediately."
+            ),
+            "estrategia_defensiva": (
+                "• How to defeat Chiyo: Do not commit to heavy attacks while she spins; strike when her dance ends."
+            )
+        }
+    },
+    {
+        "id": CHAR_BENKEI,
+        "color": COLOR_BENKEI_AURA,
+        "char_type": "benkei",
+        "pt": {
+            "name": "BENKEI",
+            "title": "Guardião Sōhei",
+            "style": "Naginata & Armadura Pesada",
+            "vel": "[2/5] Tanque",
+            "dano": "Estocada Colossal (Alcance 3.0)",
+            "especial": "Arremesso de Haste & Tackle com Stun",
+            "keys_p1": "[E] Estocada/Tackle | [R] Arremesso",
+            "keys_p2": "[U] Estocada/Tackle | [I] Arremesso",
+            "conceito": (
+                "Monge guerreiro sōhei colossal e inabalável que acumulou 999 armas na Ponte Gojo. "
+                "Não possui aparo técnico, compensando com armadura maciça, alcance desmedido da naginata "
+                "e um tackle desarmado brutal de atropelamento."
+            ),
+            "habilidades": (
+                "• Estocada Colossal [E]: Golpe frontal penetrante de 3.0 tiles de alcance com alto knockback.\n"
+                "• Arremesso de Naginata [R]: Lança a haste pesada a longa distância que se crava no solo sem cair em buracos ou água.\n"
+                "• Tackle Atropelo [E desarmado]: Investida de choque que aplica STUN garantido (1.2s) e recupera a arma."
+            ),
+            "estrategia_ofensiva": (
+                "• Domine o centro da arena e a ponte usando a estocada de 3 tiles antes que o rival chegue perto.\n"
+                "• Se o adversário fugir, arremesse a naginata [R] e em seguida use o Tackle [E] para atordoá-lo e recuperar a haste."
+            ),
+            "estrategia_defensiva": (
+                "• Como vencer Benkei: Benkei não tem parry e é o lutador mais lento (Velocidade 4.0). Flanqueie pelas diagonais ou use rolamentos para entrar na sua guarda."
+            )
+        },
+        "en": {
+            "name": "BENKEI",
+            "title": "Sōhei Warrior Monk",
+            "style": "Naginata & Heavy Plate Armor",
+            "vel": "[2/5] Walking Tank",
+            "dano": "Colossal Spear Thrust (Range 3.0)",
+            "especial": "Naginata Throw & Stun Tackle",
+            "keys_p1": "[E] Thrust/Tackle | [R] Throw",
+            "keys_p2": "[U] Thrust/Tackle | [I] Throw",
+            "conceito": (
+                "Colossal warrior monk of legend on Gojo Bridge. Lacks technical parry, relying on heavy lacquered iron armor, "
+                "massive naginata reach, and an unstoppable unarmed charging tackle."
+            ),
+            "habilidades": (
+                "• Colossal Thrust [E]: Penetrating 3.0-tile reach spear strike with devastating knockback.\n"
+                "• Naginata Throw [R]: Hurls the heavy spear across long range, embedding safely in the ground.\n"
+                "• Stun Tackle [E unarmed]: High-speed kinetic charge that inflicts guaranteed STUN (1.2s) and recovers the weapon."
+            ),
+            "estrategia_ofensiva": (
+                "• Dominate corridors and bridge choke points with your 3.0-tile reach.\n"
+                "• Throw the naginata [R] to catch retreating foes, then tackle with [E] for guaranteed stun and weapon recovery."
+            ),
+            "estrategia_defensiva": (
+                "• How to defeat Benkei: Benkei cannot parry and has 4.0 movement speed. Sidestep his linear thrusts and strike during recovery."
+            )
+        }
+    },
+    {
+        "id": CHAR_ORIN,
+        "color": COLOR_ORIN_AURA,
+        "char_type": "orin",
+        "pt": {
+            "name": "O-RIN",
+            "title": "Menestrel de Yoshiwara",
+            "style": "Tsugaru Shamisen Acústico",
+            "vel": "[5/5] Evasiva",
+            "dano": "Lâmina Sônica Kamaitachi (Alcance 6.0)",
+            "especial": "Ressonância 360° Repelente",
+            "keys_p1": "[E] Kamaitachi | [R] Ressonância",
+            "keys_p2": "[U] Kamaitachi | [I] Ressonância",
+            "conceito": (
+                "Cortesã e musicista genial dos becos de Yoshiwara. Nunca empunha uma lâmina física: "
+                "seus ataques são ondas sônicas de alta frequência e vácuo disparadas pelas cordas do shamisen com precisão cirúrgica."
+            ),
+            "habilidades": (
+                "• Kamaitachi [E]: Lâmina em crescente de vácuo sônico disparada pelo dedilhado rápido. 1-Hit Kill com alcance de 6.0 tiles.\n"
+                "• Ressonância 360° [R]: Acorde potente que emite um pulso acústico concêntrico, desviando projéteis e repelindo oponentes próximos."
+            ),
+            "estrategia_ofensiva": (
+                "• Mantenha o espaçamento máximo: Kamaitachi tem 6.0 tiles de alcance e atravessa a arena velozmente.\n"
+                "• Use a Ressonância [R] se o rival avançar de perto para empurrá-lo para longe e cancelar ataques dele."
+            ),
+            "estrategia_defensiva": (
+                "• Como vencer O-Rin: O-Rin é extremamente frágil e não tem golpe corpo a corpo físico. Use o Roll [T] para atravessar o Kamaitachi e ataque à queima-roupa."
+            )
+        },
+        "en": {
+            "name": "O-RIN",
+            "title": "Yoshiwara Minstrel",
+            "style": "Tsugaru Shamisen Acoustic",
+            "vel": "[5/5] Evasive Zoner",
+            "dano": "Kamaitachi Vacuum Blade (Range 6.0)",
+            "especial": "360° Acoustic Resonance",
+            "keys_p1": "[E] Kamaitachi | [R] Resonance",
+            "keys_p2": "[U] Kamaitachi | [I] Resonance",
+            "conceito": (
+                "Brilliant courtesan and acoustic minstrel of Yoshiwara. Never wields a physical blade; "
+                "attacks entirely through razor-sharp vacuum soundwaves produced by her Tsugaru shamisen."
+            ),
+            "habilidades": (
+                "• Kamaitachi [E]: Crescent vacuum soundwave blade plucked from the shamisen strings. 1-Hit Kill with 6.0-tile reach.\n"
+                "• 360° Resonance [R]: Expanding acoustic pulse that reflects light projectiles and shoves nearby rivals away."
+            ),
+            "estrategia_ofensiva": (
+                "• Keep maximum zoning distance: Kamaitachi has a massive 6.0-tile reach and flies at high speed.\n"
+                "• Activate Resonance [R] whenever opponents dash or dive in close to repel them."
+            ),
+            "estrategia_defensiva": (
+                "• How to defeat O-Rin: O-Rin has no physical melee blade. Use Roll [T] i-frames to pass cleanly through her Kamaitachi wave."
             )
         }
     }

@@ -38,6 +38,10 @@ PORTRAIT_MAP = {
     "shaolin": "ren",
     "chiyo": "chiyo",
     "nodachi": "chiyo",
+    "benkei": "benkei",
+    "orin": "orin",
+    "o-rin": "orin",
+    "shamisen": "orin",
 }
 
 # Cache de superfícies carregadas: (char_key, size, circular) -> pygame.Surface

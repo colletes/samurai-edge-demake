@@ -76,6 +76,16 @@ def calc_leg_joints(
                 foot_fwd = 0.06 if side == "R" else -0.06
                 knee_fwd = 0.02
                 knee_lift = -0.02
+            elif "benkei" in char_type or "naginata" in char_type:
+                # Benkei: Base sólida e pesada de sōhei tanque
+                foot_fwd = 0.11 if side == "R" else -0.09
+                knee_fwd = 0.05 if side == "R" else -0.04
+                knee_lift = -0.01
+            elif "orin" in char_type or "shamisen" in char_type:
+                # O-Rin: Postura ereta e elegante de cortesã musicista
+                foot_fwd = 0.03 if side == "L" else -0.03
+                knee_fwd = 0.015
+                knee_lift = -0.01
             else:
                 foot_fwd = 0.04 if side == "R" else -0.04
                 knee_fwd = 0.02 if side == "R" else -0.02
@@ -459,6 +469,18 @@ def calc_character_idle_pose(
             tz + 0.06 + chain_swing
         )
         return arm_l, arm_r, {"pose": "KUSARIGAMA_READY"}
+
+    elif char_type in ("benkei", "naginata"):
+        # Benkei: Naginata empunhada com ambas as mãos
+        arm_r = (base_x + fx * 0.18 - px * 0.12, base_y + fy * 0.18 - py * 0.12, tz + 0.14)
+        arm_l = (base_x - fx * 0.04 + px * 0.16, base_y - fy * 0.04 + py * 0.16, tz + 0.06)
+        return arm_l, arm_r, {"pose": "NAGINATA_STANCE"}
+
+    elif char_type in ("orin", "shamisen"):
+        # O-Rin: Shamisen posicionado para dedilhado
+        arm_l = (base_x + fx * 0.12 + px * 0.12, base_y + fy * 0.12 + py * 0.12, tz + 0.16)
+        arm_r = (base_x + fx * 0.16 - px * 0.08, base_y + fy * 0.16 - py * 0.08, tz + 0.08)
+        return arm_l, arm_r, {"pose": "SHAMISEN_PLAY"}
 
     # Padrão
     arm_l = (base_x + px * 0.14, base_y + py * 0.14, tz + 0.06)

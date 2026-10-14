@@ -79,6 +79,47 @@ class TestCinematicKanji(unittest.TestCase):
         self.assertEqual(self.director.current_kanji_text, "")
         self.assertEqual(self.director.current_kanji_subtitle, "")
         self.assertFalse(self.director.is_active)
+        self.assertEqual(self.director.letterbox_prog, 0.0)
+        self.assertEqual(self.director.cinematic_zoom, 1.0)
+
+    def test_cinematic_camera_letterbox_and_sumie_anim(self):
+        """Teste 4: Câmera dinâmica 1.65x, barras CinemaScope 2.39:1, carimbo Inkan e transições."""
+        from src.isometric.camera import Camera
+        camera = Camera()
+
+        self.director.trigger_fatal_strike(
+            self.attacker, self.victim, "VERTICAL_BISECTION", (1.0, 0.0)
+        )
+
+        # 1. Alvos de foco e enquadramento
+        self.assertEqual(self.director.camera_focus_target, (10.5, 10.0))
+        self.assertEqual(self.director.cinematic_zoom_target, 1.65)
+        self.assertEqual(self.director.letterbox_target, 1.0)
+        self.assertEqual(self.director.sumie_anim_timer, 0.0)
+        self.assertFalse(self.director.inkan_stamped)
+
+        # 2. Câmera acompanha interpolação de zoom e rotação de azimute
+        initial_az = camera.azimuth
+        self.director.apply_camera(camera, 0.1)
+        self.assertGreater(camera.zoom, 1.0)
+        self.assertGreater(camera.azimuth, initial_az)
+        self.assertGreater(self.director.letterbox_prog, 0.0)
+
+        # 3. Disparo do carimbo Inkan com poeira carmim
+        particles = []
+        self.director.update(0.25, None, particles)
+        self.assertTrue(self.director.inkan_stamped)
+        self.assertGreater(len(particles), 0)
+
+        # 4. Renderização do letterbox e filtro
+        self.director.render_letterbox(self.surface)
+        self.director.apply_cinematic_filter(self.surface)
+
+        # 5. Resolução da morte postergada (pull-back para 1.0x e retração das barras)
+        self.director.update(0.50, None, particles)
+        self.assertEqual(self.director.cinematic_zoom_target, 1.0)
+        self.assertEqual(self.director.letterbox_target, 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -555,6 +555,29 @@ def generate_chain_rattle() -> pygame.mixer.Sound:
     return _samples_to_sound(samples)
 
 
+def generate_heartbeat() -> pygame.mixer.Sound:
+    """Batimento cardíaco surdo de tensão visceral (lub-dub duplo com graves profundos e decaimento exponencial)."""
+    duration = 0.85
+    num_samples = int(SAMPLE_RATE * duration)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        val = 0.0
+        # Pulso 1 (lub - 52Hz)
+        if t < 0.28:
+            env1 = math.sin(min(1.0, t / 0.05) * math.pi * 0.5) * math.exp(-12.0 * t)
+            val += math.sin(2.0 * math.pi * 52.0 * t) * env1 * 0.95
+            val += math.sin(2.0 * math.pi * 104.0 * t) * env1 * 0.25
+        # Pulso 2 (dub - 44Hz)
+        if 0.22 <= t < 0.65:
+            t2 = t - 0.22
+            env2 = math.sin(min(1.0, t2 / 0.05) * math.pi * 0.5) * math.exp(-10.0 * t2)
+            val += math.sin(2.0 * math.pi * 44.0 * t2) * env2 * 0.85
+            val += math.sin(2.0 * math.pi * 88.0 * t2) * env2 * 0.20
+        samples.append(val * 0.9)
+    return _samples_to_sound(samples)
+
+
 _GENERATOR_MAP = {
     SoundEvent.SWORD_SLASH: generate_sword_slash,
     SoundEvent.SWORD_CLASH: generate_sword_clash,
@@ -577,6 +600,7 @@ _GENERATOR_MAP = {
     SoundEvent.FOOTSTEP: generate_footstep,
     SoundEvent.DOG_BARK: generate_dog_bark,
     SoundEvent.FALL: generate_fall,
+    SoundEvent.HEARTBEAT: generate_heartbeat,
     SoundEvent.SHIP_CREAK: generate_ship_creak,
     SoundEvent.CHAIN_RATTLE: generate_chain_rattle,
     SoundEvent.ROUND_START: generate_round_start,

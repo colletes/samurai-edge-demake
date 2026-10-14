@@ -110,13 +110,69 @@ Mix & Texture: Deep spatial reverb creating immense cavernous depth; eerie stere
 
 ---
 
+## ⛩️ Ciclo 2: Arenas do Ciclo 2
+
+---
+
+### 5. Ponte Gojo (`gojo_bridge`)
+* **Personagem Principal**: Benkei (Guardião Naginata)
+* **Ambiente**: Ponte colossal de tábuas de carvalho sobre as águas negras e revoltas do Rio Kamo em Kyoto. Névoa noturna densa rastejando sobre o rio, luar pálido de lua cheia, estátuas Jizo sagradas e postes de madeira com katanas troféu cravadas.
+* **Clima Emocional**: Imponente, titânico, peso de muralha viva. A atmosfera de uma lenda marcial intransponível: o desafio solene de um guerreiro de armadura negra que nunca recua.
+
+#### 🎙️ Prompt Gemini (English - High Fidelity MusicLM / Lyria):
+```text
+Title: The Guardian of Gojo Bridge
+Genre: Epic Feudal Japanese Orchestral Martial Theme / Heavy Taiko & Sōhei War Anthem
+Tempo: 108 BPM, 4/4 Time Signature, Key of B Phrygian / Pentatonic Battle Scale
+Instrumentation: Massive thunderous Ōdaiko and Nagado taiko war drums with deep chest-thumping impact, solemn low-register Buddhist monk chanting drones, heavy rhythmic biwa and distorted acoustic shamisen bass riffs, piercing warrior Shakuhachi phrases with fierce overblowing techniques, resonant ancient bronze temple bells (bonshō), clattering lacquered armor plates and cold metal textures.
+Structure & Dynamics:
+- Intro (0:00 - 0:14): Foggy river wind ambiance, solitary resonant bonshō bell stroke with deep decay; low throat-singing Buddhist chant begins as heavy footfalls cross wooden bridge planks.
+- Heavy March of the Colossus (0:14 - 0:50): Powerful slow-cadence Ōdaiko groove enters; aggressive, syncopated biwa riffs establish immovable wall-like momentum; soaring, tragic shakuhachi melody echoes over the dark river.
+- Duel Climax (0:50 - 1:16): Rhythmic intensity peaks with double-time taiko rolls, clashing metal transients, brassy sustained drones, dramatic sudden pause mimicking a lethal naginata thrust over the bridge railing.
+- Seamless Loop Tail: Low rumbling taiko decay resolving back into the river wind and opening bronze bell resonance for infinite fighting game looping.
+Mix & Texture: Colossal low-end punch, cavernous natural reverb of open water beneath a wooden bridge, visceral close-mic'd traditional acoustic percussion; raw 90s SNK feudal boss battle energy (in the style of Samurai Shodown / The Last Blade).
+```
+
+#### 📜 Descrição Conceitual (Português):
+* **Foco Rítmico**: Pulso marcial pesado em compasso 4/4 com batidas cavernosas de Ōdaiko, emulando o peso da armadura negra de Benkei e a firmeza inabalável das tábuas da ponte.
+* **Arranjo Melódico**: Cantos monásticos sōhei graves em bordão, dialogando com melodias trágicas e vigorosas de Shakuhachi sobre acordes tensos de Biwa.
+
+---
+
+### 6. Beco Yoshiwara (`yoshiwara_alley`)
+* **Personagem Principal**: O-Rin (Menestrel Shamisen)
+* **Ambiente**: Beco estreito e labiríntico pavimentado em paralelepípedos úmidos pós-chuva, refletindo os tons rubros das lanternas chōchin vermelhas. Varandas treliçadas de machiyas, cortinas noren oscilando e biombos de papel com sombras misteriosas.
+* **Clima Emocional**: Sensual, sombrio, hipnótico e mortal. Uma melodia fascinante de entretenimento noturno que oculta rajadas de vácuo cortante e lâminas sonoras invisíveis.
+
+#### 🎙️ Prompt Gemini (English - High Fidelity MusicLM / Lyria):
+```text
+Title: Echoes of the Crimson Pleasure Quarter
+Genre: Virtuosic Shamisen Instrumental / Dark Feudal Neo-Geo Combat Theme / Japanese Acoustic Battle
+Tempo: 140 BPM, 4/4 Time Signature, Key of G# Minor (In-sen Japanese Scale)
+Instrumentation: Virtuosic, hyper-fast Tsugaru shamisen played with aggressive percussive plectrum strikes (banchi), sharp high-pitched wooden clappers (hyoshigi), rapid syncopated tsuzumi shoulder drums, sorrowful bowed kokyū melodies weaving through the background, deep pulsing taiko backbeat, subtle raindrop textures and rustling paper lantern ambiance.
+Structure & Dynamics:
+- Intro (0:00 - 0:10): Gentle nocturnal rain dripping on stone cobblestones; a solitary melancholic shamisen arpeggio lures the listener before a sharp, sudden plectrum snap shatters the silence.
+- Acoustic Hurricane (0:10 - 0:48): Blistering sixteen-note Tsugaru shamisen riff bursts forth with immense agility and percussive attack; urgent tsuzumi rhythms drive a frantic, graceful combat dance; weeping kokyū fills provide dark harmonic depth.
+- Resonance Peak (0:48 - 1:14): Dissonant bent string harmonics, polyrhythmic wooden percussion breaks, sweeping shamisen runs imitating invisible vacuum blades (kamaitachi) slicing through the alley.
+- Seamless Loop Tail: A breathtaking shamisen flourish resolving cleanly into the soft patter of rain and swaying lantern creaks for seamless looping.
+Mix & Texture: Razor-sharp transients on the shamisen strings, intimate stereo width emphasizing narrow alleyway reflections, damp atmospheric depth; authentic aesthetic of 90s SNK arcade fighting soundtracks.
+```
+
+#### 📜 Descrição Conceitual (Português):
+* **Foco Rítmico**: Shamisen Tsugaru executado em velocidade relâmpago com técnica percussiva (banchi), auxiliado por estalos secos de Hyoshigi e batidas rápidas de Tsuzumi que traduzem os projéteis sonoros de Kamaitachi.
+* **Arranjo Melódico**: Escala clássica In-sen em tom sombrio, alternando passagens de sedução lírica com frenesi acústico afiado.
+
+---
+
 ## 📌 Guia de Integração no Jogo
-Quando as faixas forem geradas em áudio (.ogg / .mp3):
+Quando as faixas forem geradas em áudio (.mp3 / .ogg):
 1. Normalizar o áudio para **-14 LUFS** com pico máximo em **-1.0 dB True Peak**.
 2. Criar ponto de loop sem clique (*loop point metadata* ou arquivo cortado exatamente no compasso de volta).
-3. Salvar em `assets/audio/music/`:
-   - `bgm_shaolin_temple.ogg`
-   - `bgm_higanbana_garden.ogg`
-   - `bgm_nagashino_field.ogg`
-   - `bgm_shadow_cave.ogg`
+3. Salvar em `assets/sounds/music/`:
+   - `bgm_shaolin_temple.mp3`
+   - `bgm_higanbana_garden.mp3`
+   - `bgm_nagashino_field.mp3`
+   - `bgm_shadow_cave.mp3`
+   - `bgm_gojo_bridge.mp3`
+   - `bgm_yoshiwara_alley.mp3`
 4. O `SoundManager` já está configurado para mapear os IDs de arena diretamente para essas faixas de BGM via `spec.music`.

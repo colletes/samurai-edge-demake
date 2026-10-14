@@ -605,50 +605,116 @@ class PowderBarrel(SolidProp):
 
 class ShrineBell(SolidProp):
     """
-    Sino de bronze do santuário (Tomoe). Golpe ou projétil que o toque faz soar o sino, e o som dissipa a fumaça da
-    Kasumi e as nuvens de veneno da Okuni em toda a arena. Tem uma pausa entre toques.
+    Sino de bronze do santuário / templo Shaolin (Ren / Tomoe).
+    Golpe ou projétil faz soar o sino com um ataque circular de som expansivo
+    (alcance de até metade da arena, ~10.5 tiles), causando paralisia (stun 1.2s)
+    em quem o acionou e em qualquer combatente pego na onda sonora que não esteja esquivando.
     """
 
-    COOLDOWN = 2.0
-    RING_TIME = 1.4
+    COOLDOWN = 3.5
+    RING_TIME = 1.6
 
     def __init__(self, wx: float, wy: float):
         super().__init__(wx - 0.8, wy - 0.8, 1.6, 1.6, height=2.1, color=(110, 78, 50), style="bell")
         self.cooldown = 0.0
         self.ring = 0.0
         self._pending = False
+        self.striker = None
 
-    def ignite(self, hx: float, hy: float, radius: float) -> bool:
+        # Ataque circular sônico expansivo
+        self.soundwave_active = False
+        self.soundwave_radius = 0.4
+        self.soundwave_max_radius = 10.5  # Metade da arena (21x21)
+        self.soundwave_speed = 8.5
+        self.hit_fighters = set()
+
+    def ignite(self, hx: float, hy: float, radius: float, striker = None) -> bool:
         if self.cooldown > 0.0:
             return False
         if _aabb_distance((self.wx, self.wy, self.wx + self.width, self.wy + self.depth), hx, hy) > radius + 0.1:
             return False
         self.cooldown, self.ring, self._pending = self.COOLDOWN, self.RING_TIME, True
+        self.striker = striker
         return True
 
     def tick(self, arena, dt: float, fighters: list, camera, particles: list, banners: list):
         self.cooldown = max(0.0, self.cooldown - dt)
         self.ring = max(0.0, self.ring - dt)
-        if not self._pending:
-            return
-        self._pending = False
-        arena.dispel_requested = True
-        Cannon._play("round_win")
-        cx, cy = self.wx + self.width / 2.0, self.wy + self.depth / 2.0
-        if banners is not None:
-            from src.effects.particles import FloatingBanner
-            from src.i18n import t
-            banners.append(FloatingBanner(t("banner_bell"), cx, cy, wz=2.6, color=(255, 226, 150), duration=1.6))
-        if particles is not None:
-            from src.effects.particles import SparkParticle, SmokeParticle
-            for _ in range(10):
-                particles.append(SparkParticle(cx, cy, 1.3, color=(255, 230, 150)))
-            for _ in range(8):
-                particles.append(SmokeParticle(cx, cy, wz=1.2, color=(240, 236, 220), radius=0.5, lifetime=0.9))
+
+        cx = self.wx + self.width / 2.0
+        cy = self.wy + self.depth / 2.0
+
+        if self._pending:
+            self._pending = False
+            arena.dispel_requested = True
+            Cannon._play("round_win")
+            camera.add_shake(5.5)
+
+            # Iniciar expansão da onda de choque sônica
+            self.soundwave_active = True
+            self.soundwave_radius = 0.5
+            self.hit_fighters = set()
+
+            if banners is not None:
+                from src.effects.particles import FloatingBanner
+                from src.i18n import t
+                banners.append(FloatingBanner(t("banner_bell"), cx, cy, wz=2.6, color=(255, 226, 150), duration=1.6))
+            if particles is not None:
+                from src.effects.particles import SparkParticle, SmokeParticle
+                for _ in range(16):
+                    particles.append(SparkParticle(cx, cy, 1.3, color=(255, 230, 150)))
+                for _ in range(8):
+                    particles.append(SmokeParticle(cx, cy, wz=1.2, color=(240, 236, 220), radius=0.5, lifetime=0.9))
+
+        # Propagação da onda circular de paralisia
+        if self.soundwave_active:
+            self.soundwave_radius += self.soundwave_speed * dt
+
+            # Verificar colisão da frente de onda sonora com os lutadores
+            for fighter in fighters:
+                if not getattr(fighter, "is_alive", True) or id(fighter) in self.hit_fighters:
+                    continue
+
+                dist = math.hypot(fighter.wx - cx, fighter.wy - cy)
+                if abs(dist - self.soundwave_radius) <= 0.85:
+                    self.hit_fighters.add(id(fighter))
+                    # Lutador esquivando (roll / dash) evade o choque acústico
+                    is_dodging = (
+                        getattr(fighter, "state", "") == "ROLL"
+                        or getattr(fighter, "roll_recovery_timer", 0.0) > 0
+                        or getattr(fighter, "is_invulnerable", False)
+                        or (hasattr(fighter, "roll_timer") and fighter.roll_timer > 0)
+                    )
+
+                    if is_dodging:
+                        if banners is not None:
+                            from src.effects.particles import FloatingBanner
+                            banners.append(FloatingBanner("SONIC DODGE!", fighter.wx, fighter.wy, wz=1.6, color=(160, 220, 255)))
+                        if particles is not None:
+                            from src.effects.particles import SparkParticle
+                            for _ in range(6):
+                                particles.append(SparkParticle(fighter.wx, fighter.wy, 0.4, color=(160, 220, 255)))
+                    else:
+                        # Paralisia acústica direta (1.2s de stun)
+                        fighter.stun(1.2)
+                        camera.add_shake(6.5)
+                        if banners is not None:
+                            from src.effects.particles import FloatingBanner
+                            is_self = (fighter == self.striker)
+                            msg = "AUTO-PARALISIA!" if is_self else "PARALISIA SÔNICA!"
+                            banners.append(FloatingBanner(msg, fighter.wx, fighter.wy, wz=1.8, color=(255, 195, 60)))
+                        if particles is not None:
+                            from src.effects.particles import SparkParticle
+                            for _ in range(12):
+                                particles.append(SparkParticle(fighter.wx, fighter.wy, 0.5, color=(255, 220, 90)))
+
+            if self.soundwave_radius >= self.soundwave_max_radius:
+                self.soundwave_active = False
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         x0, y0, w, d, h = self.wx, self.wy, self.width, self.depth, self.height
-        gx, gy = camera.apply(x0 + w / 2, y0 + d / 2, 0.0)
+        cx, cy = x0 + w / 2, y0 + d / 2
+        gx, gy = camera.apply(cx, cy, 0.0)
         pygame.draw.ellipse(surface, (88, 82, 74), (gx - 40, gy - 18, 80, 36))
         draw_voxel_box(surface, camera, x0, y0, 0.0, w, d, 0.18, (112, 108, 100), outline=True)
         for px, py in ((x0 + 0.08, y0 + 0.08), (x0 + w - 0.24, y0 + 0.08), (x0 + 0.08, y0 + d - 0.24), (x0 + w - 0.24, y0 + d - 0.24)):
@@ -661,3 +727,16 @@ class ShrineBell(SolidProp):
         glow = int(60 * (self.ring / self.RING_TIME))
         draw_voxel_box(surface, camera, bx, by, 0.7, 0.52, 0.52, h - 1.4, (150 + glow, 108 + glow // 2, 54), outline=True)
         draw_voxel_box(surface, camera, bx - 0.04, by - 0.04, 0.66, 0.60, 0.60, 0.1, (176, 132, 70), outline=False)
+
+        # Renderizar anel sonoro expansivo na arena
+        if self.soundwave_active:
+            prog = min(1.0, self.soundwave_radius / self.soundwave_max_radius)
+            alpha = int((1.0 - prog) * 200)
+            if alpha > 0:
+                rx_screen = int(self.soundwave_radius * camera.zoom * 58)
+                ry_screen = int(rx_screen * 0.50)
+                wave_surf = pygame.Surface((rx_screen * 2 + 10, ry_screen * 2 + 10), pygame.SRCALPHA)
+                rect = (5, 5, rx_screen * 2, ry_screen * 2)
+                pygame.draw.ellipse(wave_surf, (255, 215, 80, alpha // 3), rect, 6)
+                pygame.draw.ellipse(wave_surf, (255, 245, 180, alpha), rect, 3)
+                surface.blit(wave_surf, (gx - rx_screen - 5, gy - ry_screen - 5))

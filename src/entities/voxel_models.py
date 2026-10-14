@@ -21,9 +21,9 @@ e Lâminas com Orientação Angular 3D Dinâmica (nunca estáticas em eixos puro
 from types import SimpleNamespace
 import math
 import pygame
-from src.isometric.iso_math import rotate_xy
 from src.isometric.voxel_renderer import draw_voxel_box, draw_oriented_voxel_box
-from src.entities import model_kit, okuni_model, kenshi_model, murasaki_model, musashi_model, hanzo_model, joe_model, saitou_model, teppo_model, kasumi_model, tomoe_model, anne_model, julie_model, ren_model, chiyo_model, pose_scripts
+from src.isometric.iso_math import rotate_xy
+from src.entities import model_kit, okuni_model, kenshi_model, murasaki_model, musashi_model, hanzo_model, joe_model, saitou_model, teppo_model, kasumi_model, tomoe_model, anne_model, julie_model, ren_model, chiyo_model, benkei_model, orin_model, pose_scripts
 from src.isometric.voxel_rig import calc_leg_joints, calc_blade_slash_3d, calc_character_idle_pose
 from src.config import (
     COLOR_STEEL, COLOR_GOLD, COLOR_WHITE, COLOR_BLACK,
@@ -68,7 +68,7 @@ def is_female_character(char_type: str) -> bool:
     c = char_type.lower()
     return c in ("kenshin", "kenshi", "kasumi", "gray", "murasaki", "purple",
                  "okuni", "kabuki", "tomoe", "archer", "anne", "pirate", "julie", "musketeer",
-                 "chiyo", "nodachi")
+                 "chiyo", "nodachi", "orin", "o-rin", "shamisen")
 
 
 def _canonical_char_type(char_type: str) -> str:
@@ -81,11 +81,29 @@ def _canonical_char_type(char_type: str) -> str:
     if "musashi" in char_type or "blue" in char_type: return "musashi"
     if "ren" in char_type or "shaolin" in char_type: return "ren"
     if "chiyo" in char_type or "nodachi" in char_type: return "chiyo"
+    if "benkei" in char_type or "naginata" in char_type: return "benkei"
+    if "orin" in char_type or "shamisen" in char_type: return "orin"
     return char_type
 
 
 # Todos os lutadores com modelo próprio (ganchos por parte)
-MODEL_FIGHTERS = {"kenshin": kenshi_model, "murasaki": murasaki_model, "musashi": musashi_model, "ninja": hanzo_model, "american": joe_model, "saitou": saitou_model, "rifleman": teppo_model, "kasumi": kasumi_model, "tomoe": tomoe_model, "pirate": anne_model, "musketeer": julie_model, "ren": ren_model, "chiyo": chiyo_model}
+MODEL_FIGHTERS = {
+    "kenshin": kenshi_model,
+    "murasaki": murasaki_model,
+    "musashi": musashi_model,
+    "ninja": hanzo_model,
+    "american": joe_model,
+    "saitou": saitou_model,
+    "rifleman": teppo_model,
+    "kasumi": kasumi_model,
+    "tomoe": tomoe_model,
+    "pirate": anne_model,
+    "musketeer": julie_model,
+    "ren": ren_model,
+    "chiyo": chiyo_model,
+    "benkei": benkei_model,
+    "orin": orin_model,
+}
 
 
 def _material(model_c, color):
@@ -167,6 +185,8 @@ def _render_voxel_humanoid(
     elif "musketeer" in char_type or "julie" in char_type: char_type = "musketeer"
     elif "ren" in char_type or "shaolin" in char_type: char_type = "ren"
     elif "chiyo" in char_type or "nodachi" in char_type: char_type = "chiyo"
+    elif "benkei" in char_type or "naginata" in char_type: char_type = "benkei"
+    elif "orin" in char_type or "shamisen" in char_type: char_type = "orin"
 
     # Morte com desmembramento ativo
     if state == "CORPSE_SLICED":
@@ -229,7 +249,7 @@ def _render_voxel_humanoid(
     back_to_camera = (back_rx + back_ry) > 0.0
 
     # Animação de ataque melee
-    is_melee = state in ("ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE", "KIAI", "NODACHI_DANCE")
+    is_melee = state in ("ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE", "KIAI", "NODACHI_DANCE", "NAGINATA_THROW", "TACKLE_CHARGE", "RESONANCE")
     atk_progress = 0.0
     if is_melee:
         atk_dur = 0.20
@@ -244,6 +264,13 @@ def _render_voxel_humanoid(
             r_step = extra_props.get("combo_step", 1) if extra_props else 1
             atk_dur = 0.24 if r_step == 3 else (0.16 if r_step == 2 else 0.14)
         elif char_type == "chiyo": atk_dur = 0.14
+        elif char_type == "benkei":
+            if state == "NAGINATA_THROW": atk_dur = 0.22
+            elif state == "TACKLE_CHARGE": atk_dur = 0.35
+            else: atk_dur = 0.28
+        elif char_type == "orin":
+            if state == "RESONANCE": atk_dur = 0.30
+            else: atk_dur = 0.15
 
         if state_timer > 0:
             atk_progress = max(0.0, min(1.0, 1.0 - (state_timer / atk_dur)))
@@ -252,7 +279,7 @@ def _render_voxel_humanoid(
 
     # Lunge dinâmico com agachamento
     lunge_curve = math.sin(atk_progress * math.pi) if is_melee else 0.0
-    lunge_dist = 0.32 if char_type in ("kenshin", "musketeer", "saitou") else 0.22
+    lunge_dist = 0.38 if char_type == "benkei" else (0.04 if char_type == "orin" else (0.32 if char_type in ("kenshin", "musketeer", "saitou") else 0.22))
     lunge_x = fx * lunge_dist * lunge_curve
     lunge_y = fy * lunge_dist * lunge_curve
 
@@ -275,7 +302,7 @@ def _render_voxel_humanoid(
     # -------------------------------------------------------------
     # 1. PERNAS HUMANAS ARTICULADAS (COXA + JOELHO/CANELA + PÉ)
     # -------------------------------------------------------------
-    hip_w = 0.075 if is_female else 0.09
+    hip_w = 0.11 if char_type == "benkei" else (0.075 if is_female else 0.09)
     legs_data = calc_leg_joints(
         base_x, base_y, base_z, fx, fy, px, py,
         is_moving, walk_timer, is_melee, atk_progress,
@@ -283,10 +310,10 @@ def _render_voxel_humanoid(
     )
 
     pelvis_z = base_z + (0.48 if is_female else 0.46)
-    pelvis_w = 0.27 if char_type == "kenshin" else (0.24 if is_female else 0.28)
-    pelvis_d = 0.18 if is_female else 0.21
+    pelvis_w = 0.33 if char_type == "benkei" else (0.27 if char_type == "kenshin" else (0.24 if is_female else 0.28))
+    pelvis_d = 0.25 if char_type == "benkei" else (0.18 if is_female else 0.21)
 
-    # Contexto dos modelos próprios (Kenshi e Murasaki): alturas do tronco e da cabeça já são conhecidas aqui
+    # Contexto dos modelos próprios: alturas do tronco e da cabeça já são conhecidas aqui
     model = MODEL_FIGHTERS.get(char_type)
     model_c = None
     if model is not None:
@@ -295,7 +322,9 @@ def _render_voxel_humanoid(
             surface=surface, camera=camera, alpha=alpha, azimuth=getattr(camera, "azimuth", 0.0), base_x=base_x, base_y=base_y, base_z=base_z,
             fx=fx, fy=fy, px=px, py=py, pelvis_z=pelvis_z, pelvis_w=pelvis_w, walk_timer=walk_timer, is_moving=is_moving, is_melee=is_melee,
             atk_progress=atk_progress, lunge_curve=lunge_curve, legs_data=legs_data, state=state, state_timer=state_timer, extra_props=extra_props,
-            materials=model_kit.material_map(model.pal(), getattr(model, "MATERIALS", {})), torso_z=torso_z0, neck_z=torso_z0 + 0.26, head_z=torso_z0 + 0.31, head_w=0.13 if is_female else 0.15, sh_span=0.14 if is_female else 0.17)
+            materials=model_kit.material_map(model.pal(), getattr(model, "MATERIALS", {})), torso_z=torso_z0, neck_z=torso_z0 + 0.26, head_z=torso_z0 + 0.31,
+            head_w=0.16 if char_type == "benkei" else (0.13 if is_female else 0.15),
+            sh_span=0.21 if char_type == "benkei" else (0.14 if is_female else 0.17))
         if hasattr(model, "draw_behind"):
             model.draw_behind(model_c)
         if hasattr(model, "draw_legs"):
@@ -366,8 +395,8 @@ def _render_voxel_humanoid(
     # 3. TRONCO HUMANO (QUIMONO TRANSPASSADO / COLETE / HAKAMA)
     # -------------------------------------------------------------
     torso_z = pelvis_z + 0.13
-    waist_w = 0.20 if is_female else 0.25
-    waist_d = 0.15 if is_female else 0.19
+    waist_w = 0.29 if char_type == "benkei" else (0.20 if is_female else 0.25)
+    waist_d = 0.23 if char_type == "benkei" else (0.15 if is_female else 0.19)
 
     def draw_joe_back_gear():
         """Mochila tática e katana em diagonal nas costas do Joe."""
@@ -388,8 +417,8 @@ def _render_voxel_humanoid(
     draw_voxel_box(surface, camera, base_x - waist_w/2, base_y - waist_d/2, torso_z, waist_w, waist_d, 0.12, col_torso, outline=True, alpha=alpha, texture=_material(model_c, col_torso))
 
     # Tórax / Busto feminino ou peitoral masculino
-    chest_w = 0.23 if is_female else 0.29
-    chest_d = 0.17 if is_female else 0.22
+    chest_w = 0.35 if char_type == "benkei" else (0.23 if is_female else 0.29)
+    chest_d = 0.26 if char_type == "benkei" else (0.17 if is_female else 0.22)
     draw_voxel_box(surface, camera, base_x - chest_w/2, base_y - chest_d/2, torso_z + 0.10, chest_w, chest_d, 0.15, col_torso, outline=True, alpha=alpha, texture=_material(model_c, col_torso))
 
     # Gola em V do quimono / Colete / Sarashi
@@ -430,7 +459,7 @@ def _render_voxel_humanoid(
         if hasattr(model, "draw_torso"):
             model.draw_torso(model_c)
 
-    sh_span = 0.14 if is_female else 0.17
+    sh_span = 0.21 if char_type == "benkei" else (0.14 if is_female else 0.17)
 
     # Capa azul para Julie (Mosqueteira) com animação dinâmica em CAPE_FLOURISH (Item 8)
     if char_type in ("musketeer", "julie") and model_c is None:
@@ -597,7 +626,7 @@ def _render_voxel_humanoid(
 
     head_z = neck_z + 0.05
     # Crânio esculpido e queixo refinado (foco nas silhuetas)
-    head_w = 0.13 if is_female else 0.15
+    head_w = 0.16 if char_type == "benkei" else (0.13 if is_female else 0.15)
     draw_voxel_box(surface, camera, base_x - head_w/2, base_y - head_w/2, head_z + 0.03, head_w, head_w, 0.14, skin_color, outline=True, alpha=alpha)
     draw_voxel_box(surface, camera, base_x - 0.035 + fx*0.045, base_y - 0.035 + fy*0.045, head_z, 0.07, 0.07, 0.06, skin_shadow, outline=False, alpha=alpha)
 
@@ -949,8 +978,10 @@ def render_voxel_doberman(
 # Helpers para cores dos guerreiros baseados estritamente na arte conceitual oficial
 def _get_char_torso_color(char_type: str):
     model = MODEL_FIGHTERS.get(char_type)
-    if model is not None and "torso" in model.pal():
-        return model.pal()["torso"]
+    if model is not None:
+        p = model.pal()
+        if "torso" in p: return p["torso"]
+        if "kimono" in p: return p["kimono"]
     if char_type == "kenshin": return kenshi_model.pal()["kimono"]      # Quimono carmim (Kenshi)
     if char_type == "musashi": return musashi_model.pal()["kimono"]     # Quimono azul índigo desbotado de Musashi
     if char_type in ("ninja", "hanzo"): return COLOR_YELLOW_NINJA # Shozoku amarelo

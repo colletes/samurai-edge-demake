@@ -5,6 +5,43 @@ All notable changes to Samurai Edge Demake are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-10-14
+
+### Added
+- **Cycle 2 Expansion (Roster 16 Playable Fighters)**:
+  - **Benkei** (Sōhei Warrior Monk / Walking Tank): speed 4.0, no parry, colossal 3.0-tile naginata thrust, screen-wide naginata throw with anti-pit safety clamp, unarmed tackle charge with guaranteed 1.2s stun, and ground weapon recovery.
+  - **O-Rin** (Acoustic Courtesan Minstrel / Pure Zoner): speed 4.9, open piercing amber eyes, red kumadori eyeliner, higanbana neck tattoo, silver bell earrings, tsugaru shamisen, 6.0-tile Kamaitachi vacuum blade projectile, and 360° Acoustic Resonance shockwave deflecting light projectiles and pushing rivals.
+- **New Arenas**:
+  - **Ponte Gojo** (`gojo_bridge`): legendary weathered timber bridge over turbulent Kamo River void, stone lanterns, trophy spears/katanas, and river mist atmosphere (`bgm_gojo_bridge.mp3`).
+  - **Beco Yoshiwara** (`yoshiwara_alley`): rain-slicked cobblestone alleyway in Kyoto's pleasure quarter, glowing red chōchin lanterns, dark machiya facades, and destrutible folding screens (`bgm_yoshiwara_alley.mp3`).
+- **Arena Visual Revamps (Cycle 2)**:
+  - **Forest Camp** (`forest_camp`): dynamic campfire ember sparks, drifting autumn leaves, ambient moonlight, and forest fireflies.
+  - **Baroque Court** (`baroque_court`): marble fountain steam/mist spray, drifting white and crimson rose petals, and refined baroque sunbeam lighting.
+- **Cinematic Presentation Overhaul (Samurai Cinema & Finishers)**:
+  - **Dynamic Camera & Anamorphic CinemaScope (2.39:1)**: Smooth zoom to 1.65x centered on the midpoint between fighters, slow atmospheric azimuth rotation (`0.18 rad/s`), and CinemaScope black bars with subtle gold filigree. Smooth pull-back handoff upon corpse collapse to the winner's victory sequence.
+  - **Dynamic Sumi-E Calligraphy (*Slash & Stamp*)**: High-speed sweeping diagonal ink brush stroke, Kanji drop-in with impact deceleration (1.30x -> 1.0x), and crimson Inkan seal stamp with exploding red ink dust particles.
+  - **Procedural Heartbeat Tension**: Procedural low-frequency double heartbeat (*lub-dub*, 52Hz/44Hz dual pulse with exponential decay) during the hitstop freeze tension, preserving victory BGM upon death resolution.
+  - **Enhanced Multi-Stage Finishers & Input Lockout**: Multi-stage fatalities for Benkei (*Naginata Hoist & Slam*), O-Rin (*Sonic Slicer* with 0.7s sepulchral silence), Joe & Yamato (*Windmill Shuriken Decapitation*), and Julie (*Rapier Flurry & Point-Blank Flintlock*). All input cancellation is strictly locked during cinematic execution.
+- **Cycle 2 Feedback Fixes & Polish**:
+  - Safe ground recovery for thrown weapons: fixed `recover_naginata` collision crash when non-Benkei characters walk over the weapon.
+  - Yoshiwara destructible screens: paper folding screens (`ScreenPanel`) shatter into wood splinter particles upon hit.
+  - Yoshiwara alley night life aesthetics: removed burning flames on buildings, enhanced nocturnal neon chōchin reflections.
+  - Concept art portraits: integrated concept previews for Shaolin Temple and Higanbana Garden into stage carousel.
+  - Shaolin Temple Bell: interactive bell hazard triggers expanding circular sonic shockwave (up to half arena) with stun.
+  - Shaolin ambiance: procedural voxel crickets and wildlife roaming the Shaolin arena.
+
+## [1.7.0] - 2026-10-10
+
+### Added
+- **Cycle 1 Expansion (Roster 14 Playable Fighters)**:
+  - **Ren** (Shaolin Martial Monk): speed 5.3, martial arts punch combos, 360° Kiai shout repelling projectiles and stunning enemies.
+  - **Chiyo** (Twin Kodachi Kunoichi): speed 5.1, double scissor slash (2.35 tiles), and Mai spinning vortex dance with projectile deflection and riposte.
+- **New Arenas (Cycle 1)**:
+  - **Pátio dos Sinos Shaolin** (`shaolin_temple`) and **Jardim dos Lírios Carmim** (`higanbana_garden`).
+- **Arena Visual Revamps (Cycle 1)**:
+  - **Nagashino Field** (`nagashino_field`) & **Shadow Cave** (`shadow_cave`).
+- **Cycle 1 Fatalities**: `HYAKURETSU_BODY_EXPLOSION`, `WALL_SMASH_FATAL`, `TRIPLE_SCISSOR_CLEAVE`, `MAI_X_CLEAVE`.
+
 ## [1.6.0] - 2026-10-06
 
 ### Added

@@ -15,7 +15,7 @@ VICTORY_RETURN = 0.6      # câmera volta à vista clássica depois da pose
 
 # Duração de cada estado de golpe no renderer (`atk_progress = 1 - state_timer / duração`).
 ATTACK_DURATION = {"kenshin": 0.16, "musashi": 0.18, "pirate": 0.22, "anne": 0.22, "musketeer": 0.24, "julie": 0.24,
-                   "purple": 0.16, "ninja": 0.18, "saitou": 0.25, "ren": 0.14, "chiyo": 0.14}
+                   "purple": 0.16, "ninja": 0.18, "saitou": 0.25, "ren": 0.14, "chiyo": 0.14, "benkei": 0.32, "orin": 0.20}
 DEFAULT_ATTACK_DURATION = 0.20
 STATE_DURATION = {"PARRY": 0.45, "CAPE_FLOURISH": 0.5, "KIAI": 0.35, "MAI_DANCE": 0.36}
 MELEE_STATES = ("ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE", "KIAI", "MAI_DANCE")
@@ -60,6 +60,10 @@ def canonical(char_type: str) -> str:
         return "ren"
     if "chiyo" in c or "nodachi" in c or "kodachi" in c:
         return "chiyo"
+    if "benkei" in c or "sohei" in c:
+        return "benkei"
+    if "orin" in c or "minstrel" in c:
+        return "orin"
     return c
 
 
@@ -67,8 +71,8 @@ def _seg(t0, t1, state="IDLE", a0=0.0, a1=None, alpha=(1.0, 1.0), **extra):
     return (t0, t1, state, a0, a0 if a1 is None else a1, alpha, extra)
 
 
-def _idle(t0, t1, alpha=(1.0, 1.0)):
-    return _seg(t0, t1, "IDLE", 0.0, 0.0, alpha)
+def _idle(t0, t1, alpha=(1.0, 1.0), **extra):
+    return _seg(t0, t1, "IDLE", 0.0, 0.0, alpha, **extra)
 
 
 INTRO = {
@@ -111,6 +115,18 @@ INTRO = {
         _seg(0.54, 0.82, "ATTACK", 0.0, 1.0, combo_step=3),
         _idle(0.82, 1.0),
     ],
+    # Benkei (Sōhei Warrior Monk): Bate o cabo de ferro da naginata no chão, ergue a manopla em desafio e assume guarda inabalável
+    "benkei": [
+        _idle(0.0, 0.20),
+        _seg(0.20, 0.65, "ATTACK", 0.0, 1.0),
+        _idle(0.65, 1.0, pose="iron_guard"),
+    ],
+    # O-Rin (Menestrel Shamisen): Dedilha o shamisen com o plectro bachi, gira com leveza e assume postura de cortesã
+    "orin": [
+        _idle(0.0, 0.20),
+        _seg(0.20, 0.68, "ATTACK", 0.0, 1.0),
+        _idle(0.68, 1.0, pose="courtesan_stance"),
+    ],
 }
 
 VICTORY = {
@@ -142,6 +158,18 @@ VICTORY = {
         _seg(0.35, 0.65, "IDLE", 0.0, 1.0, pose="kodachi_x_pose"),
         _seg(0.65, 1.0, "IDLE", 0.0, 1.0, pose="kodachi_victory"),
     ],
+    # Benkei: Apoia a naginata sobre os ombros, cruza os braços com presença de fortaleza
+    "benkei": [
+        _idle(0.0, 0.25),
+        _seg(0.25, 0.70, "ATTACK", 0.0, 0.5),
+        _idle(0.70, 1.0, pose="benkei_shoulder_rest"),
+    ],
+    # O-Rin: Toca acorde melancólico, vira de costas e olha por cima do ombro com pétalas de higanbana
+    "orin": [
+        _idle(0.0, 0.20),
+        _seg(0.20, 0.55, "ATTACK", 0.0, 1.0),
+        _idle(0.55, 1.0, pose="orin_backward_glance"),
+    ],
 }
 
 SCRIPTS = {"intro": INTRO, "victory": VICTORY}
@@ -163,6 +191,8 @@ BEATS = {
         "musketeer": [(0.2, "sfx:sword_slash"), (0.52, "sfx:dodge_whoosh")],
         "ren": [(0.26, "sfx:dodge_whoosh"), (0.50, "sfx:sword_slash"), (0.58, "fx:sparks")],
         "chiyo": [(0.02, "fx:smoke"), (0.02, "sfx:smoke_puff"), (0.30, "sfx:sword_slash"), (0.56, "sfx:sword_slash"), (0.60, "fx:petals")],
+        "benkei": [(0.24, "sfx:obstacle_hit"), (0.45, "sfx:sword_slash"), (0.50, "fx:sparks")],
+        "orin": [(0.22, "sfx:sword_slash"), (0.50, "fx:petals")],
     },
     "victory": {
         "kenshin": [(0.17, "sfx:sword_slash"), (0.6, "sfx:sword_slash"), (0.4, "fx:petals")],
@@ -179,6 +209,8 @@ BEATS = {
         "musketeer": [(0.12, "sfx:sword_slash"), (0.36, "sfx:dodge_whoosh")],
         "ren": [(0.08, "sfx:dodge_whoosh"), (0.34, "sfx:sword_clash"), (0.36, "fx:sparks"), (0.68, "fx:petals")],
         "chiyo": [(0.08, "sfx:sword_slash"), (0.38, "sfx:parry"), (0.42, "fx:petals"), (0.72, "fx:petals")],
+        "benkei": [(0.28, "sfx:parry"), (0.35, "fx:sparks")],
+        "orin": [(0.24, "sfx:sword_slash"), (0.40, "fx:petals"), (0.75, "fx:petals")],
     },
 }
 
