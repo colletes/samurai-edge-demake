@@ -36,7 +36,7 @@ Mix & Texture: Warm analog vintage master, punchy low-end percussion, clear spar
 ---
 
 ### 2. Jardim dos Lírios Carmim (`higanbana_garden`)
-* **Personagem Principal**: Chiyo (Kunoichi das Duas Nodachis)
+* **Personagem Principal**: Chiyo (Kunoichi das Duas Kodachis)
 * **Ambiente**: Pântano noturno iluminado por névoa arroxeada e luar frio, campos infinitos de flores carmesim (Higanbana / Spider Lily), pontes de pedra escura e lanternas trêmulas.
 * **Clima Emocional**: Ominoso, melancólico, sensual e fatal. Uma dança elegante da morte onde pétalas vermelhas são cortadas por lâminas duplas velozes.
 
@@ -49,13 +49,13 @@ Instrumentation: Virtuosic fast-paced Tsugaru shamisen with aggressive percussiv
 Structure & Dynamics:
 - Intro (0:00 - 0:10): Hypnotic distant night wind with eerie dissonant shakuhachi breath noises; a single sorrowful biwa chord strikes as spider lily petals swirl.
 - Danse Macabre (0:10 - 0:48): Sudden explosion into a lightning-fast, rhythmic Tsugaru shamisen riff in rapid sixteenth notes; urgent tsuzumi and taiko rhythms drive a stealthy, predatory combat cadence.
-- Duel Tension (0:48 - 1:12): Complex polyrhythmic percussion breaks, dual shamisen counterpoints evoking two dancing nodachi blades slicing through the air, dark gothic string pads swelling beneath the traditional strings.
+- Duel Tension (0:48 - 1:12): Complex polyrhythmic percussion breaks, dual shamisen counterpoints evoking two dancing kodachi blades slicing through the air, dark gothic string pads swelling beneath the traditional strings.
 - Seamless Loop Tail: A breathless shamisen cadence that cuts cleanly into the opening nocturnal wind gust, designed for seamless infinite battle looping.
 Mix & Texture: Crisp, razor-sharp string transients, shadowy stereo imaging with sweeping mist effects, midnight atmospheric reverb, aesthetic reminiscent of classic Samurai Shodown IV / The Last Blade 2.
 ```
 
 #### 📜 Descrição Conceitual (Português):
-* **Foco Rítmico**: Shamisen acelerado tocado com intensidade percussiva (banchi), emulando os giros contínuos das duas Nodachis em alta rotação.
+* **Foco Rítmico**: Shamisen acelerado tocado com intensidade percussiva (banchi), emulando os giros contínuos das duas Kodachis em alta rotação.
 * **Arranjo Melódico**: Escala japonesa In-sen sombria, intercalando momentos de suspense fantasmagórico com rajadas de velocidade cortante.
 
 ---

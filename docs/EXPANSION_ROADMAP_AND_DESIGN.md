@@ -132,11 +132,34 @@ Cada fatality é acionado de forma **contextual de acordo com o ataque que desfe
 
 ---
 
-## 📅 5. Resumo Executivo dos 6 Ciclos
+## 🏯 5. Novas Arenas dos Combatentes
+
+Cada ciclo entrega 2 arenas inéditas, uma para cada lutador da nova dupla. As trilhas sonoras (BGM) de cada arena têm prompts dedicados em [`GEMINI_MUSIC_PROMPTS.md`](GEMINI_MUSIC_PROMPTS.md).
+
+### 5.1 Ciclo 1 — ✅ Implementadas
+
+Ambas estão registradas em `ARENA_SPECS` (`src/world/arenas.py`), mapeadas em `ARENA_BY_FIGHTER` (`src/roster.py`) e são as arenas da **Edição Demo** (`DEMO_ARENAS` em `src/edition.py`, com `shaolin_temple` como fallback).
+
+| | **Pátio dos Sinos Shaolin** | **Jardim dos Lírios Carmim** |
+| :--- | :--- | :--- |
+| **ID / Constante** | `shaolin_temple` / `ARENA_SHAOLIN` | `higanbana_garden` / `ARENA_HIGANBANA` |
+| **Subtítulo** | *O Templo das Mil Contas* | *O Bosque do Adeus Noturno* |
+| **Lutador** | **Ren** (Monge Shaolin) | **Chiyo** (Kunoichi) |
+| **Perigo** | Nenhum | Moderado (Névoa Espessa, Água Rasa) |
+| **Layout** | Borda de pedra escura ➔ terraço ➔ lajes polidas ➔ círculo central de cascalho (raio 4.5). | Tapete de lírios-aranha ➔ lago escuro em elipse (água rasa, velocidade ×0.5) ➔ passarela de pedra N–S ➔ plataforma circular com canteiro de lírios no centro. |
+| **Props** | 2 sinos de bronze, 4 incensários, 4 lanternas de pedra, 4 pinheiros, 2 estátuas Jizo. | 2 torii (norte/sul), 8 bambus sombrios, 4 lanternas de pedra, 5 bancos de névoa, 2 estátuas Jizo. |
+| **Iluminação** | Ambiente dourado quente (força 0.88, vinheta 0.15); lanternas âmbar com cintilação leve. | Ambiente roxo noturno (força 0.38, vinheta 0.45); lanternas carmesim com cintilação forte. |
+| **Atmosfera & Partículas** | Fumaça de incenso, raios de sol, poeira; 42 partículas à deriva (`drift_petals=0.65`), ginkgo dourado. | Névoa, banco de neblina, vagalumes; 55 partículas à deriva (`drift_petals=0.95`), pétalas carmesim. |
+| **Tática** | Bater no sino reverbera ondas sonoras; o piso limpo favorece esquivas rápidas. | Névoa e pétalas camuflam aproximações; a água rasa atrasa a corrida. |
+| **BGM** | *Courtyard of the Sacred Bronze Bells* — 118 BPM, Ré Dórico (`bgm_shaolin_temple`) | *Dance of the Crimson Spider Lilies* — 136 BPM, Fá# menor In-sen (`bgm_higanbana_garden`) |
+
+---
+
+## 📅 6. Resumo Executivo dos 6 Ciclos
 
 | Ciclo | Nova Dupla (1M + 1F) | Novas Arenas da Dupla | Revamp de 2 Arenas Atuais | Fatalities Implementados no Ciclo |
 | :---: | :--- | :--- | :--- | :--- |
-| **1** | **Ren** (Shaolin) & **Chiyo** (2 Kodachi) | Mosteiro das Nuvens & Jardim Carmesim | **Nagashino Field** & **Shadow Cave** | **Teppo**, **Anne**, **Ren**, **Chiyo** |
+| **1** | **Ren** (Shaolin) & **Chiyo** (2 Kodachi) | **Pátio dos Sinos Shaolin** (`shaolin_temple`) & **Jardim dos Lírios Carmim** (`higanbana_garden`) | **Nagashino Field** & **Shadow Cave** | **Teppo**, **Anne**, **Ren**, **Chiyo** |
 | **2** | **Benkei** (Naginata) & **O-Rin** (Shamisen) | Ponte Gojo & Beco Yoshiwara | **Forest Camp** & **Baroque Court** | **Kenshi**, **Musashi**, **Benkei**, **O-Rin** |
 | **3** | **Goro** (Fazendeiro) & **Ichi** (Lâmina Cega) | Arrozais Terraciados & Moinho na Chuva | **Ganryū Island** & **Iga Rooftops** | **Saitou**, **Hanzo**, **Goro**, **Ichi** |
 | **4** | **Valerius** (Necromante) & **Seimei** (Onmyoji) | Cemitério Barroco & Santuário Heian | **Mist Temple** & **Kabuki Stage** | **Murasaki**, **Kasumi**, **Valerius**, **Seimei** |
