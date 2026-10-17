@@ -10,6 +10,19 @@ from src.isometric.iso_math import world_to_iso, PIXELS_PER_Z
 
 # Cache de cores sombreadas para performance máxima
 _COLOR_CACHE: dict[tuple, tuple[tuple[int, int, int], tuple[int, int, int], tuple[int, int, int], tuple[int, int, int]]] = {}
+_ALPHA_SCRATCH: pygame.Surface | None = None
+
+
+def _get_alpha_scratch(bw: int, bh: int) -> tuple[pygame.Surface, pygame.Rect]:
+    """Devolve uma superfície temporária reutilizável limpa na região (0, 0, bw, bh)."""
+    global _ALPHA_SCRATCH
+    if _ALPHA_SCRATCH is None or _ALPHA_SCRATCH.get_width() < bw or _ALPHA_SCRATCH.get_height() < bh:
+        sw = max(256, bw + 32)
+        sh = max(256, bh + 32)
+        _ALPHA_SCRATCH = pygame.Surface((sw, sh), pygame.SRCALPHA)
+    sub_rect = pygame.Rect(0, 0, bw, bh)
+    _ALPHA_SCRATCH.fill((0, 0, 0, 0), sub_rect)
+    return _ALPHA_SCRATCH, sub_rect
 
 
 def get_voxel_shades(color: tuple[int, int, int]):
@@ -77,7 +90,7 @@ def draw_voxel_box(
         )
 
     if alpha < 255:
-        # Para transparência (fumaça, camuflagem): desenha numa superfície local com bounding box
+        # Para transparência (fumaça, camuflagem): usa scratch surface reutilizável (zero-alloc)
         all_pts = [p000, p100, p110, p010, p001, p101, p111, p011]
         min_x = min(p[0] for p in all_pts)
         max_x = max(p[0] for p in all_pts)
@@ -86,7 +99,7 @@ def draw_voxel_box(
         bw = max(2, int(max_x - min_x + 2))
         bh = max(2, int(max_y - min_y + 2))
 
-        voxel_surf = pygame.Surface((bw, bh), pygame.SRCALPHA)
+        voxel_surf, sub_rect = _get_alpha_scratch(bw, bh)
         ox, oy = min_x, min_y
         local_faces = [([(px - ox, py - oy) for px, py in poly], shade) for poly, shade, _, _ in faces]
 
@@ -96,7 +109,7 @@ def draw_voxel_box(
             for poly, _ in local_faces:
                 pygame.draw.polygon(voxel_surf, (*outline_shade, alpha), poly, 1)
 
-        surface.blit(voxel_surf, (ox, oy))
+        surface.blit(voxel_surf, (ox, oy), sub_rect)
         return
 
     # Desenho direto ultra-rápido quando alpha == 255
@@ -236,12 +249,13 @@ def draw_oriented_voxel_box(
     screen_pts = [camera.apply(v[0], v[1], v[2]) for v in verts]
 
     # As 6 faces: índices, normal e as arestas (u, v) em unidades de mundo para a textura
+    # Vértices ordenados de forma que (p1-p0) x (p2-p0) aponte consistentemente para fora (+normal)
     faces = [
-        ([4, 5, 7, 6], (dir_x, dir_y, dir_z), width, height, "side"),
-        ([1, 0, 2, 3], (-dir_x, -dir_y, -dir_z), width, height, "side"),
+        ([4, 6, 7, 5], (dir_x, dir_y, dir_z), width, height, "side"),
+        ([0, 1, 3, 2], (-dir_x, -dir_y, -dir_z), width, height, "side"),
         ([2, 3, 7, 6], (ux, uy, uz), width, length, "top"),
-        ([0, 1, 5, 4], (-ux, -uy, -uz), width, length, "side"),
-        ([1, 3, 7, 5], (rx, ry, rz), height, length, "side"),
+        ([0, 4, 5, 1], (-ux, -uy, -uz), width, length, "side"),
+        ([1, 5, 7, 3], (rx, ry, rz), height, length, "side"),
         ([0, 2, 6, 4], (-rx, -ry, -rz), height, length, "side")
     ]
     use_texture = bool(texture) and alpha >= 255
@@ -279,14 +293,14 @@ def draw_oriented_voxel_box(
             max_x = max(p[0] for p in poly)
             min_y = min(p[1] for p in poly)
             max_y = max(p[1] for p in poly)
-            bw = max(2, max_x - min_x + 2)
-            bh = max(2, max_y - min_y + 2)
-            f_surf = pygame.Surface((bw, bh), pygame.SRCALPHA)
+            bw = max(2, int(max_x - min_x + 2))
+            bh = max(2, int(max_y - min_y + 2))
+            f_surf, sub_rect = _get_alpha_scratch(bw, bh)
             loc_poly = [(p[0] - min_x, p[1] - min_y) for p in poly]
             pygame.draw.polygon(f_surf, (*face_color, alpha), loc_poly)
             if outline:
                 pygame.draw.polygon(f_surf, (*outline_shade, alpha), loc_poly, 1)
-            surface.blit(f_surf, (min_x, min_y))
+            surface.blit(f_surf, (min_x, min_y), sub_rect)
         else:
             pygame.draw.polygon(surface, face_color, poly)
             if use_texture:

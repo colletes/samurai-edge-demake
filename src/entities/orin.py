@@ -32,9 +32,10 @@ class OrinMinstrel(Samurai):
         self.hp = 2
 
         # Ataque Primário: Kamaitachi (Lâmina Sônica de Vácuo)
-        self.attack_duration = 0.15
-        self.attack_recovery = 0.22
-        self.attack_cooldown_timer = 0.0
+        self.attack_duration = 0.18
+        self.attack_recovery = 0.24
+        self.kamaitachi_cooldown = 0.65  # Cadência controlada com intervalo entre dedilhados
+        self.kamaitachi_timer = 0.0
 
         # Ação Secundária: Acorde de Ressonância Mortal (3 ondas em espiral a 120°)
         self.resonance_cooldown = 5.0
@@ -53,19 +54,20 @@ class OrinMinstrel(Samurai):
     def can_act(self) -> bool:
         return (
             self.is_alive
-            and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY)
+            and self.state in (STATE_IDLE, STATE_WALK)
             and self.roll_recovery_timer <= 0
             and self.dash_recovery_timer <= 0
         )
 
     def trigger_kamaitachi_pluck(self, aim_x: float, aim_y: float, projectiles: list, particles: list = None):
-        """Ataque Primário: Disparo de lâmina acústica de vácuo Kamaitachi."""
-        if not self.can_act():
+        """Ataque Primário: Disparo de lâmina acústica de vácuo Kamaitachi com cooldown."""
+        if not self.can_act() or self.kamaitachi_timer > 0:
             return
 
         self.set_facing(aim_x, aim_y)
         self.state = STATE_ATTACK
         self.state_timer = self.attack_duration
+        self.kamaitachi_timer = self.kamaitachi_cooldown
         self.hitbox_active = False  # O dano é conduzido pelo projétil acústico
 
         # Instanciar projétil Kamaitachi
@@ -141,6 +143,9 @@ class OrinMinstrel(Samurai):
 
         if self.resonance_timer > 0:
             self.resonance_timer = max(0.0, self.resonance_timer - dt)
+
+        if self.kamaitachi_timer > 0:
+            self.kamaitachi_timer = max(0.0, self.kamaitachi_timer - dt)
 
         # Atualizar ondas de choque ativas
         if self.active_resonance_waves:

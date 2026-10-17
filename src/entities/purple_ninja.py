@@ -27,8 +27,7 @@ class PurpleNinja(Samurai):
         self.kama_timer = 0.0
 
         # Ataque Especial: Kusarigama Chain Grapple / Pull
-        # Ataque Especial: Kusarigama Chain Grapple / Pull
-        self.chain_cooldown = 2.5
+        self.chain_cooldown = 3.2  # Cooldown aumentado (era 2.5s) para cadência mais justa
         self.chain_timer = 0.0
 
         # Timers da animação de ataque (windup 0.04s, janela ativa ampliada para 0.22s - Entregável 4.2)
@@ -83,7 +82,7 @@ class PurpleNinja(Samurai):
         self.state = STATE_ATTACK
         self.state_timer = 0.0
         self.kama_timer = self.kama_cooldown
-        self.is_priority_strike = True
+        self.is_priority_strike = False  # Ajustado: Murasaki agora entra em QTE de choque de lâminas (clash) normalmente
 
         # Avanço súbito à queima-roupa
         self.vx = self.facing_x * 4.5
@@ -190,10 +189,10 @@ class PurpleNinja(Samurai):
             # Fase 1: Windup ultra-curto (0.04s)
             if self.state_timer < self.windup_time:
                 self.hitbox_active = False
-            # Fase 2: Lâmina ativa com precedência absoluta (1.15m de alcance)
+            # Fase 2: Lâmina ativa (1.15m de alcance)
             elif self.state_timer < (self.windup_time + self.active_time):
                 self.hitbox_active = True
-                self.is_priority_strike = True
+                self.is_priority_strike = False
                 self.hitbox_center = (self.wx + self.facing_x * 0.80, self.wy + self.facing_y * 0.80)
             # Fase 3: Recovery
             elif self.state_timer < (self.windup_time + self.active_time + self.recovery_time):

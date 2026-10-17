@@ -28,6 +28,9 @@ class KnockoutCam:
         self.target = (0.0, 0.0)
         self.mid = (0.0, 0.0)
         self.deferred_result = None  # dados da tela de resultados, exibidos só após o replay
+        self._start_captured = False
+        self.start_azimuth = 0.0
+        self.start_zoom = 1.0
 
     def reset(self):
         self.pending = False
@@ -35,6 +38,9 @@ class KnockoutCam:
         self.used = False
         self.time = 0.0
         self.deferred_result = None
+        self._start_captured = False
+        self.start_azimuth = 0.0
+        self.start_zoom = 1.0
 
     def arm(self, target: tuple[float, float]):
         """Marca o nocaute; o replay começa em begin() quando a simulação descongela."""
@@ -48,6 +54,7 @@ class KnockoutCam:
         self.pending = False
         self.active = True
         self.time = 0.0
+        self._start_captured = False
 
     def skip(self):
         self.active = False
@@ -73,16 +80,22 @@ class KnockoutCam:
     def camera_state(self) -> dict:
         """Foco (wx, wy), azimute (rad), zoom e deslocamento vertical no instante atual."""
         sweep = math.radians(ORBIT_DEG)
+        end_az = self.start_azimuth + sweep * (0.45 if self.start_azimuth > 0.1 else 1.0)
         if self.time <= T_ORBIT:
             k = _ease_out(self.time / T_ORBIT)
-            return dict(focus=self.target, azimuth=sweep * k, zoom=_lerp(1.0, ORBIT_ZOOM, k),
+            return dict(focus=self.target, azimuth=_lerp(self.start_azimuth, end_az, k),
+                        zoom=_lerp(self.start_zoom, ORBIT_ZOOM, k),
                         shift_y=ORBIT_SHIFT_Y * k)
         k = _smooth((self.time - T_ORBIT) / T_RETURN)
         return dict(focus=(_lerp(self.target[0], self.mid[0], k), _lerp(self.target[1], self.mid[1], k)),
-                    azimuth=_lerp(sweep, 0.0, k), zoom=_lerp(ORBIT_ZOOM, 1.0, k),
+                    azimuth=_lerp(end_az, 0.0, k), zoom=_lerp(ORBIT_ZOOM, 1.0, k),
                     shift_y=ORBIT_SHIFT_Y * (1.0 - k))
 
     def apply_camera(self, camera, dt: float):
+        if not self._start_captured:
+            self._start_captured = True
+            self.start_azimuth = getattr(camera, "azimuth", 0.0)
+            self.start_zoom = getattr(camera, "zoom", 1.0)
         st = self.camera_state()
         camera.update(st["focus"][0], st["focus"][1], dt)
         camera.set_azimuth(st["azimuth"])

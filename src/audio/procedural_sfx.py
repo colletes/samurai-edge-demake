@@ -578,11 +578,299 @@ def generate_heartbeat() -> pygame.mixer.Sound:
     return _samples_to_sound(samples)
 
 
+# =========================================================================
+# FASE M-3: GERADORES REALISTAS DE ARMAS, IMPACTOS VISCERAIS E PASSOS
+# =========================================================================
+
+def generate_slash_katana() -> pygame.mixer.Sound:
+    """Corte ultra-rápido de katana: lâmina afiada cortando o ar em alta velocidade com 'shing' metálico agudo."""
+    duration = 0.20
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _highpass(_white_noise(num_samples), 0.45)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        prog = t / duration
+        env = math.sin(math.pi * prog) ** 1.8
+        # Varredura descendente de alta frequência (aerofólio do aço)
+        sweep_freq = 2400.0 * (1.0 - prog) + 380.0 * prog
+        sweep = math.sin(2.0 * math.pi * sweep_freq * t) * 0.22
+        # Ressonância harmônica de lâmina fina
+        ring = (math.sin(2.0 * math.pi * 3200.0 * t) * 0.15 + math.sin(2.0 * math.pi * 4800.0 * t) * 0.08) * math.exp(-35.0 * t)
+        samples.append((noise[i] * 0.75 + sweep + ring) * env * 0.88)
+    return _samples_to_sound(samples)
+
+
+def generate_slash_heavy() -> pygame.mixer.Sound:
+    """Golpe pesado com arma longa (naginata Benkei, kuwa Goro, alfanje Anne): deslocamento grave de ar e inércia de ferro."""
+    duration = 0.36
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _lowpass(_white_noise(num_samples), 0.25)
+    partials = [(1.0, 0.45, 14.0), (2.15, 0.22, 18.0), (3.62, 0.12, 24.0)]
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        prog = t / duration
+        env = math.sin(math.pi * prog) ** 1.3
+        # Sub-grave de pressão de ar
+        sub = math.sin(2.0 * math.pi * (140.0 - 60.0 * prog) * t) * 0.38
+        ring = _metal_ring(t, 780.0, partials) * 0.45
+        samples.append((noise[i] * 0.85 + sub + ring) * env * 0.95)
+    return _samples_to_sound(samples)
+
+
+def generate_slash_rapier() -> pygame.mixer.Sound:
+    """Estocada rápida e zunido agudo de florete ocidental (Julie): deslocamento ultraleve e vibração de aço-mola."""
+    duration = 0.15
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _highpass(_white_noise(num_samples), 0.65)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        prog = t / duration
+        env = math.sin(math.pi * prog) ** 2.2
+        whistle = math.sin(2.0 * math.pi * (3400.0 - 2200.0 * prog) * t) * 0.28
+        flex = math.sin(2.0 * math.pi * 2150.0 * t) * math.exp(-40.0 * t) * 0.20
+        samples.append((noise[i] * 0.70 + whistle + flex) * env * 0.82)
+    return _samples_to_sound(samples)
+
+
+def generate_swing_blunt() -> pygame.mixer.Sound:
+    """Golpe com bastão maciço de madeira (Ren) ou golpe marcial: baque aerodinâmico encorpado e oco."""
+    duration = 0.25
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _lowpass(_white_noise(num_samples), 0.22)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        prog = t / duration
+        env = math.sin(math.pi * prog) ** 1.5
+        body = math.sin(2.0 * math.pi * (240.0 - 110.0 * prog) * t) * 0.42
+        wood_hum = math.sin(2.0 * math.pi * 175.0 * t) * math.exp(-15.0 * t) * 0.35
+        samples.append((noise[i] * 0.75 + body + wood_hum) * env * 0.85)
+    return _samples_to_sound(samples)
+
+
+def generate_slash_chain() -> pygame.mixer.Sound:
+    """Giro cortante de foice e corrente (Kasumi, Murasaki): micro-chocalho metálico de elos e chicotada rápida."""
+    duration = 0.30
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _highpass(_white_noise(num_samples), 0.50)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        prog = t / duration
+        env = math.sin(math.pi * prog) ** 1.6
+        whip = math.sin(2.0 * math.pi * (1800.0 - 900.0 * prog) * t) * 0.25
+        rattle = math.sin(2.0 * math.pi * 3600.0 * t) * (1.0 if (int(t * 120.0) % 2 == 0) else 0.0) * 0.15
+        samples.append((noise[i] * 0.80 + whip + rattle) * env * 0.84)
+    return _samples_to_sound(samples)
+
+
+def generate_swing_shamisen() -> pygame.mixer.Sound:
+    """Ataque sônico com shamisen (O-Rin): beliscada afiada de seda e onda cortante com lâmina oculta."""
+    duration = 0.38
+    num_samples = int(SAMPLE_RATE * duration)
+    samples = []
+    phase = 0.0
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        freq = 440.0 * math.exp(-1.5 * t)
+        phase += freq / SAMPLE_RATE
+        saw = 2.0 * (phase % 1.0) - 1.0
+        env = math.exp(-9.0 * t) * (1.0 - math.exp(-80.0 * t))
+        whoosh = math.sin(2.0 * math.pi * 1200.0 * t) * math.exp(-18.0 * t) * 0.25
+        samples.append((saw * 0.55 + whoosh) * env * 0.90)
+    return _samples_to_sound(samples)
+
+
+def generate_flesh_cleave() -> pygame.mixer.Sound:
+    """Impacto visceral de lâmina cortando carne: transiente de corte limpo + textura orgânica úmida e baque corporal."""
+    duration = 0.30
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
+    lp_noise = _lowpass(noise, 0.20)
+    hp_noise = _highpass(noise, 0.60)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        sharp_slice = hp_noise[i] * math.exp(-85.0 * t) * 0.65
+        wet_squelch = lp_noise[i] * math.exp(-22.0 * t) * 0.55
+        body_thud = math.sin(2.0 * math.pi * 92.0 * t) * math.exp(-18.0 * t) * 0.50
+        samples.append((sharp_slice + wet_squelch + body_thud) * 0.95)
+    return _samples_to_sound(samples)
+
+
+def generate_bone_crush() -> pygame.mixer.Sound:
+    """Fratura óssea / impacto contundente pesado: estalo seco de ruptura seguido de grave profundo e compressão visceral."""
+    duration = 0.34
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        crack1 = noise[i] * math.exp(-160.0 * t) * 0.70
+        t2 = t - 0.016
+        crack2 = (noise[i] * math.exp(-120.0 * t2) * 0.50) if t2 > 0 else 0.0
+        sub_thud = math.sin(2.0 * math.pi * 62.0 * t) * math.exp(-9.0 * t) * 0.85
+        wood_resonance = math.sin(2.0 * math.pi * 320.0 * t) * math.exp(-28.0 * t) * 0.40
+        samples.append((crack1 + crack2 + sub_thud + wood_resonance) * 0.95)
+    return _samples_to_sound(samples)
+
+
+def generate_arterial_spray() -> pygame.mixer.Sound:
+    """Jato arterial sob pressão no golpe de finalização: dois pulsos viscerais de dispersão sanguínea."""
+    duration = 0.65
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        val = 0.0
+        # Pulso 1
+        if t < 0.35:
+            env1 = math.exp(-10.0 * t) * (1.0 - math.exp(-90.0 * t))
+            val += noise[i] * env1 * 0.75
+        # Pulso 2
+        if t >= 0.26:
+            t2 = t - 0.26
+            env2 = math.exp(-8.0 * t2) * (1.0 - math.exp(-70.0 * t2))
+            val += noise[i] * env2 * 0.55
+        samples.append(val * 0.85)
+    return _samples_to_sound(samples)
+
+
+def generate_armor_clang() -> pygame.mixer.Sound:
+    """Deflexão metálica de lâmina contra armadura de placas: choque brilhante e sino inarmônico de ferro fundido."""
+    duration = 0.42
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _highpass(_white_noise(num_samples), 0.65)
+    partials = [(1.0, 0.48, 8.0), (1.95, 0.32, 11.0), (3.42, 0.18, 16.0), (5.10, 0.10, 22.0)]
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        strike = noise[i] * math.exp(-95.0 * t) * 0.65
+        ring = _metal_ring(t, 1150.0, partials)
+        samples.append((strike + ring) * 0.88)
+    return _samples_to_sound(samples)
+
+
+def generate_wood_shatter() -> pygame.mixer.Sound:
+    """Estilhaçamento de bambu, caixas ou barreiras: quebra seca de fibras e estilhaços caindo."""
+    duration = 0.32
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        splinter1 = noise[i] * math.exp(-140.0 * t) * 0.65
+        t2 = t - 0.024
+        splinter2 = (noise[i] * math.exp(-90.0 * t2) * 0.45) if t2 > 0 else 0.0
+        tone = math.sin(2.0 * math.pi * 380.0 * t) * math.exp(-32.0 * t) * 0.45
+        samples.append((splinter1 + splinter2 + tone) * 0.85)
+    return _samples_to_sound(samples)
+
+
+def generate_footstep_grass() -> pygame.mixer.Sound:
+    """Passo suave na relva/musgo: baque abafado com leve farfalhar de folhas."""
+    duration = 0.08
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _highpass(_white_noise(num_samples), 0.40)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        thud = math.sin(2.0 * math.pi * 110.0 * t) * math.exp(-65.0 * t) * 0.30
+        rustle = noise[i] * math.exp(-45.0 * t) * 0.15
+        samples.append(thud + rustle)
+    return _samples_to_sound(samples)
+
+
+def generate_footstep_wood() -> pygame.mixer.Sound:
+    """Passo em pranchas de madeira/ponte: estalo de solado e ressonância oca de tábua."""
+    duration = 0.10
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        click = noise[i] * math.exp(-150.0 * t) * 0.28
+        hollow = math.sin(2.0 * math.pi * 195.0 * t) * math.exp(-40.0 * t) * 0.45
+        samples.append(click + hollow)
+    return _samples_to_sound(samples)
+
+
+def generate_footstep_stone() -> pygame.mixer.Sound:
+    """Passo firme em pedra/lajes: contato mineral seco com claque nítido."""
+    duration = 0.07
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _highpass(_white_noise(num_samples), 0.50)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        tap = noise[i] * math.exp(-110.0 * t) * 0.38
+        stone_thud = math.sin(2.0 * math.pi * 280.0 * t) * math.exp(-75.0 * t) * 0.25
+        samples.append(tap + stone_thud)
+    return _samples_to_sound(samples)
+
+
+def generate_footstep_gravel() -> pygame.mixer.Sound:
+    """Passo em terra batida e cascalho solto: atrito crocante de pequenas pedras sob os pés."""
+    duration = 0.09
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        crunch = noise[i] * math.exp(-55.0 * t) * 0.32
+        thud = math.sin(2.0 * math.pi * 140.0 * t) * math.exp(-70.0 * t) * 0.22
+        samples.append(crunch + thud)
+    return _samples_to_sound(samples)
+
+
+def generate_footstep_water() -> pygame.mixer.Sound:
+    """Passo na água rasa/poças: chapinhar líquido com estalo de superfície e espalhar aquoso."""
+    duration = 0.14
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _lowpass(_white_noise(num_samples), 0.45)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        slap = noise[i] * math.exp(-60.0 * t) * 0.40
+        ripple = math.sin(2.0 * math.pi * (480.0 - 200.0 * (t / duration)) * t) * math.exp(-25.0 * t) * 0.25
+        samples.append(slap + ripple)
+    return _samples_to_sound(samples)
+
+
+def generate_footstep_mud() -> pygame.mixer.Sound:
+    """Passo em lama ou solo encharcado de arrozal: chapinhar viscoso e sucção de saída."""
+    duration = 0.13
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _lowpass(_white_noise(num_samples), 0.25)
+    samples = []
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        squish = noise[i] * math.exp(-45.0 * t) * 0.42
+        suction = math.sin(2.0 * math.pi * (160.0 + 80.0 * (t / duration)) * t) * math.exp(-28.0 * t) * 0.28
+        samples.append(squish + suction)
+    return _samples_to_sound(samples)
+
+
 _GENERATOR_MAP = {
     SoundEvent.SWORD_SLASH: generate_sword_slash,
+    SoundEvent.SLASH_KATANA: generate_slash_katana,
+    SoundEvent.SLASH_HEAVY: generate_slash_heavy,
+    SoundEvent.SLASH_RAPIER: generate_slash_rapier,
+    SoundEvent.SWING_BLUNT: generate_swing_blunt,
+    SoundEvent.SLASH_CHAIN: generate_slash_chain,
+    SoundEvent.SWING_SHAMISEN: generate_swing_shamisen,
     SoundEvent.SWORD_CLASH: generate_sword_clash,
     SoundEvent.PARRY: generate_parry,
     SoundEvent.FATAL_STRIKE: generate_fatal_strike,
+    SoundEvent.FLESH_CLEAVE: generate_flesh_cleave,
+    SoundEvent.BONE_CRUSH: generate_bone_crush,
+    SoundEvent.ARTERIAL_SPRAY: generate_arterial_spray,
+    SoundEvent.ARMOR_CLANG: generate_armor_clang,
+    SoundEvent.WOOD_SHATTER: generate_wood_shatter,
     SoundEvent.OBSTACLE_HIT: generate_obstacle_hit,
     SoundEvent.FLINTLOCK_SHOT: generate_flintlock_shot,
     SoundEvent.TANEGASHIMA_SHOT: generate_tanegashima_shot,
@@ -598,6 +886,12 @@ _GENERATOR_MAP = {
     SoundEvent.SMOKE_PUFF: generate_smoke_puff,
     SoundEvent.POISON_BREATH: generate_poison_breath,
     SoundEvent.FOOTSTEP: generate_footstep,
+    SoundEvent.FOOTSTEP_GRASS: generate_footstep_grass,
+    SoundEvent.FOOTSTEP_WOOD: generate_footstep_wood,
+    SoundEvent.FOOTSTEP_STONE: generate_footstep_stone,
+    SoundEvent.FOOTSTEP_GRAVEL: generate_footstep_gravel,
+    SoundEvent.FOOTSTEP_WATER: generate_footstep_water,
+    SoundEvent.FOOTSTEP_MUD: generate_footstep_mud,
     SoundEvent.DOG_BARK: generate_dog_bark,
     SoundEvent.FALL: generate_fall,
     SoundEvent.HEARTBEAT: generate_heartbeat,

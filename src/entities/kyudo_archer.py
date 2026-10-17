@@ -48,7 +48,7 @@ class KyudoArcher(Samurai):
         self.rope_timer = 0.0
 
         # Mecânica de Recarga de Flecha Yumi (Cooldown)
-        self.arrow_cooldown = 1.20
+        self.arrow_cooldown = 1.60  # Cooldown calibrado (era 1.20) para dar janela de avanço aos rivais
         self.arrow_cooldown_timer = 0.0
 
         # Ação Secundária: Chuva de Flechas Sagradas em Arco (Salva Sagrada - Mecanismo de mira e cooldown idênticos à Anne)
@@ -218,7 +218,7 @@ class KyudoArcher(Samurai):
         self.target_aim_x = target_wx
         self.target_aim_y = target_wy
         self.state = STATE_RECOVERY
-        self.state_timer = 0.20
+        self.state_timer = 0.32  # Recovery aumentado (era 0.20) para criar abertura contra melee
         self.arrow_cooldown_timer = self.arrow_cooldown
 
         proj_list = projectiles if projectiles is not None else getattr(self, "projectiles_ref", None)

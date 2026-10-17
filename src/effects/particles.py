@@ -250,7 +250,17 @@ class CannonShotParticle:
 
 class FloatingBanner:
     """Textos estilizados de combate (CLASH, PARRY, IAI FLASH, VICTORY)."""
-    def __init__(self, text: str, wx: float, wy: float, wz: float = 1.6, color=COLOR_WHITE, duration: float = 1.0):
+    def __init__(self, text: str, wx: float, wy: float = None, wz: float = 1.6, color=COLOR_WHITE, duration: float = 1.0):
+        # Suporte defensivo a posição como tupla (ex: text, (wx, wy), ...)
+        if isinstance(wx, (tuple, list)):
+            self.text = str(text)
+            self.wx, self.wy = float(wx[0]), float(wx[1])
+            self.wz = 1.6
+            self.color = wy if isinstance(wy, (tuple, list)) else color
+            self.duration = wz if isinstance(wz, (int, float)) and not isinstance(wz, (tuple, list)) else duration
+            self.lifetime = self.duration
+            return
+
         # Suporte defensivo a ordens invertidas acidentais (ex: text, wx, wy, color)
         if isinstance(text, (int, float)) and isinstance(wy, str):
             # Chamada com (wx, wy, text, color)
@@ -280,14 +290,38 @@ class FloatingBanner:
     def render(self, surface: pygame.Surface, camera, font: pygame.font.Font):
         sx, sy = camera.apply(self.wx, self.wy, self.wz)
         alpha = max(0, min(255, int((1.0 - self.age / self.duration) * 255)))
-        txt_surf = font.render(self.text, True, self.color)
-        txt_surf.set_alpha(alpha)
-        # Sombra
-        shadow_surf = font.render(self.text, True, (0, 0, 0))
-        shadow_surf.set_alpha(alpha)
-        rect = txt_surf.get_rect(center=(sx, sy))
-        surface.blit(shadow_surf, (rect.x + 2, rect.y + 2))
-        surface.blit(txt_surf, rect)
+        if alpha <= 0:
+            return
+
+        try:
+            from src.ui.combat_callouts import render_sumie_ribbon
+            # Seleciona selo Kanji tradicional baseado no tipo de mensagem
+            upper_txt = self.text.upper()
+            seal = None
+            if "CLASH" in upper_txt:
+                seal = "鍔"
+            elif "PARRY" in upper_txt or "DEFLECT" in upper_txt:
+                seal = "受"
+            elif "SLASH" in upper_txt or "CUT" in upper_txt:
+                seal = "斬"
+            elif "BREAK" in upper_txt or "STUN" in upper_txt:
+                seal = "破"
+            elif "PERIGO" in upper_txt or "DANGER" in upper_txt:
+                seal = "危"
+            elif "KIAI" in upper_txt:
+                seal = "気"
+            elif "WIN" in upper_txt or "VICTORY" in upper_txt:
+                seal = "勝"
+
+            render_sumie_ribbon(surface, self.text, sx, sy, color=self.color, alpha=alpha, font_size=18, kanji_seal=seal)
+        except Exception:
+            txt_surf = font.render(self.text, True, self.color)
+            txt_surf.set_alpha(alpha)
+            shadow_surf = font.render(self.text, True, (0, 0, 0))
+            shadow_surf.set_alpha(alpha)
+            rect = txt_surf.get_rect(center=(sx, sy))
+            surface.blit(shadow_surf, (rect.x + 2, rect.y + 2))
+            surface.blit(txt_surf, rect)
 
 
 class FlameVoxelParticle:

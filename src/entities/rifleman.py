@@ -18,6 +18,7 @@ from src.effects.particles import SparkParticle
 
 STATE_BACKSTEP = "BACKSTEP"
 STATE_RIFLE_ROLL = "RIFLE_ROLL"
+STATE_RIFLE_AIM = "RIFLE_AIM"
 
 class PowderTrap:
     """Trilha de pólvora negra deixada por Teppo no solo que incendeia ao contato."""
@@ -113,14 +114,21 @@ class Rifleman(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Teppo")
         self.char_type = "teppo"
-        self.speed = 4.3  # Velocidade ágil para caçar pólvora na arena
+        self.speed = 4.0  # Velocidade calibrada (era 4.3) para permitir aproximação melee
 
         # Mecânica de Munição e Pólvora
         self.has_ammo = True           # Inicia CARREGADO com munição
-        self.cocking_timer = 0.0
+        self.cocking_timer = 0.80      # Delay de armação de cão antes do tiro no início do round
         self.reload_time = 0.0
         self.is_reloading = False
         self.reload_progress = 0.0
+
+        # Mecânica de Mira (Windup antes do disparo para permitir esquiva)
+        self.aim_duration = 0.24       # Delay para simular a mira e a queima da mecha
+        self.target_aim_wx = 0.0
+        self.target_aim_wy = 0.0
+        self.pending_projectiles = None
+        self.pending_particles = None
 
         # Subterfúgio Evasivo
         self.backstep_cooldown = 0.60   # Calibrado: reposicionamento ágil
@@ -219,16 +227,20 @@ class Rifleman(Samurai):
                     return True
         return False
 
+    def on_round_start(self):
+        """Inicia o round com tempo de armação/mira para evitar tiro imediato no primeiro frame."""
+        self.cocking_timer = 0.80
+
     def can_act(self) -> bool:
         return (
             self.is_alive
-            and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD)
+            and self.state not in (STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, STATE_RIFLE_AIM)
             and self.roll_recovery_timer <= 0
             and self.dash_recovery_timer <= 0
         )
 
-    def trigger_shoot(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None):
-        """Ataque Primário: Disparo fatal de arcabuz se tiver munição e engatilhado, ou coronhada defensiva se descarregado."""
+    def trigger_shoot(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None, immediate: bool = False):
+        """Ataque Primário: Aponta o arcabuz em mira e aguarda delay (0.24s) simulando a queima da mecha antes do disparo fatal."""
         if not self.can_act():
             return
 
@@ -236,6 +248,31 @@ class Rifleman(Samurai):
             # Se descarregado, desfere coronhada tática; se ainda engatilhando, aguarda
             if not self.has_ammo:
                 self.trigger_rifle_butt(target_wx, target_wy, particles)
+            return
+
+        self.set_facing(target_wx, target_wy)
+
+        if immediate:
+            self._fire_musket(target_wx, target_wy, projectiles, particles)
+            return
+
+        self.state = STATE_RIFLE_AIM
+        self.state_timer = self.aim_duration
+        self.target_aim_wx = target_wx
+        self.target_aim_wy = target_wy
+        self.pending_projectiles = projectiles
+        self.pending_particles = particles
+
+        # Indicativo visual/sonoro: faísca acesa no cão e pavio do arcabuz
+        if particles is not None:
+            px = self.wx + self.facing_x * 0.45
+            py = self.wy + self.facing_y * 0.45
+            for _ in range(6):
+                particles.append(SparkParticle(px, py, 0.40, color=(255, 180, 50)))
+
+    def _fire_musket(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None):
+        """Disparo efetivo da bala de arcabuz após a conclusão da mira."""
+        if not self.has_ammo or not self.is_alive:
             return
 
         self.set_facing(target_wx, target_wy)
@@ -254,11 +291,18 @@ class Rifleman(Samurai):
         bx = self.wx + self.facing_x * 0.65
         by = self.wy + self.facing_y * 0.65
         bullet = MusketBulletProjectile(bx, by, wz=0.55, dir_x=self.facing_x, dir_y=self.facing_y, owner=self)
-        projectiles.append(bullet)
+        if projectiles is not None:
+            projectiles.append(bullet)
 
         if particles is not None:
             for _ in range(14):
                 particles.append(SparkParticle(bx, by, 0.55))
+
+        try:
+            from src.audio import play_sfx, SoundEvent
+            play_sfx(SoundEvent.TANEGASHIMA_SHOT, volume_scale=1.0)
+        except Exception:
+            pass
 
     def trigger_rifle_butt(self, target_wx: float, target_wy: float, particles: list = None):
         """Coronhada Defensiva: Golpe de madeira de curto alcance que atordoa e afasta o adversário."""
@@ -272,6 +316,11 @@ class Rifleman(Samurai):
         self.is_rifle_butt = True
         self.hitbox_center = (self.wx + self.facing_x * 0.75, self.wy + self.facing_y * 0.75)
         self.slash_dir = (self.facing_x, self.facing_y)
+        try:
+            from src.audio import play_sfx, SoundEvent
+            play_sfx(SoundEvent.SWING_BLUNT, volume_scale=0.88)
+        except Exception:
+            pass
         if particles is not None:
             for _ in range(6):
                 particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.3))
@@ -344,7 +393,7 @@ class Rifleman(Samurai):
                 # Rolamento tático conclui recarga de emergência!
                 if not self.has_ammo:
                     self.has_ammo = True
-                    self.cocking_timer = 0.30
+                    self.cocking_timer = 0.50
                     if particles is not None:
                         for _ in range(12):
                             particles.append(SparkParticle(self.wx, self.wy, 0.45))
@@ -370,6 +419,22 @@ class Rifleman(Samurai):
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
 
+        elif self.state == STATE_RIFLE_AIM:
+            self.state_timer -= dt
+            # Partículas indicativas de faísca/fumaça do pavio durante a visada de mira
+            if particles is not None and random.random() < 0.40:
+                px = self.wx + self.facing_x * 0.60
+                py = self.wy + self.facing_y * 0.60
+                particles.append(SparkParticle(px, py, 0.35, color=(255, 160, 40)))
+
+            if self.state_timer <= 0:
+                self._fire_musket(
+                    self.target_aim_wx,
+                    self.target_aim_wy,
+                    self.pending_projectiles,
+                    particles or self.pending_particles
+                )
+
         elif self.state == STATE_RECOVERY:
             self.state_timer -= dt
             if self.state_timer <= 0:
@@ -383,6 +448,14 @@ class Rifleman(Samurai):
     def render(self, surface: pygame.Surface, camera):
         """Renderiza o Rifleman e indicador de munição/pólvora."""
         if self.is_hidden:
+            sx, sy = camera.apply(self.wx, self.wy, 1.4)
+            pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
+
+        # Indicador visual brilhante no cano quando em mira (aviso para esquiva)
+        if self.state == STATE_RIFLE_AIM:
+            mx, my = camera.apply(self.wx + self.facing_x * 0.85, self.wy + self.facing_y * 0.85, 0.58)
+            pygame.draw.circle(surface, (255, 220, 60), (mx, my), 5)
+            pygame.draw.circle(surface, (255, 255, 255), (mx, my), 2)
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 

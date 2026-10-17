@@ -4,6 +4,7 @@ botes letais do cão Doberman e contra-ataques que nocauteiam o cão.
 """
 import math
 from src.isometric.iso_math import world_distance
+from src.combat.hitboxes import check_fighter_melee_hit, align_finisher_pair
 from src.effects.particles import (
     SparkParticle, BloodParticle, FloatingBanner
 )
@@ -20,12 +21,15 @@ from src.entities.doberman import STATE_DOG_CHARGE, STATE_DOG_KNOCKED_OUT, STATE
 
 def _get_death_style_for_attacker(attacker, weapon: str | None = None):
     """Estilo de morte contextual pelo golpe recebido: reflete a natureza do ataque que gerou a morte."""
+    char_type = getattr(attacker, "char_type", "").lower()
+    state = getattr(attacker, "state", "")
+
     if weapon in ("kunai", "shuriken"):
+        if "ninja" in char_type or "hanzo" in char_type:
+            return "FOREHEAD_PIN"
         return "KUNAI_PIN"
     if weapon == "arrow":
         return "ARROW_PIN"
-    char_type = getattr(attacker, "char_type", "").lower()
-    state = getattr(attacker, "state", "")
 
     # 1. Kenshi: Iai Flash (KENSHIN_SPLIT) vs Ryuu Tsui Sen (VERTICAL_BISECTION)
     if "kenshin" in char_type or "kenshi" in char_type or "red" in char_type:
@@ -51,17 +55,41 @@ def _get_death_style_for_attacker(attacker, weapon: str | None = None):
             return "MAI_X_CLEAVE"
         return "TRIPLE_SCISSOR_CLEAVE"
 
+    # 5. Goro (Ciclo 3): Clivagem da Kuwa vs Pisotão Sísmico
+    elif "goro" in char_type or "farmer" in char_type:
+        if state in ("EARTH_STOMP", "STOMP") or weapon in ("shockwave", "stomp"):
+            return "EARTH_STOMP_CRUSH"
+        return "KUWA_SKULL_CLEAVE"
+
+    # 6. Ichi (Ciclo 3): Gyaku-Iai Carotídeo vs Contra-ataque de Escuta Perfurante
+    elif "ichi" in char_type or "blind" in char_type:
+        if state in ("COUNTER_THRUST", "LISTEN", "COUNTER") or weapon == "counter":
+            return "BLIND_SPINE_PIERCE"
+        return "BLIND_CAROTID_SLICE"
+
+    # 7. Saitou (Veterano Ciclo 3): Gatotsu Empalamento vs Zeroshiki Explosão
+    elif "saitou" in char_type or state == "GATOTSU_CHARGE":
+        if state in ("ZEROSHIKI", "ZERO_THRUST") or weapon == "zeroshiki":
+            return "TORSO_BLAST_THRUST"
+        return "HEART_IMPALE_LUNGE"
+
+    # 8. Hanzo (Veterano Ciclo 3): Kunai na Testa vs Estocada Garganta/Coração
+    elif "ninja" in char_type or "hanzo" in char_type:
+        if weapon in ("kunai", "shuriken"):
+            return "FOREHEAD_PIN"
+        return "HEART_THROAT_STAB"
+
     elif "murasaki" in char_type or "purple" in char_type:
         return "MURASAKI_DECAP"
     elif "pirate" in char_type or "anne" in char_type:
         return "PIRATE_CLEAVE"
     elif "musketeer" in char_type or "julie" in char_type:
         return "RAPIER_FLURRY_POINTBLANK"
-    elif "saitou" in char_type or state == "GATOTSU_CHARGE":
-        return "SAITOU_IMPALE"
     elif "joe" in char_type or "american" in char_type:
-        return "WINDMILL_SHURIKEN_DECAP"
-    elif "ninja" in char_type or "hanzo" in char_type or "gray" in char_type or "kasumi" in char_type or "kemuri" in char_type:
+        if weapon in ("dog", "yamato") or state in ("DOG_ATTACK", "YAMATO"):
+            return "WINDMILL_SHURIKEN_DECAP"
+        return "STAB_FALL"
+    elif "gray" in char_type or "kasumi" in char_type or "kemuri" in char_type:
         return "STAB_FALL"
     elif "rifle" in char_type or "teppo" in char_type or "tomoe" in char_type or "archer" in char_type:
         return "BLUNT_FALL"
@@ -75,6 +103,10 @@ def _get_death_style_for_attacker(attacker, weapon: str | None = None):
         return "KAMAITACHI_MINCE"
     elif "kabuki" in char_type or "okuni" in char_type:
         return "MURASAKI_DECAP"
+    if weapon in ("kunai", "shuriken"):
+        return "KUNAI_PIN"
+    if weapon == "arrow":
+        return "ARROW_PIN"
     return "KENSHIN_SPLIT"
 
 # Maior que o alcance do combo de Musashi (hitbox 0.9 + 2.06 + raio), para o ferido não contra-atacar na hora.
@@ -108,12 +140,12 @@ class CombatSystem:
                     break
         victim.apply_forced_displacement(ux * travel, uy * travel, game_map)
 
-    def _play_sound(self, event, volume: float = 1.0):
-        """Helper seguro para disparo de efeitos sonoros em combate."""
+    def _play_sound(self, event, volume: float = 1.0, weapon: str | None = None, surface: str | None = None):
+        """Helper seguro para disparo de efeitos sonoros em combate com suporte a multi-camadas."""
         try:
             from src.audio import get_sound_manager, SoundEvent
             ev = getattr(SoundEvent, event.upper(), event) if isinstance(event, str) else event
-            get_sound_manager().play(ev, volume_scale=volume)
+            get_sound_manager().play_layered(ev, surface=surface, weapon=weapon, volume_scale=volume)
         except Exception:
             pass
 
@@ -238,11 +270,37 @@ class CombatSystem:
                             camera.add_shake(5.0)
                             self._play_sound("sword_clash")
 
-
+            # 8. Ichi: Postura de Escuta (cone frontal) reflete projéteis com velocidade aumentada (+35%)
+            elif (char_t == "ichi" or getattr(def_fighter, "is_listening", False)) and (def_fighter.state == "LISTEN" or getattr(def_fighter, "counter_active", False)):
+                for proj in projectiles:
+                    if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter and not getattr(proj, "has_been_reflected_by_ichi", False):
+                        dist = world_distance(def_fighter.wx, def_fighter.wy, proj.wx, proj.wy)
+                        if dist <= 1.85:
+                            proj_dx = proj.wx - def_fighter.wx
+                            proj_dy = proj.wy - def_fighter.wy
+                            dot = (proj_dx * def_fighter.facing_x + proj_dy * def_fighter.facing_y) / max(0.001, dist)
+                            if dot > 0.0:  # Cone frontal de parry direcional
+                                # Inverter direção do projétil e aumentar velocidade (+35%)
+                                if hasattr(proj, "dir_x") and hasattr(proj, "dir_y"):
+                                    proj.dir_x = -proj.dir_x
+                                    proj.dir_y = -proj.dir_y
+                                if hasattr(proj, "vx") and hasattr(proj, "vy"):
+                                    proj.vx = -proj.vx * 1.35
+                                    proj.vy = -proj.vy * 1.35
+                                if hasattr(proj, "speed"):
+                                    proj.speed *= 1.35
+                                proj.owner = def_fighter
+                                proj.has_been_reflected_by_ichi = True
+                                proj.dist_traveled = 0
+                                for _ in range(16):
+                                    particles.append(SparkParticle(proj.wx, proj.wy, 0.6, color=(140, 200, 255)))
+                                banners.append(FloatingBanner("BLIND REFLECT!", def_fighter.wx, def_fighter.wy, wz=1.8, color=(160, 215, 255)))
+                                camera.add_shake(5.5)
+                                self._play_sound("parry")
 
         active_projectiles = []
         for proj in projectiles:
-            if isinstance(proj, HamayaArrowProjectile):
+            if isinstance(proj, HamayaArrowProjectile) or getattr(proj, "__class__", None).__name__ == "EarthStompShockwave":
                 still_valid = proj.update(dt, game_map, particles, projectiles=projectiles)
             else:
                 still_valid = proj.update(dt, game_map, particles)
@@ -290,11 +348,12 @@ class CombatSystem:
                 winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
 
                 if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.45 + target.radius):
-                    if target.state in (STATE_PARRY, "MAI_DANCE"):
-                        # Musashi (primeiros 0.28s) ou Chiyo na Dança Mai refletem projéteis
+                    if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
+                        # Musashi (primeiros 0.28s), Chiyo (Dança Mai) ou Ichi (Postura de Escuta) refletem projéteis
                         can_reflect = (
                             target.state == "MAI_DANCE" or
-                            (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0)
+                            (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0) or
+                            (target.state == "LISTEN" and hasattr(target, "is_facing_target") and target.is_facing_target(proj.wx, proj.wy))
                         )
                         if can_reflect and not getattr(proj, "has_been_reflected", False):
                             # REFLETE: inverte direção e muda dono
@@ -308,6 +367,10 @@ class CombatSystem:
                             if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
                                 target.on_mai_parry_success()
                                 banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                            elif target.state == "LISTEN":
+                                banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
+                                if hasattr(target, "trigger_counter_thrust"):
+                                    target.trigger_counter_thrust(proj.owner.wx, proj.owner.wy, banners=banners, particles=particles)
                             else:
                                 banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
                             camera.add_shake(6.0)
@@ -340,10 +403,11 @@ class CombatSystem:
                 target = p2 if proj.owner == p1 else p1
 
                 if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.45 + target.radius):
-                    if target.state in (STATE_PARRY, "MAI_DANCE"):
+                    if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
                         can_reflect = (
                             target.state == "MAI_DANCE" or
-                            (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0)
+                            (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0) or
+                            (target.state == "LISTEN" and hasattr(target, "is_facing_target") and target.is_facing_target(proj.wx, proj.wy))
                         )
                         if can_reflect and not getattr(proj, "has_been_reflected", False):
                             # REFLETE: inverte direção e muda dono
@@ -357,6 +421,10 @@ class CombatSystem:
                             if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
                                 target.on_mai_parry_success()
                                 banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                            elif target.state == "LISTEN":
+                                banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
+                                if hasattr(target, "trigger_counter_thrust"):
+                                    target.trigger_counter_thrust(proj.owner.wx, proj.owner.wy, banners=banners, particles=particles)
                             else:
                                 banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
                             camera.add_shake(6.0)
@@ -402,7 +470,8 @@ class CombatSystem:
 
                 if should_detonate:
                     proj.is_active = False
-                    camera.add_shake(18.0)
+                    if camera and hasattr(camera, "add_shake"):
+                        camera.add_shake(18.0)
                     self._play_sound("bomb_explode")
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(0, 0.9, 0.7, 280)
@@ -416,12 +485,22 @@ class CombatSystem:
                     for prop in getattr(game_map, "interactives", ()):
                         prop.ignite(proj.wx, proj.wy, proj.explosion_radius)
 
+                    # Choque de ar da explosão verga bambus e agita atmosfera
+                    if hasattr(game_map, "add_wind_impulse"):
+                        game_map.add_wind_impulse(proj.wx, proj.wy, strength=2.2, radius=proj.explosion_radius * 1.5, duration=0.85)
+
                     # Destruir bambus ao redor
                     for b in game_map.bamboos:
                         if not b.is_cut and world_distance(proj.wx, proj.wy, b.wx, b.wy) < proj.explosion_radius:
                             slice_part = b.cut((1.0, 0.0))
                             if slice_part:
                                 particles.append(slice_part)
+
+                    # Destruir biombos ao redor
+                    for r in getattr(game_map, "rocks", []):
+                        if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                            if world_distance(proj.wx, proj.wy, r.wx, r.wy) < (proj.explosion_radius + 0.4):
+                                r.break_panel((1.0, 0.0), particles)
 
                     # Dano em área (com 50% de redução de dano para Kasumi contra sua própria bomba)
                     for dog_cand in [getattr(p1, "dog", None), getattr(p2, "dog", None)]:
@@ -492,10 +571,11 @@ class CombatSystem:
                     if target_in_dodge:
                         pass  # Bala passa através sem detonar (o dodge garante i-frames totais)
                     else:
-                        if target.state in (STATE_PARRY, "MAI_DANCE"):
+                        if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
                             can_reflect = (
                                 target.state == "MAI_DANCE" or
-                                (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0)
+                                (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0) or
+                                (target.state == "LISTEN" and hasattr(target, "is_facing_target") and target.is_facing_target(proj.wx, proj.wy))
                             )
                             if can_reflect and not getattr(proj, "has_been_reflected", False):
                                 # REFLETE: inverte direção e muda dono
@@ -509,6 +589,10 @@ class CombatSystem:
                                 if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
                                     target.on_mai_parry_success()
                                     banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                                elif target.state == "LISTEN":
+                                    banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
+                                    if hasattr(target, "trigger_counter_thrust"):
+                                        target.trigger_counter_thrust(proj.owner.wx, proj.owner.wy, banners=banners, particles=particles)
                                 else:
                                     banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
                                 camera.add_shake(6.0)
@@ -555,10 +639,11 @@ class CombatSystem:
                 target = p2 if proj.owner == p1 else p1
                 winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
                 if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.50 + target.radius):
-                    if target.state in (STATE_PARRY, "MAI_DANCE"):
+                    if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
                         can_reflect = (
                             target.state == "MAI_DANCE" or
-                            (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0)
+                            (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0) or
+                            (target.state == "LISTEN" and hasattr(target, "is_facing_target") and target.is_facing_target(proj.wx, proj.wy))
                         )
                         if can_reflect and not getattr(proj, "has_been_reflected", False):
                             # REFLETE: inverte direção e muda dono
@@ -572,6 +657,10 @@ class CombatSystem:
                             if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
                                 target.on_mai_parry_success()
                                 banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                            elif target.state == "LISTEN":
+                                banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
+                                if hasattr(target, "trigger_counter_thrust"):
+                                    target.trigger_counter_thrust(proj.owner.wx, proj.owner.wy, banners=banners, particles=particles)
                             else:
                                 banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
                             camera.add_shake(6.0)
@@ -767,22 +856,24 @@ class CombatSystem:
                             if cinematic_director:
                                 death_style = "SKEWERED_LANCE_FLAG"
                                 cinematic_director.trigger_fatal_strike(proj.owner, target, death_style, (proj.dir_x, proj.dir_y))
+                            proj.is_active = False
                         else:
                             camera.add_shake(8.0)
                             for _ in range(15):
                                 particles.append(BloodParticle(target.wx, target.wy, 0.5))
                             self._play_sound("obstacle_hit")
-                        proj._embed_into_ground(game_map, particles)
+                            proj._embed_into_ground(game_map, particles)
 
             # Se for LÂMINA KAMAITACHI OU ONDA ESPIRAL (KamaitachiProjectile / SpiralResonanceProjectile)
             elif isinstance(proj, (KamaitachiProjectile, SpiralResonanceProjectile)) and proj.is_active:
                 target = p2 if proj.owner == p1 else p1
                 winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
                 if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.55 + target.radius):
-                    if target.state in (STATE_PARRY, "MAI_DANCE"):
+                    if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
                         can_reflect = (
                             target.state == "MAI_DANCE" or
-                            (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0)
+                            (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0) or
+                            (target.state == "LISTEN" and hasattr(target, "is_facing_target") and target.is_facing_target(proj.wx, proj.wy))
                         )
                         if can_reflect and not getattr(proj, "has_been_reflected", False):
                             proj.vx = -proj.vx
@@ -795,6 +886,10 @@ class CombatSystem:
                             if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
                                 target.on_mai_parry_success()
                                 banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                            elif target.state == "LISTEN":
+                                banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
+                                if hasattr(target, "trigger_counter_thrust"):
+                                    target.trigger_counter_thrust(proj.owner.wx, proj.owner.wy, banners=banners, particles=particles)
                             else:
                                 banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
                             camera.add_shake(6.0)
@@ -808,7 +903,8 @@ class CombatSystem:
                             self._play_sound("parry")
                             proj.is_active = False
                     else:
-                        hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=2)
+                        proj_damage = 1 if isinstance(proj, KamaitachiProjectile) else 2
+                        hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=proj_damage)
                         if dead:
                             camera.add_shake(16.0)
                             for _ in range(25):
@@ -899,10 +995,15 @@ class CombatSystem:
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                         self.hitstop_timer = 0.14
                         winner = "P1_WINS"
-                        dog.state = "FOLLOW"
                         dog.hitbox_active = False
                         if cinematic_director:
-                            cinematic_director.trigger_fatal_strike(p1, p2, "MAULED", (dog.facing_x, dog.facing_y))
+                            cinematic_director.trigger_fatal_strike(p1, p2, "WINDMILL_SHURIKEN_DECAP", (dog.facing_x, dog.facing_y))
+                        else:
+                            dog.state = "FOLLOW"
+                    else:
+                        dog.state = "FOLLOW"
+                        dog.hitbox_active = False
+                        dog.cooldown_timer = 8.0
                         if ctrl_mgr:
                             ctrl_mgr.rumble_player(0, 0.8, 1.0, 320)
                             ctrl_mgr.rumble_player(1, 1.0, 1.0, 400)
@@ -935,10 +1036,15 @@ class CombatSystem:
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                         self.hitstop_timer = 0.14
                         winner = "P2_WINS"
-                        dog.state = "FOLLOW"
                         dog.hitbox_active = False
                         if cinematic_director:
-                            cinematic_director.trigger_fatal_strike(p2, p1, "MAULED", (dog.facing_x, dog.facing_y))
+                            cinematic_director.trigger_fatal_strike(p2, p1, "WINDMILL_SHURIKEN_DECAP", (dog.facing_x, dog.facing_y))
+                        else:
+                            dog.state = "FOLLOW"
+                    else:
+                        dog.state = "FOLLOW"
+                        dog.hitbox_active = False
+                        dog.cooldown_timer = 8.0
                         if ctrl_mgr:
                             ctrl_mgr.rumble_player(1, 0.8, 1.0, 320)
                             ctrl_mgr.rumble_player(0, 1.0, 1.0, 400)
@@ -1032,8 +1138,7 @@ class CombatSystem:
                         break
 
         if p1.hitbox_active and p2.is_alive:
-            hx, hy = p1.hitbox_center
-            if world_distance(hx, hy, p2.wx, p2.wy) < (p1.hitbox_radius + p2.radius) and getattr(p2, "wz", 0.0) < 0.65:
+            if check_fighter_melee_hit(p1, p2.wx, p2.wy, p2.radius) and getattr(p2, "wz", 0.0) < 0.65:
                 p1.hitbox_active = False
 
                 if p2.state == STATE_PARRY:
@@ -1042,7 +1147,10 @@ class CombatSystem:
                     parry_msg = "PARRY GATOTSU!" if p1.state == "GATOTSU_CHARGE" else "PARRY!"
                     banners.append(FloatingBanner(parry_msg, p2.wx, p2.wy, wz=1.7, color=(100, 200, 255)))
                     camera.add_shake(8.0)
-                    p1.stun(0.85)
+                    if hasattr(p1, "on_parried"):
+                        p1.on_parried(p2, game_map=game_map, banners=banners, particles=particles)
+                    else:
+                        p1.stun(0.85)
                     self._play_sound("parry")
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(0, 0.5, 0.8, 200)
@@ -1077,10 +1185,32 @@ class CombatSystem:
                         self.hitstop_timer = 0.12
                         self._play_sound("fatal_strike")
                         if cinematic_director:
+                            align_finisher_pair(p2, p1, game_map)
                             cinematic_director.trigger_fatal_strike(p2, p1, "MAI_X_CLEAVE", (p2.facing_x, p2.facing_y))
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(0, 0.5, 0.7, 180)
                         ctrl_mgr.rumble_player(1, 0.5, 0.7, 180)
+                elif (p2.state == "LISTEN" or getattr(p2, "counter_active", False)) and (hasattr(p2, "is_facing_target") and p2.is_facing_target(p1.wx, p1.wy)):
+                    # Postura de Escuta direcional da Ichi: bloqueio frontal perfeito e contra-ataque perfurante automático
+                    for _ in range(16):
+                        particles.append(SparkParticle(p2.wx, p2.wy, 0.65, color=(140, 200, 255)))
+                    banners.append(FloatingBanner("BLIND COUNTER!", p2.wx, p2.wy, wz=1.80, color=(160, 215, 255)))
+                    camera.add_shake(8.5)
+                    p1.stun(0.40)
+                    self._play_sound("parry")
+                    if hasattr(p2, "trigger_counter_thrust"):
+                        p2.trigger_counter_thrust(p1.wx, p1.wy, banners, particles)
+                    hit_c, dead_c = p1.take_hit((p2.facing_x, p2.facing_y), damage=2)
+                    if dead_c:
+                        winner = "P2_WINS"
+                        self.hitstop_timer = 0.14
+                        self._play_sound("fatal_strike")
+                        if cinematic_director:
+                            align_finisher_pair(p2, p1, game_map)
+                            cinematic_director.trigger_fatal_strike(p2, p1, "BLIND_SPINE_PIERCE", (p2.facing_x, p2.facing_y))
+                    if ctrl_mgr:
+                        ctrl_mgr.rumble_player(0, 0.6, 0.8, 200)
+                        ctrl_mgr.rumble_player(1, 0.6, 0.8, 200)
                 elif getattr(p1, "is_rifle_butt", False):
                     # Coronhada agressiva do Teppo: causa 1 de dano, afasta 1.6m e atordoa o adversário
                     hit, dead = p2.take_hit(p1.slash_dir, damage=1)
@@ -1095,6 +1225,7 @@ class CombatSystem:
                         winner = "P1_WINS"
                         self._play_sound("fatal_strike")
                         if cinematic_director:
+                            align_finisher_pair(p1, p2, game_map)
                             cinematic_director.trigger_fatal_strike(p1, p2, "BLUNT_FALL", p1.slash_dir)
                 else:
                     is_ninja = (getattr(p1, "char_type", "") == "ninja" or hasattr(p1, "has_kunai"))
@@ -1120,15 +1251,16 @@ class CombatSystem:
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                         self.hitstop_timer = 0.12
                         winner = "P1_WINS"
-                        self._play_sound("fatal_strike")
+                        self._play_sound("fatal_strike", weapon=getattr(p1, "char_type", None))
                         if cinematic_director:
+                            align_finisher_pair(p1, p2, game_map)
                             death_style = _get_death_style_for_attacker(p1)
                             cinematic_director.trigger_fatal_strike(p1, p2, death_style, p1.slash_dir)
                     elif hit:
                         camera.add_shake(7.0)
                         for _ in range(12):
                             particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
-                        self._play_sound("sword_slash")
+                        self._play_sound("sword_slash", weapon=getattr(p1, "char_type", None))
                         self._apply_hit_knockback(p1, p2, game_map)
 
 
@@ -1145,8 +1277,7 @@ class CombatSystem:
                         break
 
         if p2.hitbox_active and p1.is_alive and winner is None:
-            hx, hy = p2.hitbox_center
-            if world_distance(hx, hy, p1.wx, p1.wy) < (p2.hitbox_radius + p1.radius) and getattr(p1, "wz", 0.0) < 0.65:
+            if check_fighter_melee_hit(p2, p1.wx, p1.wy, p1.radius) and getattr(p1, "wz", 0.0) < 0.65:
                 p2.hitbox_active = False
 
                 if p1.state == STATE_PARRY:
@@ -1155,7 +1286,10 @@ class CombatSystem:
                     parry_msg = "PARRY GATOTSU!" if p2.state == "GATOTSU_CHARGE" else "PARRY!"
                     banners.append(FloatingBanner(parry_msg, p1.wx, p1.wy, wz=1.7, color=(100, 200, 255)))
                     camera.add_shake(8.0)
-                    p2.stun(0.85)
+                    if hasattr(p2, "on_parried"):
+                        p2.on_parried(p1, game_map=game_map, banners=banners, particles=particles)
+                    else:
+                        p2.stun(0.85)
                     self._play_sound("parry")
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(1, 0.5, 0.8, 200)
@@ -1190,10 +1324,32 @@ class CombatSystem:
                         self.hitstop_timer = 0.12
                         self._play_sound("fatal_strike")
                         if cinematic_director:
+                            align_finisher_pair(p1, p2, game_map)
                             cinematic_director.trigger_fatal_strike(p1, p2, "MAI_X_CLEAVE", (p1.facing_x, p1.facing_y))
                     if ctrl_mgr:
                         ctrl_mgr.rumble_player(1, 0.5, 0.7, 180)
                         ctrl_mgr.rumble_player(0, 0.5, 0.7, 180)
+                elif (p1.state == "LISTEN" or getattr(p1, "counter_active", False)) and (hasattr(p1, "is_facing_target") and p1.is_facing_target(p2.wx, p2.wy)):
+                    # Postura de Escuta direcional da Ichi: bloqueio frontal perfeito e contra-ataque perfurante automático
+                    for _ in range(16):
+                        particles.append(SparkParticle(p1.wx, p1.wy, 0.65, color=(140, 200, 255)))
+                    banners.append(FloatingBanner("BLIND COUNTER!", p1.wx, p1.wy, wz=1.80, color=(160, 215, 255)))
+                    camera.add_shake(8.5)
+                    p2.stun(0.40)
+                    self._play_sound("parry")
+                    if hasattr(p1, "trigger_counter_thrust"):
+                        p1.trigger_counter_thrust(p2.wx, p2.wy, banners, particles)
+                    hit_c, dead_c = p2.take_hit((p1.facing_x, p1.facing_y), damage=2)
+                    if dead_c:
+                        winner = "P1_WINS"
+                        self.hitstop_timer = 0.14
+                        self._play_sound("fatal_strike")
+                        if cinematic_director:
+                            align_finisher_pair(p1, p2, game_map)
+                            cinematic_director.trigger_fatal_strike(p1, p2, "BLIND_SPINE_PIERCE", (p1.facing_x, p1.facing_y))
+                    if ctrl_mgr:
+                        ctrl_mgr.rumble_player(0, 0.6, 0.8, 200)
+                        ctrl_mgr.rumble_player(1, 0.6, 0.8, 200)
                 elif getattr(p2, "is_rifle_butt", False):
                     # Coronhada agressiva do Teppo: causa 1 de dano, afasta 1.6m e atordoa o adversário
                     hit, dead = p1.take_hit(p2.slash_dir, damage=1)
@@ -1208,6 +1364,7 @@ class CombatSystem:
                         winner = "P2_WINS"
                         self._play_sound("fatal_strike")
                         if cinematic_director:
+                            align_finisher_pair(p2, p1, game_map)
                             cinematic_director.trigger_fatal_strike(p2, p1, "BLUNT_FALL", p2.slash_dir)
                 else:
                     is_ninja = getattr(p2, "char_type", "") == "ninja"
@@ -1232,15 +1389,16 @@ class CombatSystem:
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                         self.hitstop_timer = 0.12
                         winner = "P2_WINS"
-                        self._play_sound("fatal_strike")
+                        self._play_sound("fatal_strike", weapon=getattr(p2, "char_type", None))
                         if cinematic_director:
+                            align_finisher_pair(p2, p1, game_map)
                             death_style = _get_death_style_for_attacker(p2)
                             cinematic_director.trigger_fatal_strike(p2, p1, death_style, p2.slash_dir)
                     elif hit:
                         camera.add_shake(7.0)
                         for _ in range(12):
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
-                        self._play_sound("sword_slash")
+                        self._play_sound("sword_slash", weapon=getattr(p2, "char_type", None))
                         self._apply_hit_knockback(p2, p1, game_map)
 
 
@@ -1318,9 +1476,11 @@ class CombatSystem:
         # 3. Lanternas Ishi-doro (Kyoto e Bamboo Forest)
         if not hit_solid:
             for lantern in getattr(game_map, "lanterns", []):
-                if world_distance(hx, hy, lantern.wx, lantern.wy) < (hradius + 0.45):
-                    hit_solid = True
-                    break
+                # Ignora decorações sem colisão física (como grilos, pássaros, névoa e fitas)
+                if getattr(lantern, "is_solid", False) or hasattr(lantern, "check_collision") or lantern.__class__.__name__ in ("StoneLantern", "KyotoLantern"):
+                    if world_distance(hx, hy, lantern.wx, lantern.wy) < (hradius + getattr(lantern, "radius", 0.45)):
+                        hit_solid = True
+                        break
 
         # 4. Carruagens em disparada (Kyoto)
         if not hit_solid:

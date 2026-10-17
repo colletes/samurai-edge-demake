@@ -42,6 +42,17 @@ class KyotoLantern:
     def __init__(self, wx: float, wy: float):
         self.wx = wx
         self.wy = wy
+        self.radius = 0.35
+
+    def check_collision(self, px: float, py: float, p_radius: float = 0.3) -> tuple[bool, float, float]:
+        dist = math.hypot(px - self.wx, py - self.wy)
+        min_dist = self.radius + p_radius
+        if dist < min_dist:
+            overlap = min_dist - dist
+            nx = (px - self.wx) / dist if dist > 0.0001 else 1.0
+            ny = (py - self.wy) / dist if dist > 0.0001 else 0.0
+            return True, nx * overlap, ny * overlap
+        return False, 0.0, 0.0
 
     def render(self, surface: pygame.Surface, camera, time_val: float):
         cx, cy = self.wx, self.wy

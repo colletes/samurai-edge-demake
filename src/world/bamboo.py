@@ -18,6 +18,8 @@ class Bamboo:
         self.is_cut = False
         self.stump_height = random.uniform(0.35, 0.65)
         self.wind_offset = random.uniform(0, math.pi * 2)
+        self.combat_bend_x = 0.0
+        self.combat_bend_y = 0.0
 
     def cut(self, slash_dir: tuple[float, float]) -> BambooSliceParticle | None:
         """Corta o bambu se ainda estiver inteiro, gerando o tronco superior que tomba."""
@@ -67,13 +69,15 @@ class Bamboo:
 
         # Bambu em pé: coluna vertical de voxels com anéis e nós volumétricos
         wind_sway = math.sin(time_val * 2.0 + self.wind_offset) * 0.08
+        bend_x = getattr(self, "combat_bend_x", 0.0)
+        bend_y = getattr(self, "combat_bend_y", 0.0)
         num_segs = 5
         seg_h = (self.total_height - 0.2) / num_segs
 
         for i in range(num_segs):
             frac = i / num_segs
-            sway_x = wind_sway * frac
-            sway_y = wind_sway * frac
+            sway_x = wind_sway * frac + bend_x * (frac ** 1.6)
+            sway_y = wind_sway * frac + bend_y * (frac ** 1.6)
             cur_z = i * seg_h
 
             # Segmento do colmo (coluna voxel)
@@ -94,8 +98,8 @@ class Bamboo:
                 )
 
         # Topo e folhagem em blocos voxels suspensos
-        top_wx = self.wx + wind_sway
-        top_wy = self.wy + wind_sway
+        top_wx = self.wx + wind_sway + bend_x
+        top_wy = self.wy + wind_sway + bend_y
         top_wz = self.total_height
 
         # Folhas em blocos voxel finos projetados

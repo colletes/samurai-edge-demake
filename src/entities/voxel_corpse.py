@@ -13,6 +13,7 @@ import numpy as np
 import pygame
 from src.config import COLOR_BLOOD
 from src.isometric.voxel_renderer import draw_voxel_box
+from src.isometric.mesh_primitives import draw_tapered_frustum_3d
 
 ALPHA_CUT = 200      # descarta sombras e auras translúcidas do recorte
 NECK_Z = 0.88        # altura do pescoço nos modelos
@@ -22,7 +23,9 @@ FALL_DEG = 88.0
 
 STUCK_WEAPON = {
     "SAITOU_IMPALE": "blade", "KUNAI_PIN": "kunai", "ARROW_PIN": "arrow", "STAB_FALL": "kunai",
-    "ARMORED_HEART_IMPALE": "naginata", "SKEWERED_LANCE_FLAG": "naginata", "NAGINATA_HOIST_SLAM": "naginata"
+    "ARMORED_HEART_IMPALE": "naginata", "SKEWERED_LANCE_FLAG": "naginata",
+    "HEART_IMPALE_LUNGE": "blade", "BLIND_SPINE_PIERCE": "blade",
+    "FOREHEAD_PIN": "kunai",
 }
 
 
@@ -115,7 +118,7 @@ def sample_colors(sprite: pygame.Surface, count: int, min_y: int = 0, max_y: int
 
 def _draw_stuck(layer: pygame.Surface, kind: str, x: float, y: float, ax: float, ay: float):
     """Arma cravada no peito, com a ponta para fora voltada ao agressor (ax, ay = direção em tela)."""
-    length = {"arrow": 18, "kunai": 9, "blade": 22, "naginata": 36}[kind]
+    length = {"arrow": 18, "kunai": 9, "blade": 22, "naginata": 36, "kuwa": 26}[kind]
     tail = (x + ax * length, y + ay * length)
     if kind == "arrow":
         pygame.draw.line(layer, (176, 132, 76), (x, y), tail, 2)
@@ -135,6 +138,13 @@ def _draw_stuck(layer: pygame.Surface, kind: str, x: float, y: float, ax: float,
         # Lâmina curva atravessando as costas
         blade_tip = (x - ax * 16, y - ay * 16)
         pygame.draw.line(layer, (230, 235, 245), (x, y), blade_tip, 3)
+    elif kind == "kuwa":
+        # Haste de carvalho da enxada com lâmina de aço forjado transversal
+        pygame.draw.line(layer, (80, 52, 32), (x, y), tail, 3)
+        perp_x, perp_y = -ay, ax
+        blade_p1 = (x + perp_x * 7, y + perp_y * 7)
+        blade_p2 = (x - perp_x * 7, y - perp_y * 7)
+        pygame.draw.line(layer, (170, 175, 185), blade_p1, blade_p2, 4)
     else:
         pygame.draw.line(layer, (214, 219, 228), (x, y), tail, 3)
         hilt = (tail[0] - ax * 5, tail[1] - ay * 5)
@@ -235,7 +245,19 @@ class VoxelCorpsePiece:
         return True
 
     def render_box(self, surface: pygame.Surface, camera):
-        draw_voxel_box(surface, camera, self.wx - self.sx / 2, self.wy - self.sy / 2, self.wz, self.sx, self.sy, self.sz, self.color, outline=True)
+        rad = math.radians(self.rot_angle)
+        dx = math.sin(rad) * self.sz * 0.5
+        dz = math.cos(rad) * self.sz * 0.5
+        a = (self.wx - dx, self.wy, max(0.01, self.wz + self.sz * 0.5 - dz))
+        b = (self.wx + dx, self.wy, max(0.02, self.wz + self.sz * 0.5 + dz))
+        draw_tapered_frustum_3d(
+            surface, camera,
+            a, b,
+            self.sx, self.sy,
+            self.sx * 0.85, self.sy * 0.85,
+            self.color,
+            outline=True,
+        )
 
 
 class VoxelCorpse:
@@ -304,17 +326,29 @@ class VoxelCorpse:
                 self._add_blood_drop(spread=0.6)
 
         elif style == "DUAL_IMPALE_X_SPREAD":
-            # Musashi 3-Cortes: Peito empalado e aberto em 'X' com jato de sangue
-            self.pieces.append(P(x, y, 0.0, 0.44, 0.34, 0.75, self.col_torso,
-                                 vx=dx * 2.2, vy=dy * 2.2, vz=1.4,
-                                 piece_type="impaled_body", region=lambda c: c.band(None, None),
-                                 rot_target=FALL_DEG, rot_speed=220.0))
-            for _ in range(18):
+            # Musashi: Niten Ichi-ryuu - Golpe cruzado em 'X'. O torso superior é bissectado diagonalmente
+            # e a cabeça é arremessada no cruzamento das lâminas duplas!
+            self.severed_head = P(x, y, NECK_Z + 0.12, 0.16, 0.16, 0.16, self.col_hair,
+                                  vx=dx * 2.2 + random.uniform(-0.6, 0.6), vy=dy * 2.2 + random.uniform(-0.6, 0.6),
+                                  vz=3.6, rot_speed=320.0, piece_type="head", region=lambda c: c.band(None, NECK_Z),
+                                  pivot="center", floor_z=0.15)
+            self.top_half = P(x, y, WAIST_Z, 0.32, 0.24, 0.48, self.col_torso,
+                              vx=dx * 3.2 - dy * 1.6, vy=dy * 3.2 + dx * 1.6, vz=2.0,
+                              piece_type="top", region=lambda c: c.diagonal(upper=True),
+                              rot_target=108.0, rot_speed=260.0)
+            self.bottom_half = P(x, y, 0.0, 0.32, 0.24, 0.50, self.col_pants,
+                                 vx=-dx * 0.8, vy=-dy * 0.8, vz=0.3,
+                                 piece_type="bottom", region=lambda c: c.diagonal(upper=False),
+                                 rot_target=FALL_DEG, rot_speed=130.0, rot_delay=0.18)
+            self.pieces.extend([self.severed_head, self.top_half, self.bottom_half])
+            for _ in range(28):
                 angle = random.uniform(0, math.pi * 2)
-                sp = random.uniform(1.6, 4.4)
+                sp = random.uniform(1.8, 4.8)
                 self.pieces.append(P(x, y, CHEST_Z, 0.08, 0.08, 0.08, random.choice([self.col_torso, COLOR_BLOOD, (160, 20, 25)]),
                                      vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(2.0, 5.0),
                                      rot_speed=random.uniform(-300, 300), piece_type="blood_gib"))
+            for _ in range(32):
+                self._add_blood_drop(spread=0.8)
 
         elif style == "REFLECTED_TORSO_CLEAVE":
             # Musashi Parry: Corte refletido que divide o torso e o arremessa para trás
@@ -476,7 +510,7 @@ class VoxelCorpse:
             for _ in range(25):
                 self._add_blood_drop(spread=0.8)
 
-        elif style in STUCK_WEAPON:
+        elif style in ("SAITOU_IMPALE", "KUNAI_PIN", "ARROW_PIN", "STAB_FALL"):
             # Perfurado: a arma fica cravada e o corpo é jogado para longe do agressor
             self.pieces.append(P(x, y, 0.0, 0.44, 0.34, 0.75, self.col_torso, vx=dx * 1.8, vy=dy * 1.8, vz=1.2,
                                  piece_type="impaled_body", region=lambda c: c.band(None, None),
@@ -512,6 +546,96 @@ class VoxelCorpse:
                                  region=lambda c: c.band(None, None), squash="crush"))
             for _ in range(30):
                 self._add_blood_drop(spread=0.9)
+
+        # ---------------------------------------------------------------
+        # Ciclo 3 Fatalities: Goro, Ichi, Saitou, Hanzo
+        # ---------------------------------------------------------------
+        elif style == "KUWA_SKULL_CLEAVE":
+            # Goro Primário: Golpe brutal descendente que racha o crânio; o rival tomba de costas pesado no solo com sangue escorrendo
+            self.cleaved_body = P(x, y, 0.0, 0.44, 0.34, 0.78, self.col_torso,
+                                  vx=-dx * 0.30, vy=-dy * 0.30, vz=0.0,
+                                  piece_type="cleaved_body", region=lambda c: c.band(None, None),
+                                  rot_target=FALL_DEG, rot_speed=130.0, rot_delay=0.08)
+            self.pieces.append(self.cleaved_body)
+            for _ in range(40):
+                self._add_blood_drop(spread=0.75)
+
+        elif style == "EARTH_STOMP_CRUSH":
+            # Goro Secundário: Pisotão sísmico esmaga o crânio e coluna contra o solo rachado
+            self.pieces.append(P(x, y, 0.0, 0.52, 0.38, 0.55, self.col_torso, piece_type="crushed_body",
+                                 region=lambda c: c.band(None, None), squash="crush"))
+            for _ in range(36):
+                self._add_blood_drop(spread=1.0)
+            for _ in range(12):
+                angle = random.uniform(0, math.pi * 2)
+                sp = random.uniform(1.5, 4.0)
+                self.pieces.append(P(x, y, 0.1, 0.09, 0.09, 0.09, (120, 85, 55),
+                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(1.0, 3.0),
+                                     rot_speed=random.uniform(-250, 250), piece_type="earth_shard"))
+
+        elif style == "BLIND_CAROTID_SLICE":
+            # Ichi Primário: Corte imperceptível na carótida, pausa dramática, degolamento diagonal e jorro em leque
+            self.severed_head = P(x, y, NECK_Z + 0.12, 0.16, 0.16, 0.16, self.col_hair,
+                                  vx=dx * 2.0 - dy * 0.8, vy=dy * 2.0 + dx * 0.8, vz=3.2,
+                                  rot_speed=280.0, piece_type="head", region=lambda c: c.band(None, NECK_Z),
+                                  pivot="center", floor_z=0.15)
+            self.headless_body = P(x, y, 0.0, 0.30, 0.22, 0.82, self.col_torso,
+                                   vx=dx * 0.3, vy=dy * 0.3, vz=0.0,
+                                   piece_type="headless_body", region=lambda c: c.band(NECK_Z, None),
+                                   rot_target=FALL_DEG, rot_speed=115.0, rot_delay=0.35)
+            self.pieces.extend([self.severed_head, self.headless_body])
+            for _ in range(45):
+                self._add_blood_drop(spread=0.95)
+
+        elif style == "BLIND_SPINE_PIERCE":
+            # Ichi Secundário: Estocada cega nas costas atravessando a espinha e o coração
+            self.top_body = P(x, y, WAIST_Z, 0.34, 0.24, 0.48, self.col_torso,
+                              vx=-dx * 2.2, vy=-dy * 2.2, vz=1.4,
+                              piece_type="transfixed_torso", region=lambda c: c.band(None, WAIST_Z),
+                              rot_target=96.0, rot_speed=220.0)
+            self.bottom_legs = P(x, y, 0.0, 0.34, 0.24, 0.44, self.col_pants,
+                                 vx=dx * 0.4, vy=dy * 0.4, vz=0.2,
+                                 piece_type="fallen_legs", region=lambda c: c.band(WAIST_Z, None),
+                                 rot_target=75.0, rot_speed=140.0, rot_delay=0.16)
+            self.pieces.extend([self.top_body, self.bottom_legs])
+            for _ in range(30):
+                self._add_blood_drop(spread=0.7)
+
+        elif style == "HEART_IMPALE_LUNGE":
+            # Saitou Primário: Gatotsu avança e crava lâmina perfurando o tórax
+            self.pieces.append(P(x, y, 0.0, 0.45, 0.34, 0.76, self.col_torso,
+                                 vx=dx * 3.6, vy=dy * 3.6, vz=1.4,
+                                 piece_type="impaled_body", region=lambda c: c.band(None, None),
+                                 rot_target=FALL_DEG, rot_speed=240.0))
+            for _ in range(28):
+                self._add_blood_drop(spread=0.8)
+
+        elif style == "TORSO_BLAST_THRUST":
+            # Saitou Secundário: Zeroshiki à queima-roupa projeta a vítima voando pelo ar
+            self.pieces.append(P(x, y, 0.0, 0.44, 0.34, 0.72, self.col_torso,
+                                 vx=dx * 5.4, vy=dy * 5.4, vz=2.8,
+                                 piece_type="fallen_body", region=lambda c: c.band(None, None),
+                                 rot_target=FALL_DEG, rot_speed=300.0))
+            for _ in range(30):
+                self._add_blood_drop(spread=0.95)
+
+        elif style == "FOREHEAD_PIN":
+            # Hanzo Ranged: Kunai fincada na testa entre os olhos; impacto tomba a vítima estatelada
+            self.pieces.append(P(x, y, 0.0, 0.44, 0.34, 0.72, self.col_torso,
+                                 vx=-dx * 2.8, vy=-dy * 2.8, vz=1.6,
+                                 piece_type="impaled_body", region=lambda c: c.band(None, None),
+                                 rot_target=-FALL_DEG, rot_speed=260.0))
+            for _ in range(16):
+                self._add_blood_drop(spread=0.5)
+
+        elif style == "HEART_THROAT_STAB":
+            # Hanzo Melee: Estocada dupla fulminante no coração e transversal na garganta
+            self.pieces.append(P(x, y, 0.0, 0.44, 0.32, 0.74, self.col_torso,
+                                 vx=dx * 0.5, vy=dy * 0.5, vz=0.2,
+                                 piece_type="fallen_body", region=lambda c: c.band(None, None),
+                                 rot_target=82.0, rot_speed=130.0, rot_delay=0.18))
+            for _ in range(26):
+                self._add_blood_drop(spread=0.75)
 
         else:
             # Padrão e BLUNT_FALL: tombo cinematográfico para trás
@@ -552,7 +676,8 @@ class VoxelCorpse:
             a = camera.apply(self.wx, self.wy, 0.0)
             b = camera.apply(self.wx + self.dx, self.wy + self.dy, 0.0)
             n = math.hypot(b[0] - a[0], b[1] - a[1]) or 1.0
-            _draw_stuck(sprite, stuck, ctx.cx, ctx.y_of(CHEST_Z), -(b[0] - a[0]) / n, -(b[1] - a[1]) / n)
+            stuck_z = NECK_Z + 0.12 if self.death_style == "FOREHEAD_PIN" else (0.84 if self.death_style == "KUWA_SKULL_CLEAVE" else CHEST_Z)
+            _draw_stuck(sprite, stuck, ctx.cx, ctx.y_of(stuck_z), -(b[0] - a[0]) / n, -(b[1] - a[1]) / n)
 
         for piece in self.pieces:
             if piece.region is None:
@@ -672,13 +797,43 @@ class VoxelCorpse:
             pygame.draw.ellipse(scorch, (18, 16, 16, 150), scorch.get_rect())
             surface.blit(scorch, (sx - scorch.get_width() // 2, sy - scorch.get_height() // 2))
 
-        # 2. Peças: recortes do modelo e estilhaços em voxel 3D, do fundo para a frente
+        # 2. Peças: recortes do modelo, tampas anatômicas 3D de corte e estilhaços em malha 3D
         fall = fall_factor(camera, self.wx, self.wy, self.dx, self.dy)
         for p in sorted(self.pieces, key=lambda q: (camera.depth(q.wx, q.wy), q.wz)):
             if p.region is not None and p.surf is not None:
                 self._draw_sprite_piece(surface, camera, p, fall)
+                self._render_3d_severed_cap(surface, camera, p)
             elif p.region is None or self._sprite_failed:
                 p.render_box(surface, camera)
+
+    def _render_3d_severed_cap(self, surface: pygame.Surface, camera, piece: VoxelCorpsePiece) -> None:
+        """Renderiza tampa 3D de seção transversal carmim no plano de amputação/bisseção."""
+        if piece.piece_type not in (
+            "head", "headless_body", "top_half", "bottom_half",
+            "transfixed_torso", "fallen_legs", "half_left", "half_right"
+        ):
+            return
+        rad = math.radians(min(90.0, abs(piece.rot_angle)))
+        if piece.piece_type == "head":
+            cap_z = max(0.04, piece.wz - 0.02)
+            w = 0.08
+        elif piece.piece_type == "headless_body":
+            cap_z = max(0.08, piece.wz + math.cos(rad) * (NECK_Z - 0.04))
+            w = 0.09
+        else:
+            cap_z = max(0.06, piece.wz + math.cos(rad) * 0.42)
+            w = 0.16
+        cap_x = piece.wx + self.dx * math.sin(rad) * 0.22
+        cap_y = piece.wy + self.dy * math.sin(rad) * 0.22
+        draw_tapered_frustum_3d(
+            surface, camera,
+            (cap_x, cap_y, cap_z),
+            (cap_x + self.dx * 0.02, cap_y + self.dy * 0.02, cap_z + 0.025),
+            w, w * 0.78,
+            w * 0.72, w * 0.56,
+            (155, 18, 26),
+            outline=False,
+        )
 
 
 def draw_fallen_model(surface: pygame.Surface, camera, wx: float, wy: float, wz: float, facing_x: float, facing_y: float, draw) -> bool:

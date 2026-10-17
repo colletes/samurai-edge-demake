@@ -7,6 +7,9 @@ import os
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 import sys
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, ROOT)
+
 import time
 import math
 import random
@@ -20,7 +23,8 @@ pygame.font.init()
 from src.config import (
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_SAITOU,
     CHAR_RIFLE, CHAR_PURPLE, CHAR_GRAY, CHAR_KABUKI, CHAR_ARCHER,
-    CHAR_PIRATE, CHAR_MUSKETEER, CHAR_REN, CHAR_CHIYO
+    CHAR_PIRATE, CHAR_MUSKETEER, CHAR_REN, CHAR_CHIYO,
+    CHAR_BENKEI, CHAR_ORIN, CHAR_GORO, CHAR_ICHI
 )
 from src.world.map_data import GameMap
 from src.world.kyoto_map import KyotoMap
@@ -37,6 +41,10 @@ from src.entities.pirate import PirateSwordswoman
 from src.entities.musketeer import Musketeer
 from src.entities.ren_monk import RenMonk
 from src.entities.chiyo_kunoichi import ChiyoKunoichi
+from src.entities.benkei import BenkeiSamurai
+from src.entities.orin import OrinMinstrel
+from src.entities.goro import GoroFarmer
+from src.entities.ichi import IchiBlade
 from src.entities.pickups import PowderPouch
 from main import get_random_arena_spawns, get_kyoto_arena_spawns, create_fighter
 
@@ -55,6 +63,10 @@ ROSTER = [
     {"id": CHAR_MUSKETEER, "name": "Julie", "title": "Mosqueteira (Florete/Riposte)"},
     {"id": CHAR_REN, "name": "Ren", "title": "Monge Shaolin (Kiai/Flurry)"},
     {"id": CHAR_CHIYO, "name": "Chiyo", "title": "Lâminas Gêmeas (Dual Nodachi)"},
+    {"id": CHAR_BENKEI, "name": "Benkei", "title": "Sōhei Monge Guerreiro (Naginata Colossal)"},
+    {"id": CHAR_ORIN, "name": "O-Rin", "title": "Menestrel Acústica (Shamisen/Kamaitachi)"},
+    {"id": CHAR_GORO, "name": "Goro", "title": "Fazendeiro da Kuwa (Kuwa Cleave/Pisotão)"},
+    {"id": CHAR_ICHI, "name": "Ichi", "title": "Lâmina Cega (Shikomizue/Gyaku-Iai)"},
 ]
 
 CHAR_IDS = [char["id"] for char in ROSTER]
@@ -72,6 +84,12 @@ def update_fighter(f, dt, game_map, particles, projectiles, powder_pouches=None,
         f.update(dt, game_map, particles, opponent=opponent)
     elif isinstance(f, (RenMonk, ChiyoKunoichi)):
         f.update(dt, game_map, particles, opponent=opponent)
+    elif isinstance(f, BenkeiSamurai):
+        f.update(dt, game_map, particles, opponent=opponent)
+    elif isinstance(f, OrinMinstrel):
+        f.update(dt, game_map, particles, opponent=opponent, projectiles=projectiles)
+    elif isinstance(f, (GoroFarmer, IchiBlade)):
+        f.update(dt, game_map, particles, opponent=opponent, projectiles=projectiles)
     elif isinstance(f, (RedSamurai, SaitouSamurai, Rifleman, Kabuki, Musketeer)):
         f.update(dt, game_map, particles)
     else:
@@ -96,6 +114,9 @@ def simulate_single_battle(c1_id: str, c2_id: str, game_map, max_time: float = 3
     p2 = create_fighter(c2_id, s2_x, s2_y)
     p1.set_facing(p2.wx, p2.wy)
     p2.set_facing(p1.wx, p1.wy)
+    for f in (p1, p2):
+        if hasattr(f, "on_round_start"):
+            f.on_round_start()
 
     projectiles = []
     particles = []
@@ -114,8 +135,8 @@ def simulate_single_battle(c1_id: str, c2_id: str, game_map, max_time: float = 3
             game_map.update(dt, [p1, p2], cam, particles, banners)
 
         # 1. Decisão e comandos da IA
-        ai1.update(p1, p2, dt, game_map, projectiles, powder_pouches, decoys)
-        ai2.update(p2, p1, dt, game_map, projectiles, powder_pouches, decoys)
+        ai1.update(p1, p2, dt, game_map, projectiles, powder_pouches, decoys, poison_clouds)
+        ai2.update(p2, p1, dt, game_map, projectiles, powder_pouches, decoys, poison_clouds)
 
         # 1.5 Atualização de entidades secundárias
         decoys[:] = [d for d in decoys if d.update(dt)]
@@ -503,13 +524,15 @@ def generate_balance_report(tournament_data, merge_sorted_roster, output_path: s
         return "D (Underpowered / Crítico)"
 
     difficulty = tournament_data.get("difficulty", "normal")
+    n_fighters = len(ROSTER)
+    n_combos = n_fighters * (n_fighters - 1) // 2
 
     lines = []
     lines.append("# Relatório Detalhado de Balanceamento & Merge Sort de Duelos Simulados")
     lines.append(f"\n> **Métricas Globais da Simulação**:")
     lines.append(f"> - Dificuldade da IA (ambos os lutadores): **{difficulty.upper()}**")
-    lines.append(f"> - Total de Guerreiros Avaliados: 12")
-    lines.append(f"> - Combinações Únicas de Duelos: 66 confrontos $\\binom{{12}}{{2}}$")
+    lines.append(f"> - Total de Guerreiros Avaliados: {n_fighters}")
+    lines.append(f"> - Combinações Únicas de Duelos: {n_combos} confrontos $\\binom{{{n_fighters}}}{{2}}$")
     lines.append(f"> - Volume de Lutas por Combinação: 24 batalhas simétricas (12 com P1/P2 alternados)")
     lines.append(f"> - **Volume Total de Batalhas Simuladas**: **{total_battles} batalhas**")
     lines.append(f"> - Tempo Total de Simulação Física: {sim_time} segundos ({total_battles / sim_time:.1f} lutas/segundo)")
@@ -539,7 +562,7 @@ def generate_balance_report(tournament_data, merge_sorted_roster, output_path: s
         lines.append(f"| {r} | **{s['name']}** | **{s['winrate']:.1f}%** | {b_wr:.1f}% | {k_wr:.1f}% | {diff_str} |")
     lines.append("")
 
-    lines.append("## 3. Matriz de Confrontos Head-to-Head (H2H 12x12)")
+    lines.append(f"## 3. Matriz de Confrontos Head-to-Head (H2H {n_fighters}x{n_fighters})")
     lines.append("A tabela exibe a taxa percentual de vitórias da linha contra a coluna nas 24 lutas disputadas (12 em cada arena):")
     lines.append("")
 
@@ -652,6 +675,9 @@ def main():
 
     # Gerar Relatório Markdown
     generate_balance_report(tournament_data, merge_sorted_roster, report_path)
+    docs_report_path = os.path.join("docs", report_path)
+    if os.path.exists("docs"):
+        generate_balance_report(tournament_data, merge_sorted_roster, docs_report_path)
 
 if __name__ == "__main__":
     main()

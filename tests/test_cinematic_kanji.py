@@ -52,6 +52,9 @@ class TestCinematicKanji(unittest.TestCase):
             self.attacker, self.victim, "KENSHIN_SPLIT", (1.0, 0.0)
         )
 
+        # Avançar a fase de setup da câmera
+        self.director.update(self.director.camera_setup_timer, None)
+
         # Frame inicial do flash (alpha máximo)
         self.director.apply_cinematic_filter(self.surface)
         self.assertGreaterEqual(self.director.cached_kanji_surf.get_alpha(), 200)
@@ -62,7 +65,7 @@ class TestCinematicKanji(unittest.TestCase):
         self.assertLess(self.director.cached_kanji_surf.get_alpha(), 255)
 
         # Fim do flash
-        self.director.update(0.30, None)
+        self.director.update(0.50, None)
         self.assertEqual(self.director.bw_flash_timer, 0.0)
         # Quando flash zerado, não desenha mais
         self.director.apply_cinematic_filter(self.surface)
@@ -105,9 +108,9 @@ class TestCinematicKanji(unittest.TestCase):
         self.assertGreater(camera.azimuth, initial_az)
         self.assertGreater(self.director.letterbox_prog, 0.0)
 
-        # 3. Disparo do carimbo Inkan com poeira carmim
+        # 3. Disparo do carimbo Inkan com poeira carmim (após setup de câmera)
         particles = []
-        self.director.update(0.25, None, particles)
+        self.director.update(self.director.camera_setup_timer + 0.25, None, particles)
         self.assertTrue(self.director.inkan_stamped)
         self.assertGreater(len(particles), 0)
 
@@ -116,7 +119,7 @@ class TestCinematicKanji(unittest.TestCase):
         self.director.apply_cinematic_filter(self.surface)
 
         # 5. Resolução da morte postergada (pull-back para 1.0x e retração das barras)
-        self.director.update(0.50, None, particles)
+        self.director.update(0.70, None, particles)
         self.assertEqual(self.director.cinematic_zoom_target, 1.0)
         self.assertEqual(self.director.letterbox_target, 0.0)
 

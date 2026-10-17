@@ -193,50 +193,95 @@ class ClashSystem:
             loser.wy += (dy / dist) * 0.9
 
     def render(self, surface, camera):
-        """Desenha o botão arcade pulsante com o texto 'STRIKE!' sobre o ponto do choque."""
+        """
+        Desenha o prompt cinematográfico de Tsubazeriai (choque de espadas):
+        Lâminas cruzadas em aço e ouro, anel radial de tensão temporal e selo Kanji de impacto.
+        """
         if not self.is_active:
             return
         from src.ui.fonts import get_title_font, get_text_font
 
         sx, sy = camera.apply(self.mid_x, self.mid_y, 1.9)
-        pulse = 1.0 + 0.18 * math.sin(self.pulse_phase)
-        cx, cy = sx, sy - 70
-
-        # Brilho pulsante atrás do botão
-        glow_r = int(52 * pulse)
-        glow = pygame.Surface((glow_r * 2, glow_r * 2), pygame.SRCALPHA)
-        for r, a in ((glow_r, 40), (int(glow_r * 0.75), 60), (int(glow_r * 0.5), 80)):
-            pygame.draw.circle(glow, (255, 190, 60, a), (glow_r, glow_r), r)
-        surface.blit(glow, (cx - glow_r, cy - glow_r))
-
-        # Botão arcade: base escura, cúpula vermelha com reflexo e aro dourado
-        base_r = int(30 * pulse)
-        pygame.draw.circle(surface, (28, 18, 10), (cx, cy + 4), base_r + 4)
-        pygame.draw.circle(surface, (200, 40, 36), (cx, cy), base_r)
-        pygame.draw.circle(surface, (255, 96, 74), (cx, cy - 2), int(base_r * 0.78))
-        pygame.draw.ellipse(surface, (255, 220, 200), (cx - int(base_r * 0.5), cy - int(base_r * 0.72), int(base_r * 0.8), int(base_r * 0.42)))
-        pygame.draw.circle(surface, (255, 225, 70), (cx, cy), base_r + 4, width=3)
-
-        size = max(18, int(34 * pulse))
-        font = get_title_font(size)
-        text = font.render("STRIKE!", True, (255, 225, 70))
-        shadow = font.render("STRIKE!", True, (40, 20, 0))
-        rect = text.get_rect(center=(cx, cy - base_r - 24))
-        surface.blit(shadow, (rect.x + 3, rect.y + 3))
-        surface.blit(text, rect)
-
-        # Qual tecla cada jogador deve apertar
-        hint_font = get_text_font(15)
-        hints = [f"P{i + 1} [{label}]" for i, label in enumerate(self.key_hints) if label]
-        if hints:
-            hint = hint_font.render("   ".join(hints), True, (255, 240, 200))
-            surface.blit(hint, hint.get_rect(center=(cx, cy + base_r + 20)))
+        pulse = 1.0 + 0.14 * math.sin(self.pulse_phase)
+        cx, cy = sx, sy - 82
 
         pct = max(0.0, min(1.0, self.timer / QTE_WINDOW))
-        bar_w = 90
-        bar_h = 6
-        bx = cx - bar_w // 2
-        by = cy + base_r + 36
-        pygame.draw.rect(surface, (30, 24, 10), (bx, by, bar_w, bar_h), border_radius=3)
-        pygame.draw.rect(surface, (255, 200, 60), (bx, by, int(bar_w * pct), bar_h), border_radius=3)
-        pygame.draw.rect(surface, (255, 240, 200), (bx, by, bar_w, bar_h), width=1, border_radius=3)
+
+        # 1. Halo de Brilho & Tensão Mística
+        glow_r = int(58 * pulse)
+        glow_surf = pygame.Surface((glow_r * 2 + 8, glow_r * 2 + 8), pygame.SRCALPHA)
+        center_g = glow_r + 4
+        # Cor esquenta de ouro para carmesim conforme o tempo esgota
+        glow_col = (
+            int(255),
+            int(215 * pct + 40 * (1.0 - pct)),
+            int(60 * pct + 30 * (1.0 - pct)),
+        )
+        for r, a in ((glow_r, 35), (int(glow_r * 0.72), 55), (int(glow_r * 0.45), 80)):
+            pygame.draw.circle(glow_surf, (*glow_col, a), (center_g, center_g), r)
+        surface.blit(glow_surf, (cx - center_g, cy - center_g))
+
+        # 2. Anel Radial de Tensão (circunferência decrescente com a contagem)
+        ring_r = int(42 * pulse)
+        pygame.draw.circle(surface, (18, 20, 24), (cx, cy), ring_r + 4, width=4)
+        pygame.draw.circle(surface, (50, 44, 36), (cx, cy), ring_r, width=2)
+
+        # Segmentos do anel de tensão desenhados como arcos angulares
+        num_segs = 32
+        active_segs = int(num_segs * pct)
+        for i in range(active_segs):
+            theta = -math.pi / 2 + (i / num_segs) * math.pi * 2
+            px = cx + int(math.cos(theta) * ring_r)
+            py = cy + int(math.sin(theta) * ring_r)
+            pygame.draw.circle(surface, glow_col, (px, py), 3)
+
+        # 3. Lâminas de Aço Cruzadas (✕) com Gume Metálico e Guarda Dourada (Tsuba)
+        blade_len = int(36 * pulse)
+        for sign_x in (-1, 1):
+            p_start = (cx - sign_x * blade_len, cy - blade_len)
+            p_end = (cx + sign_x * blade_len, cy + blade_len)
+            # Corpo de aço escuro
+            pygame.draw.line(surface, (20, 22, 26), p_start, p_end, 5)
+            # Gume de aço brilhante temperado
+            pygame.draw.line(surface, (230, 240, 255), p_start, p_end, 2)
+            # Destaque de reflexo
+            p_mid1 = (cx - sign_x * (blade_len // 3), cy - (blade_len // 3))
+            p_mid2 = (cx + sign_x * (blade_len // 3), cy + (blade_len // 3))
+            pygame.draw.line(surface, (255, 255, 255), p_mid1, p_mid2, 3)
+
+        # 4. Ponto Central de Fricção: Selo Kanji Carmesim (斬 - ZAN / STRIKE)
+        seal_size = int(28 * pulse)
+        seal_rect = pygame.Rect(cx - seal_size // 2, cy - seal_size // 2, seal_size, seal_size)
+        pygame.draw.rect(surface, (180, 28, 32), seal_rect, border_radius=4)
+        pygame.draw.rect(surface, (255, 225, 110), seal_rect, width=2, border_radius=4)
+
+        kanji_font = get_title_font(max(14, int(18 * pulse)))
+        kanji_txt = kanji_font.render("斬", True, (255, 245, 225))
+        surface.blit(kanji_txt, (seal_rect.centerx - kanji_txt.get_width() // 2, seal_rect.centery - kanji_txt.get_height() // 2))
+
+        # 5. Título de Ação "STRIKE!" com caligrafia em folha de ouro
+        title_font = get_title_font(max(18, int(26 * pulse)))
+        callout_txt = title_font.render("STRIKE!", True, (255, 225, 95))
+        shadow_txt = title_font.render("STRIKE!", True, (16, 12, 10))
+        title_rect = callout_txt.get_rect(center=(cx, cy - ring_r - 20))
+        surface.blit(shadow_txt, (title_rect.x + 2, title_rect.y + 2))
+        surface.blit(callout_txt, title_rect)
+
+        # 6. Prompts de Tecla dos Jogadores (P1 / P2) em laca estilizada
+        hint_font = get_text_font(13)
+        hints_y = cy + ring_r + 18
+        if any(self.key_hints):
+            p1_active = self.p1_pressed
+            p2_active = self.p2_pressed
+            p1_str = f"P1 [{self.key_hints[0]}]" if len(self.key_hints) > 0 and self.key_hints[0] else ""
+            p2_str = f"P2 [{self.key_hints[1]}]" if len(self.key_hints) > 1 and self.key_hints[1] else ""
+
+            combined_str = f"{p1_str}   {p2_str}".strip()
+            if combined_str:
+                h_surf = hint_font.render(combined_str, True, (255, 240, 200))
+                h_w = h_surf.get_width() + 20
+                h_h = h_surf.get_height() + 8
+                h_rect = pygame.Rect(cx - h_w // 2, hints_y - 2, h_w, h_h)
+                pygame.draw.rect(surface, (14, 16, 18, 220), h_rect, border_radius=4)
+                pygame.draw.rect(surface, (180, 145, 60), h_rect, width=1, border_radius=4)
+                surface.blit(h_surf, (h_rect.centerx - h_surf.get_width() // 2, h_rect.centery - h_surf.get_height() // 2))

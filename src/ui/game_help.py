@@ -11,10 +11,12 @@ from src.config import (
     COLOR_RED_AURA, COLOR_BLUE_AURA, COLOR_YELLOW_AURA, COLOR_STEEL,
     COLOR_SAITOU_LIGHT_BLUE, COLOR_PURPLE_AURA, COLOR_PIRATE_AURA,
     COLOR_MUSKETEER_AURA, COLOR_REN_AURA, COLOR_CHIYO_AURA, COLOR_BENKEI_AURA, COLOR_ORIN_AURA,
+    COLOR_GORO_AURA, COLOR_ICHI_AURA,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA,
     CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE, CHAR_SAITOU, CHAR_RIFLE,
     CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
-    CHAR_REN, CHAR_CHIYO, CHAR_BENKEI, CHAR_ORIN
+    CHAR_REN, CHAR_CHIYO, CHAR_BENKEI, CHAR_ORIN,
+    CHAR_GORO, CHAR_ICHI
 )
 from src.isometric.iso_math import world_to_iso
 from src.entities.voxel_models import render_voxel_humanoid, render_voxel_doberman
@@ -966,6 +968,116 @@ FIGHTERS_GUIDE_DATA = [
             ),
             "estrategia_defensiva": (
                 "• How to defeat O-Rin: O-Rin has no physical melee blade. Use Roll [T] i-frames to pass cleanly through her Kamaitachi wave."
+            )
+        }
+    },
+    {
+        "id": CHAR_GORO,
+        "color": COLOR_GORO_AURA,
+        "char_type": "goro",
+        "pt": {
+            "name": "GORO",
+            "title": "O Camponês Rebelde",
+            "style": "Kuwa de Ferro & Pisotão Sísmico",
+            "vel": "[3/5] Camponês Robusto",
+            "dano": "Kuwa Cleave Pesado (2 HP)",
+            "especial": "Pisotão Sísmico (Stun e Onda de Choque)",
+            "keys_p1": "[E] Kuwa Cleave | [R] Pisotão",
+            "keys_p2": "[U] Kuwa Cleave | [I] Pisotão",
+            "conceito": (
+                "Guerreiro camponês rebelde do Bakumatsu forjado no trabalho duro da terra. "
+                "Empunha uma enxada agrícola pesada de ferro forjado capaz de esmagar armaduras e destruir obstáculos."
+            ),
+            "habilidades": (
+                "• Kuwa Cleave [E]: Golpe descendente demolidor que causa 2 de dano e quebra coberturas no cenário.\n"
+                "• Pisotão Sísmico [R]: Bate a bota pesada no solo, liberando uma onda de choque que causa knockback e stun de 0.8s em área."
+            ),
+            "estrategia_ofensiva": (
+                "• Abra caminho com o Pisotão Sísmico [R] para atordoar alvos rápidos ou esquivos.\n"
+                "• Conecte imediatamente o Kuwa Cleave [E] durante o stun para garantir dano letal massivo."
+            ),
+            "estrategia_defensiva": (
+                "• Como vencer Goro: O golpe de kuwa tem recuperação mais lenta. Esquive-se para os lados ou use recuo para punir suas investidas."
+            )
+        },
+        "en": {
+            "name": "GORO",
+            "title": "The Rebel Farmer",
+            "style": "Forged Kuwa & Earth Stomp",
+            "vel": "[3/5] Heavy Peasant",
+            "dano": "Heavy Kuwa Cleave (2 HP)",
+            "especial": "Earth Stomp (AoE Stun & Shockwave)",
+            "keys_p1": "[E] Kuwa Cleave | [R] Earth Stomp",
+            "keys_p2": "[U] Kuwa Cleave | [I] Earth Stomp",
+            "conceito": (
+                "Battle-hardened peasant rebel of the Bakumatsu era. "
+                "Wields a heavy hand-forged agricultural hoe capable of crushing armor and shattering obstacles."
+            ),
+            "habilidades": (
+                "• Kuwa Cleave [E]: Downward crushing cleave dealing 2 damage and destroying destructible cover.\n"
+                "• Earth Stomp [R]: Slams boot into the terrain, unleashing a radial shockwave with knockback and 0.8s stun."
+            ),
+            "estrategia_ofensiva": (
+                "• Disrupt evasive foes with Earth Stomp [R] to stop their momentum.\n"
+                "• Punish their recovery immediately with the devastating Kuwa Cleave [E]."
+            ),
+            "estrategia_defensiva": (
+                "• How to defeat Goro: His agricultural hoe has longer recovery frames. Sidestep his vertical swing and punish from behind."
+            )
+        }
+    },
+    {
+        "id": CHAR_ICHI,
+        "color": COLOR_ICHI_AURA,
+        "char_type": "ichi",
+        "pt": {
+            "name": "ICHI",
+            "title": "A Lâmina Cega",
+            "style": "Shikomizue (Gyaku-Iai) & Escuta",
+            "vel": "[5/5] Reflexo Extremo",
+            "dano": "Saque Gyaku-Iai (0.14s / 2 HP)",
+            "especial": "Postura de Escuta (Contra-Ataque Perfurante)",
+            "keys_p1": "[E] Gyaku-Iai | [R] Escuta",
+            "keys_p2": "[U] Gyaku-Iai | [I] Escuta",
+            "conceito": (
+                "Mestra espadachim cega lendária inspirada no clássico Zatoichi. Caminha com uma bengala de madeira "
+                "que oculta uma katana afiada como navalha, guiando-se pelo som e pela vibração do ar."
+            ),
+            "habilidades": (
+                "• Gyaku-Iai [E]: Saque relâmpago em empunhadura invertida a partir da bengala oculta (0.14s, 2 HP).\n"
+                "• Postura de Escuta [R]: Assume foco auditivo sereno. Se atingida nesta janela, bloqueia o ataque e desfere contra-ataque perfurante automático."
+            ),
+            "estrategia_ofensiva": (
+                "• Avance com calma e aproveite o saque mais rápido do jogo para punir tentativas afobadas do rival.\n"
+                "• Ative a Postura de Escuta [R] na meia-distância para atrair ataques impulsivos e contra-atacar letalmente."
+            ),
+            "estrategia_defensiva": (
+                "• Como vencer Ichi: Jamais ataque diretamente quando ela estiver na Postura de Escuta. Use fintas, projéteis ou armas de longo alcance para atacá-la com segurança."
+            )
+        },
+        "en": {
+            "name": "ICHI",
+            "title": "The Blind Blade",
+            "style": "Shikomizue (Gyaku-Iai) & Sensory Stance",
+            "vel": "[5/5] Extreme Reflexes",
+            "dano": "Gyaku-Iai Lightning Draw (0.14s / 2 HP)",
+            "especial": "Listen Stance (Sensory Counter-Thrust)",
+            "keys_p1": "[E] Gyaku-Iai | [R] Listen Stance",
+            "keys_p2": "[U] Gyaku-Iai | [I] Listen Stance",
+            "conceito": (
+                "Serene blind master swordsman. Wields a disguised wooden walking cane concealing a razor-sharp blade, "
+                "sensing opponents through vibrations, footsteps, and rustling air."
+            ),
+            "habilidades": (
+                "• Gyaku-Iai [E]: Blindingly swift reverse-grip draw strike from her concealed cane (0.14s, 2 HP).\n"
+                "• Listen Stance [R]: Closes senses to focus purely on sound; automatically counters incoming strikes with a lethal forward thrust."
+            ),
+            "estrategia_ofensiva": (
+                "• Utilize her lightning draw to interrupt opposing attacks in close quarters.\n"
+                "• Bait aggressive rushdown foes into your Listen Stance [R] for an unblockable counter-thrust."
+            ),
+            "estrategia_defensiva": (
+                "• How to defeat Ichi: Do not swing blindly into her Listen Stance. Bait the stance with feints or zone her with projectiles."
             )
         }
     }

@@ -19,6 +19,7 @@ from src.entities.projectile import MusashiWaveProjectile
 class BlueSamurai(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Musashi")
+        self.char_type = "musashi"
         self.speed = 4.0  # Mantém velocidade original
         
         # Musashi com 3 HP
@@ -105,6 +106,11 @@ class BlueSamurai(Samurai):
             self.hitbox_radius = 1.45
             self.slash_dir = (self.facing_x, self.facing_y)
             self.hitbox_center = (self.wx + self.facing_x * 0.9, self.wy + self.facing_y * 0.9)
+            try:
+                from src.audio import play_sfx, SoundEvent
+                play_sfx(SoundEvent.SLASH_KATANA, volume_scale=0.92)
+            except Exception:
+                pass
         elif self.state == STATE_ATTACK:
             # O jogador pressionou o botão durante o golpe atual para encadear o próximo
             if self.combo_step < 3:
@@ -121,6 +127,11 @@ class BlueSamurai(Samurai):
             # Rebalanceamento D: Alcance aumentado em +11% (1.45→1.62, 1.85→2.06)
             self.hitbox_radius = 1.62 if self.combo_step == 2 else 2.06
             self.slash_dir = (self.facing_x, self.facing_y)
+            try:
+                from src.audio import play_sfx, SoundEvent
+                play_sfx(SoundEvent.SLASH_KATANA, volume_scale=0.95)
+            except Exception:
+                pass
 
     def trigger_parry(self):
         """Assume a postura de guarda defensiva com lâminas cruzadas."""

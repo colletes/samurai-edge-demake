@@ -524,6 +524,7 @@ class ArenaMap:
         self.well = None
         self.carriages: list = []
         self.falling_debris: list = []
+        self.wind_impulses: list[dict] = []
         self.fireflies: list[tuple[float, float, float]] = []
         for effect in spec.lighting.atmosphere:
             if effect.kind == "fireflies":
@@ -691,13 +692,85 @@ class ArenaMap:
         return "water" if style.kind == "water" else style.surface
 
     def wind_at(self, wx: float, wy: float, t: float) -> tuple[float, float]:
-        """Vento (vx, vy) em u/s no ponto e no instante t, com rajadas que variam no espaço e no tempo."""
+        """Vento (vx, vy) em u/s no ponto e no instante t, com rajadas atmosféricas e impulsos de combate."""
         wind = self.spec.wind
         norm = math.hypot(wind.dir_x, wind.dir_y) or 1.0
         gust = 1.0 + wind.gust * (0.55 * math.sin(0.45 * t + 0.17 * wx + 0.11 * wy)
                                   + 0.45 * math.sin(1.1 * t + 0.23 * wy - 0.13 * wx + 1.7))
         gust = max(0.0, gust) * wind.strength / norm
-        return wind.dir_x * gust, wind.dir_y * gust
+        vx = wind.dir_x * gust
+        vy = wind.dir_y * gust
+
+        for imp in getattr(self, "wind_impulses", ()):
+            dx = wx - imp["wx"]
+            dy = wy - imp["wy"]
+            dist = math.hypot(dx, dy)
+            rad = imp["radius"]
+            if dist < rad:
+                frac = (1.0 - dist / rad) * (imp["time_left"] / imp["duration"]) * imp["strength"]
+                ix = imp.get("dir_x", 0.0)
+                iy = imp.get("dir_y", 0.0)
+                if ix == 0.0 and iy == 0.0:
+                    ix = dx / max(dist, 0.01)
+                    iy = dy / max(dist, 0.01)
+                else:
+                    inorm = math.hypot(ix, iy) or 1.0
+                    ix /= inorm
+                    iy /= inorm
+                vx += ix * frac * 2.5
+                vy += iy * frac * 2.5
+        return vx, vy
+
+    def add_wind_impulse(self, wx: float, wy: float, strength: float = 1.0, radius: float = 3.5, duration: float = 0.8, dir_x: float = 0.0, dir_y: float = 0.0):
+        """Aplica um choque de vento radial ou direcional (ataques, esquivas, explosões) que verga bambus e vegetação."""
+        if not hasattr(self, "wind_impulses"):
+            self.wind_impulses = []
+        self.wind_impulses.append({
+            "wx": wx, "wy": wy,
+            "strength": strength,
+            "radius": max(0.5, radius),
+            "duration": max(0.01, duration),
+            "time_left": max(0.01, duration),
+            "dir_x": dir_x, "dir_y": dir_y
+        })
+        # Flectir bambus próximos instantaneamente pelo impacto do deslocamento de ar
+        for b in getattr(self, "bamboos", []):
+            if getattr(b, "is_cut", False):
+                continue
+            dx = b.wx - wx
+            dy = b.wy - wy
+            dist = math.hypot(dx, dy)
+            if dist < radius:
+                factor = (1.0 - dist / radius) * strength
+                if dir_x == 0.0 and dir_y == 0.0:
+                    nx = dx / max(dist, 0.01)
+                    ny = dy / max(dist, 0.01)
+                else:
+                    inorm = math.hypot(dir_x, dir_y) or 1.0
+                    nx = dir_x / inorm
+                    ny = dir_y / inorm
+                b.combat_bend_x = getattr(b, "combat_bend_x", 0.0) + nx * factor * 0.22
+                b.combat_bend_y = getattr(b, "combat_bend_y", 0.0) + ny * factor * 0.22
+
+    def update_wind(self, dt: float):
+        """Atualiza dissipação dos choques de vento e amortecimento elástico dos bambus/vegetação."""
+        if not hasattr(self, "wind_impulses"):
+            self.wind_impulses = []
+        for imp in self.wind_impulses:
+            imp["time_left"] -= dt
+        self.wind_impulses = [imp for imp in self.wind_impulses if imp["time_left"] > 0]
+
+        decay = math.exp(-6.5 * dt)
+        for b in getattr(self, "bamboos", []):
+            bx = getattr(b, "combat_bend_x", 0.0)
+            by = getattr(b, "combat_bend_y", 0.0)
+            if abs(bx) > 0.0001 or abs(by) > 0.0001:
+                b.combat_bend_x = bx * decay
+                b.combat_bend_y = by * decay
+                if abs(b.combat_bend_x) < 0.001:
+                    b.combat_bend_x = 0.0
+                if abs(b.combat_bend_y) < 0.001:
+                    b.combat_bend_y = 0.0
 
     def pit_edge_distance(self, wx: float, wy: float) -> float:
         """Menor distância com sinal até qualquer buraco (negativa dentro; infinita sem buracos)."""
@@ -795,6 +868,7 @@ class ArenaMap:
 
     # -- simulação e desenho ------------------------------------------------
     def update(self, dt: float, fighters: list, camera, particles: list, banners: list, cinematic_director=None):
+        self.update_wind(dt)
         for hazard in self.hazards:
             hazard.update(self, dt, fighters, camera, particles, banners, cinematic_director)
         for prop in self.interactives + self.emitters:
@@ -809,10 +883,47 @@ class ArenaMap:
 
     def render_terrain(self, surface: pygame.Surface, camera, time_val: float):
         """Desenha os tiles (válido para qualquer azimute) e, por cima, as estruturas cujo piso está à vista."""
-        visible_anchors: set[int] = set()
+        from src.world.arena_cache import get_terrain_cache
+
         width, height = surface.get_width(), surface.get_height()
         reflections = set(self.spec.reflections)
 
+        used_cache, visible_anchors = get_terrain_cache().render_static_terrain(self, surface, camera)
+        if used_cache:
+            # Desenha apenas tiles de água animados por cima da base estática cacheada
+            if not hasattr(self, "_water_coords"):
+                self._water_coords = [
+                    (x, y, self.styles[self.tiles[x][y]])
+                    for x in range(self.cols)
+                    for y in range(self.rows)
+                    if self.styles[self.tiles[x][y]].kind == "water"
+                ]
+            for x, y, style in self._water_coords:
+                p_top = camera.apply(x, y, 0.0)
+                p_right = camera.apply(x + 1, y, 0.0)
+                p_bottom = camera.apply(x + 1, y + 1, 0.0)
+                p_left = camera.apply(x, y + 1, 0.0)
+                quad = [p_top, p_right, p_bottom, p_left]
+                qxs = (p_top[0], p_right[0], p_bottom[0], p_left[0])
+                qys = (p_top[1], p_right[1], p_bottom[1], p_left[1])
+                if max(qys) < -60 or min(qys) > height + 60 or max(qxs) < -60 or min(qxs) > width + 60:
+                    continue
+                self._draw_water(surface, camera, style, x, y, quad, time_val, (x, y) in reflections)
+
+            for struct_spec, struct in zip(self.spec.structures, self.structures):
+                if struct_spec.anchor_tile in visible_anchors:
+                    struct.draw(surface, camera, time_val)
+
+            for pit in self.pits:
+                if pit.water is not None:
+                    self._draw_pit(surface, camera, pit, time_val)
+            for hazard in self.hazards + self.interactives:
+                draw_ground = getattr(hazard, "render_ground", None)
+                if draw_ground:
+                    draw_ground(self, surface, camera, time_val)
+            return
+
+        visible_anchors = set()
         for x in range(self.cols):
             for y in range(self.rows):
                 tile = self.tiles[x][y]
@@ -848,6 +959,8 @@ class ArenaMap:
             draw_ground = getattr(hazard, "render_ground", None)
             if draw_ground:
                 draw_ground(self, surface, camera, time_val)
+
+    _pit_surf_pool: dict[tuple[int, int], tuple[pygame.Surface, pygame.Surface]] = {}
 
     @staticmethod
     def _draw_pit(surface, camera, pit: PitZone, time_val: float = 0.0):
@@ -891,7 +1004,15 @@ class ArenaMap:
         xs = [p[0] for p in top + bottom]
         ys = [p[1] for p in top + bottom]
         area = pygame.Rect(int(min(xs)) - 2, int(min(ys)) - 2, int(max(xs) - min(xs)) + 5, int(max(ys) - min(ys)) + 5)
-        interior = pygame.Surface(area.size, pygame.SRCALPHA)
+        pool_pair = ArenaMap._pit_surf_pool.get(area.size)
+        if pool_pair is None:
+            if len(ArenaMap._pit_surf_pool) > 24:
+                ArenaMap._pit_surf_pool.clear()
+            pool_pair = (pygame.Surface(area.size, pygame.SRCALPHA), pygame.Surface(area.size, pygame.SRCALPHA))
+            ArenaMap._pit_surf_pool[area.size] = pool_pair
+        interior, mask = pool_pair
+        interior.fill((0, 0, 0, 0))
+        mask.fill((0, 0, 0, 0))
 
         def local(point):
             return point[0] - area.x, point[1] - area.y
@@ -921,7 +1042,6 @@ class ArenaMap:
                     pygame.draw.line(interior, lerp(shade, (0, 0, 0), 0.35), quad[3], quad[2], 1)
             else:
                 near_edges.append(((xa, ya), (xb, yb)))
-        mask = pygame.Surface(area.size, pygame.SRCALPHA)
         pygame.draw.polygon(mask, (255, 255, 255, 255), [local(p) for p in top])
         interior.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
         surface.blit(interior, area.topleft)

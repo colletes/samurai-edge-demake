@@ -28,7 +28,7 @@ STATE_VICTORY = "VICTORY"
 # Estados em que o lutador atravessa buracos (esquivas, saltos e avanços); ao terminarem, o ponto de pouso decide
 PIT_CROSSING_STATES = frozenset({
     STATE_ROLL, STATE_DASH, "SHUKUCHI", "RYUU_TSUI_SEN", "KABUKI_ROLL", "RIFLE_ROLL", "BACKSTEP", "JUMP",
-    STATE_ATTACK, "TSUKA_ATE", "ZEROSHIKI",  # avanços de golpe: o pouso decide, em vez de cair no meio do ataque
+    STATE_ATTACK, "TSUKA_ATE", "ZEROSHIKI", "PARRY_BACKHOP",  # avanços de golpe: o pouso decide, em vez de cair no meio do ataque
 })
 FALL_DURATION = 0.9
 FALL_GRAVITY = 14.0
@@ -42,6 +42,65 @@ def resolve_playable_bounds(game_map) -> tuple[float, float, float, float]:
     if bounds is not None:
         return bounds
     return 1.0, 1.0, game_map.cols - 1.0, game_map.rows - 1.0
+
+
+def slide_movement_against_obstacles(
+    start_x: float, start_y: float,
+    dx: float, dy: float,
+    radius: float, game_map
+) -> tuple[float, float]:
+    """
+    Desloca a entidade de (start_x, start_y) por (dx, dy), aplicando deslizamento tangencial suave
+    e separação física contra rochas, fachadas machiya, poços, árvores, lanternas, portais torii e props sólidos.
+    """
+    target_x = start_x + dx
+    target_y = start_y + dy
+
+    min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
+    target_x = max(min_x, min(max_x, target_x))
+    target_y = max(min_y, min(max_y, target_y))
+
+    obstacles = list(getattr(game_map, "rocks", []))
+    obstacles.extend(getattr(game_map, "buildings", []))
+    if getattr(game_map, "well", None) is not None:
+        obstacles.append(game_map.well)
+    obstacles.extend(getattr(game_map, "trees", []))
+    obstacles.extend(getattr(game_map, "lanterns", []))
+    obstacles.extend(getattr(game_map, "torii_gates", []))
+    obstacles.extend(getattr(game_map, "solid_props", []))
+
+    cur_x, cur_y = target_x, target_y
+    move_mag = math.hypot(dx, dy)
+
+    for _ in range(2):
+        any_collision = False
+        for obs in obstacles:
+            check_fn = getattr(obs, "check_collision", None)
+            if not check_fn:
+                continue
+            collided, push_x, push_y = check_fn(cur_x, cur_y, radius)
+            if collided:
+                any_collision = True
+                cur_x += push_x
+                cur_y += push_y
+                push_mag = math.hypot(push_x, push_y)
+                if push_mag > 1e-5 and move_mag > 1e-5:
+                    nx = push_x / push_mag
+                    ny = push_y / push_mag
+                    dot = dx * nx + dy * ny
+                    if dot < 0:
+                        tangent_x = dx - dot * nx
+                        tangent_y = dy - dot * ny
+                        t_mag = math.hypot(tangent_x, tangent_y)
+                        if t_mag > 1e-5:
+                            cur_x += (tangent_x / t_mag) * min(abs(dot), 0.04)
+                            cur_y += (tangent_y / t_mag) * min(abs(dot), 0.04)
+        if not any_collision:
+            break
+
+    cur_x = max(min_x, min(max_x, cur_x))
+    cur_y = max(min_y, min(max_y, cur_y))
+    return cur_x, cur_y
 
 
 class Samurai:
@@ -186,26 +245,20 @@ class Samurai:
         """Atualiza a translação física e cronômetro do rolamento/esquiva."""
         if self.state != STATE_ROLL:
             return
+
+        # Impulso de deslocamento de ar no início da esquiva
+        if self.state_timer >= self.roll_duration - dt - 1e-4:
+            if hasattr(game_map, "add_wind_impulse"):
+                game_map.add_wind_impulse(self.wx, self.wy, strength=0.85, radius=2.6, duration=0.45, dir_x=self.facing_x, dir_y=self.facing_y)
+
         self.state_timer -= dt
         step = self.roll_speed * dt
-        new_wx = self.wx + self.facing_x * step
-        new_wy = self.wy + self.facing_y * step
+        dx = self.facing_x * step
+        dy = self.facing_y * step
+        new_wx, new_wy = slide_movement_against_obstacles(self.wx, self.wy, dx, dy, self.radius, game_map)
 
-        min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
-        new_wx = max(min_x, min(max_x, new_wx))
-        new_wy = max(min_y, min(max_y, new_wy))
-
-        # Testar colisão com rochas
-        for rock in game_map.rocks:
-            c, px, py = rock.check_collision(new_wx, new_wy, self.radius)
-            if c:
-                new_wx += px; new_wy += py
-
-        # Testar colisão com fachadas de edifícios (ex: machiyas de Kyoto)
-        for building in getattr(game_map, "buildings", []):
-            c, px, py = building.check_collision(new_wx, new_wy, self.radius)
-            if c:
-                new_wx += px; new_wy += py
+        if getattr(game_map, "has_rails", False):
+            new_wx, new_wy = self.block_pit_entry(game_map, new_wx, new_wy)
 
         self.wx, self.wy = new_wx, new_wy
 
@@ -249,7 +302,10 @@ class Samurai:
 
     def _begin_fall(self, pit, particles: list = None, banners: list = None):
         from src.audio.sound_manager import get_sound_manager
-        get_sound_manager().play_death_music(fadeout_ms=350)
+        from src.audio.sound_events import SoundEvent
+        sm = get_sound_manager()
+        sm.play_death_music(fadeout_ms=350)
+        sm.play(SoundEvent.FALL)
         self.state = STATE_FALL
         self.fall_timer = 0.0
         self.fall_pit = pit
@@ -261,11 +317,21 @@ class Samurai:
         if particles is not None:
             import random
             from src.effects.particles import SmokeParticle
-            for _ in range(10):
-                particles.append(SmokeParticle(
-                    self.wx + random.uniform(-0.3, 0.3), self.wy + random.uniform(-0.3, 0.3),
-                    wz=random.uniform(0.0, 0.25), color=(122, 108, 92),
-                    radius=random.uniform(0.12, 0.24), lifetime=random.uniform(0.45, 0.8)))
+            is_water = getattr(pit, "water", None) is not None
+            if is_water:
+                # Respingos e espuma d'água na queda no rio/mar
+                for _ in range(16):
+                    particles.append(SmokeParticle(
+                        self.wx + random.uniform(-0.35, 0.35), self.wy + random.uniform(-0.35, 0.35),
+                        wz=random.uniform(0.0, 0.35),
+                        color=random.choice([(220, 240, 255), (180, 215, 255), (140, 185, 235), (255, 255, 255)]),
+                        radius=random.uniform(0.14, 0.28), lifetime=random.uniform(0.45, 0.85)))
+            else:
+                for _ in range(10):
+                    particles.append(SmokeParticle(
+                        self.wx + random.uniform(-0.3, 0.3), self.wy + random.uniform(-0.3, 0.3),
+                        wz=random.uniform(0.0, 0.25), color=(122, 108, 92),
+                        radius=random.uniform(0.12, 0.24), lifetime=random.uniform(0.45, 0.8)))
         if banners is not None:
             from src.effects.particles import FloatingBanner
             from src.i18n import t
@@ -293,8 +359,8 @@ class Samurai:
         if not self.is_alive:
             return False, False
 
-        # Se estiver em esquiva / roll com i-frames ativos (incluindo Floreio de Capa da Julie)
-        if (self.state in (STATE_ROLL, STATE_DASH, "SHUKUCHI", "KAWARIMI_ROLL", "DODGE", "CAPE_FLOURISH")
+        # Se estiver em esquiva / roll com i-frames ativos (incluindo Floreio de Capa da Julie e Recuo Acrobático de Parry)
+        if (self.state in (STATE_ROLL, STATE_DASH, "SHUKUCHI", "KAWARIMI_ROLL", "DODGE", "CAPE_FLOURISH", "PARRY_BACKHOP")
                 and (self.is_invulnerable_dodge or getattr(self, "is_invulnerable_dodge", False))):
             return False, False
 
@@ -323,6 +389,7 @@ class Samurai:
             self.state_timer = duration
             self.hitbox_active = False
             self.is_invulnerable_dodge = False
+            self.wz = 0.0
 
     def apply_movement(self, move_x: float, move_y: float, dt: float, game_map):
         """Aplica a movimentação com detecção de obstáculos e desaceleração na água."""
@@ -351,46 +418,14 @@ class Samurai:
         elif game_map.is_water(self.wx, self.wy):
             current_speed *= 0.55
 
-        # Nova posição proposta
-        new_wx = self.wx + move_x * current_speed * dt
-        new_wy = self.wy + move_y * current_speed * dt
-
         # Vira na direção do movimento
         self.facing_x = move_x
         self.facing_y = move_y
 
-        # Colisão com limites do mapa
-        min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
-        new_wx = max(min_x, min(max_x, new_wx))
-        new_wy = max(min_y, min(max_y, new_wy))
-
-        # Colisão com rochas
-        for rock in game_map.rocks:
-            collided, push_x, push_y = rock.check_collision(new_wx, new_wy, self.radius)
-            if collided:
-                new_wx += push_x
-                new_wy += push_y
-
-        # Colisão com fachadas de edifícios (ex: machiyas de Kyoto)
-        for building in getattr(game_map, "buildings", []):
-            collided, push_x, push_y = building.check_collision(new_wx, new_wy, self.radius)
-            if collided:
-                new_wx += push_x
-                new_wy += push_y
-
-        # Colisão com o poço
-        if game_map.well:
-            collided, push_x, push_y = game_map.well.check_collision(new_wx, new_wy, self.radius)
-            if collided:
-                new_wx += push_x
-                new_wy += push_y
-
-        # Colisão com árvores
-        for tree in game_map.trees:
-            collided, push_x, push_y = tree.check_collision(new_wx, new_wy, self.radius)
-            if collided:
-                new_wx += push_x
-                new_wy += push_y
+        # Nova posição proposta com deslizamento tangencial em obstáculos
+        dx = move_x * current_speed * dt
+        dy = move_y * current_speed * dt
+        new_wx, new_wy = slide_movement_against_obstacles(self.wx, self.wy, dx, dy, self.radius, game_map)
 
         if getattr(game_map, "has_rails", False):
             new_wx, new_wy = self.block_pit_entry(game_map, new_wx, new_wy)

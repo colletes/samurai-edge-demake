@@ -31,7 +31,7 @@ class Musketeer(Samurai):
         self.cape_timer = 0.0
 
         # Arma Secundária de Bolso: Pistola Pederneira (Pocket Flintlock)
-        self.flintlock_cooldown = 4.5
+        self.flintlock_cooldown = 6.0  # Cooldown aumentado (era 4.5s)
         self.flintlock_timer = 1.0  # Inicia com 1.0s no round para evitar tiro instantâneo no spawn
 
         # Terceira Ação: Rolamento de Mosqueteira (grande: cobre buracos largos e desvia projéteis)
@@ -203,15 +203,15 @@ class Musketeer(Samurai):
 
         if self.state == STATE_ATTACK:
             self.state_timer -= dt
-            # Bote linear veloz de fleche
-            step = 7.5 * dt
+            # Bote linear calibrado (era 7.5 * dt) para evitar alcance abusivo
+            step = 5.2 * dt
             self.wx = max(1.0, min(game_map.cols - 1.0, self.wx + self.facing_x * step))
             self.wy = max(1.0, min(game_map.rows - 1.0, self.wy + self.facing_y * step))
             self.hitbox_center = (self.wx + self.facing_x * 1.30, self.wy + self.facing_y * 1.30)
 
             if self.state_timer <= 0:
                 self.state = STATE_RECOVERY
-                self.state_timer = 0.18  # Recovery reduzido (era 0.28s) para punição justa sem paralisia letal
+                self.state_timer = 0.26  # Recovery calibrado (era 0.18s) para punição justa ao errar a estocada
                 self.hitbox_active = False
 
         elif self.state == "CAPE_FLOURISH":

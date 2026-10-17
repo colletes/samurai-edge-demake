@@ -2,6 +2,10 @@
 Script para renderizar um frame de alta fidelidade e salvar uma screenshot do duelo.
 """
 import os
+import sys
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, ROOT)
+
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 import pygame
@@ -111,7 +115,9 @@ def generate_preview():
     screen.blit(c2, (SCREEN_WIDTH // 2 - c2.get_width() // 2, SCREEN_HEIGHT - 40))
     screen.blit(c3, (SCREEN_WIDTH - c3.get_width() - 35, SCREEN_HEIGHT - 40))
 
-    artifact_img = "/Users/thiagocarvalho/.gemini/antigravity/brain/80cd5ff5-eb4f-4d2c-baf8-9e4a729ecc96/gameplay_preview.png"
+    out_dir = os.path.join(ROOT, "docs", "screenshots")
+    os.makedirs(out_dir, exist_ok=True)
+    artifact_img = os.path.join(out_dir, "gameplay_preview.png")
     pygame.image.save(screen, artifact_img)
     print("Screenshot salva com sucesso em:", artifact_img)
     pygame.quit()

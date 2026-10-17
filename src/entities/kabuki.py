@@ -48,12 +48,12 @@ class PoisonCloud:
         self.wx = wx + self.dir_x * 0.85
         self.wy = wy + self.dir_y * 0.85
         self.wz = 0.2
-        self.cone_length = 1.85   # Alcance frontal concentrado em cone (área menor)
-        self.cone_half_angle = math.radians(40)  # Abertura de 80° à frente
+        self.cone_length = 2.45   # Alcance frontal estendido para 2.45m
+        self.cone_half_angle = math.radians(45)  # Abertura ampla de 90° à frente
         self.cos_cone_half_angle = math.cos(self.cone_half_angle)
-        self.radius = 0.95        # Raio efetivo reduzido (era 1.35)
-        self.lifetime = 1.9       # Rajada concentrada de 1.9s
-        self.max_lifetime = 1.9
+        self.radius = 1.20        # Raio efetivo ampliado
+        self.lifetime = 2.2       # Duração da névoa
+        self.max_lifetime = 2.2
         self.age = 0.0
         self.is_active = True
         self.has_pushed: set[int] = set()
@@ -111,45 +111,31 @@ class PoisonCloud:
                         fid = id(f)
                         if fid not in self.has_pushed:
                             self.has_pushed.add(fid)
-                            push_dist = 1.35
+                            push_dist = 1.60
                             f.wx += self.dir_x * push_dist
                             f.wy += self.dir_y * push_dist
                             f.wx = max(1.0, min(24.0, f.wx))
                             f.wy = max(1.0, min(24.0, f.wy))
-                            f.slow_timer = 0.0 # Sem lentidão!
+                            # Micro-stun de tosse ao aspirar a nuvem tóxica de frente
+                            f.stun(0.25)
 
-                        # 2. Infectar com veneno (sem slow, concedendo adrenalina de velocidade e cooldowns 20% menores)
+                        # 2. Infectar com veneno DEBUFF: causa lentidão real (-25% SPD) e drena HP
                         if not getattr(f, "is_poisoned", False):
                             f.is_poisoned = True
-                            f.poison_timer = 6.0
-                            f.slow_timer = 0.0
-                            # Redução imediata de 20% nos cooldowns já ativos
-                            for cd_attr in (
-                                "ryuu_timer", "dash_recovery_timer", "jump_timer", "jump_cooldown_timer",
-                                "chain_timer", "mine_timer", "bomb_timer", "smoke_timer", "rope_timer",
-                                "arrow_cooldown_timer", "ofuda_cooldown_timer", "cannon_cooldown_timer",
-                                "volley_cooldown_timer", "sacred_volley_cooldown_timer",
-                                "flintlock_timer", "cape_timer", "trap_timer", "zeroshiki_timer",
-                                "shuriken_timer", "thrust_timer", "kama_timer", "backstep_timer"
-                            ):
-                                val = getattr(f, cd_attr, 0.0)
-                                if val > 0:
-                                    setattr(f, cd_attr, val * 0.80)
-                            if hasattr(f, "dog") and f.dog and getattr(f.dog, "cooldown_timer", 0.0) > 0:
-                                f.dog.cooldown_timer *= 0.80
-
+                            f.poison_timer = 1.6  # Asfixia mais rápida (era 2.4s)
+                            f.slow_timer = 2.4
                             if banners is not None:
-                                banners.append(FloatingBanner("POISON FRENZY! (+25% SPD & -20% CD)", f.wx, f.wy, wz=1.8, color=(80, 240, 130), duration=2.4))
+                                banners.append(FloatingBanner("POISONED! (-25% SPD)", f.wx, f.wy, wz=1.8, color=(160, 60, 220), duration=2.0))
                         else:
-                            # Respirar dentro do cone acelera o relógio do veneno
-                            f.poison_timer -= dt * 1.2
+                            # Respirar dentro do cone acelera a asfixia do veneno
+                            f.poison_timer -= dt * 1.5
 
                         if particles is not None and random.random() < 0.35:
-                            particles.append(SparkParticle(f.wx, f.wy, 0.45, color=(80, 225, 120)))
+                            particles.append(SparkParticle(f.wx, f.wy, 0.45, color=(160, 50, 220)))
 
                         if f.poison_timer <= 0:
                             f.is_poisoned = False
-                            hit, dead = f.take_hit((0, 0), damage=2)
+                            hit, dead = f.take_hit((0, 0), damage=1)
                             if dead:
                                 if particles is not None:
                                     from src.effects.particles import BloodParticle
@@ -277,14 +263,14 @@ class Kabuki(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Okuni")
         self.char_type = "okuni"
-        self.speed = 4.4
+        self.speed = 4.6  # Agilidade aprimorada (era 4.4)
 
         # Ataque Melee: Dança dos Leques de Aço (Tessen-jutsu)
-        self.attack_duration = 0.16
-        self.recovery_duration = 0.12
+        self.attack_duration = 0.14  # Golpes mais ágeis (era 0.16)
+        self.recovery_duration = 0.08  # Resposta ultra-rápida pós-golpe (era 0.10)
 
         # Ação Secundária: Dokukiri (Névoa Venenosa)
-        self.poison_cooldown = 3.2
+        self.poison_cooldown = 2.6   # Cooldown reduzido (era 3.2s) para presença tática
         self.poison_cooldown_timer = 0.0
 
         # Terceira Ação: Pirueta Teatral Kabuki (Especial / Ágil)
@@ -314,11 +300,15 @@ class Kabuki(Samurai):
             return
 
         self.set_facing(target_wx, target_wy)
+        # Micro-avanço tático para fechar distância no duelo melee
+        self.wx += self.facing_x * 0.20
+        self.wy += self.facing_y * 0.20
         self.state = STATE_ATTACK
         self.state_timer = self.attack_duration
         self.hitbox_active = True
-        self.hitbox_radius = 1.25
-        self.hitbox_center = (self.wx + self.facing_x * 0.75, self.wy + self.facing_y * 0.75)
+        self.hitbox_damage = 2  # Golpe de leques de aço letal
+        self.hitbox_radius = 1.45  # Alcance estendido (era 1.25)
+        self.hitbox_center = (self.wx + self.facing_x * 0.85, self.wy + self.facing_y * 0.85)
         self.slash_dir = (self.facing_x, self.facing_y)
 
         if particles is not None:

@@ -31,12 +31,12 @@ class ChiyoKunoichi(Samurai):
         self.scissor_timer = 0.0
 
         # Ação Secundária: Dança Mai com as 2 Kodachi (Esquiva/Parry Dançante de Janela Longa)
-        self.mai_dance_cooldown = 3.0
+        self.mai_dance_cooldown = 2.2        # Cooldown reduzido (era 3.0s)
         self.mai_dance_timer = 0.0
-        self.mai_cooldown = 3.0
+        self.mai_cooldown = 2.2
         self.mai_timer = 0.0
         self.mai_dance_duration = 0.75       # Janela de 0.75s (maior que os 0.45s do Musashi)
-        self.mai_whiff_recovery = 0.45       # Desvantagem: 0.45s de exaustão vulnerável se dançar no vazio
+        self.mai_whiff_recovery = 0.18       # Exaustão calibrada (era 0.45s) para punição justa sem morte garantida
         self.mai_active = False
         self.mai_parried_anything = False
         self.mai_exhausted = False
@@ -72,13 +72,13 @@ class ChiyoKunoichi(Samurai):
         self.state = STATE_ATTACK
         self.state_timer = 0.14
         self.hitbox_active = True
-        self.hitbox_radius = 1.25  # Alcance preciso das Kodachi gêmeas
+        self.hitbox_radius = 1.50  # Alcance ampliado (era 1.25m)
         self.hitbox_damage = 2     # Golpe letal
         self.slash_dir = (self.facing_x, self.facing_y)
-        # Passo ágil e equilibrado com as lâminas curtas
-        self.wx += self.facing_x * 0.25
-        self.wy += self.facing_y * 0.25
-        self.hitbox_center = (self.wx + self.facing_x * 0.85, self.wy + self.facing_y * 0.85)
+        # Passo ágil e agressivo com as lâminas curtas (0.35m)
+        self.wx += self.facing_x * 0.35
+        self.wy += self.facing_y * 0.35
+        self.hitbox_center = (self.wx + self.facing_x * 0.90, self.wy + self.facing_y * 0.90)
         self.scissor_timer = self.scissor_cooldown
 
     def trigger_primary_attack(self, target_wx: float, target_wy: float):

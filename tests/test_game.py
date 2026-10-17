@@ -179,8 +179,10 @@ def test_complete_roster():
     rifleman.update(0.45, game_map)
     assert rifleman.has_ammo == True, "Teppo deve estar municiado após engatilhar!"
 
-    # Disparo com arma carregada
+    # Disparo com arma carregada (mira com windup de 0.24s antes do tiro fatal)
     rifleman.trigger_shoot(samurai_target.wx, samurai_target.wy, projectiles)
+    assert rifleman.state == "RIFLE_AIM", "Teppo deve entrar em estado de visada de mira ao apertar o botão!"
+    rifleman.update(0.26, game_map)
     assert len(projectiles) == 1
     assert rifleman.has_ammo == False
     bullet = projectiles[0]
@@ -381,8 +383,9 @@ def test_complete_roster():
     assert victim.state == "DYING_FREEZE"
     assert victim.is_alive == False
 
-    # Avançar além do delay dramático (delayed_death_timer = 0.42s)
-    director.update(0.45, game_map, particles)
+    # Avançar além do setup de câmera e do delay dramático a 85% de velocidade
+    advance_time = director.camera_setup_timer + (director.delayed_death_timer / director.FINISHER_SPEED_SCALE) + 0.05
+    director.update(advance_time, game_map, particles)
     assert len(director.corpses) == 1
     corpse = director.corpses[0]
     assert corpse.death_style == "KENSHIN_SPLIT"

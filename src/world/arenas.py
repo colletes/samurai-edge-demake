@@ -6,7 +6,7 @@ Aqui ficam os dados de cada arena e o registro dos tipos de prop, estrutura e pe
 """
 from src.config import (
     ARENA_BAMBOO, ARENA_KYOTO, ARENA_GANRYU, ARENA_IGA, ARENA_PIRATE_DECK, ARENA_SHADOW_CAVE, ARENA_MIST_TEMPLE, ARENA_FOREST_CAMP, ARENA_NAGASHINO, ARENA_KABUKI_STAGE, ARENA_MOUNTAIN_SHRINE, ARENA_BAROQUE_COURT, ARENA_GASHADOKURO,
-    ARENA_SHAOLIN, ARENA_HIGANBANA, ARENA_GOJO_BRIDGE, ARENA_YOSHIWARA, COLOR_BG, COLOR_KYOTO_BG,
+    ARENA_SHAOLIN, ARENA_HIGANBANA, ARENA_GOJO_BRIDGE, ARENA_YOSHIWARA, ARENA_RICE_PADDIES, ARENA_RAIN_MILL, COLOR_BG, COLOR_KYOTO_BG,
     COLOR_GRASS, COLOR_GRASS_LIGHT, COLOR_EARTH, COLOR_WATER, COLOR_WATER_HIGHLIGHT,
     COLOR_KYOTO_STONE, COLOR_KYOTO_STONE_LIGHT, COLOR_KYOTO_STONE_DARK, COLOR_KYOTO_CURB, COLOR_KYOTO_PAVEMENT,
     MAP_COLS, MAP_ROWS,
@@ -20,7 +20,8 @@ from src.world.bamboo import Bamboo
 from src.world.decor import (
     Bunting, Campfire, ForestTree, HangingChain, IncenseBurner, JizoStatue, KoiFish, MistBank, NoboriBanner, PaperLantern,
     ArcheryTarget, Fountain, HedgeBlock, MarbleStatue, PineTree, ScreenPanel, SnareTrap, StripedCurtain, SupplyCrate,
-    VoxelCricket, VoxelSparrow,
+    VoxelCricket, VoxelSparrow, Scarecrow, HayBale, WaterMillWheel, DuneGrass,
+    GojoRailing, KagaribiBrazier, BladeCluster, BridgeSupport, WaterChute,
 )
 from src.world.hazards import ChainPendulum, FireworkMortars, RotatingStage, ShipRoll, TideSurge
 from src.world.solid_props import Cannon, PowderBarrel, ShrineBell, SolidProp
@@ -77,6 +78,15 @@ register_prop("barrel", lambda x, y, **p: SolidProp(x, y, style="barrel", **p), 
 register_prop("cannon", lambda x, y, **p: Cannon(x, y, **p), "buildings")
 register_prop("cricket", lambda x, y, **p: VoxelCricket(x, y, **p), "lanterns")
 register_prop("sparrow", lambda x, y, **p: VoxelSparrow(x, y, **p), "lanterns")
+register_prop("scarecrow", lambda x, y, **p: Scarecrow(x, y, **p), "lanterns")
+register_prop("hay_bale", lambda x, y, **p: HayBale(x, y, **p), "rocks")
+register_prop("watermill", lambda x, y, **p: WaterMillWheel(x, y, **p), "buildings")
+register_prop("dune_grass", lambda x, y, **p: DuneGrass(x, y, **p), "lanterns")
+register_prop("gojo_railing", lambda x, y, **p: GojoRailing(wy=y, **p), "buildings")
+register_prop("kagaribi", lambda x, y, **p: KagaribiBrazier(x, y, **p), "rocks")
+register_prop("blade_cluster", lambda x, y, **p: BladeCluster(x, y, **p), "rocks")
+register_prop("bridge_support", lambda x, y, **p: BridgeSupport(x, y, **p), "lanterns")
+register_prop("water_chute", lambda x, y, **p: WaterChute(x, y, **p), "lanterns")
 register_structure("arched_bridge", ArchedBridge)
 register_structure("roof_beam", RoofBeam)
 register_structure("plank_bridge", PlankBridge)
@@ -269,7 +279,10 @@ GANRYU_SPEC = ArenaSpec(
         PropSpec("rock", 12.5, 4.5, {"radius": 0.7, "height": 0.9}),
         PropSpec("rock", 16.5, 18.5, {"radius": 0.75, "height": 1.0}),
         PropSpec("rock", 3.8, 6.5, {"radius": 0.6, "height": 0.8}),
-    ) + tuple(PropSpec("stone_lantern", x, y) for x, y in _GANRYU_LANTERNS),
+    ) + tuple(PropSpec("stone_lantern", x, y) for x, y in _GANRYU_LANTERNS)
+      + tuple(PropSpec("dune_grass", x, y, {"seed": 30 + i}) for i, (x, y) in enumerate(
+          ((5.2, 4.2), (15.2, 5.5), (4.5, 16.8), (17.5, 16.2), (8.5, 7.5), (13.5, 16.5), (7.0, 18.2), (15.8, 8.8))
+      )),
     structures=(StructureSpec("plank_bridge", TILE_PLANK, {"x0": 11.0, "width": 2.0, "y_start": 9, "y_end": 14}),),
     hazards=(HazardSpec("tide_surge", {"x_from": 0.0, "x_to": float(MAP_COLS), "band_width": 3.2, "sweep_speed": 6.5,
                                        "push_speed": 4.0, "warn_time": 2.4, "interval": (7.0, 10.0), "initial_delay": 5.0}),),
@@ -282,10 +295,16 @@ GANRYU_SPEC = ArenaSpec(
     ),
     spawns=SpawnRule(x_range=(4.0, 17.0), margin=3.0, min_distance=7.0, fallback=((4.5, 14.0), (16.0, 14.0))),
     stage=StageSpec(12.0, 11.0, structure=0),
+    drift_count=48,
+    drift_petals=0.60,
     lighting=LightingEnvironment(
         ambient_color=(150, 160, 172), ambient_strength=0.55, vignette=0.30,
         lights=tuple(LightSource(x, y, 0.9, (255, 214, 150), 2.5, flicker=0.12) for x, y in _GANRYU_LANTERNS),
-        atmosphere=(AtmosphereEffect("fog", density=0.8),),
+        atmosphere=(
+            AtmosphereEffect("fog", density=0.85),
+            AtmosphereEffect("mist", density=0.75),
+            AtmosphereEffect("dust", density=0.40),
+        ),
     ),
 )
 
@@ -364,10 +383,16 @@ IGA_SPEC = ArenaSpec(
     slopes=(RoofSlope(0.0, 6.0, 3.5, 1.1), RoofSlope(8.08, 14.0, 10.5, 1.1), RoofSlope(16.82, 22.0, 19.5, 1.1)),
     spawns=SpawnRule(x_range=(1.0, 21.0), margin=2.0, min_distance=7.0, min_pit_distance=1.1, fallback=((3.0, 11.0), (19.5, 12.0))),
     stage=StageSpec(11.0, 11.0),
+    drift_count=52,
+    drift_petals=0.75,
     lighting=LightingEnvironment(
-        ambient_color=(96, 110, 150), ambient_strength=0.40, vignette=0.35,
+        ambient_color=(68, 85, 130), ambient_strength=0.46, vignette=0.42,
         lights=tuple(LightSource(x, y, 1.0, (255, 190, 110), 3.0, flicker=0.15) for x, y in _IGA_LANTERNS),
-        atmosphere=(AtmosphereEffect("fog", density=0.5),),
+        atmosphere=(
+            AtmosphereEffect("fogbank", density=0.85),
+            AtmosphereEffect("mist", density=0.65),
+            AtmosphereEffect("dust", density=0.30),
+        ),
     ),
 )
 
@@ -948,12 +973,9 @@ TILE_GOJO_CENTER = 72
 
 _GOJO_LANTERNS = ((4.5, 7.2), (10.5, 7.2), (16.5, 7.2), (4.5, 13.8), (10.5, 13.8), (16.5, 13.8))
 _GOJO_JIZO = ((2.0, 9.5), (2.0, 11.5), (19.5, 9.5), (19.5, 11.5))
-_GOJO_RAILING_POSTS = (
-    # Postes da mureta norte com vãos abertos entre 7..9 e 13..15
-    (3.5, 7.0), (5.5, 7.0), (9.5, 7.0), (11.5, 7.0), (15.5, 7.0), (17.5, 7.0),
-    # Postes da mureta sul com vãos abertos entre 7..9 e 13..15
-    (3.5, 14.0), (5.5, 14.0), (9.5, 14.0), (11.5, 14.0), (15.5, 14.0), (17.5, 14.0),
-)
+_GOJO_KAGARIBI = ((2.2, 7.0), (2.2, 14.0), (10.5, 6.8), (10.5, 14.2), (18.8, 7.0), (18.8, 14.0))
+_GOJO_BLADES = ((1.5, 8.5), (1.5, 12.5), (19.5, 8.5), (19.5, 12.5), (2.8, 10.5), (18.2, 10.5))
+_GOJO_SUPPORTS = ((5.5, 6.7), (10.5, 6.7), (15.5, 6.7), (5.5, 14.3), (10.5, 14.3), (15.5, 14.3))
 
 GOJO_BRIDGE_SPEC = ArenaSpec(
     id=ARENA_GOJO_BRIDGE,
@@ -981,7 +1003,22 @@ GOJO_BRIDGE_SPEC = ArenaSpec(
         PitZone(0.0, 14.1, float(MAP_COLS), float(MAP_ROWS), "VOID", railed=False, water=((16, 22, 36), (36, 52, 78))),
     ),
     props=(
-        tuple(PropSpec("pillar", x, y, {"width": 0.45, "depth": 0.45, "height": 1.1, "color": (58, 44, 34)}) for x, y in _GOJO_RAILING_POSTS)
+        # Balustradas de madeira com corrimão contínuo e ponteiras giboshi de bronze
+        (
+            PropSpec("gojo_railing", 4.5, 7.0, {"x0": 2.0, "x1": 7.0}),
+            PropSpec("gojo_railing", 10.5, 7.0, {"x0": 9.0, "x1": 12.0}),
+            PropSpec("gojo_railing", 16.5, 7.0, {"x0": 14.0, "x1": 19.0}),
+            PropSpec("gojo_railing", 4.5, 14.0, {"x0": 2.0, "x1": 7.0}),
+            PropSpec("gojo_railing", 10.5, 14.0, {"x0": 9.0, "x1": 12.0}),
+            PropSpec("gojo_railing", 16.5, 14.0, {"x0": 14.0, "x1": 19.0}),
+        )
+        # Braseiros de ferro crepitante (Kagaribi)
+        + tuple(PropSpec("kagaribi", x, y) for x, y in _GOJO_KAGARIBI)
+        # As 999 Lâminas da Lenda de Benkei cravadas nas margens de pedra
+        + tuple(PropSpec("blade_cluster", x, y, {"seed": 10 + i * 7}) for i, (x, y) in enumerate(_GOJO_BLADES))
+        # Pilares estruturais descendo ao rio
+        + tuple(PropSpec("bridge_support", x, y) for x, y in _GOJO_SUPPORTS)
+        # Lanternas e estátuas Jizo
         + tuple(PropSpec("stone_lantern", x, y) for x, y in _GOJO_LANTERNS)
         + tuple(PropSpec("jizo", x, y) for x, y in _GOJO_JIZO)
     ),
@@ -991,7 +1028,10 @@ GOJO_BRIDGE_SPEC = ArenaSpec(
     drift_petals=0.35,
     lighting=LightingEnvironment(
         ambient_color=(125, 140, 170), ambient_strength=0.46, vignette=0.36,
-        lights=tuple(LightSource(x, y, 0.9, (255, 195, 120), 2.8, flicker=0.12) for x, y in _GOJO_LANTERNS),
+        lights=(
+            tuple(LightSource(x, y, 0.9, (255, 195, 120), 2.8, flicker=0.12) for x, y in _GOJO_LANTERNS)
+            + tuple(LightSource(x, y, 1.2, (255, 145, 50), 3.4, flicker=0.25) for x, y in _GOJO_KAGARIBI)
+        ),
         atmosphere=(
             AtmosphereEffect("mist", density=0.80),
             AtmosphereEffect("fogbank", density=0.60),
@@ -1062,6 +1102,176 @@ YOSHIWARA_SPEC = ArenaSpec(
     ),
 )
 
+
+# ---------------------------------------------------------------------------
+# Arrozais Terraciados (Goro) — Ciclo 3
+# ---------------------------------------------------------------------------
+TILE_RICE_EARTH = 80
+TILE_RICE_EARTH = 80
+TILE_RICE_MUD = 81
+TILE_RICE_WATER = 82
+TILE_RICE_CROP = 83
+TILE_RICE_TERRACE_HIGH = 95
+TILE_RICE_WATER_HIGH = 96
+TILE_RICE_CROP_HIGH = 97
+TILE_RICE_TERRACE_MID = 98
+TILE_RICE_WATER_MID = 99
+
+_RICE_LANTERNS = ((4.5, 6.5), (16.5, 6.5), (4.5, 13.5), (16.5, 13.5))
+_RICE_HAYBALES = ((8.5, 3.5), (12.5, 3.5), (2.5, 10.5), (18.5, 10.5), (8.5, 17.5), (12.5, 17.5))
+_RICE_SCARECROWS = ((10.5, 2.2), (5.5, 9.5), (15.5, 16.5))
+_RICE_CHUTES = (
+    # Vertedouros do Patamar Superior para o Intermediário
+    {"wx": 7.5, "wy": 6.8, "z_top": 0.28, "z_bottom": 0.14},
+    {"wx": 13.5, "wy": 6.8, "z_top": 0.28, "z_bottom": 0.14},
+    # Vertedouros do Patamar Intermediário para o Inferior
+    {"wx": 7.5, "wy": 13.8, "z_top": 0.14, "z_bottom": 0.00},
+    {"wx": 13.5, "wy": 13.8, "z_top": 0.14, "z_bottom": 0.00},
+)
+
+RICE_PADDIES_SPEC = ArenaSpec(
+    id=ARENA_RICE_PADDIES,
+    name="Arrozais Terraciados",
+    cols=MAP_COLS,
+    rows=MAP_ROWS,
+    bg_color=(36, 26, 20),
+    music="bgm_rice_paddies",
+    wind=WindSpec(1, 0.4, 0.5, 0.4),
+    tile_styles={
+        TILE_RICE_EARTH: TileStyle("flat", ((138, 96, 62), (124, 84, 52)), pattern="parity", edge=(88, 58, 36), surface="earth"),
+        TILE_RICE_MUD: TileStyle("flat", ((98, 70, 48), (86, 60, 40)), edge=(64, 44, 28), speed_mult=0.88, surface="mud"),
+        TILE_RICE_WATER: TileStyle("water", ((56, 44, 38), (170, 110, 60)), edge=(42, 32, 28), depth=0.08, speed_mult=0.92, surface="water"),
+        TILE_RICE_CROP: TileStyle("flat", ((102, 134, 68), (88, 118, 56)), pattern="rows", edge=(62, 86, 40), surface="grass"),
+        # Patamar Superior (Norte: Z = 0.28m)
+        TILE_RICE_TERRACE_HIGH: TileStyle("slab", ((156, 112, 74), (142, 100, 64)), height=0.28, outline=True, top_edge=(102, 72, 46), surface="earth"),
+        TILE_RICE_CROP_HIGH: TileStyle("slab", ((122, 154, 76), (106, 134, 62)), height=0.28, pattern="rows", outline=True, top_edge=(78, 102, 48), surface="grass"),
+        TILE_RICE_WATER_HIGH: TileStyle("slab", ((68, 54, 46), (185, 125, 75)), height=0.22, outline=True, top_edge=(48, 38, 32), surface="water"),
+        # Patamar Intermediário (Centro: Z = 0.14m)
+        TILE_RICE_TERRACE_MID: TileStyle("slab", ((144, 102, 66), (130, 90, 56)), height=0.14, outline=True, top_edge=(92, 62, 38), surface="earth"),
+        TILE_RICE_WATER_MID: TileStyle("slab", ((60, 46, 40), (175, 115, 65)), height=0.10, outline=True, top_edge=(44, 34, 28), surface="water"),
+    },
+    layers=(
+        FillLayer(TILE_RICE_EARTH),
+        # 1. Patamar Superior (Y: 0..6)
+        RectLayer(TILE_RICE_TERRACE_HIGH, 0, 20, 0, 6),
+        RectLayer(TILE_RICE_CROP_HIGH, 2, 7, 1, 5),
+        RectLayer(TILE_RICE_CROP_HIGH, 13, 18, 1, 5),
+        RectLayer(TILE_RICE_WATER_HIGH, 8, 12, 1, 5),
+        # Rampa de conexão norte-centro
+        RectLayer(TILE_RICE_TERRACE_MID, 10, 11, 5, 7),
+        # 2. Patamar Intermediário (Y: 7..13)
+        RectLayer(TILE_RICE_TERRACE_MID, 0, 20, 7, 13),
+        RectLayer(TILE_RICE_WATER_MID, 3, 8, 8, 12),
+        RectLayer(TILE_RICE_WATER_MID, 13, 18, 8, 12),
+        # Rampa de conexão centro-sul
+        RectLayer(TILE_RICE_EARTH, 10, 11, 12, 14),
+        # 3. Patamar Inferior (Y: 14..20)
+        RectLayer(TILE_RICE_MUD, 8, 13, 14, 20),
+        RectLayer(TILE_RICE_WATER, 3, 7, 15, 19),
+        RectLayer(TILE_RICE_WATER, 14, 18, 15, 19),
+        RectLayer(TILE_RICE_CROP, 1, 2, 14, 18),
+        RectLayer(TILE_RICE_CROP, 19, 20, 14, 18),
+    ),
+    props=(
+        tuple(PropSpec("scarecrow", x, y, {"seed": 100 + i * 17}) for i, (x, y) in enumerate(_RICE_SCARECROWS))
+        + tuple(PropSpec("hay_bale", x, y, {"seed": 200 + i}) for i, (x, y) in enumerate(_RICE_HAYBALES))
+        + tuple(PropSpec("stone_lantern", x, y) for x, y in _RICE_LANTERNS)
+        + tuple(PropSpec("water_chute", c["wx"], c["wy"], {"z_top": c["z_top"], "z_bottom": c["z_bottom"]}) for c in _RICE_CHUTES)
+        + (
+            PropSpec("tree", 1.8, 1.8),
+            PropSpec("tree", 19.2, 1.8),
+            PropSpec("crate", 10.5, 3.5),
+            PropSpec("crate", 10.5, 18.2),
+        )
+    ),
+    spawns=SpawnRule(x_range=(6.0, 15.0), margin=4.0, min_distance=6.5, fallback=((8.0, 10.5), (13.0, 10.5))),
+    stage=StageSpec(10.5, 10.5),
+    drift_count=45,
+    drift_petals=0.65,
+    lighting=LightingEnvironment(
+        ambient_color=(195, 125, 75), ambient_strength=0.62, vignette=0.30,
+        lights=tuple(LightSource(x, y, 0.9, (255, 175, 90), 2.8, flicker=0.15) for x, y in _RICE_LANTERNS),
+        atmosphere=(
+            AtmosphereEffect("dust", density=0.55),
+            AtmosphereEffect("mist", density=0.45),
+        ),
+    ),
+)
+
+
+# ---------------------------------------------------------------------------
+# Moinho na Chuva (Ichi) — Ciclo 3
+# ---------------------------------------------------------------------------
+TILE_MILL_WOOD = 85
+TILE_MILL_RIVER = 86
+TILE_MILL_GRAVEL = 87
+TILE_MILL_FOUNDATION = 88
+TILE_MILL_BRIDGE = 89
+
+_MILL_LANTERNS = ((6.5, 8.5), (14.5, 8.5), (6.5, 13.5), (14.5, 13.5))
+_MILL_PILLARS = ((7.4, 8.8), (13.6, 8.8), (7.4, 13.2), (13.6, 13.2))
+
+_MILL_RIVER_PIT = {
+    "water": ((24, 46, 75), (95, 150, 210)),
+    "wall_colors": ((40, 48, 58), (18, 24, 34)),
+    "rim_color": (54, 62, 74),
+    "depth": 1.5,
+}
+
+RAIN_MILL_SPEC = ArenaSpec(
+    id=ARENA_RAIN_MILL,
+    name="Moinho na Chuva",
+    cols=MAP_COLS,
+    rows=MAP_ROWS,
+    bg_color=(18, 22, 32),
+    music="bgm_rain_mill",
+    wind=WindSpec(-1, 0.6, 1.2, 0.8),
+    tile_styles={
+        TILE_MILL_WOOD: TileStyle("flat", ((78, 62, 52), (66, 52, 44)), pattern="rows", edge=(42, 32, 26), surface="wood"),
+        TILE_MILL_RIVER: TileStyle("water", ((28, 48, 72), (64, 105, 145)), edge=(18, 32, 48), depth=0.25, speed_mult=0.45, surface="water"),
+        TILE_MILL_GRAVEL: TileStyle("flat", ((88, 92, 102), (76, 80, 90)), pattern="parity", edge=(52, 56, 64), surface="gravel"),
+        TILE_MILL_FOUNDATION: TileStyle("slab", ((50, 54, 62),), height=0.18, outline=True, surface="stone"),
+        TILE_MILL_BRIDGE: TileStyle("anchor", surface="wood"),
+    },
+    layers=(
+        FillLayer(TILE_MILL_GRAVEL),
+        RectLayer(TILE_MILL_RIVER, 8, 13, 0, 21),
+        RectLayer(TILE_MILL_FOUNDATION, 2, 7, 4, 17),
+        RectLayer(TILE_MILL_WOOD, 3, 6, 5, 16),
+        RectLayer(TILE_MILL_BRIDGE, 7, 14, 9, 12),
+    ),
+    props=(
+        (PropSpec("watermill", 7.6, 7.0, {"radius": 1.7, "speed": 1.4}),)
+        + tuple(PropSpec("pillar", x, y, {"width": 0.5, "depth": 0.5, "height": 1.4, "color": (56, 46, 40)}) for x, y in _MILL_PILLARS)
+        + tuple(PropSpec("stone_lantern", x, y) for x, y in _MILL_LANTERNS)
+        + (
+            PropSpec("cabin", 2.6, 4.5, {"width": 4.5, "depth": 3.0, "height": 2.2, "color": (65, 52, 45)}),
+            PropSpec("crate", 4.5, 9.0),
+            PropSpec("crate", 5.5, 9.0),
+            PropSpec("barrel", 4.5, 13.0, {"width": 0.7, "depth": 0.7, "height": 0.8, "color": (96, 64, 42)}),
+            PropSpec("rock", 15.5, 5.0, {"radius": 0.65, "height": 0.7}),
+            PropSpec("rock", 16.5, 16.0, {"radius": 0.8, "height": 0.9}),
+        )
+    ),
+    structures=(StructureSpec("roof_beam", TILE_MILL_BRIDGE, {"x0": 7.0, "y0": 9.0, "x1": 14.5, "y1": 13.0}),),
+    pits=(
+        PitZone(8.0, 0.0, 13.0, 8.8, "VOID", railed=False, **_MILL_RIVER_PIT),
+        PitZone(8.0, 12.2, 13.0, 21.0, "VOID", railed=False, **_MILL_RIVER_PIT),
+    ),
+    spawns=SpawnRule(x_range=(4.0, 17.0), margin=4.0, min_distance=6.5, fallback=((5.5, 11.0), (15.5, 11.0))),
+    stage=StageSpec(10.5, 11.0),
+    drift_count=60,
+    drift_petals=0.95,
+    lighting=LightingEnvironment(
+        ambient_color=(85, 95, 125), ambient_strength=0.40, vignette=0.45,
+        lights=tuple(LightSource(x, y, 0.9, (200, 220, 255), 2.8, flicker=0.15) for x, y in _MILL_LANTERNS),
+        atmosphere=(
+            AtmosphereEffect("rain", density=1.0),
+            AtmosphereEffect("mist", density=0.75),
+        ),
+    ),
+)
+
 # ---------------------------------------------------------------------------
 # Registro de arenas jogáveis
 # ---------------------------------------------------------------------------
@@ -1077,6 +1287,8 @@ ARENA_SPECS: dict[str, ArenaSpec] = {
     ARENA_HIGANBANA: HIGANBANA_SPEC,
     ARENA_GOJO_BRIDGE: GOJO_BRIDGE_SPEC,
     ARENA_YOSHIWARA: YOSHIWARA_SPEC,
+    ARENA_RICE_PADDIES: RICE_PADDIES_SPEC,
+    ARENA_RAIN_MILL: RAIN_MILL_SPEC,
 }
 
 

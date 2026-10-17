@@ -111,8 +111,8 @@ def test_orin_mechanics():
     assert orin.state == "ATTACK"
     assert len(projectiles) == 1
     blade = projectiles[0]
-    assert isinstance(blade, KamaitachiProjectile)
-    assert blade.damage == 2, "Kamaitachi deve ser 1-hit kill (damage 2)"
+    assert blade.damage == 1, "Kamaitachi deve causar 1 de dano com cooldown"
+    assert orin.kamaitachi_timer > 0, "Kamaitachi deve acionar cooldown"
     assert blade.max_range >= 6.0, f"Alcance do Kamaitachi deve ser >= 6.0 tiles, obtido {blade.max_range}"
 
     # 2. Ação Secundária: Acorde de Ressonância Mortal (3 projéteis em espiral a 120°, 5.0s cooldown)

@@ -32,9 +32,9 @@ class DobermanDog:
         self.cooldown_timer = 0.0
         self.knockout_duration = 2.0
 
-        # Atributos de corrida (Entregável 4.4: charge_speed acelerado para 17.5)
+        # Atributos de corrida (Velocidade calibrada para 14.5)
         self.follow_speed = 4.8
-        self.charge_speed = 17.5
+        self.charge_speed = 14.5
         self.charge_range = 5.2
         self.charge_dist = 0.0
 
@@ -114,19 +114,34 @@ class DobermanDog:
             self.hitbox_active = True
             self.hitbox_center = (self.wx + self.facing_x * 0.5, self.wy + self.facing_y * 0.5)
 
+            # Colisão com bambus no caminho
+            if game_map:
+                for b in getattr(game_map, "bamboos", []):
+                    if not getattr(b, "is_cut", False) and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.65:
+                        b.cut((self.facing_x, self.facing_y))
+
             # Colisão com rochas ou poço durante o dash
-            for r in game_map.rocks:
-                if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
+            if game_map:
+                for r in getattr(game_map, "rocks", []):
+                    if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                        if world_distance(self.wx, self.wy, r.wx, r.wy) < (getattr(r, "radius", 0.5) + 0.35):
+                            r.break_panel((self.facing_x, self.facing_y), None)
+                    elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
+                        self.state = STATE_DOG_FOLLOW
+                        self.hitbox_active = False
+                        self.cooldown_timer = 8.0
+                        return
+                if getattr(game_map, "well", None) and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
                     self.state = STATE_DOG_FOLLOW
                     self.hitbox_active = False
-                    self.cooldown_timer = 2.0
+                    self.cooldown_timer = 8.0
                     return
 
             if self.charge_dist >= self.charge_range:
                 # Terminou o dash sem acertar: retorna a seguir o dono com cooldown de comando
                 self.state = STATE_DOG_FOLLOW
                 self.hitbox_active = False
-                self.cooldown_timer = 2.5
+                self.cooldown_timer = 8.0
 
         elif self.state == STATE_DOG_KNOCKED_OUT:
             self.hitbox_active = False

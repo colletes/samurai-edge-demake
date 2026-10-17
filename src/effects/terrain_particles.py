@@ -276,14 +276,21 @@ class TerrainFX:
                 self._emit(arena, preset, x, y, dir_x, dir_y, speed, n, 1.2 + 0.18 * speed)
             tr["acc"] = 0.0
             return
-        if speed > 0.6 and preset.step > 0.0:  # passos
+        if speed > 0.6:  # passos ao caminhar
             tr["acc"] += dist
             while tr["acc"] >= STRIDE:
                 tr["acc"] -= STRIDE
                 tr["side"] = -tr["side"]
                 fx = x - dir_y * 0.12 * tr["side"] - dir_x * 0.05
                 fy = y + dir_x * 0.12 * tr["side"] - dir_y * 0.05
-                self._emit(arena, preset, fx, fy, dir_x, dir_y, speed, _rand_round(preset.step * (0.5 + speed / 6.0)), 0.5)
+                if preset.step > 0.0:
+                    self._emit(arena, preset, fx, fy, dir_x, dir_y, speed, _rand_round(preset.step * (0.5 + speed / 6.0)), 0.5)
+                # Disparo de áudio de passo realista contextualizado por superfície
+                try:
+                    from src.audio import SoundManager, SoundEvent
+                    SoundManager.get_instance().play_layered(SoundEvent.FOOTSTEP, surface=surface, volume_scale=0.28)
+                except Exception:
+                    pass
         else:
             tr["acc"] = 0.0
 

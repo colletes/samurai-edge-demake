@@ -40,6 +40,7 @@ class SoundManager:
 
         self.is_audio_available: bool = False
         self._sfx_cache: dict[str, pygame.mixer.Sound] = {}
+        self._pitch_pool: dict[str, list[pygame.mixer.Sound]] = {}
         self.current_music_track: str | None = None
         self._pending_music: tuple[str, int, int] | None = None
         self._pending_music_timer: float = 0.0
@@ -55,9 +56,31 @@ class SoundManager:
                 pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
             pygame.mixer.set_num_channels(24)  # Até 24 sons simultâneos sem interrupções
             self.is_audio_available = True
-        except Exception as e:
+        except Exception:
             # Fallback seguro para ambientes sem hardware de som
             self.is_audio_available = False
+
+    def _build_pitch_variants(self, sound: pygame.mixer.Sound) -> list[pygame.mixer.Sound]:
+        """Gera 3 variações de afinação (0.94x grave, 1.00x original, 1.06x agudo) para prevenir monotonia robótica."""
+        variants = [sound]
+        try:
+            import numpy as np
+            arr = pygame.sndarray.array(sound)
+            if len(arr) > 100:
+                for rate in (0.94, 1.06):
+                    n_samples = max(10, int(len(arr) / rate))
+                    indices = np.linspace(0, len(arr) - 1, n_samples)
+                    if arr.ndim == 2:
+                        ch0 = np.interp(indices, np.arange(len(arr)), arr[:, 0])
+                        ch1 = np.interp(indices, np.arange(len(arr)), arr[:, 1])
+                        resampled = np.column_stack((ch0, ch1)).astype(np.int16)
+                    else:
+                        resampled = np.interp(indices, np.arange(len(arr)), arr).astype(np.int16)
+                    var_sound = pygame.sndarray.make_sound(resampled)
+                    variants.append(var_sound)
+        except Exception:
+            pass
+        return variants
 
     def get_sound(self, event: SoundEvent | str) -> pygame.mixer.Sound | None:
         """
@@ -92,24 +115,78 @@ class SoundManager:
 
         return None
 
-    def play(self, event: SoundEvent | str, volume_scale: float = 1.0) -> pygame.mixer.Channel | None:
+    def get_sound_with_variation(self, event: SoundEvent | str) -> pygame.mixer.Sound | None:
+        """Retorna uma variação de afinação de micro-timbre do som solicitado."""
+        event_key = event.value if isinstance(event, SoundEvent) else str(event)
+        if event_key not in self._pitch_pool:
+            base_sound = self.get_sound(event)
+            if not base_sound:
+                return None
+            self._pitch_pool[event_key] = self._build_pitch_variants(base_sound)
+        variants = self._pitch_pool.get(event_key)
+        if variants:
+            import random
+            return random.choice(variants)
+        return self.get_sound(event)
+
+    def play(self, event: SoundEvent | str, volume_scale: float = 1.0, pitch_variance: bool = True) -> pygame.mixer.Channel | None:
         """
         Toca um efeito sonoro (SFX) ajustando o volume relativo pelo volume global.
-        Retorna o canal de reprodução do pygame.
+        Aplica micro-variação de afinação (±6%) e micro-jitter de volume (±8%) para máxima fidelidade.
         """
         if not self.is_audio_available:
             return None
 
-        sound = self.get_sound(event)
+        if pitch_variance:
+            sound = self.get_sound_with_variation(event)
+        else:
+            sound = self.get_sound(event)
+
         if not sound:
             return None
 
-        eff_vol = max(0.0, min(1.0, self.master_volume * self.sfx_volume * volume_scale))
+        import random
+        jitter = random.uniform(0.92, 1.08) if pitch_variance else 1.0
+        eff_vol = max(0.0, min(1.0, self.master_volume * self.sfx_volume * volume_scale * jitter))
         sound.set_volume(eff_vol)
         try:
             return sound.play()
         except Exception:
             return None
+
+    def play_layered(self, event: SoundEvent | str, surface: str | None = None, weapon: str | None = None, volume_scale: float = 1.0) -> list[pygame.mixer.Channel]:
+        """
+        Dispara áudio multi-camada: combina o impacto primário, camada de superfície e timbre de arma.
+        """
+        channels = []
+        # Resolver arma se fornecida e o evento for de ataque/corte
+        if weapon and event in (SoundEvent.SWORD_SLASH, "sword_slash"):
+            from src.audio.sound_events import get_weapon_swing_event
+            event = get_weapon_swing_event(weapon)
+
+        # Resolver superfície se fornecida e o evento for passo
+        if surface and event in (SoundEvent.FOOTSTEP, "footstep"):
+            from src.audio.sound_events import get_surface_footstep_event
+            event = get_surface_footstep_event(surface)
+
+        ch = self.play(event, volume_scale=volume_scale)
+        if ch:
+            channels.append(ch)
+
+        # Camada visceral para impactos letais e cortes
+        if event in (SoundEvent.FATAL_STRIKE, "fatal_strike"):
+            ch_visceral = self.play(SoundEvent.FLESH_CLEAVE, volume_scale=volume_scale * 0.85)
+            if ch_visceral:
+                channels.append(ch_visceral)
+            ch_spray = self.play(SoundEvent.ARTERIAL_SPRAY, volume_scale=volume_scale * 0.70)
+            if ch_spray:
+                channels.append(ch_spray)
+        elif event in (SoundEvent.PARRY, "parry"):
+            ch_metal = self.play(SoundEvent.ARMOR_CLANG, volume_scale=volume_scale * 0.65)
+            if ch_metal:
+                channels.append(ch_metal)
+
+        return channels
 
     def _play_music_file(self, track_key: str, loops: int = -1, fade_in_ms: int = 0) -> bool:
         """Carrega e inicia a reprodução do arquivo de música especificado."""
@@ -254,3 +331,9 @@ def get_sound_manager() -> SoundManager:
     if _GLOBAL_SOUND_MANAGER is None:
         _GLOBAL_SOUND_MANAGER = SoundManager()
     return _GLOBAL_SOUND_MANAGER
+
+
+def play_sfx(event: SoundEvent | str, volume_scale: float = 1.0, pitch_variance: bool = True):
+    """Atalho universal para tocar SFX através do SoundManager global."""
+    return get_sound_manager().play(event, volume_scale=volume_scale, pitch_variance=pitch_variance)
+

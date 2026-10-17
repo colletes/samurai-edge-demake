@@ -361,8 +361,8 @@ def calc_character_idle_pose(
         # Braço esquerdo estendido apontando a espada horizontalmente nos olhos do rival.
         # Braço direito engatilhado junto ao colarinho/ombro segurando o pomo da espada.
         arm_l = (
-            base_x + fx * 0.28,
-            base_y + fy * 0.28,
+            base_x + fx * 0.28 + px * 0.12,
+            base_y + fy * 0.28 + py * 0.12,
             tz + 0.15
         )
         arm_r = (
@@ -486,4 +486,86 @@ def calc_character_idle_pose(
     arm_l = (base_x + px * 0.14, base_y + py * 0.14, tz + 0.06)
     arm_r = (base_x - px * 0.14, base_y - py * 0.14, tz + 0.06)
     return arm_l, arm_r, {"pose": "DEFAULT"}
+
+
+def martial_ease_3phase(p: float) -> float:
+    """
+    Curva de easing marcial não-linear em 3 fases (Pilar 5 / Fase M-2.2):
+    - 0.00 -> 0.22: Antecipação / Encolhimento elástico (coil lento: 0.0 -> 0.12)
+    - 0.22 -> 0.62: Chicote Explosivo do Golpe (whip veloz: 0.12 -> 0.88)
+    - 0.62 -> 1.00: Zanshin / Desaceleração com peso (0.88 -> 1.00)
+    """
+    p = max(0.0, min(1.0, p))
+    if p < 0.22:
+        u = p / 0.22
+        return 0.12 * (u * u)
+    if p < 0.62:
+        u = (p - 0.22) / 0.40
+        smooth_u = u * u * (3.0 - 2.0 * u)
+        return 0.12 + 0.76 * smooth_u
+    u = (p - 0.62) / 0.38
+    return 0.88 + 0.12 * (1.0 - (1.0 - u) * (1.0 - u))
+
+
+def calc_spine_and_pelvis_rig(
+    char_type: str,
+    state: str,
+    is_moving: bool,
+    is_melee: bool,
+    atk_progress: float,
+    walk_timer: float,
+    fx: float,
+    fy: float,
+    px: float,
+    py: float,
+) -> dict:
+    """
+    Calcula a cinemática articulada de coluna, quadril e ombros (Fase M-2.2):
+    - Oscilação lateral de quadril (hip sway) na marcha.
+    - Inclinação frontal de corrida/investida (chest lean).
+    - Contra-rotação quadril-ombros (shoulder yaw twist) na caminhada e nos golpes.
+    """
+    walk_phase = walk_timer * 9.0
+    eased_atk = martial_ease_3phase(atk_progress) if is_melee else 0.0
+
+    if is_melee:
+        # Torção de tronco no golpe: recolhe o ombro direito para trás (-0.28 rad) no windup
+        # e projeta à frente (+0.34 rad) no corte!
+        shoulder_yaw = -0.28 + eased_atk * 0.62
+        lean_mag = 0.045 * math.sin(eased_atk * math.pi)
+        hip_sway = 0.0
+    elif state in ("SHUKUCHI", "GATOTSU_CHARGE", "FLECHE", "TACKLE_CHARGE"):
+        shoulder_yaw = 0.22
+        lean_mag = 0.065
+        hip_sway = 0.0
+    elif is_moving:
+        # Contra-rotação natural entre pelve e tórax ao caminhar/correr
+        shoulder_yaw = -math.sin(walk_phase) * 0.14
+        lean_mag = 0.032
+        hip_sway = math.sin(walk_phase) * 0.016
+    else:
+        # Leve torção de guarda marcial no idle
+        shoulder_yaw = 0.08 if char_type in ("saitou", "musketeer", "kenshin") else 0.03
+        lean_mag = 0.008 * math.sin(walk_timer * 2.8)
+        hip_sway = 0.0
+
+    cy, sy = math.cos(shoulder_yaw), math.sin(shoulder_yaw)
+    sh_fx = fx * cy - px * sy
+    sh_fy = fy * cy - py * sy
+    sh_px = -sh_fy
+    sh_py = sh_fx
+
+    return {
+        "eased_atk": eased_atk,
+        "shoulder_yaw": shoulder_yaw,
+        "sh_fx": sh_fx,
+        "sh_fy": sh_fy,
+        "sh_px": sh_px,
+        "sh_py": sh_py,
+        "chest_lean_x": fx * lean_mag,
+        "chest_lean_y": fy * lean_mag,
+        "hip_sway_x": px * hip_sway,
+        "hip_sway_y": py * hip_sway,
+    }
+
 

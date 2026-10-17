@@ -289,7 +289,7 @@ class SamuraiAI:
                 self.move_dir_x, self.move_dir_y = dir_x, dir_y
                 return
 
-    def update(self, ai_fighter, opponent, dt: float, game_map, projectiles: list = None, powder_pouches: list = None, decoys: list = None):
+    def update(self, ai_fighter, opponent, dt: float, game_map, projectiles: list = None, powder_pouches: list = None, decoys: list = None, poison_clouds: list = None):
         """Atualiza a IA controlando ai_fighter contra o opponent."""
         if not ai_fighter.is_alive or not opponent.is_alive:
             return
@@ -528,6 +528,12 @@ class SamuraiAI:
                 ai_fighter.trigger_resonance_shockwave(aim_x, aim_y, projectiles)
                 return True
 
+            # Ichi (A Lâmina Cega): Postura de Escuta Auditiva (contra-ataque sensorial automático)
+            if hasattr(ai_fighter, "trigger_listen_stance") and getattr(ai_fighter, "listen_timer", 0.0) <= 0:
+                ai_fighter.set_facing(threat_x, threat_y)
+                ai_fighter.trigger_listen_stance(threat_x, threat_y)
+                return True
+
             # Demais combatentes com trigger_parry genérico
             if hasattr(ai_fighter, "trigger_parry") and ai_fighter.can_move():
                 ai_fighter.set_facing(threat_x, threat_y)
@@ -648,11 +654,11 @@ class SamuraiAI:
 
             # American Ninja: shuriken com dispersão ou comando do cão
             if hasattr(ai_fighter, "trigger_shuriken") and projectiles is not None:
-                if 2.0 <= dist <= 6.0 and random.random() < 0.55:
+                if 2.2 <= dist <= 6.0 and random.random() < 0.40:
                     aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
                     ai_fighter.trigger_shuriken(aim_x, aim_y, projectiles)
                     return
-                if hasattr(ai_fighter, "dog") and ai_fighter.dog and ai_fighter.dog.can_attack() and dist <= 4.5 and random.random() < 0.45:
+                if hasattr(ai_fighter, "dog") and ai_fighter.dog and ai_fighter.dog.can_attack() and dist <= 4.5 and random.random() < 0.35:
                     aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
                     ai_fighter.trigger_dog_attack(aim_x, aim_y)
                     return
@@ -708,7 +714,7 @@ class SamuraiAI:
             # Teppo: tiro com dispersão de mira
             if hasattr(ai_fighter, "trigger_shoot"):
                 if getattr(ai_fighter, "has_ammo", False) and getattr(ai_fighter, "cocking_timer", 0.0) <= 0 and projectiles is not None:
-                    if 2.5 <= dist <= 8.5 and random.random() < 0.70:
+                    if 2.5 <= dist <= 8.5 and random.random() < 0.55:
                         aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
                         ai_fighter.trigger_shoot(aim_x, aim_y, projectiles)
                         return
@@ -722,9 +728,15 @@ class SamuraiAI:
                             ai_fighter.trigger_evasive_backstep()
                             return
 
-            # Okuni: leques ou finta Kawarimi
+            # Okuni: Sopro Venenoso Dokukiri, Leques Tessen ou finta Kawarimi
+            if hasattr(ai_fighter, "trigger_dokukiri") and poison_clouds is not None:
+                if 1.4 <= dist <= 3.2 and getattr(ai_fighter, "poison_cooldown_timer", 0.0) <= 0 and random.random() < 0.65:
+                    aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+                    ai_fighter.trigger_dokukiri(aim_x, aim_y, clouds=poison_clouds)
+                    return
+
             if hasattr(ai_fighter, "trigger_fan_strike") and not melee_unsafe:
-                if dist <= 1.45:
+                if dist <= 1.70:
                     ai_fighter.trigger_fan_strike(opponent.wx, opponent.wy)
                     return
                 elif dist <= 2.2 and random.random() < 0.35 and decoys is not None and self._away_ok(
@@ -735,13 +747,13 @@ class SamuraiAI:
             # Kyudo Archer: arco com dispersão de mira e salva sagrada em arco
             if hasattr(ai_fighter, "trigger_quick_volley") and projectiles is not None:
                 if dist >= 2.5 and getattr(ai_fighter, "volley_cooldown_timer", 0.0) <= 0:
-                    if random.random() < 0.65:
+                    if random.random() < 0.45:
                         aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
                         ai_fighter.trigger_quick_volley(aim_x, aim_y, projectiles)
                         return
 
             if hasattr(ai_fighter, "trigger_bow_draw") and projectiles is not None:
-                if 2.8 <= dist <= 7.5 and random.random() < 0.55:
+                if 2.8 <= dist <= 7.5 and random.random() < 0.45:
                     aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
                     ai_fighter.trigger_bow_draw(aim_x, aim_y, projectiles)
                     return
@@ -785,16 +797,16 @@ class SamuraiAI:
                         ai_fighter.trigger_flintlock_shot(aim_x, aim_y, projectiles)
                         return
 
-                if 1.30 <= dist <= 2.65 and random.random() < 0.65:
+                if 1.20 <= dist <= 2.10 and random.random() < 0.65:
                     ai_fighter.trigger_fleche_thrust(opponent.wx, opponent.wy)
                     return
 
             # Ren (Shaolin Monk): combo veloz de socos marciais e Kiai
             if hasattr(ai_fighter, "trigger_punch_combo") and not melee_unsafe:
-                if dist <= 2.2 and random.random() < 0.70:
+                if dist <= 2.45:
                     ai_fighter.trigger_punch_combo(opponent.wx, opponent.wy)
                     return
-                if getattr(ai_fighter, "kiai_timer", 0.0) <= 0 and dist <= 2.4 and random.random() < 0.40:
+                if getattr(ai_fighter, "kiai_timer", 0.0) <= 0 and dist <= 2.6 and random.random() < 0.55:
                     ai_fighter.trigger_kiai_shout(opponent=opponent, game_map=game_map)
                     return
 
@@ -820,8 +832,8 @@ class SamuraiAI:
                         aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
                         ai_fighter.trigger_naginata_throw(aim_x, aim_y, projectiles)
                         return
-                    # Alcance colossal de 3.0m
-                    if 1.4 <= dist <= 2.95 and random.random() < 0.75:
+                    # Alcance colossal de 3.2m
+                    if 1.3 <= dist <= 3.25 and random.random() < 0.85:
                         ai_fighter.trigger_naginata_thrust(opponent.wx, opponent.wy)
                         return
 
@@ -835,6 +847,26 @@ class SamuraiAI:
                 if dist <= 6.2 and random.random() < 0.70:
                     aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
                     ai_fighter.trigger_kamaitachi_pluck(aim_x, aim_y, projectiles)
+                    return
+
+            # Goro (Fazendeiro da Kuwa): Pisotão Sísmico e Descida da Kuwa
+            if hasattr(ai_fighter, "trigger_earth_stomp"):
+                if getattr(ai_fighter, "stomp_timer", 0.0) <= 0 and dist <= 3.8 and random.random() < 0.75:
+                    ai_fighter.trigger_earth_stomp(opponent.wx, opponent.wy, shockwaves=projectiles)
+                    return
+            if hasattr(ai_fighter, "trigger_kuwa_cleave") and not melee_unsafe:
+                if dist <= 2.2 and random.random() < 0.85:
+                    ai_fighter.trigger_kuwa_cleave(opponent.wx, opponent.wy)
+                    return
+
+            # Ichi (A Lâmina Cega / Shikomizue): Postura de Escuta e Saque Gyaku-Iai
+            if hasattr(ai_fighter, "trigger_listen_stance"):
+                if getattr(ai_fighter, "listen_timer", 0.0) <= 0 and dist <= 2.8 and (getattr(opponent, "hitbox_active", False) or random.random() < 0.45):
+                    ai_fighter.trigger_listen_stance(opponent.wx, opponent.wy)
+                    return
+            if hasattr(ai_fighter, "trigger_gyaku_iai") and not melee_unsafe:
+                if dist <= 2.0 and random.random() < 0.85:
+                    ai_fighter.trigger_gyaku_iai(opponent.wx, opponent.wy)
                     return
 
             # Movimentação Não-Linear e Espaçamento
@@ -1011,3 +1043,7 @@ class SamuraiAI:
             if projectiles is not None:
                 aim_x, aim_y = self._get_aim_target(fighter, target, target.wx, target.wy)
                 fighter.trigger_kamaitachi_pluck(aim_x, aim_y, projectiles)
+        elif hasattr(fighter, "trigger_kuwa_cleave"):
+            fighter.trigger_kuwa_cleave(target.wx, target.wy)
+        elif hasattr(fighter, "trigger_gyaku_iai"):
+            fighter.trigger_gyaku_iai(target.wx, target.wy)

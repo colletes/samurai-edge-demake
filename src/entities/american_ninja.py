@@ -25,7 +25,7 @@ class AmericanNinja(Samurai):
         self.dog = DobermanDog(self)
 
         # Timings de Shuriken e Comando
-        self.shuriken_cooldown = 0.55
+        self.shuriken_cooldown = 2.4  # Cooldown calibrado (era 0.55s) para evitar stun lock constante
         self.shuriken_timer = 0.0
 
         # Terceira Ação: Esquiva Pesada / Padrão

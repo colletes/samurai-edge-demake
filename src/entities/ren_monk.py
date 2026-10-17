@@ -34,7 +34,7 @@ class RenMonk(Samurai):
         self.attack_cooldown_timer = 0.0
 
         # Ação Secundária: Grito Místico Kiai (Aura Esférica Repelente)
-        self.kiai_cooldown = 3.5
+        self.kiai_cooldown = 2.6  # Cooldown reduzido (era 3.5s) para defesa consistente contra zhoners
         self.kiai_timer = 0.0
         self.kiai_aura_active = False
         self.kiai_aura_timer = 0.0
@@ -66,25 +66,25 @@ class RenMonk(Samurai):
         if step == 1:
             # Passo 1: Jab frontal veloz de direita
             self.state_timer = 0.14
-            self.hitbox_radius = 1.18
+            self.hitbox_radius = 1.30
             self.hitbox_damage = 1
-            lunge = 0.14
-            offset = 0.85
+            lunge = 0.18
+            offset = 0.90
         elif step == 2:
             # Passo 2: Palma de Ferro / Cruzado de esquerda
             self.state_timer = 0.16
-            self.hitbox_radius = 1.32
+            self.hitbox_radius = 1.45
             self.hitbox_damage = 1
-            lunge = 0.18
-            offset = 0.92
+            lunge = 0.22
+            offset = 0.96
         else:
             # Passo 3: Chute Alto do Dragão Shaolin (Golpe Finalizador com Chi)
             self.state_timer = 0.24
             self.combo_window_timer = 0.0
-            self.hitbox_radius = 1.48
+            self.hitbox_radius = 1.65
             self.hitbox_damage = 2
-            lunge = 0.24
-            offset = 1.00
+            lunge = 0.45
+            offset = 1.05
 
         # Micro-passo inicial controlado para garantir conexão fluida entre os 3 golpes
         self.wx += self.facing_x * lunge

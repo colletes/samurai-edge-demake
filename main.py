@@ -37,11 +37,11 @@ from src.config import (
     KEY_RESTART, KEY_TOGGLE_AI, KEY_SETTINGS, DEFAULT_CONTROLS,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
     CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
-    CHAR_REN, CHAR_CHIYO, CHAR_BENKEI, CHAR_ORIN, CHAR_BOSS,
+    CHAR_REN, CHAR_CHIYO, CHAR_BENKEI, CHAR_ORIN, CHAR_GORO, CHAR_ICHI, CHAR_BOSS,
     COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA, COLOR_SAITOU_AURA,
     COLOR_RIFLE_AURA, COLOR_KABUKI_AURA, COLOR_ARCHER_AURA,
     COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA, COLOR_REN_AURA, COLOR_CHIYO_AURA,
-    COLOR_BENKEI_AURA, COLOR_ORIN_AURA,
+    COLOR_BENKEI_AURA, COLOR_ORIN_AURA, COLOR_GORO_AURA, COLOR_ICHI_AURA,
     ARENA_BAMBOO, ARENA_KYOTO, ARENA_RANDOM
 )
 from src.isometric.iso_math import input_to_world_direction
@@ -63,11 +63,14 @@ from src.entities.ren_monk import RenMonk
 from src.entities.chiyo_kunoichi import ChiyoKunoichi
 from src.entities.benkei import BenkeiSamurai
 from src.entities.orin import OrinMinstrel
+from src.entities.goro import GoroFarmer
+from src.entities.ichi import IchiBlade
 from src.entities.boss_oni import BossOni
 from src.entities.ai_controller import SamuraiAI
 from src.entities.pickups import PowderPouch
 from src.combat.collision import CombatSystem
 from src.combat.clash_system import ClashSystem
+from src.combat.hitboxes import HitboxDebugInspector
 from src.effects.particles import AmbientLeafParticle, SparkParticle, BloodParticle, FloatingBanner, SmokeParticle
 from src.effects.cinematic_director import CinematicDirector
 from src.effects.lighting import ArenaLighting
@@ -75,6 +78,7 @@ from src.effects.terrain_particles import TerrainFX
 from src.effects.fog import FogVolume
 from src.effects.particles import set_wind_source
 from src.effects import quality
+from src.world.arena_cache import get_prop_cache, clear_arena_caches
 from src.effects.fall_render import render_falling_fighter
 from src.entities.samurai import STATE_FALL, STATE_IDLE, STATE_INTRO, STATE_VICTORY
 from src.entities.pose_scripts import BeatPlayer
@@ -167,6 +171,10 @@ def create_fighter(char_id: str, wx: float, wy: float):
         return BenkeiSamurai(wx, wy)
     elif char_id == CHAR_ORIN:
         return OrinMinstrel(wx, wy)
+    elif char_id == CHAR_GORO:
+        return GoroFarmer(wx, wy)
+    elif char_id == CHAR_ICHI:
+        return IchiBlade(wx, wy)
     elif char_id == CHAR_BOSS:
         return BossOni(wx, wy)
     return RedSamurai(wx, wy)
@@ -208,6 +216,10 @@ def get_fighter_color(fighter):
         return COLOR_BENKEI_AURA
     elif isinstance(fighter, OrinMinstrel):
         return COLOR_ORIN_AURA
+    elif isinstance(fighter, GoroFarmer):
+        return COLOR_GORO_AURA
+    elif isinstance(fighter, IchiBlade):
+        return COLOR_ICHI_AURA
     return COLOR_WHITE
 
 def get_fighter_action_labels(fighter):
@@ -248,6 +260,10 @@ def get_fighter_action_labels(fighter):
         return "Tackle Atropelo", "Recuperar Arma"
     elif isinstance(fighter, OrinMinstrel):
         return "Kamaitachi Sônico", "Ressonância 360°"
+    elif isinstance(fighter, GoroFarmer):
+        return "Corte da Kuwa", "Pisotão Sísmico"
+    elif isinstance(fighter, IchiBlade):
+        return "Gyaku-Iai", "Postura Escuta"
     return "Ataque", "Especial"
 
 def get_fighter_cooldown_data(fighter) -> dict | None:
@@ -374,6 +390,18 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
             return {"name": "Ressonância", "timer": timer, "max_cd": getattr(fighter, "resonance_cooldown", 2.6), "color": (235, 75, 120)}
         return None
 
+    elif isinstance(fighter, GoroFarmer):
+        timer = max(0.0, getattr(fighter, "stomp_timer", 0.0))
+        if timer > 0:
+            return {"name": "Pisotão Sísmico", "timer": timer, "max_cd": getattr(fighter, "stomp_cooldown", 4.5), "color": (115, 165, 235)}
+        return None
+
+    elif isinstance(fighter, IchiBlade):
+        timer = max(0.0, getattr(fighter, "listen_timer", 0.0))
+        if timer > 0:
+            return {"name": "Postura Escuta", "timer": timer, "max_cd": getattr(fighter, "listen_cooldown", 4.2), "color": (215, 140, 230)}
+        return None
+
     return None
 
 # Azimute atual da câmera, lido pelas conversões de entrada (W continua sendo "para cima na tela")
@@ -400,14 +428,18 @@ def play_sfx(event: SoundEvent):
     except Exception:
         pass
 
-def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: list, particles: list):
-    """Executa a ação primária de ataque do lutador em direção às coordenadas de mira."""
+def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: list, particles: list, game_map=None):
+    """Executa a ação primária de ataque do lutador em direção às coordenadas de mira com áudio específico de arma."""
+    if game_map and hasattr(game_map, "add_wind_impulse"):
+        dx = aim_x - fighter.wx
+        dy = aim_y - fighter.wy
+        game_map.add_wind_impulse(fighter.wx, fighter.wy, strength=1.1, radius=3.2, duration=0.55, dir_x=dx, dir_y=dy)
     if isinstance(fighter, RedSamurai):
         fighter.trigger_iai_attack(aim_x, aim_y)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        play_sfx(SoundEvent.SLASH_KATANA)
     elif isinstance(fighter, BlueSamurai):
         fighter.trigger_combo_attack(aim_x, aim_y)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        play_sfx(SoundEvent.SLASH_KATANA)
     elif isinstance(fighter, YellowNinja):
         if fighter.has_kunai:
             if fighter.state == "JUMP":
@@ -417,7 +449,7 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
             play_sfx(SoundEvent.KUNAI_THROW)
         else:
             fighter.trigger_thrust_attack(aim_x, aim_y)
-            play_sfx(SoundEvent.SWORD_SLASH)
+            play_sfx(SoundEvent.SLASH_KATANA)
     elif isinstance(fighter, AmericanNinja):
         fighter.trigger_shuriken(aim_x, aim_y, projectiles)
         play_sfx(SoundEvent.KUNAI_THROW)
@@ -426,17 +458,17 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
         play_sfx(SoundEvent.BOMB_FUSE)
     elif isinstance(fighter, PurpleNinja):
         fighter.trigger_kama_strike(aim_x, aim_y)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        play_sfx(SoundEvent.SLASH_CHAIN)
     elif isinstance(fighter, SaitouSamurai):
         fighter.trigger_gatotsu_thrust(aim_x, aim_y)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        play_sfx(SoundEvent.SLASH_KATANA)
     elif isinstance(fighter, Rifleman):
-        if fighter.has_ammo:
+        if fighter.has_ammo and fighter.cocking_timer <= 0:
             fighter.trigger_shoot(aim_x, aim_y, projectiles, particles)
-            play_sfx(SoundEvent.GUNSHOT)
+            play_sfx(SoundEvent.BOMB_FUSE)
         else:
             fighter.trigger_rifle_butt(aim_x, aim_y, particles)
-            play_sfx(SoundEvent.SWORD_SLASH)
+            play_sfx(SoundEvent.SWING_BLUNT)
     elif isinstance(fighter, Kabuki):
         fighter.trigger_fan_strike(aim_x, aim_y, particles)
         play_sfx(SoundEvent.SWORD_SLASH)
@@ -445,22 +477,28 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
         play_sfx(SoundEvent.BOW_RELEASE)
     elif isinstance(fighter, PirateSwordswoman):
         fighter.trigger_cutlass_cleave(aim_x, aim_y)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        play_sfx(SoundEvent.SLASH_HEAVY)
     elif isinstance(fighter, Musketeer):
         fighter.trigger_fleche_thrust(aim_x, aim_y)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        play_sfx(SoundEvent.SLASH_RAPIER)
     elif isinstance(fighter, RenMonk):
         fighter.trigger_punch_combo(aim_x, aim_y)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        play_sfx(SoundEvent.SWING_BLUNT)
     elif isinstance(fighter, ChiyoKunoichi):
         fighter.trigger_kodachi_strike(aim_x, aim_y)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        play_sfx(SoundEvent.SLASH_KATANA)
     elif isinstance(fighter, BenkeiSamurai):
         fighter.trigger_naginata_thrust(aim_x, aim_y)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        play_sfx(SoundEvent.SLASH_HEAVY)
     elif isinstance(fighter, OrinMinstrel):
         fighter.trigger_kamaitachi_pluck(aim_x, aim_y, projectiles, particles)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        play_sfx(SoundEvent.SWING_SHAMISEN)
+    elif isinstance(fighter, GoroFarmer):
+        fighter.trigger_kuwa_cleave(aim_x, aim_y)
+        play_sfx(SoundEvent.SLASH_HEAVY)
+    elif isinstance(fighter, IchiBlade):
+        fighter.trigger_gyaku_iai(aim_x, aim_y)
+        play_sfx(SoundEvent.SLASH_KATANA)
 
 def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, poison_clouds: list, powder_traps: list, opponent=None, game_map=None, banners: list = None):
     """Executa a Ação Secundária (Técnica Especial / Defesa / Contra-ataque) do combatente."""
@@ -530,6 +568,14 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
         # O-Rin: Ressonância Acústica 360°
         fighter.trigger_resonance_shockwave(aim_x, aim_y, projectiles, particles=particles, banners=banners)
         play_sfx(SoundEvent.SWORD_CLASH)
+    elif isinstance(fighter, GoroFarmer):
+        # Goro: Pisotão Sísmico
+        fighter.trigger_earth_stomp(aim_x, aim_y, shockwaves=projectiles, particles=particles, banners=banners)
+        play_sfx(SoundEvent.OBSTACLE_HIT)
+    elif isinstance(fighter, IchiBlade):
+        # Ichi: Postura de Escuta
+        fighter.trigger_listen_stance(aim_x, aim_y, banners=banners, particles=particles)
+        play_sfx(SoundEvent.DODGE_WHOOSH)
 
 def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None, opponent=None, banners=None):
     """Executa a Terceira Ação (Roll / Dash dedicado) com invulnerabilidade temporária (i-frames)."""
@@ -685,6 +731,7 @@ def run_game():
     decoys = []
     poison_clouds = []
     powder_traps = []
+    hitbox_inspector = HitboxDebugInspector(enabled=False)
 
     round_winner = None
     game_time = 0.0
@@ -754,6 +801,7 @@ def run_game():
         cinematic_director.reset_round()
         outcome_seq.reset()
         cine_beats.clear()
+        clear_arena_caches()
         static_render_queue = build_static_render_queue(game_map)
         round_intro.start(
             p1.name, p2.name,
@@ -868,6 +916,7 @@ def run_game():
     def request_restart():
         """Ponto único de reinício: decide entre revanche completa (partida encerrada) ou próximo round."""
         if (cinematic_director.is_active or cinematic_director.is_frozen() or
+            getattr(cinematic_director, "camera_setup_timer", 0.0) > 0 or
             getattr(cinematic_director, "freeze_timer", 0.0) > 0 or
             getattr(cinematic_director, "delayed_death_timer", 0.0) > 0 or
             getattr(cinematic_director, "bw_flash_timer", 0.0) > 0 or
@@ -875,6 +924,7 @@ def run_game():
             getattr(cinematic_director, "hoist_timer", 0.0) > 0 or
             getattr(cinematic_director, "sonic_silence_timer", 0.0) > 0 or
             getattr(cinematic_director, "joe_pin_timer", 0.0) > 0 or
+            getattr(cinematic_director, "joe_throw_timer", 0.0) > 0 or
             getattr(cinematic_director, "julie_flurry_timer", 0.0) > 0):
             return
         if arcade_run is not None:
@@ -901,8 +951,11 @@ def run_game():
     def draw_world_queue(render_queue):
         """Ordena (painter's algorithm) e desenha os itens do cenário/entidades já projetados pela câmera."""
         render_queue.sort(key=lambda item: item[0])
+        prop_cache = get_prop_cache()
 
         for _, item_type, obj in render_queue:
+            if item_type in ('rock', 'well', 'tree', 'torii', 'bamboo', 'building') and prop_cache.render_prop(screen, camera, item_type, obj, game_time):
+                continue
             if item_type in ('bamboo', 'building', 'lantern'):
                 obj.render(screen, camera, game_time)
             elif item_type == 'fighter' and getattr(obj, 'state', None) == STATE_FALL:
@@ -972,8 +1025,9 @@ def run_game():
     running = True
 
     while running:
-        dt = clock.tick(FPS) / 1000.0
-        dt = min(dt, 0.05)
+        raw_dt = clock.tick(FPS) / 1000.0
+        quality.update_fps_governor(raw_dt)
+        dt = min(raw_dt, 0.05)
         sound_mgr.update(dt)
 
         # -------------------------------------------------------------
@@ -1501,6 +1555,8 @@ def run_game():
                         request_restart()
                 elif event.key == KEY_TOGGLE_AI and arcade_run is None:
                     vs_ai_mode = not vs_ai_mode
+                elif event.key == pygame.K_F3:
+                    hitbox_inspector.toggle()
 
                 # Ao terminar um duelo, permitir que Quadrado / Ação Primária reinicie o duelo (mas nunca com duelo em andamento ou finisher rodando)
                 if round_winner is not None and not (cinematic_director.is_active or cinematic_director.is_frozen()):
@@ -1518,7 +1574,7 @@ def run_game():
                 if p1.is_alive and round_winner is None and round_in_progress:
                     if event.key == controls["P1_ATTACK"]:
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                        execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
+                        execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles, game_map=game_map)
                     elif event.key == controls.get("P1_SECONDARY", pygame.K_r):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                         execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
@@ -1530,7 +1586,7 @@ def run_game():
                 if not vs_ai_mode and p2.is_alive and round_winner is None and round_in_progress:
                     if event.key == controls["P2_ATTACK"]:
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
-                        execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles)
+                        execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles, game_map=game_map)
                     elif event.key in (controls.get("P2_SECONDARY"), controls.get("P2_PARRY")):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
                         execute_fighter_secondary(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p1, game_map=game_map, banners=banners)
@@ -1558,7 +1614,7 @@ def run_game():
                 elif p1.is_alive and round_winner is None and round_in_progress:
                     if ctrl_mgr.is_event_action(event, 0, "attack"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                        execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
+                        execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles, game_map=game_map)
                     elif ctrl_mgr.is_event_action(event, 0, "secondary"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                         execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
@@ -1573,7 +1629,7 @@ def run_game():
                         break
                     elif ctrl_mgr.is_event_action(event, 1, "attack"):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
-                        execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles)
+                        execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles, game_map=game_map)
                     elif ctrl_mgr.is_event_action(event, 1, "secondary"):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
                         execute_fighter_secondary(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p1, game_map=game_map, banners=banners)
@@ -1582,15 +1638,8 @@ def run_game():
                         execute_fighter_roll(p2, p2_dwx, p2_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p1, banners=banners)
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                mx, my = event.pos
                 if round_winner is not None:
                     request_restart()
-                else:
-                    select_btn_rect = pygame.Rect(25, 20, 160, 32)
-                    if arcade_run is None and select_btn_rect.collidepoint(mx, my):
-                        play_sfx(SoundEvent.MENU_SELECT)
-                        sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
-                        game_state = STATE_ARENA_SELECT
 
         # Comandos de Ação Touchscreen
         if touch_controls.is_menu_requested():
@@ -1606,7 +1655,7 @@ def run_game():
         if p1.is_alive and round_winner is None and round_in_progress:
             if touch_controls.is_attack_just_pressed():
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles)
+                execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles, game_map=game_map)
             elif touch_controls.is_dash_just_pressed():
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                 execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
@@ -1740,7 +1789,7 @@ def run_game():
                 pass  # o chefe se move pelo próprio cérebro (BossOni.update)
             elif vs_ai_mode:
                 if round_in_progress:
-                    ai.update(p2, p1, dt, game_map, projectiles, powder_pouches, decoys)
+                    ai.update(p2, p1, dt, game_map, projectiles, powder_pouches, decoys, poison_clouds)
             else:
                 if hasattr(p2, "apply_gatotsu_steering") and p2.state == "GATOTSU_CHARGE":
                     p2.apply_gatotsu_steering(p2_dwx, p2_dwy, dt)
@@ -1809,6 +1858,8 @@ def run_game():
                 elif isinstance(f, BenkeiSamurai):
                     f.update(f_dt, game_map, particles, opponent=opp, banners=banners)
                 elif isinstance(f, OrinMinstrel):
+                    f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles)
+                elif isinstance(f, (GoroFarmer, IchiBlade)):
                     f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles)
                 else:
                     f.update(f_dt, game_map)
@@ -1975,13 +2026,23 @@ def run_game():
         elif cinematic_director.is_active or cinematic_director.letterbox_prog > 0.01:
             cinematic_director.apply_camera(camera, dt)
         else:
-            camera.update(mid_x, mid_y, dt)
-            if boss_fight and round_intro_timer <= 0:
-                camera.zoom = 0.85  # o chefe tem até ~5 unidades de altura
+            if round_intro_timer <= 0:
+                camera.update_combat_framing(p1, p2, game_map, dt, is_boss=boss_fight)
+            else:
+                camera.update(mid_x, mid_y, dt)
             if camera_was_replaying:
                 OutcomeSequence.restore_classic(camera)
 
-        particles = [p for p in particles if p.update(dt)]
+        # Quando há golpe fatal: se estiver em setup de câmera, congela partículas/folhas no ar (estilo freeze-frame matrix)
+        # Durante o finisher, executa em 85% de velocidade
+        if getattr(cinematic_director, "camera_setup_timer", 0.0) > 0:
+            p_dt = 0.0
+        elif cinematic_director.is_frozen():
+            p_dt = dt * getattr(cinematic_director, "FINISHER_SPEED_SCALE", 0.85)
+        else:
+            p_dt = dt
+
+        particles = [p for p in particles if p.update(p_dt)]
         # Entregável 1.4: Particle Cap Global (limite de 150 para prevenir sobrecarga de memória)
         if len(particles) > 150:
             cosmetic_idx = [i for i, p in enumerate(particles) if not isinstance(p, (BloodParticle, FloatingBanner))]
@@ -1990,11 +2051,11 @@ def run_game():
                 to_remove = set(cosmetic_idx[:excess])
                 particles = [p for i, p in enumerate(particles) if i not in to_remove]
 
-        banners = [b for b in banners if b.update(dt)]
+        banners = [b for b in banners if b.update(p_dt)]
         for leaf in ambient_leaves:
-            leaf.update(dt, game_map.wind_at(leaf.wx, leaf.wy, game_time))
-        terrain_fx.update(dt, game_map, game_time)
-        fog.update(dt, game_time)
+            leaf.update(p_dt, game_map.wind_at(leaf.wx, leaf.wy, game_time))
+        terrain_fx.update(p_dt, game_map, game_time)
+        fog.update(p_dt, game_time)
 
         # -------------------------------------------------------------
         # RENDERIZAÇÃO COM Y-SORTING DIVIDIDO (ESTÁTICO VS DINÂMICO)
@@ -2068,6 +2129,8 @@ def run_game():
 
         draw_world_queue(render_queue)
         draw_world_ambience()
+        cinematic_director.render_world_effects(screen, camera)
+        hitbox_inspector.render(screen, camera, [p1, p2], projectiles)
 
         for banner in banners:
             banner.render(screen, camera, font_mid)
@@ -2078,21 +2141,14 @@ def run_game():
         # Aplicar filtro Kurosawa Noir (Flash preto e branco de cinema samurai com sangue vívido)
         cinematic_director.apply_cinematic_filter(screen)
 
-        # Marcadores piscantes [ P1 ] e [ P2 ] no início de cada round
+        # Marcadores minimalistas de jogador [ P1 ] e [ P2 ] em losango de laca (urushi)
         if round_start_timer > 0:
-            if (int(round_start_timer * 6.5)) % 2 == 0:
-                for fighter, label, col in ((p1, "P1", (255, 85, 85)), (p2, "P2", (95, 170, 255))):
-                    if fighter and fighter.is_alive:
-                        sx, sy = camera.apply(fighter.wx, fighter.wy, 1.80)
-                        txt = font_mid.render(f"[ {label} ]", True, col)
-                        bg_w = txt.get_width() + 14
-                        bg_h = 24
-                        bg_rect = pygame.Rect(sx - bg_w // 2, sy - 34, bg_w, bg_h)
-                        pygame.draw.rect(screen, (18, 22, 24), bg_rect, border_radius=6)
-                        pygame.draw.rect(screen, col, bg_rect, 2, border_radius=6)
-                        screen.blit(txt, (bg_rect.centerx - txt.get_width() // 2, bg_rect.centery - txt.get_height() // 2))
-                        # Pequena seta indicadora apontando para a cabeça
-                        pygame.draw.polygon(screen, col, [(sx, sy - 8), (sx - 6, sy - 16), (sx + 6, sy - 16)])
+            from src.ui.combat_callouts import draw_overhead_marker, draw_status_gauge
+            fade_a = max(0, min(255, int(min(1.0, round_start_timer / 0.4) * 255)))
+            for fighter, label, col in ((p1, "P1", (255, 95, 95)), (p2, "P2", (100, 185, 255))):
+                if fighter and fighter.is_alive:
+                    sx, sy = camera.apply(fighter.wx, fighter.wy, 1.80)
+                    draw_overhead_marker(screen, sx, sy, label, col, alpha=fade_a)
 
         # Contador Regressivo de Veneno (Dokukiri) com alarme visual e barra decrescente
         for fighter in (p1, p2):
@@ -2133,44 +2189,31 @@ def run_game():
 
         # Barra de Cooldown flutuante sobre a cabeça dos combatentes na arena (Item 6)
         if round_winner is None:
+            from src.ui.combat_callouts import draw_status_gauge
             for fighter in (p1, p2):
                 if fighter and fighter.is_alive:
                     cd_data = get_fighter_cooldown_data(fighter)
                     if cd_data and (cd_data.get("timer", 0.0) > 0.0 or cd_data.get("warning")):
                         fsx, fsy = camera.apply(fighter.wx, fighter.wy, 1.82)
-                        bar_w = 46
-                        bar_h = 5
-                        bx = fsx - bar_w // 2
-                        by = fsy - 28
-
-                        # Sombra / Fundo
-                        pygame.draw.rect(screen, (14, 18, 16, 210), (bx - 1, by - 1, bar_w + 2, bar_h + 2), border_radius=2)
-
-                        if cd_data.get("warning"):
-                            if int(game_time * 8.0) % 2 == 0:
-                                pygame.draw.rect(screen, cd_data.get("color", (240, 60, 60)), (bx, by, bar_w, bar_h), border_radius=2)
-                            lbl_surf = font_small.render(cd_data["name"], True, (255, 190, 190))
-                            screen.blit(lbl_surf, (fsx - lbl_surf.get_width() // 2, by - 13))
-                        else:
-                            timer = cd_data.get("timer", 0.0)
-                            max_cd = max(0.01, cd_data.get("max_cd", 1.0))
-                            pct = max(0.0, min(1.0, 1.0 - timer / max_cd))
-                            fill_w = int(bar_w * pct)
-
-                            pygame.draw.rect(screen, (36, 44, 40), (bx, by, bar_w, bar_h), border_radius=1)
-                            if fill_w > 0:
-                                pygame.draw.rect(screen, cd_data.get("color", (100, 200, 255)), (bx, by, fill_w, bar_h), border_radius=1)
-                            pygame.draw.rect(screen, (170, 180, 175), (bx - 1, by - 1, bar_w + 2, bar_h + 2), 1, border_radius=2)
-
-                            lbl_surf = font_small.render(f"{timer:.1f}s", True, (230, 240, 235))
-                            screen.blit(lbl_surf, (fsx - lbl_surf.get_width() // 2, by - 14))
+                        draw_status_gauge(
+                            screen,
+                            fsx,
+                            fsy,
+                            cd_data["name"],
+                            cd_data.get("timer", 0.0),
+                            cd_data.get("max_cd", 1.0),
+                            color=cd_data.get("color", (100, 200, 255)),
+                            warning=bool(cd_data.get("warning")),
+                            blink=(int(game_time * 8.0) % 2 == 0),
+                        )
 
         # -------------------------------------------------------------
-        # INTERFACE DE USUÁRIO (HUD)
+        # INTERFACE DE USUÁRIO (HUD) EM LACA URUSHI E FOLHA DE OURO
         # -------------------------------------------------------------
         panel_rect = pygame.Rect(SCREEN_WIDTH // 2 - 270, 10, 540, 66)
-        pygame.draw.rect(screen, (20, 24, 22, 220), panel_rect, border_radius=8)
-        pygame.draw.rect(screen, (60, 75, 68), panel_rect, 2, border_radius=8)
+        pygame.draw.rect(screen, (14, 16, 20), panel_rect, border_radius=8)
+        pygame.draw.rect(screen, (218, 175, 75), panel_rect, 2, border_radius=8)
+        pygame.draw.rect(screen, (140, 105, 38), (panel_rect.x + 3, panel_rect.y + 3, panel_rect.w - 6, panel_rect.h - 6), 1, border_radius=6)
 
         p1_color = get_fighter_color(p1)
         p2_color = get_fighter_color(p2)
@@ -2336,13 +2379,7 @@ def run_game():
                         screen.blit(dist_lbl, (d_bg.x + 4, d_bg.y + 1))
 
 
-        # Botão Trocar Personagens no topo esquerdo (não existe no Arcade)
-        if arcade_run is None:
-            select_btn = pygame.Rect(25, 20, 180, 32)
-            pygame.draw.rect(screen, (26, 34, 30, 210), select_btn, border_radius=6)
-            pygame.draw.rect(screen, COLOR_GOLD, select_btn, 1, border_radius=6)
-            sel_txt = font_small.render(t("change_warriors"), True, COLOR_GOLD)
-            screen.blit(sel_txt, (select_btn.centerx - sel_txt.get_width() // 2, select_btn.y + 7))
+
 
         # Renderizar Controles Virtuais Touchscreen (se ativos/visíveis)
         p1_a1, p1_a2 = get_fighter_action_labels(p1)

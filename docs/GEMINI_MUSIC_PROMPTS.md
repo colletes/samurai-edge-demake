@@ -164,6 +164,110 @@ Mix & Texture: Razor-sharp transients on the shamisen strings, intimate stereo w
 
 ---
 
+## ⛩️ Ciclo 3: Arenas do Ciclo 3
+
+---
+
+### 7. Arrozais Terraciados (`rice_paddies`)
+* **Personagem Principal**: Goro (Fazendeiro da Kuwa)
+* **Ambiente**: Encosta montanhosa esculpida em terraços escalonados de arrozais alagados ao pôr do sol crepuscular. Espelhos d'água refletindo o céu alaranjado e cinzento, caminhos de terra batida e lamaçais, espantalhos rústicos de palha, feixes de feno secando e névoa rural rasteira.
+* **Clima Emocional**: Insurreição popular, força telúrica inabalável, dignidade da terra e revolta camponesa. O peso rústico do trabalho braçal transformado em fúria marcial contra a tirania samurai.
+
+#### 🎙️ Prompt Gemini (English - High Fidelity MusicLM / Lyria):
+```text
+Title: Wrath of the Terraced Earth
+Genre: Feudal Japanese Folk War Anthem / Rural Peasant Rebellion Theme / Neo-Geo Arcade Battle
+Tempo: 116 BPM, 4/4 Time Signature, Key of D Minor (Min'yo / In-sen Folk Scale)
+Instrumentation: Heavy earthen foot-stomps and wooden sake barrel drums (taru-taiko) serving as foundational rhythm, rustic hand-forged agricultural hoe and scythe clangs used as raw metal percussion, deep resonant nagado taiko, gritty low-pitched biwa and rustic sanshin/shamisen riffs, earthy bamboo shinobue flute melodies with fierce vibrato, distant call-and-response peasant work chants (Taue-uta style) transformed into a defiant battle roar, low analog sub-drone evoking shifting tectonic earth.
+Structure & Dynamics:
+- Intro (0:00 - 0:12): Distant evening wind over water terraces, a heavy boot-stomp in damp earth followed by a solitary rhythmic clang of a forged steel hoe; a raw, unpolished shinobue flute cry begins the melody.
+- Peasant Revolt Groove (0:12 - 0:50): Thumping earth-stomping rhythm enters with heavy wooden barrels and deep taikos; aggressive, percussive biwa strums drive relentless forward momentum; gritty peasant folk shouts ("Sore! Ha-iya!") punctuate syncopated downbeats.
+- Seismic Climax (0:50 - 1:15): Accelerating polyrhythmic drum rolls simulate an earthquake/landslide; piercing shrill flute trills and roaring brass accents culminate in an explosive unison hit, pausing sharply to mimic a crushing downward hoe strike into the soil.
+- Seamless Loop Tail: Low rumbling resonance of vibrating earth and evening breeze resolving naturally back into the introductory hoe strike for infinite battle looping.
+Mix & Texture: Gritty, warm, visceral low-end with natural wooden thump and raw metallic transients; humid, earthy open-air acoustic resonance; 90s SNK arcade fighting game aesthetic (reminiscent of Cham Cham / Genan stages with grounded feudal weight).
+```
+
+#### 📜 Descrição Conceitual (Português):
+* **Foco Rítmico**: Percussão pesada de solo e madeira (Taru-taiko e batidas de bota na terra batida) combinada com estalos metálicos secos de ferro forjado da Kuwa batendo no solo.
+* **Arranjo Melódico**: Canto folclórico camponês (estilo *Taue-uta*) fundido com a escala Min'yo rústica na flauta Shinobue e acordes ásperos de Biwa, transmitindo a revolta indomável do homem do campo.
+
+---
+
+### 8. Moinho na Chuva (`rain_mill`)
+* **Personagem Principal**: Ichi (A Lâmina Cega - Shikomizue)
+* **Ambiente**: Moinho de água abandonado à beira de um riacho caudaloso sob chuva torrencial contínua. Roda d'água de madeira antiga girando com rangidos ritmados, pingos densos espirrando em poças e pedras de rio, névoa úmida envolvente e pontes de madeira escorregadias.
+* **Clima Emocional**: Melancolia cinematográfica nobre, tensão sensorial extrema (estilo clássico *Zatoichi*), serenidade mortal. A percepção aguçada de quem enxerga a batalha pelo som das gotas e pelo vento antes de sacar a lâmina oculta.
+
+#### 🎙️ Prompt Gemini (English - High Fidelity MusicLM / Lyria):
+```text
+Title: The Blind Blade in the Weeping Mill
+Genre: Cinematic Feudal Japanese Neo-Noir Combat / Zatoichi Instrumental Theme / 90s Neo-Geo Arcade OST
+Tempo: 124 BPM, 4/4 Time Signature, Key of A Minor (Miyako-bushi / In-sen Scale)
+Instrumentation: Continuous ambient rain textures and the rhythmic wooden creak and splash of a watermill wheel functioning as an organic metronome, solitary master-level Shakuhachi using extended breath techniques (muraiki wind-gusts), sparse and poignant plucked Koto arpeggios, sorrowful bowed Kokyū phrases, muted soft-skin taiko drums, sharp wooden cane tap and instantaneous metal blade unsheathing sound effect (shikomizue click) integrated into the percussion.
+Structure & Dynamics:
+- Intro (0:00 - 0:14): Atmospheric heavy rainfall and splashing watermill wheel; a solitary hollow wooden cane tap on wet stone planks; a single breathy, trembling shakuhachi phrase cuts through the mist.
+- Sensory Duel (0:14 - 0:52): A crisp, restrained yet urgent rhythm begins with syncopated wooden percussion and muted taiko; elegant koto cascades dance around the sorrowful, weeping kokyū; sudden razor-sharp shamisen accents strike like lightning unseen.
+- The Blind Riposte (0:52 - 1:18): Dramatic buildup of dynamic rain and accelerating waterwheel tempo; sweeping koto runs crescendo into a sudden breathless silence (waterdrops in slow-motion), snapped by an electrifying blade-draw slash and hollow wooden sheath click.
+- Seamless Loop Tail: The resonance of the sheath click decays into the rhythmic creak of the watermill wheel and steady downpour, looping seamlessly into the opening measure.
+Mix & Texture: Intimate, wet, highly detailed stereo imaging where every raindrop and wooden creak has pinpoint spatial placement; razor-clean transient attacks on string plucks; dark, poetic, cinematic aesthetic matching the golden era of Samurai Shodown and The Last Blade.
+```
+
+#### 📜 Descrição Conceitual (Português):
+* **Foco Rítmico**: O giro compassado e os respingos da roda d'água de madeira servem de metrônomo orgânico para o ritmo de combate, intercalado com o estalo seco da bengala de madeira e o clique metálico do shikomizue.
+* **Arranjo Melódico**: Escala melancólica Miyako-bushi em Lá Menor, alternando passagens de silêncio meditativo com rajadas virtuosas de Koto e Kokyū, evocando a tragédia e a precisão letal da espadachim cega.
+
+---
+
+### 9. Ilha Ganryū - Visual Revamp (`ganryu_island`)
+* **Personagem Principal**: Musashi (Duelista das Duas Espadas)
+* **Ambiente**: Praia desolada varrida por ventos oceânicos na lendária Ilha de Ganryū. Areias brancas, espumas de maré arrebentando nas rochas costeiras, barcos de madeira encalhados, grama de duna balançando e névoa marinha matinal.
+* **Clima Emocional**: O ápice do duelo samurai lendário (Musashi vs. Sasaki Kojirō). Solenidade absoluta, honra inflexível, choque monumental de duas filosofias de espada diante da imensidão do oceano.
+
+#### 🎙️ Prompt Gemini (English - High Fidelity MusicLM / Lyria):
+```text
+Title: Tide of the Dual Blades (Ganryū Island Revamp)
+Genre: Legendary Feudal Japanese Duel Theme / Epic Coastal Sword Battle / Neo-Geo Arcade
+Tempo: 120 BPM, 4/4 Time Signature, Key of G Dorian / Pentatonic Coastal Scale
+Instrumentation: Crashing ocean surf and howling coastal wind atmospheric layers, deep resonant Ōdaiko rolling waves, crisp dual-stick Shime-daiko battle patterns, heroic and commanding Shakuhachi leads with aggressive overblown attacks, rapid alternating dual-plectrum Biwa riffs symbolizing two crossing katanas, metallic sword-sheathing transients and subtle orchestral brass pads for cinematic dueling grandeur.
+Structure & Dynamics:
+- Intro (0:00 - 0:12): Waves crashing against rocky shores, solitary sea gulls, and an iconic solemn shakuhachi intro setting up the historic sunrise duel.
+- Duel on the Waves (0:12 - 0:48): Driving, galloping taiko rhythm pushes the battle forward; fierce biwa counterpoints weave around heroic wind phrases; tension rises as rhythmic intervals tighten.
+- Clash of Legends (0:48 - 1:16): High-drama crescendo featuring rapid-fire shime-daiko rolls, soaring high-register flute flourishes, and heavy dramatic pauses representing decisive killing strokes above the tide.
+- Seamless Loop Tail: Crashing wave swell fading into the steady coastal surf, looping seamlessly back to the opening ocean wind.
+Mix & Texture: Broad, expansive coastal stereo field with deep low-end punch of tidal waves, crystal-clear flute presence, punchy vintage 90s SNK arcade master.
+```
+
+#### 📜 Descrição Conceitual (Português):
+* **Foco Rítmico**: O ritmo do mar e o trote firme dos tambores Shime-daiko e Ōdaiko, simbolizando o compasso das ondas da maré e o avanço calculado dos dois maiores duelistas do Japão.
+* **Arranjo Melódico**: Diálogo dramático e heroico no Shakuhachi sobre acordes tensos de Biwa, culminando em cortes súbitos que remetem à lenda do duelo de Ganryūjima.
+
+---
+
+### 10. Telhados de Iga - Visual Revamp (`iga_rooftops`)
+* **Personagem Principal**: Hanzo (Mestre Shinobi de Iga)
+* **Ambiente**: Conjunto de telhados de telhas negras de um castelo feudal sob a luz gelada de uma lua cheia monumental. Névoa densa rastejando pelos beirais, telhas de argila estalando sob passos acrobáticos, vento noturno sibilante e sombras furtivas deslizando na escuridão.
+* **Clima Emocional**: Infiltração furtiva em alta velocidade, perigo mortal em cada salto sobre o abismo, astúcia e letalidade silenciosa do Ninjutsu tradicional.
+
+#### 🎙️ Prompt Gemini (English - High Fidelity MusicLM / Lyria):
+```text
+Title: Moonlit Shadows Over Iga (Iga Rooftops Revamp)
+Genre: Stealth Shinobi Combat Theme / Fast-Paced Ninja Battle / 90s Neo-Geo Arcade OST
+Tempo: 138 BPM, 4/4 Time Signature, Key of F# Minor (In-sen Ninja Scale)
+Instrumentation: Rapid stealthy Tsuzumi and Shime-daiko drum patterns, syncopated wooden Hyoshigi clackers, swift whispering Shinobue flute darting through chromatic runs, muted rhythmic acoustic shamisen, metallic shuriken and kunai clinks woven into hi-hat patterns, dark pulsing bass synth, nocturnal wind and fluttering cloth sound effects.
+Structure & Dynamics:
+- Intro (0:00 - 0:10): Night wind howling across castle gables, a shadowy roof tile creak, followed by a swift chromatic shinobue descent mimicking a ninja leaping into the moonlight.
+- Shadow Sprint (0:10 - 0:48): Urgent, high-tempo syncopated percussion erupts; darting flute phrases and biting shamisen riffs maintain relentless acrobatic velocity; crisp metallic shuriken-chimes punctuate offbeats.
+- Assassination Arc (0:48 - 1:14): Breakneck percussion fills with double-time tsuzumi strikes; dizzying pentatonic flute spirals ascend to a sudden, suspenseful drop where only the night wind and a distant temple bell chime remain.
+- Seamless Loop Tail: Swift shinobue flourish resolving into the high rooftop wind gust for seamless fighting game looping.
+Mix & Texture: Tight, agile transients, high-velocity stereo panning evoking ninja leaping across rooftops, dark moody reverb; quintessential 90s Ninja Master's / Samurai Shodown ninja stage vibe.
+```
+
+#### 📜 Descrição Conceitual (Português):
+* **Foco Rítmico**: Alta velocidade (138 BPM) com síncopes furtivas de Tsuzumi e estalos rápidos de Hyoshigi, emulando acrobacias aéreas, saltos parabólicos e esquivas nas alturas.
+* **Arranjo Melódico**: Flauta Shinobue veloz e esguia em escala In-sen sombria, entrecortada por efeitos percussivos que lembram arremessos de kunai e shurikens.
+
+---
+
 ## 📌 Guia de Integração no Jogo
 Quando as faixas forem geradas em áudio (.mp3 / .ogg):
 1. Normalizar o áudio para **-14 LUFS** com pico máximo em **-1.0 dB True Peak**.
@@ -175,4 +279,8 @@ Quando as faixas forem geradas em áudio (.mp3 / .ogg):
    - `bgm_shadow_cave.mp3`
    - `bgm_gojo_bridge.mp3`
    - `bgm_yoshiwara_alley.mp3`
+   - `bgm_rice_paddies.mp3` *(Novo - Ciclo 3: Goro)*
+   - `bgm_rain_mill.mp3` *(Novo - Ciclo 3: Ichi)*
+   - `bgm_ganryu_island.mp3` *(Revamp - Ciclo 3: Musashi)*
+   - `bgm_iga_rooftops.mp3` *(Revamp - Ciclo 3: Hanzo)*
 4. O `SoundManager` já está configurado para mapear os IDs de arena diretamente para essas faixas de BGM via `spec.music`.

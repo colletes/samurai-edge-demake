@@ -24,6 +24,7 @@ STATE_ZEROSHIKI = "ZEROSHIKI"
 class SaitouSamurai(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Saitou")
+        self.char_type = "saitou"
         self.speed = 4.6  # Velocidade padrão de deslocamento
 
         # -------------------------------------------------------------

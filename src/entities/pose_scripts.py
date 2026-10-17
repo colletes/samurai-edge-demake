@@ -15,7 +15,8 @@ VICTORY_RETURN = 0.6      # câmera volta à vista clássica depois da pose
 
 # Duração de cada estado de golpe no renderer (`atk_progress = 1 - state_timer / duração`).
 ATTACK_DURATION = {"kenshin": 0.16, "musashi": 0.18, "pirate": 0.22, "anne": 0.22, "musketeer": 0.24, "julie": 0.24,
-                   "purple": 0.16, "ninja": 0.18, "saitou": 0.25, "ren": 0.14, "chiyo": 0.14, "benkei": 0.32, "orin": 0.20}
+                   "purple": 0.16, "ninja": 0.18, "saitou": 0.25, "ren": 0.14, "chiyo": 0.14, "benkei": 0.32, "orin": 0.20,
+                   "goro": 0.26, "ichi": 0.16}
 DEFAULT_ATTACK_DURATION = 0.20
 STATE_DURATION = {"PARRY": 0.45, "CAPE_FLOURISH": 0.5, "KIAI": 0.35, "MAI_DANCE": 0.36}
 MELEE_STATES = ("ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE", "KIAI", "MAI_DANCE")
@@ -64,6 +65,10 @@ def canonical(char_type: str) -> str:
         return "benkei"
     if "orin" in c or "minstrel" in c:
         return "orin"
+    if "goro" in c or "farmer" in c or "kuwa" in c:
+        return "goro"
+    if "ichi" in c or "blind" in c or "shikomizue" in c:
+        return "ichi"
     return c
 
 
@@ -127,6 +132,18 @@ INTRO = {
         _seg(0.20, 0.68, "ATTACK", 0.0, 1.0),
         _idle(0.68, 1.0, pose="courtesan_stance"),
     ],
+    # Goro (Fazendeiro da Kuwa): Descida da Kuwa rachando o solo, poeira e guarda de ferro
+    "goro": [
+        _idle(0.0, 0.20),
+        _seg(0.20, 0.65, "ATTACK", 0.0, 1.0),
+        _idle(0.65, 1.0, pose="iron_guard"),
+    ],
+    # Ichi (Lâmina Cega): Postura de escuta sensorial, saque relâmpago Gyaku-Iai em leque e embainhar sereno
+    "ichi": [
+        _idle(0.0, 0.25, pose="listen_stance"),
+        _seg(0.25, 0.65, "ATTACK", 0.0, 1.0),
+        _idle(0.65, 1.0, pose="sheath_click"),
+    ],
 }
 
 VICTORY = {
@@ -170,6 +187,19 @@ VICTORY = {
         _seg(0.20, 0.55, "ATTACK", 0.0, 1.0),
         _idle(0.55, 1.0, pose="orin_backward_glance"),
     ],
+    # Goro: Pisotão sísmico triunfante, giro da enxada e descanso sobre o ombro
+    "goro": [
+        _idle(0.0, 0.20, pose="earth_stomp"),
+        _seg(0.20, 0.65, "ATTACK", 0.0, 0.5),
+        _idle(0.65, 1.0),
+    ],
+    # Ichi: Corte em arco, embainhar silencioso com clique oco e postura serena
+    "ichi": [
+        _idle(0.0, 0.15),
+        _seg(0.15, 0.55, "ATTACK", 0.0, 0.7),
+        _idle(0.55, 0.85, pose="sheath_click"),
+        _idle(0.85, 1.0),
+    ],
 }
 
 SCRIPTS = {"intro": INTRO, "victory": VICTORY}
@@ -193,6 +223,8 @@ BEATS = {
         "chiyo": [(0.02, "fx:smoke"), (0.02, "sfx:smoke_puff"), (0.30, "sfx:sword_slash"), (0.56, "sfx:sword_slash"), (0.60, "fx:petals")],
         "benkei": [(0.24, "sfx:obstacle_hit"), (0.45, "sfx:sword_slash"), (0.50, "fx:sparks")],
         "orin": [(0.22, "sfx:sword_slash"), (0.50, "fx:petals")],
+        "goro": [(0.24, "sfx:obstacle_hit"), (0.45, "sfx:sword_slash"), (0.50, "fx:sparks")],
+        "ichi": [(0.18, "sfx:dodge_whoosh"), (0.32, "sfx:sword_slash"), (0.68, "sfx:parry")],
     },
     "victory": {
         "kenshin": [(0.17, "sfx:sword_slash"), (0.6, "sfx:sword_slash"), (0.4, "fx:petals")],
@@ -211,6 +243,8 @@ BEATS = {
         "chiyo": [(0.08, "sfx:sword_slash"), (0.38, "sfx:parry"), (0.42, "fx:petals"), (0.72, "fx:petals")],
         "benkei": [(0.28, "sfx:parry"), (0.35, "fx:sparks")],
         "orin": [(0.24, "sfx:sword_slash"), (0.40, "fx:petals"), (0.75, "fx:petals")],
+        "goro": [(0.15, "sfx:obstacle_hit"), (0.40, "sfx:sword_slash"), (0.45, "fx:sparks")],
+        "ichi": [(0.15, "sfx:sword_slash"), (0.55, "sfx:parry"), (0.65, "fx:petals")],
     },
 }
 

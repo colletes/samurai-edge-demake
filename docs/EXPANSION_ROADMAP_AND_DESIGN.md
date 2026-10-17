@@ -1,6 +1,129 @@
 # 🗺️ Master Roadmap & Plano de Expansão: Samurai Edge Demake (Roster 12 ➔ 24)
 
-Este documento estabelece o planejamento estratégico, o fluxo iterativo de desenvolvimento em **6 Ciclos**, as fichas dos **12 novos personagens** (6 homens e 6 mulheres), o catálogo minucioso de **Fatalities Contextuais por Golpe (Ataque a Ataque para os 24 Guerreiros)** e o cronograma de **Revamp Visual de Arenas** com partículas volumétricas para *Samurai Edge Demake*.
+> **Prioridade Estratégica Atual:** **PRIORIDADE MÁXIMA — PLANO MESTRE DE MODERNIZAÇÃO, PERFORMANCE & FIDELIDADE VISUAL**  
+> Os itens do Plano Mestre abaixo têm precedência absoluta sobre a continuidade da expansão do roster (Ciclos 4 a 6). A engine, o sistema de câmeras, os modelos dos personagens, as colisões, as arenas voxel, os efeitos sonoros e os menus serão modernizados primeiro na base existente e nos lutadores do piloto antes de prosseguir com novos combatentes.
+
+---
+
+## ⚡ 0. PLANO MESTRE DE MODERNIZAÇÃO & PERFORMANCE (PRIORIDADE MÁXIMA)
+
+Este plano consolida as melhorias prioritárias acordadas para elevar a fidelidade técnica e estética de *Samurai Edge Demake*, mantendo 100% da base em **Python / Pygame** (sem perda de lógica de combate, IA, testes ou Modo Arcade).
+
+```mermaid
+flowchart TD
+    subgraph Foundation["Fase 1: Performance, Câmera Dinâmica & Finisher 3-Fases"]
+        M1["1.1 Cache de Cenário/Props Voxel & Zero-Alloc Loop"]
+        M2["1.2 Câmera Dinâmica (Auto-Zoom 0.88x–1.28x)"]
+        M3["1.3 Câmera de Finisher em 3 Fases (Freeze, Swoop, Execute)"]
+    end
+    subgraph CombatAudioUI["Fase 2: Modelagem 3D, Animações/Rig, Áudio Realista & UI Moderna"]
+        M4["2.1 Malha 3D Esculpida dos Personagens (Fidelidade aos Portraits)"]
+        M5["2.2 Rig 3D com Torção de Coluna + Hitboxes de Cápsula/Arco"]
+        M6["2.3 Finalizações Pareadas (2 Atores) + Desmembramento 3D Real"]
+        M7["2.4 Foley Realista em Camadas + SFX Diferenciado por Arma/Piso"]
+        M8["2.5 UI Cinema Samurai Moderna (Estilo Ghost of Tsushima / Sekiro)"]
+    end
+    subgraph Rollout["Fase 3 & 4: Piloto Vertical Slice ➔ Rollout Geral"]
+        M9["3.1 Piloto Vertical Slice (Kenshi, Musashi, Saitou, Okuni + Bambu & Kyoto)"]
+        M10["4.1 Rollout nos Demais Lutadores/Arenas + Retomada dos Ciclos 4-6"]
+    end
+    Foundation --> CombatAudioUI --> Rollout
+```
+
+> [!IMPORTANT]
+> **Diretriz Anti-Aberração Visual em Câmeras 3D:**  
+> Personagens, feições faciais, fitas de tecido/cabelo e pedaços de corpos desmembrados passam a usar **projeção pura de vértices 3D no espaço de mundo** (`camera.apply(wx, wy, wz)`), eliminando completamente recortes de superfície 2D com `pygame.transform.rotate` ou distorções escaladas na rotação/zoom da câmera.
+
+---
+
+### 0.1 Os 9 Pilares de Melhoria + 3 Recursos de Alto Impacto
+
+#### 1. Performance & Otimização Low-End PC / Mobile
+* **Problema:** `arena_generator.py` redesenha 484 tiles e dezenas de props estáticos (`draw_voxel_box` + `draw_face_texture` com chamadas de linhas em CPU) todo frame; `_draw_pit` e `cinematic_director.py` alocam superfícies `SRCALPHA` de tela cheia a cada frame.
+* **Solução:**
+  * **Cache de Terreno e Props Estáticos (`src/world/arena_cache.py` [NOVO])**: Pré-renderizar a camada de solo e props estáticos (rochas, árvores, fachadas, lanternas) em uma superfície cacheada quando `azimuth == 0`. O loop principal faz blit direto do cache, ativando desenho voxel 3D ao vivo apenas quando houver rotação de câmera (`azimuth != 0`), destruição de prop ou perigo dinâmico.
+  * **Zero Per-Frame Allocations**: Pré-alocar e reutilizar buffers de vinheta, filtros monocromáticos, sombras e partículas.
+  * **Governador Automático de FPS (`src/effects/quality.py`)**: Monitorar a média de tempo de quadro. Se exceder 17.5ms (<57 FPS em PCs modestos ou mobile), reduzir automaticamente densidade de fumaça/fog e linhas de textura distantes.
+
+#### 2. Modelagem dos Personagens & Fidelidade aos Portraits
+* **Problema:** Os personagens atuais usam caixas retangulares empilhadas (`cbox`/`obox`) com contornos pretos rígidos em cada junta, e a função `face()` é vazia (`return`), deixando rostos sem expressão nem semelhança com os portraits 2D.
+* **Solução:**
+  * **Primitivas de Malha 3D Esculpidas (`src/isometric/mesh_primitives.py` [NOVO], `src/entities/model_kit.py`)**:
+    * Troncos cônicos com ombros largos afinando na cintura; membros com frustums octogonais/tapered; cabeças esculpidas com maxilar e queixo definidos.
+    * **Rostos 2.5D com Fidelidade ao Retrato**: Olhos, sobrancelhas, maquiagem teatral Kumadori (Okuni), cicatrizes (Kenshi), delineados (O-Rin) e bandanas projetados como polígonos 3D precisos na face frontal.
+  * **Fitas Contínuas de Tecido e Cabelo 3D (`src/isometric/cloth.py`)**: Hakamas, quimonos, capas e rabos de cavalo construídos em faixas contínuas de quads conectados (`draw_ribbon_mesh_3d`), com contornos apenas na silhueta externa (sem linhas internas de tijolo).
+  * **Shaders de Materiais**: Brilho anisotrópico em seda/cetim, especularidade metálica na lâmina/armadura e sombreamento de dobras vincadas no hakama.
+
+#### 3. Arenas Voxel: Materiais, Detalhes & Texturas
+* **Abordagem:** Preservar a identidade voxel consagrada das arenas, mas elevar o detalhamento e acabamento:
+  * **Props em Múltiplas Camadas Voxel**: Rochas com formações em degraus, musgo e seixos; árvores com copas em camadas cônicas orgânicas e raízes expostas; telhados com beirais curvos tradicionais e lanternas suspensas.
+  * **Acabamento de Solo**: Transições de espuma nas margens d'água, chanfros nas calçadas de pedra de Kyoto e poças com reflexos especulares das tochas/chamas.
+
+#### 4. Áudio & Efeitos Sonoros Realistas (Foley em Camadas)
+* **Problema:** Os arquivos `.wav` atuais são ruídos sintetizados procedurais estáticos idênticos para todas as armas.
+* **Solução:**
+  * **Biblioteca de Foley Realista (`assets/sounds/sfx/`, `tools/build_realistic_sfx.py`)**:
+    * Substituição de bleeps por amostras acústicas de aço temperado de verdade, lâminas pesadas cortando o ar, impacto seco de madeira, ressonância profunda de taiko/gongo, pólvora de canhão/arcabuz encorpada e sons viscerais de corte.
+  * **Diferenciação por Arma e Terreno (`src/audio/sound_events.py`, `src/audio/sound_manager.py`)**:
+    * Eventos separados para katanas rápidas, naginatas pesadas, florete agudo, bastão de madeira, corrente e shamisen.
+    * Passos diferenciados em tempo real de acordo com o piso (grama, madeira de ponte, cascalho, água rasa, lama).
+  * **Micro-Variação em Tempo Real**: Variação aleatória de pitch (±6%) e volume (±8%) em cada golpe para eliminar repetição robótica.
+
+#### 5. Animações dos Personagens, Colisões & Finalizações Pareadas
+* **Problema:** Rig rígido sem movimento de coluna/pelve; hitboxes circulares simples não casam com estocadas longas ou cortes em arco; finalizações desconectadas (vítima fica a 1 metro da espada).
+* **Solução:**
+  * **Rig com Articulação de Tronco & Easing Marcial (`src/isometric/voxel_rig.py`)**:
+    * Movimento de pelve (peso na passada), inclinação do torso ao correr e **torção de cintura/ombro** durante os golpes.
+    * Curvas de animação em 3 fases (*Antecipação ➔ Impacto Rápido ➔ Recuperação fluida*).
+  * **Hitboxes por Cápsula e Setor de Arco (`src/combat/hitboxes.py` [NOVO], `src/combat/collision.py`)**:
+    * Cápsulas orientadas para estocadas (Gatotsu do Saitou, Julie, Benkei) e arcos angulares para cortes curvos (Kenshi, Musashi, Anne).
+    * Tecla de depuração `F3` para inspecionar hitboxes/hurtboxes e frame data no treino.
+  * **Coreografia de Finalização Pareada (2 Atores) (`src/effects/cinematic_director.py`)**:
+    * Ao acertar o golpe fatal, agressor e vítima são suavemente magnetizados na posição relativa perfeita de contato (`ideal_distance` e ângulo livre de paredes).
+    * A vítima reage fisicamente ao ponto de corte (ajoelhar, transpassar no peito, tombar de costas).
+  * **Física de Desmembramento 3D Real (`src/entities/voxel_corpse.py`)**:
+    * Substituição completa da rotação de imagem 2D por sub-modelos 3D físicos independentes (cabeça, torso, membros, arma cravada) que caem, quicam e rolam com física 3D tridimensional pura.
+
+#### 6. Animações e Física Reativa das Arenas
+* **Solução:**
+  * **Vento e Deslocamento de Ar em Combate**: Golpes próximos, dashes rápidos e explosões empurram o vento local, fazendo bambus, grama de duna, cortinas noren, faixas e folhagens dobrarem e soltarem pétalas/folhas.
+  * **Água e Lama Interativas**: Passos e deslizamentos na água geram ondas circulares isométricas concêntricas e respingos.
+  * **Destruição Voxel Direcional**: Biombos shoji, cercas de bambu e fardos de feno estilhaçam em blocos voxel que voam na direção do golpe e repousam no chão.
+  * **Deslizamento Suave em Obstáculos**: Eliminar travamentos secos ao esbarrar em paredes/rochas, aplicando vetor tangente de deslizamento.
+
+#### 7. Câmera Dinâmica de Gameplay (Auto-Zoom Suave & Enquadramento)
+* **Solução (`src/isometric/camera.py`, `main.py`):**
+  * Rotação mantida estritamente fixa (0°) durante o combate normal.
+  * **Auto-Zoom Inteligente por Distância (`0.88x` a `1.28x`)**:
+    * Combate próximo corpo-a-corpo (`distância <= 3.0 tiles`): zoom suave até `1.28x` para destacar detalhes das lâminas e roupas.
+    * Combate em média distância (`3.0 a 8.0 tiles`): zoom padrão `1.00x` a `1.15x`.
+    * Combate em longa distância com projéteis (`distância >= 9.0 tiles`): zoom abre até `0.88x` para enquadrar ambos os lutadores e projéteis.
+  * **Micro-Zooms de Ação & Clamping**: Pequeno pulso de zoom em Parries bem-sucedidos; amortecimento por mola (*spring-damper*); trava de borda para não mostrar área vazia fora da arena.
+
+#### 8. Câmera de Finisher em 3 Fases (Freeze, Swoop, Execute)
+* **Solução (`src/effects/cinematic_director.py`):**
+  * **Fase 1 — Impact Freeze (0.25s)**: No momento exato do impacto fatal, o jogo congela no tempo (lutadores, partículas e sangue parados no ar) com hitstop pesado e batimento cardíaco surdo.
+  * **Fase 2 — Swoop & Órbita com Tempo Congelado (0.55s)**: Com o mundo congelado, a câmera mergulha suavemente em direção ao ponto de contato, aplica barras pretas CinemaScope `2.39:1`, fecha o zoom em `1.75x` e **rotaciona o azimute para o melhor ângulo de perfil 3/4** em relação à linha agressor-vítima (evitando que um cubra o outro).
+  * **Fase 3 — Execução da Finalização**: A câmera trava no ângulo cinematográfico ideal, o tempo volta a correr em câmera lenta dramática (`0.80x`), a animação da coreografia pareada se completa, o corte desmembra a vítima em 3D e o kanji Sumi-E é carimbado.
+
+#### 9. Menus, HUD & Mensagens de Combate Profissionais (Cinema Samurai)
+* **Solução (`src/ui/`, `src/effects/particles.py`):**
+  * **Adeus aos Textos Neon Flutuantes (`FloatingBanner`)**: Substituição de mensagens flutuantes arcade por **faixas horizontais de pincelada Sumi-E discretas com acentos dourados e caligrafia refinada**, surgindo de forma elegante e dissipando como névoa de tinta.
+  * **Prompt de Choque de Lâminas (Clash QTE)**: O botão vermelho arcade é substituído por um **selo ritual de espadas cruzadas com círculo de tensão e caligrafia Kanji de impacto**.
+  * **HUD de Vida e Rounds Moderno**: Barras de vida em paralelogramos laqueados escuros com friso dourado, dreno suave de dano fantasma e pips de round elegantes.
+  * **Telas de Título, Opções, Pausa e Resultados Unificadas**: Aplicação do estilo pergaminho de alta fidelidade + madeira laqueada com iluminação de lanterna suave em todas as telas restantes.
+
+---
+
+### 0.2 Cronograma de Execução do Plano Mestre
+
+| Fase | Entregáveis | Foco Principal | Status |
+| :---: | :--- | :--- | :---: |
+| **M-1** | **Performance & Câmeras** | • Cache de solo e props de arena (`arena_cache.py`)<br>• Zero per-frame allocations & Auto-FPS Governor<br>• Câmera dinâmica de combate (Zoom 0.88x–1.28x)<br>• Câmera de Finisher em 3 Fases (Freeze ➔ Swoop ➔ Execute) | ✅ **CONCLUÍDO** |
+| **M-2** | **Modelagem 3D, Rig & Colisões** | • Primitivas 3D esculpidas & rostos 2.5D dos portraits (`mesh_primitives.py`)<br>• Fitas contínuas de tecido/cabelo (sem efeito tijolo)<br>• Rig com torção de tronco & hitboxes de cápsula/arco (`hitboxes.py`)<br>• Desmembramento 3D real (`voxel_corpse.py`) & finalizações pareadas | ✅ **CONCLUÍDO** |
+| **M-3** | **Foley Realista & UI Moderna** | • Gerador e biblioteca de SFX realistas em camadas por arma e piso<br>• Micro-variação de pitch/volume em tempo real<br>• Callouts de combate em pincelada Sumi-E<br>• Redesign do Clash QTE e unificação dos menus e HUD | ✅ **CONCLUÍDO** |
+| **M-4** | **Piloto Vertical Slice** | • Aplicação do novo padrão em 4 lutadores: **Kenshi**, **Musashi**, **Saitou**, **Okuni**<br>• Aplicação do novo padrão em 2 arenas: **Sacred Bamboo** e **Kyoto Bakumatsu**<br>• Validação de 60 FPS estável, jogabilidade e prévias visuais | ✅ **CONCLUÍDO** |
+| **M-5** | **Rollout nos Demais Lutadores & Arenas** | • Atualização dos 14+ lutadores restantes no padrão esculpido<br>• Atualização das 16+ arenas restantes com props detalhados e física reativa<br>• Validação da suíte de 21 testes automatizados | ✅ **CONCLUÍDO** |
 
 ---
 
@@ -30,30 +153,31 @@ Com o ajuste de nomes (**Valerius** no lugar de Faust, **Raiden** masculino, **H
 
 ## 🔄 2. A Estrutura do Novo Roadmap Iterativo
 
-Cada um dos 6 ciclos seguirá rigorosamente o fluxo de entrega definido:
+Com a implementação do **Plano Mestre de Modernização & Performance**, o fluxo de desenvolvimento para os ciclos restantes (Ciclos 4, 5 e 6) passa a herdar diretamente as novas malhas 3D esculpidas, o rig com torção de tronco, o áudio realista em camadas e as finalizações 3D pareadas:
 
 ```mermaid
 flowchart LR
-    Step1["1. Portraits HD-2D<br>(1 Homem + 1 Mulher)"] --> Step2["2. Modelos Voxel 3D<br>(Articulados & Armas)"]
-    Step2 --> Step3["3. Arenas & Trilhas Sonoras<br>(2 Novas + 2 Revamps + Prompts Gemini BGM)"]
-    Step3 --> Step4["4. Integração + Fatalities<br>(Assets + Fatalities dos Golpes)"]
-    Step4 --> Step5["5. Balanceamento<br>(Torneios Headless & Merge Sort)"]
-    Step5 --> Step6["6. Modo Arcade<br>(Prioridade & Escala de IA)"]
+    Step0["0. Plano Mestre<br>(Engine, Câmera, Rig & SFX)"] --> Step1["1. Portraits HD-2D<br>(1 Homem + 1 Mulher)"]
+    Step1 --> Step2["2. Malhas 3D Esculpidas<br>(Tecido/Cabelo Contínuo & Rostos 2.5D)"]
+    Step2 --> Step3["3. Arenas Voxel & BGMs<br>(Cacheadas, Física Reativa & Prompts BGM)"]
+    Step3 --> Step4["4. Integração & Fatalities 3D<br>(Coreografia Pareada & Desmembramento 3D)"]
+    Step4 --> Step5["5. Torneios & Balanceamento<br>(1500+ Duelos com Novas Hitboxes)"]
+    Step5 --> Step6["6. Modo Arcade<br>(Árvore de Duelos & Diálogos)"]
 ```
 
-### Protocolo de Cada Ciclo:
+### Protocolo Atualizado de Cada Ciclo:
 1. **Design de Portrait**: Geração e desenho dos retratos de busto HD-2D circular e retangular em `assets/portraits/` para os dois novos personagens do ciclo.
-2. **Design de Modelo Voxel 3D**: Criação do rig paramétrico, proporções anatômicas (~5.7 cabeças), paleta de cores e articulações em `src/entities/voxel_models.py`.
-3. **Arenas (Novas + 2 Revamps) & Prompts Musicais (Gemini)**: Criação das arenas temáticas da dupla e aplicação de revamp visual completo com partículas dinâmicas (faíscas, névoa, folhas, pó, brasas) em 2 arenas clássicas. **Inclusão obrigatória de Prompts Especializados para o Gemini gerar as trilhas sonoras (BGM)** de cada arena (instrumentação tradicional, andamento, camadas dinâmicas de combate, mood e referências acústicas).
-4. **Integração & Fatalities**: Implementação das classes dos lutadores, registro na tela de seleção e adição das **animações de morte elaboradas (Fatalities)** para os veteranos do ciclo e para a nova dupla.
-5. **Testes de Balanceamento**: Execução automatizada de baterias de 1500+ duelos em `simulate_tournament.py` com IA para assegurar taxa de vitória entre 45% e 55%.
-6. **Inclusão no Modo Arcade**: Inserção dos lutadores na árvore de duelos do Modo Arcade, bosses e regras de progressão de dificuldade.
+2. **Design de Malha 3D Esculpida**: Modelagem paramétrica com primitivas cônicas/suaves, tecidos e cabelos contínuos sem linhas de tijolo, materiais de seda/metal e reprodução das feições dos portraits em 3D.
+3. **Arenas Voxel (Novas + 2 Revamps) & Prompts Musicais (Gemini)**: Criação das arenas com cache de superfície estática, física reativa de vento e água, destruição direcional e prompts especializados para BGM.
+4. **Integração & Fatalities 3D Pareados**: Implementação das classes dos lutadores, alinhamento magnético agressor-vítima nos golpes letais e física tridimensional de corpos e armas cravadas.
+5. **Testes de Balanceamento**: Execução automatizada de baterias de duelos em `simulate_tournament.py` com as novas hitboxes de cápsula/arco.
+6. **Inclusão no Modo Arcade**: Progressão na árvore de duelos do Modo Arcade e checkpoints de dificuldade.
 
 ---
 
 ## 💀 3. Catálogo Oficial de Fatalities Ataque a Ataque (24 Guerreiros)
 
-Cada fatality é acionado de forma **contextual de acordo com o ataque que desferiu o golpe letal**. Em todas as opções, a **Morte Atual Clássica (colapso dramático Kurosawa)** permanece como uma variação disponível.
+Cada fatality é acionado de forma **contextual de acordo com o ataque que desferiu o golpe letal**, executado através da nova **câmera de 3 fases** e com **desmembramento e física em 3D real**.
 
 ### 3.1 Os 12 Lutadores Veteranos
 
@@ -121,6 +245,8 @@ Cada fatality é acionado de forma **contextual de acordo com o ataque que desfe
 
 ## 🌸 4. Cronograma de Revamp Visual das 12 Arenas Clássicas
 
+*(Beneficiadas diretamente pelo novo sistema de Cache Voxel de Alto Desempenho e Física Reativa)*
+
 | Ciclo | Arena 1 para Revamp | Melhorias Visuais & Partículas | Arena 2 para Revamp | Melhorias Visuais & Partículas |
 | :---: | :--- | :--- | :--- | :--- |
 | **Ciclo 1** | **Nagashino Field** (`nagashino_field` - Teppo) | • Fumaça volumétrica contínua subindo dos canhões.<br>• Brasas incandescentes flutuando no vento.<br>• Lama com reflexos úmidos e marcas de passos com respingos.<br>• Banners de clã tremulando ao vento com física. | **Shadow Cave** (`shadow_cave`) | • Gotas de água caindo do teto da caverna com ondulações no solo.<br>• Tochas procedurais projetando luz dinâmica e sombras longas nos pilares de pedra.<br>• Poeira de esporos brilhantes suspensa no ar. |
@@ -134,10 +260,7 @@ Cada fatality é acionado de forma **contextual de acordo com o ataque que desfe
 
 ## 🏯 5. Novas Arenas dos Combatentes
 
-Cada ciclo entrega 2 arenas inéditas, uma para cada lutador da nova dupla. As trilhas sonoras (BGM) de cada arena têm prompts dedicados em [`GEMINI_MUSIC_PROMPTS.md`](GEMINI_MUSIC_PROMPTS.md).
-
 ### 5.1 Ciclo 1 — ✅ Implementadas
-
 Ambas estão registradas em `ARENA_SPECS` (`src/world/arenas.py`), mapeadas em `ARENA_BY_FIGHTER` (`src/roster.py`) e são as arenas da **Edição Demo** (`DEMO_ARENAS` em `src/edition.py`, com `shaolin_temple` como fallback).
 
 | | **Pátio dos Sinos Shaolin** | **Jardim dos Lírios Carmim** |
@@ -154,7 +277,6 @@ Ambas estão registradas em `ARENA_SPECS` (`src/world/arenas.py`), mapeadas em `
 | **BGM** | *Courtyard of the Sacred Bronze Bells* — 118 BPM, Ré Dórico (`bgm_shaolin_temple`) | *Dance of the Crimson Spider Lilies* — 136 BPM, Fá# menor In-sen (`bgm_higanbana_garden`) |
 
 ### 5.2 Ciclo 2 — ✅ Implementadas
-
 Ambas estão registradas em `ARENA_SPECS` (`src/world/arenas.py`), mapeadas em `ARENA_BY_FIGHTER` (`src/roster.py`) e com trilhas sonoras integradas (`bgm_gojo_bridge.mp3` e `bgm_yoshiwara_alley.mp3`).
 
 | | **Ponte Gojo** | **Beco Yoshiwara** |
@@ -169,8 +291,6 @@ Ambas estão registradas em `ARENA_SPECS` (`src/world/arenas.py`), mapeadas em `
 | **Atmosfera & Partículas** | Névoa densa do rio subindo pelas frestas das tábuas, folhas secas sopradas pelo vento fluvial, poeira de madeira e respingos d'água; 48 partículas à deriva. | Gotejamento de chuva dos telhados, vapor subindo das pedras molhadas, faíscas e estilhaços de papel/madeira ao quebrar biombos; 52 partículas à deriva. |
 | **Tática** | Controle cirúrgico de espaçamento; empurrar o oponente em direção aos vãos abertos da mureta; arremesso de naginata contra postes sem risco de queda no rio. | Confinamento do beco favorece ricochetes e rajadas de Kamaitachi; destruir biombos para abrir espaço de esquiva ou prensar o oponente contra as paredes. |
 | **BGM** | *The Guardian of Gojo Bridge* — 108 BPM, Si Frígio (`bgm_gojo_bridge.mp3`) | *Echoes of the Crimson Pleasure Quarter* — 140 BPM, Sol# menor In-sen (`bgm_yoshiwara_alley.mp3`) |
-
----
 
 ### 5.3 Especificações de Combate e Balanceamento dos Guerreiros (Ciclo 2)
 
@@ -191,32 +311,53 @@ flowchart TD
     end
 ```
 
-#### Fichas Técnicas de Gameplay:
+### 5.4 Ciclo 3 — Arrozais Terraciados & Moinho na Chuva
 
-1. **Benkei (O Guardião da Ponte Gojo)**:
-   * **Arquétipo**: *Walking Tank*. Sem mecânica de parry técnico (foco em avanço implacável, armadura de placas pretas e domínio de espaço).
-   * **Velocidade de Deslocamento**: `4.0 tiles/s` (pesado, movimento firme).
-   * **Ataque Primário (Armado)**: *Estocada Frontal Colossal* — Alcance extraordinário de `3.0 tiles` (o maior alcance melee do jogo). Golpe perfurante de alto impacto que empurra o oponente diretamente contra perigos de cenário e abismos.
-   * **Ação Secundária**: *Arremesso da Naginata* — Projétil colossal de tela cheia que empala ou se crava em superfícies rígidas. **Física da Naginata**: Equipada com clamp de segurança que impede que caia em buracos ou água; se arremessada na direção do rio, crava-se na borda firme da ponte.
-   * **Ação Primária (Desarmado)**: *Investida Teleguiada de Recuperação* — Corrida rápida em direção à naginata cravada. O peso maciço da armadura atropela quem estiver na trajetória: não causa dano letal, mas inflige **STUN garantido**, abrindo janela de recuperação da arma.
+Trilhas sonoras e prompts especializados registrados em [`GEMINI_MUSIC_PROMPTS.md`](GEMINI_MUSIC_PROMPTS.md).
 
-2. **O-Rin (A Menestrel Acústica do Beco Yoshiwara)**:
-   * **Arquétipo**: *Zoner Acústica Pura*. Nunca saca uma lâmina física; 100% de seus golpes são ondas sonoras e vácuo gerados pelo Tsugaru shamisen percussivo.
-   * **Visual & Features Marcantes**: Olhos penetrantes cor de âmbar dourado com delineado carmesim dramático (*kumadori* sutil de Yoshiwara), tatuagem floral de lírio-da-ressurreição (*Higanbana*) subindo pela clavícula até o pescoço, e brincos longos de sinos de prata (*suzu*) que vibram e ressoam em harmonia com os acordes acústicos.
-   * **Velocidade de Deslocamento**: `4.9 tiles/s` (ágil, passos leves sobre paralelepípedos).
-   * **Resistência**: Frágil em curta distância; punível se encurralada contra paredes.
-   * **Ataque Primário**: *Kamaitachi (Lâminas de Vácuo Sônico)* — Rajadas em leque rítmico que cortam o ar até `6.0 tiles` de distância, desferidas através de palhetadas agressivas (*banchi*).
-   * **Ação Secundária**: *Acorde Ressonante* — Onda expansiva de choque acústico à queima-roupa com alto knockback, servindo como ferramenta primordial de desarme e manutenção de distância.
+| | **Arrozais Terraciados** | **Moinho na Chuva** |
+| :--- | :--- | :--- |
+| **ID / Constante** | `rice_paddies` / `ARENA_RICE_PADDIES` | `rain_mill` / `ARENA_RAIN_MILL` |
+| **Subtítulo** | *A Fúria dos Campos Alagados* | *O Pranto das Águas do Moinho* |
+| **Lutador** | **Goro** (Fazendeiro da Kuwa) | **Ichi** (Lâmina Cega Shikomizue) |
+| **Perigo** | **MODERADO (Lamaçais com Redução de Velocidade / Obstáculos Destrutíveis)** | **ALTO (Correnteza do Rio / Queda no Moinho)** |
+| **Layout** | Encosta montanhosa esculpida em terraços escalonados de arrozais alagados ao pôr do sol crepuscular. Espelhos d'água reflexivos, caminhos de terra batida e lamaçais, degraus de contenção de pedra rústica. | Moinho de água abandonado com grande roda de madeira giratória à beira de um riacho caudaloso sob chuva contínua. Pontes de madeira estreitas e margens de cascalho escorregadio. |
+| **Props** | Espantalhos rústicos de palha, feixes de feno secando destrutíveis, ferramentas agrícolas fincadas, cestos de bambu e lanternas de pedra campestres. | Roda d'água de madeira animada com respingos, sacas de grãos, pilares de sustentação de carvalho, lanternas de bronze sob beirais e pedras de rio musgosas. |
+| **Iluminação** | Pôr do sol dourado e alaranjado dramático com névoa baixa no solo (força 0.65, vinheta 0.30); tons terrosos quentes e reflexos crepusculares na água. | Noite cinzenta de tempestade contínua; iluminação fria azulada e dessaturada (força 0.40, vinheta 0.45), com flashes ocasionais e névoa d'água. |
+| **Atmosfera & Partículas** | Fagulhas de terra/poeira, folhas de arroz secas sopradas pelo vento, névoa rasteira alaranjada; 45 partículas à deriva. | Chuva contínua em ângulo diagonal, respingos ao bater no solo e nas tábuas, névoa d'água da roda do moinho; 60 partículas à deriva. |
+| **Tática** | Os espelhos d'água e lamaçais afetam levemente a tração; Goro aproveita o terreno para prensar oponentes com o Pisotão Sísmico e quebrar fardos de feno. | A chuva constante e a correnteza exigem controle estrito de borda; a roda d'água e os pilares de madeira servem para interceptar investidas lineares. |
+| **BGM** | *Wrath of the Terraced Earth* — 116 BPM, Ré Menor Min'yo (`bgm_rice_paddies.mp3`) | *The Blind Blade in the Weeping Mill* — 124 BPM, Lá Menor Miyako-bushi (`bgm_rain_mill.mp3`) |
+
+### 5.5 Especificações de Combate e Balanceamento dos Guerreiros (Ciclo 3)
+
+```mermaid
+flowchart TD
+    subgraph Goro["Goro (O Camponês Rebelde)"]
+        G1["Ataque Primário: Kuwa Cleave<br>• Dano 2 | Alcance 1.15m | Quebra de Barricadas"]
+        G2["Ação Secundária: Pisotão Sísmico<br>• Onda de Choque Radial 2.5m | Stun 0.8s | Knockback"]
+        G3["Passiva: Guarda de Ferro<br>• Firmeza Inabalável contra Recuos Leves"]
+        G2 -->|Desestabiliza Alvo| G1
+    end
+    subgraph Ichi["Ichi (A Lâmina Cega)"]
+        I1["Ataque Primário: Saque Gyaku-Iai<br>• Saque Relâmpago 0.14s | Dano 2 | Pegada Invertida"]
+        I2["Ação Secundária: Postura de Escuta<br>• Foco Sensorial Auditivo | Janela de Bloqueio"]
+        I3["Reação: Contra-Ataque Perfurante<br>• Avanço Instantâneo 1.25m | Perfuração Fatal"]
+        I2 -->|Ao ser Golpeada| I3
+    end
+```
 
 ---
 
-## 📅 6. Resumo Executivo dos 6 Ciclos
+## 📅 6. Resumo Executivo Global dos 6 Ciclos
+
+> **Nota de Sequenciamento:** A execução das fases **M-1 a M-5 do Plano Mestre de Modernização** precede e abastece os ciclos **4, 5 e 6**, garantindo que os novos lutadores já sejam criados sob a nova malha esculpida e com áudio realista.
 
 | Ciclo | Nova Dupla (1M + 1F) | Novas Arenas da Dupla | Revamp de 2 Arenas Atuais | Fatalities Implementados no Ciclo | Status |
 | :---: | :--- | :--- | :--- | :--- | :---: |
-| **1** | **Ren** (Shaolin) & **Chiyo** (2 Kodachi) | **Pátio dos Sinos Shaolin** (`shaolin_temple`) & **Jardim dos Lírios Carmim** (`higanbana_garden`) | **Nagashino Field** & **Shadow Cave** | **Teppo**, **Anne**, **Ren**, **Chiyo** | ✅ Concluído |
-| **2** | **Benkei** (Naginata) & **O-Rin** (Shamisen) | **Ponte Gojo** (`gojo_bridge`) & **Beco Yoshiwara** (`yoshiwara_alley`) | **Forest Camp** & **Baroque Court** | **Kenshi**, **Musashi**, **Benkei**, **O-Rin** | ✅ Concluído |
-| **3** | **Goro** (Fazendeiro) & **Ichi** (Lâmina Cega) | Arrozais Terraciados & Moinho na Chuva | **Ganryū Island** & **Iga Rooftops** | **Saitou**, **Hanzo**, **Goro**, **Ichi** | ⏳ Próximo |
-| **4** | **Valerius** (Necromante) & **Seimei** (Onmyoji) | Cemitério Barroco & Santuário Heian | **Mist Temple** & **Kabuki Stage** | **Murasaki**, **Kasumi**, **Valerius**, **Seimei** | 📅 Planejado |
-| **5** | **Daiki** (Bastão) & **Aoi** (Caçadora Ainu) | Floresta dos Pinheiros & Taiga de Ezo | **Storm Pirate Deck** & **Mountain Shrine** | **Okuni**, **Tomoe**, **Daiki**, **Aoi** | 📅 Planejado |
-| **6** | **Raiden** (Sumô) & **Hendrika** (Alquimista) | Dohyo Sagrado & Armazém de Dejima | **Sacred Bamboo** & **Kyoto Bakumatsu** | **Joe**, **Julie**, **Raiden**, **Hendrika** | 📅 Planejado |
+| **MASTER** | **Piloto: Kenshi, Musashi, Saitou, Okuni** | **Sacred Bamboo & Kyoto Bakumatsu** | **Cache de Terreno, Props Esculpidos & Som** | **Coreografia 3D Pareada + Desmembramento 3D Real** | ✅ Concluído |
+| **1** | **Ren** (Shaolin) & **Chiyo** (2 Kodachi) | **Pátio dos Sinos Shaolin** & **Jardim dos Lírios Carmim** | **Nagashino Field** & **Shadow Cave** | **Teppo**, **Anne**, **Ren**, **Chiyo** | ✅ Concluído |
+| **2** | **Benkei** (Naginata) & **O-Rin** (Shamisen) | **Ponte Gojo** & **Beco Yoshiwara** | **Forest Camp** & **Baroque Court** | **Kenshi**, **Musashi**, **Benkei**, **O-Rin** | ✅ Concluído |
+| **3** | **Goro** (Fazendeiro) & **Ichi** (Lâmina Cega) | Arrozais Terraciados & Moinho na Chuva | **Ganryū Island** & **Iga Rooftops** | **Saitou**, **Hanzo**, **Goro**, **Ichi** | ✅ Concluído |
+| **4** | **Valerius** (Necromante) & **Seimei** (Onmyoji) | Cemitério Barroco & Santuário Heian | **Mist Temple** & **Kabuki Stage** | **Murasaki**, **Kasumi**, **Valerius**, **Seimei** | 📅 Na Fila pós-Master |
+| **5** | **Daiki** (Bastão) & **Aoi** (Caçadora Ainu) | Floresta dos Pinheiros & Taiga de Ezo | **Storm Pirate Deck** & **Mountain Shrine** | **Okuni**, **Tomoe**, **Daiki**, **Aoi** | 📅 Na Fila pós-Master |
+| **6** | **Raiden** (Sumô) & **Hendrika** (Alquimista) | Dohyo Sagrado & Armazém de Dejima | **Sacred Bamboo** & **Kyoto Bakumatsu** | **Joe**, **Julie**, **Raiden**, **Hendrika** | 📅 Na Fila pós-Master |

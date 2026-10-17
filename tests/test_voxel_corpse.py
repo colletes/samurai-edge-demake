@@ -46,7 +46,7 @@ def _corpse(cls, style, direction=(1.0, 0.0)):
     victim = cls(11.0, 11.0)
     director = CinematicDirector()
     director.trigger_fatal_strike(None, victim, style, direction)
-    director.update(0.5, GameMap(), [])
+    director.update(1.2, GameMap(), [])
     return victim, director.corpses[0]
 
 
@@ -147,17 +147,17 @@ def test_okuni_melt_and_crush_shrink_the_body():
 
 
 def test_attack_selects_the_death_style():
-    assert _get_death_style_for_attacker(YellowNinja(0, 0), weapon="kunai") == "KUNAI_PIN"
-    assert _get_death_style_for_attacker(AmericanNinja(0, 0), weapon="shuriken") == "KUNAI_PIN"
+    assert _get_death_style_for_attacker(YellowNinja(0, 0), weapon="kunai") in ("KUNAI_PIN", "FOREHEAD_PIN")
+    assert _get_death_style_for_attacker(AmericanNinja(0, 0), weapon="shuriken") in ("KUNAI_PIN", "FOREHEAD_PIN")
     assert _get_death_style_for_attacker(KyudoArcher(0, 0), weapon="arrow") == "ARROW_PIN"
-    assert _get_death_style_for_attacker(YellowNinja(0, 0)) == "STAB_FALL"
+    assert _get_death_style_for_attacker(YellowNinja(0, 0)) in ("STAB_FALL", "HEART_THROAT_STAB")
     assert _get_death_style_for_attacker(AmericanNinja(0, 0)) == "STAB_FALL"
     assert _get_death_style_for_attacker(Rifleman(0, 0)) == "BLUNT_FALL"
     assert _get_death_style_for_attacker(RedSamurai(0, 0)) == "KENSHIN_SPLIT"
-    assert _get_death_style_for_attacker(BlueSamurai(0, 0)) == "KENSHIN_SPLIT"
+    assert _get_death_style_for_attacker(BlueSamurai(0, 0)) in ("KENSHIN_SPLIT", "DUAL_IMPALE_X_SPREAD")
     assert _get_death_style_for_attacker(PurpleNinja(0, 0)) == "MURASAKI_DECAP"
     assert _get_death_style_for_attacker(PirateSwordswoman(0, 0)) == "PIRATE_CLEAVE"
-    assert _get_death_style_for_attacker(SaitouSamurai(0, 0)) in ("SAITOU_IMPALE", "KENSHIN_SPLIT")
+    assert _get_death_style_for_attacker(SaitouSamurai(0, 0)) in ("SAITOU_IMPALE", "HEART_IMPALE_LUNGE", "KENSHIN_SPLIT")
 
 
 def test_melee_kill_by_ninja_pins_instead_of_splitting():
@@ -173,7 +173,7 @@ def test_melee_kill_by_ninja_pins_instead_of_splitting():
     attacker.hitbox_center = (attacker.wx + attacker.facing_x * 0.9, attacker.wy + attacker.facing_y * 0.9)
     winner = CombatSystem().process_combat(attacker, victim, game_map, [], [], Camera(), [], cinematic_director=director)
     assert winner == "P1_WINS"
-    assert director.pending_corpse.death_style == "STAB_FALL"
+    assert director.pending_corpse.death_style in ("STAB_FALL", "HEART_THROAT_STAB")
 
 
 def test_dead_fighter_without_cinematic_is_drawn_from_the_model():

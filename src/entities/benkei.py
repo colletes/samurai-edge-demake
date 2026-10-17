@@ -39,10 +39,10 @@ class BenkeiSamurai(Samurai):
         self.active_naginata_projectile = None
 
         # Parâmetros da Estocada Primária (Colossal Thrust)
-        self.thrust_duration = 0.28
-        self.thrust_reach = 3.0
-        self.thrust_radius = 1.35
-        self.thrust_recovery = 0.38
+        self.thrust_duration = 0.22  # Duração acelerada (era 0.28s) para maior responsividade
+        self.thrust_reach = 3.2
+        self.thrust_radius = 1.45
+        self.thrust_recovery = 0.28  # Recovery calibrado (era 0.38s)
         self.thrust_timer = 0.0
 
         # Parâmetros do Arremesso Secundário
@@ -65,6 +65,21 @@ class BenkeiSamurai(Samurai):
         self.roll_recovery_duration = 0.20
         self.roll_cooldown_duration = 0.42
         self.recovery_duration = self.thrust_recovery
+
+    def take_hit(self, slash_dir: tuple[float, float], damage: int = 2) -> tuple[bool, bool]:
+        """Aplica dano ao Benkei com Hyper Armor durante o Tackle Charge contra ataques leves."""
+        if not self.is_alive:
+            return False, False
+        # Hyper Armor no Tackle Charge: ataques de 1 de dano não interrompem a investida
+        if self.state == STATE_TACKLE_CHARGE and damage < 2 and self.hp > 1:
+            self.hp -= damage
+            return True, False
+        return super().take_hit(slash_dir, damage)
+
+    @property
+    def is_unarmed(self) -> bool:
+        """Indica se Benkei arremessou a Naginata e está lutando desarmado."""
+        return not self.has_naginata
 
     def can_act(self) -> bool:
         return (
@@ -91,10 +106,10 @@ class BenkeiSamurai(Samurai):
         self.hitbox_active = True
         self.hitbox_damage = 2
 
-        # Centro da hitbox a 1.8 tiles à frente com raio 1.35 tiles (alcance total ~3.15 tiles)
+        # Centro da hitbox a 1.90 tiles à frente com raio 1.45 tiles (alcance total ~3.35 tiles)
         self.hitbox_center = (
-            self.wx + self.facing_x * 1.80,
-            self.wy + self.facing_y * 1.80
+            self.wx + self.facing_x * 1.90,
+            self.wy + self.facing_y * 1.90
         )
         self.hitbox_radius = self.thrust_radius
         self.slash_dir = (self.facing_x, self.facing_y)
@@ -314,7 +329,9 @@ class BenkeiSamurai(Samurai):
         extra = {
             "has_naginata": self.has_naginata,
             "is_throwing": (self.state == STATE_NAGINATA_THROW),
-            "is_charging": (self.state == STATE_TACKLE_CHARGE)
+            "is_charging": (self.state == STATE_TACKLE_CHARGE),
+            "hoist_slam_phase": getattr(self, "hoist_slam_phase", None),
+            "hoist_slam_prog": getattr(self, "hoist_slam_prog", 0.0),
         }
         render_voxel_humanoid(
             surface=surface,

@@ -42,6 +42,12 @@ PORTRAIT_MAP = {
     "orin": "orin",
     "o-rin": "orin",
     "shamisen": "orin",
+    "goro": "goro",
+    "farmer": "goro",
+    "kuwa": "goro",
+    "ichi": "ichi",
+    "blind": "ichi",
+    "shikomizue": "ichi",
 }
 
 # Cache de superfícies carregadas: (char_key, size, circular) -> pygame.Surface
@@ -101,7 +107,7 @@ def preload_portraits(sizes=((50, 50), (58, 58), (35, 35), (33, 33), (66, 66), (
     unique_chars = (
         "kenshi", "musashi", "hanzo", "joe", "saitou", "teppo",
         "murasaki", "kasumi", "okuni", "tomoe", "anne", "julie",
-        "ren", "chiyo"
+        "ren", "chiyo", "benkei", "orin", "goro", "ichi"
     )
     for char in unique_chars:
         for circ in (True, False):

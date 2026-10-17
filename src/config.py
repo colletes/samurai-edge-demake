@@ -138,6 +138,10 @@ COLOR_CHIYO_AURA = (60, 220, 180)          # Aura esmeralda das lâminas gêmeas
 COLOR_BENKEI_AURA = (235, 175, 55)         # Aura bronze/ouro antigo sōhei
 COLOR_ORIN_AURA = (235, 75, 120)           # Aura magenta floral/sônica Yoshiwara
 
+# Cores dos Guerreiros do Ciclo 3 (Goro & Ichi)
+COLOR_GORO_AURA = (115, 165, 235)          # Azul índigo rústico de camponês
+COLOR_ICHI_AURA = (215, 140, 230)          # Violeta místico sereno de lâmina cega
+
 
 # Identificadores de Personagens (12 Guerreiros: 6 Mulheres e 6 Homens)
 CHAR_KENSHIN = "kenshin"

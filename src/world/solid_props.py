@@ -544,6 +544,8 @@ class PowderBarrel(SolidProp):
         if camera is not None and hasattr(camera, "add_shake"):
             camera.add_shake(14.0)
         cx, cy = self.center
+        if hasattr(arena, "add_wind_impulse"):
+            arena.add_wind_impulse(cx, cy, strength=2.8, radius=self.BLAST_RADIUS * 1.6, duration=1.0)
         if particles is not None:
             from src.effects.particles import FlameVoxelParticle, SmokeParticle, SparkParticle
             for _ in range(30):
@@ -556,6 +558,15 @@ class PowderBarrel(SolidProp):
             if f is not None and getattr(f, "is_alive", False) and math.hypot(f.wx - cx, f.wy - cy) < self.BLAST_RADIUS + getattr(f, "radius", 0.35) * 0.5 \
                     and getattr(f, "wz", 0.0) < 1.2:
                 f.take_hit((f.wx - cx, f.wy - cy), damage=3)  # explosão de pólvora é fatal
+        for b in getattr(arena, "bamboos", []):
+            if not getattr(b, "is_cut", False) and math.hypot(b.wx - cx, b.wy - cy) < self.BLAST_RADIUS + 0.4:
+                slice_part = b.cut((1.0, 0.0))
+                if slice_part and particles is not None:
+                    particles.append(slice_part)
+        for r in getattr(arena, "rocks", []):
+            if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                if math.hypot(r.wx - cx, r.wy - cy) < self.BLAST_RADIUS + 0.5:
+                    r.break_panel((1.0, 0.0), particles)
         for other in getattr(arena, "interactives", ()):
             if isinstance(other, PowderBarrel) and other is not self:
                 ox, oy = other.center

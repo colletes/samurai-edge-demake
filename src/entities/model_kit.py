@@ -9,6 +9,11 @@ import pygame
 
 from src.isometric.iso_math import rotate_xy
 from src.isometric.voxel_renderer import draw_oriented_voxel_box, draw_voxel_box
+from src.isometric.mesh_primitives import (
+    draw_tapered_frustum_3d,
+    draw_ribbon_mesh_3d,
+    draw_portrait_face_3d,
+)
 
 
 def band(c, points, rgba):
@@ -53,13 +58,25 @@ def obox(c, origin, direction, length, width, height, color, up=(0.0, 0.0, 1.0),
                             alpha=c.alpha if alpha is None else alpha, texture=material_for(c, color, texture))
 
 
-def limb(c, a, b, width, color, outline=True, height=None, texture=None):
-    """Caixa orientada de `a` até `b` (braço, cabo, corrente)."""
+def limb(c, a, b, width, color, outline=True, height=None, texture=None, w_end=None, h_end=None):
+    """Membro 3D cônico esculpido (frustum) de `a` até `b` (braço, perna, mecha de cabelo, cabo)."""
     d = (b[0] - a[0], b[1] - a[1], b[2] - a[2])
     length = math.sqrt(d[0] ** 2 + d[1] ** 2 + d[2] ** 2)
     if length < 1e-4:
         return
-    obox(c, a, d, length, width, width if height is None else height, color, outline=outline, texture=texture)
+    h0 = width if height is None else height
+    w1 = (width * 0.88) if w_end is None else w_end
+    h1 = (h0 * 0.88) if h_end is None else h_end
+    draw_tapered_frustum_3d(
+        c.surface, c.camera, a, b,
+        w_start=width, h_start=h0,
+        w_end=w1, h_end=h1,
+        color=color,
+        up=(0.0, 0.0, 1.0),
+        outline=outline,
+        alpha=c.alpha,
+        texture=material_for(c, color, texture),
+    )
 
 
 def norm(v):
@@ -121,8 +138,8 @@ def sorted_sides(c):
 def legs(c, pants, boot=None, boot_h=0.12, baggy=None, tight_w=(0.105, 0.09), foot_color=(60, 52, 40), foot_len=0.13, foot_w=0.075,
          sole=None, cuff=None, texture=None):
     """
-    Pernas de um lutador. `baggy=(coxa, canela)` desenha calça larga em caixas que se estreita na bota; sem ele, pernas justas
-    em membros. `boot=(cor, borda)` cobre a canela de baixo; `cuff` é a cor do punho da bota.
+    Pernas esculpidas de um lutador (frustums 3D afunilados). `baggy=(coxa, canela)` desenha hakama/calça larga
+    que se estreita na bota; sem ele, pernas anatômicas afuniladas.
     """
     trail, amp, freq = motion(c, 0.04)
     for side in sorted_sides(c):
@@ -134,16 +151,19 @@ def legs(c, pants, boot=None, boot_h=0.12, baggy=None, tight_w=(0.105, 0.09), fo
             obox(c, (ft[0] - c.fx * 0.05, ft[1] - c.fy * 0.05, ft[2]), (c.fx, c.fy, 0.0), foot_len, foot_w, 0.022, sole)
         obox(c, (ft[0] - c.fx * 0.03, ft[1] - c.fy * 0.03, ft[2] + (0.02 if sole is not None else 0.0)), (c.fx, c.fy, 0.0), foot_len - 0.02, foot_w - 0.012, 0.045, foot_color)
         if baggy is not None:
-            cbox(c, th[0], th[1], th[2], baggy[0], baggy[0], 0.22, pants, texture=texture)
-            cbox(c, sh[0] + o1[0], sh[1] + o1[1], sh[2] + 0.08, baggy[1], baggy[1], 0.13, pants, texture=texture)
-            cbox(c, sh[0] + o2[0] * 0.5, sh[1] + o2[1] * 0.5, sh[2] + 0.02, baggy[1] - 0.025, baggy[1] - 0.025, 0.07, pants)
+            top = (th[0], th[1], th[2] + 0.22)
+            knee = (sh[0] + o1[0], sh[1] + o1[1], sh[2] + 0.14)
+            ankle = (sh[0] + o2[0] * 0.5, sh[1] + o2[1] * 0.5, sh[2] + 0.02)
+            limb(c, top, knee, baggy[0] * 0.92, pants, texture=texture, w_end=baggy[0] * 1.04, h_end=baggy[0] * 1.04)
+            limb(c, knee, ankle, baggy[1] * 1.02, pants, texture=texture, w_end=max(0.07, baggy[1] - 0.025), h_end=max(0.07, baggy[1] - 0.025))
         else:
             top, knee, ankle = (th[0], th[1], th[2] + 0.215), (sh[0], sh[1], sh[2] + 0.205), (ft[0], ft[1], ft[2] + 0.1)
-            limb(c, top, knee, tight_w[0], pants)
-            cbox(c, knee[0], knee[1], knee[2] - 0.045, tight_w[0] - 0.01, tight_w[0] - 0.01, 0.07, pants, outline=False)
-            limb(c, knee, ankle, tight_w[1], pants)
+            limb(c, top, knee, tight_w[0], pants, texture=texture, w_end=tight_w[1])
+            limb(c, knee, ankle, tight_w[1], pants, texture=texture, w_end=tight_w[1] * 0.80)
         if boot is not None:
-            cbox(c, sh[0], sh[1], sh[2] + 0.005, 0.1, 0.1, boot_h, boot)
+            b_top = (sh[0], sh[1], sh[2] + boot_h + 0.005)
+            b_bot = (ft[0], ft[1], sh[2] + 0.005)
+            limb(c, b_top, b_bot, 0.102, boot, w_end=0.086, h_end=0.086)
             if cuff is not None:
                 cbox(c, sh[0], sh[1], sh[2] + boot_h - 0.012, 0.108, 0.108, 0.02, cuff, outline=False)
 
@@ -154,40 +174,70 @@ def cloth_offsets(c, count, phase, trail, amp, freq, at, wind_gain=0.035):
 
 
 def arm(c, shoulder, hand, side, skin, sleeve=None, sleeve_to=1.0, glove=None, bracer=None, bracer_span=(0.45, 0.92), w=0.056, bend=0.03):
-    """Braço em duas partes, ombro-cotovelo-mão. `sleeve` cobre o braço até `sleeve_to`; `bracer` é a braçadeira do antebraço."""
+    """Braço anatômico em duas partes (ombro-cotovelo-mão) com frustums cônicos 3D."""
     s = (shoulder[0], shoulder[1], c.torso_z + 0.205)
     h = (hand[0], hand[1], hand[2] - 0.065)
     out = (c.px * side, c.py * side, 0.0)
     e = add(add(lerp(s, h, 0.5), out, bend), (0.0, 0.0, -0.035))
     upper = sleeve if sleeve is not None else skin
-    limb(c, s, e, w + 0.01, upper)
+    limb(c, s, e, w + 0.014, upper, w_end=w + 0.002)
     fore_color = sleeve if (sleeve is not None and sleeve_to > 1.0) else skin
-    limb(c, e, h, w, fore_color)
+    limb(c, e, h, w + 0.002, fore_color, w_end=w * 0.84)
     if bracer is not None:
-        limb(c, lerp(e, h, bracer_span[0]), lerp(e, h, bracer_span[1]), w + 0.016, bracer)
-    cbox(c, h[0], h[1], h[2] - 0.028, w, w, w, glove if glove is not None else skin)
+        limb(c, lerp(e, h, bracer_span[0]), lerp(e, h, bracer_span[1]), w + 0.016, bracer, w_end=w + 0.008)
+    cbox(c, h[0], h[1], h[2] - 0.028, w * 0.95, w * 0.95, w * 0.95, glove if glove is not None else skin)
     return s, e
 
 
 def panels(c, anchor, count, seg, width, depth_, colors, phase=0.0, up=None, spread=0.0, side=1.0, trail=None, amp=None, freq=None,
            drag=(0.0, 0.0), flare=0.0, outline=True):
-    """Pano pendurado (manga, capa, casaco): `count` segmentos que descem de `anchor`, balançando; devolve a origem do último."""
+    """
+    Pano pendurado contínuo (manga, capa, aba de casaco, fita de obi): desenha uma fita quad-strip 3D
+    contínua sem costuras internas entre os segmentos e devolve a extremidade final.
+    """
     if trail is None:
         trail, amp, freq = motion(c, 0.07)
     offs = cloth_offsets(c, count, phase, (trail[0] + drag[0], trail[1] + drag[1]), amp * 1.5, freq, anchor)
-    up = up if up is not None else (c.fx, c.fy, 0.0)
-    last = anchor
+    up_v = up if up is not None else (c.fx, c.fy, 0.0)
+    side_v = cross((0.0, 0.0, -1.0), up_v)
+    if math.hypot(side_v[0], side_v[1], side_v[2]) < 1e-4:
+        side_v = (c.px, c.py, 0.0)
+
+    spine_pts = [anchor]
+    widths = [max(width, depth_)]
     for i, o in enumerate(offs):
-        origin = (anchor[0] + o[0] + c.px * side * spread * i, anchor[1] + o[1] + c.py * side * spread * i, anchor[2] - seg * i + o[2])
-        color = colors[min(i, len(colors) - 1)]
-        obox(c, origin, (0.0, 0.0, -1.0), seg, width + flare * i, depth_ + flare * 2 * i, color, up=up, outline=outline)
-        last = (origin[0], origin[1], origin[2] - seg)
-    return last
+        pt = (
+            anchor[0] + o[0] + c.px * side * spread * (i + 1),
+            anchor[1] + o[1] + c.py * side * spread * (i + 1),
+            anchor[2] - seg * (i + 1) + o[2],
+        )
+        spine_pts.append(pt)
+        widths.append(max(width + flare * (i + 1), depth_ + flare * 2.0 * (i + 1)))
+
+    draw_ribbon_mesh_3d(
+        c.surface, c.camera,
+        spine_points=spine_pts,
+        widths=widths,
+        depth_thick=min(width, depth_),
+        colors=colors,
+        side_vec=side_v,
+        normal_vec=up_v,
+        outline=outline,
+        alpha=c.alpha,
+    )
+    return spine_pts[-1]
 
 
 def face(c, eye=None, brow=None, mouth=None, skin_shadow=None, eye_z=0.088, brow_z=0.13, spacing=0.036, brow_tilt=0.0, mouth_w=0.026, nose=False):
-    """Rosto estilizado limpo com tom de pele natural do personagem, sem cubos saltados de olhos ou boca."""
-    return
+    """Desenha as feições faciais projetadas em 3D no plano frontal da cabeça esculpida."""
+    draw_portrait_face_3d(
+        c,
+        char_type=getattr(c, "char_type", ""),
+        eye=eye, brow=brow, mouth=mouth, skin_shadow=skin_shadow,
+        eye_z=eye_z, brow_z=brow_z, spacing=spacing,
+        brow_tilt=brow_tilt, mouth_w=mouth_w, nose=nose,
+    )
+    setattr(c, "_face_drawn", True)
 
 
 def hair_volume(c, color, size=0.15, height=0.12, back=0.036):
@@ -216,3 +266,44 @@ def sword(c, hand, d, length, steel, edge, grip, guard, gold, guard_w=0.085, gri
 
 def behind(c, point) -> bool:
     return depth(c, point[0], point[1]) < depth(c, c.base_x, c.base_y) - 0.02
+
+
+def is_lock_behind(c, anchor_pt, margin=0.005) -> bool:
+    """
+    Retorna True se a mecha / fita estiver no lado posterior da cabeça em relação à câmera.
+    Mechas 'behind' devem ser desenhadas em draw_behind(c) para que o crânio sólido 3D
+    as oclua naturalmente, impedindo que cortem a face em projeção isométrica.
+    """
+    return depth(c, anchor_pt[0], anchor_pt[1]) < depth(c, c.base_x, c.base_y) - margin
+
+
+def hair_strand(
+    c,
+    spine_points: list[tuple[float, float, float]],
+    widths: list[float] | tuple[float, ...],
+    color: tuple[int, int, int] | list[tuple[int, int, int]],
+    depth_thick: float = 0.012,
+    normal_vec: tuple[float, float, float] | None = None,
+    side_vec: tuple[float, float, float] | None = None,
+    outline: bool = False,
+):
+    """
+    Desenha uma fita 3D contínua de mecha de cabelo (franja, cacho lateral, mecha solta).
+    """
+    if normal_vec is None:
+        normal_vec = (c.fx, c.fy, 0.2)
+    if side_vec is None:
+        side_vec = (c.px, c.py, 0.0)
+    colors = color if isinstance(color, (list, tuple)) and isinstance(color[0], (list, tuple)) else [color, color]
+    draw_ribbon_mesh_3d(
+        c.surface, c.camera,
+        spine_points=spine_points,
+        widths=widths,
+        depth_thick=depth_thick,
+        colors=colors,
+        side_vec=side_vec,
+        normal_vec=normal_vec,
+        outline=outline,
+        alpha=c.alpha,
+    )
+

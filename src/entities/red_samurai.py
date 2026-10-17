@@ -11,7 +11,8 @@ from src.config import (
 )
 from src.entities.samurai import (
     Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY,
-    STATE_DASH, STATE_STUNNED, STATE_DEAD, STATE_ROLL
+    STATE_DASH, STATE_STUNNED, STATE_DEAD, STATE_ROLL,
+    slide_movement_against_obstacles, resolve_playable_bounds
 )
 from src.entities.voxel_models import render_voxel_humanoid
 from src.isometric.iso_math import world_to_iso
@@ -42,6 +43,14 @@ class RedSamurai(Samurai):
         self.roll_recovery_duration = 0.12
         self.roll_cooldown_duration = 0.35
         self.post_shukuchi_iframe_timer = 0.0
+
+        # Variáveis de deflexão e acrobacia pós-parry
+        self.zanzou_spawn_timer = 0.0
+        self.zanzou_ghosts = []
+        self.is_aerial_parry = False
+        self.parry_hop_dir = (0.0, 0.0)
+        self.parry_hop_speed = 7.5
+        self.parry_hop_duration = 0.28
 
     def can_act(self) -> bool:
         """Kenshi só pode agir se estiver viva, em IDLE/WALK e sem recovery de dash/golpes."""
@@ -83,6 +92,12 @@ class RedSamurai(Samurai):
         self.slash_trail_points = [(self.wx, self.wy)]
         self.hitbox_center = (self.wx + self.facing_x * 0.8, self.wy + self.facing_y * 0.8)
 
+        try:
+            from src.audio import play_sfx, SoundEvent
+            play_sfx(SoundEvent.SLASH_KATANA, volume_scale=0.92)
+        except Exception:
+            pass
+
     def trigger_ryuu_tsui_sen(self, target_wx: float, target_wy: float, particles: list = None, banners: list = None, opponent = None):
         """
         Ação Secundária: Ryuu Tsui Sen (竜槌閃 - Item 17).
@@ -108,6 +123,12 @@ class RedSamurai(Samurai):
             "facing_x": self.facing_x, "facing_y": self.facing_y,
             "alpha": 200, "duration": 0.30
         })
+
+        try:
+            from src.audio import play_sfx, SoundEvent
+            play_sfx(SoundEvent.RYUU_TSUI_SEN, volume_scale=1.0)
+        except Exception:
+            pass
 
         if particles is not None:
             from src.effects.particles import SmokeParticle, SparkParticle
@@ -162,6 +183,84 @@ class RedSamurai(Samurai):
             "facing_x": self.facing_x, "facing_y": self.facing_y,
             "alpha": 190, "duration": 0.28
         })
+
+        try:
+            from src.audio import play_sfx, SoundEvent
+            play_sfx(SoundEvent.SHUKUCHI, volume_scale=0.9)
+        except Exception:
+            pass
+
+    def stun(self, duration: float = 0.8):
+        """Atordoa Kenshi garantindo queda/aterrissagem física (wz = 0.0) sem flutuação."""
+        super().stun(duration)
+        self.wz = 0.0
+
+    def on_parried(self, opponent, game_map=None, banners: list = None, particles: list = None):
+        """
+        Mitigação e Acrobacia de Deflexão ao ser aparada:
+        1. Se for aparada durante o Ryuu Tsui Sen (ou no ar):
+           Kenshi é defletida para trás, a gravidade a traz rapidamente de volta ao solo (wz -> 0.0),
+           com i-frames aéreos, aterrissando em pose de recuperação a distância segura e nunca
+           ficando flutuando no ar.
+        2. Se for aparada em golpe terrestre (Iai):
+           Kenshi executa um salto acrobático de recuo (~2.0 tiles para trás) com i-frames,
+           aterrissando a distância segura para embainhar a katana (STATE_RECOVERY),
+           evitando ficar congelada à queima-roupa sofrendo punição letal trivial garantida.
+        """
+        self.hitbox_active = False
+        self.slash_trail_points.clear()
+
+        # Calcular vetor de repulsão / recuo para longe do oponente
+        if opponent is not None:
+            dx = self.wx - opponent.wx
+            dy = self.wy - opponent.wy
+            dist = math.hypot(dx, dy)
+            if dist > 0.001:
+                hop_dir_x = dx / dist
+                hop_dir_y = dy / dist
+            else:
+                hop_dir_x = -self.facing_x
+                hop_dir_y = -self.facing_y
+        else:
+            hop_dir_x = -self.facing_x
+            hop_dir_y = -self.facing_y
+
+        is_aerial = (self.state == "RYUU_TSUI_SEN" or self.wz > 0.1)
+
+        self.state = "PARRY_BACKHOP"
+        self.is_invulnerable_dodge = True
+        self.is_aerial_parry = is_aerial
+        self.parry_hop_dir = (hop_dir_x, hop_dir_y)
+
+        if is_aerial:
+            self.state_timer = 0.32
+            self.parry_hop_duration = 0.32
+            self.parry_hop_speed = 6.2
+            if banners is not None:
+                from src.effects.particles import FloatingBanner
+                banners.append(FloatingBanner("AERIAL DEFLECTION!", self.wx, self.wy, wz=self.wz + 0.3, color=(255, 210, 110)))
+        else:
+            self.state_timer = 0.28
+            self.parry_hop_duration = 0.28
+            self.parry_hop_speed = 7.5
+            self.wz = 0.05
+            if banners is not None:
+                from src.effects.particles import FloatingBanner
+                banners.append(FloatingBanner("ACROBATIC DEFLECTION!", self.wx, self.wy, wz=1.75, color=(255, 215, 120)))
+
+        # Zanzou inicial do recuo
+        if not hasattr(self, "zanzou_ghosts"):
+            self.zanzou_ghosts = []
+        self.zanzou_ghosts.append({
+            "wx": self.wx, "wy": self.wy,
+            "facing_x": self.facing_x, "facing_y": self.facing_y,
+            "alpha": 180, "duration": 0.25
+        })
+
+        if particles is not None:
+            from src.effects.particles import SparkParticle
+            for _ in range(6):
+                particles.append(SparkParticle(self.wx, self.wy, 0.45, color=(255, 220, 140)))
 
     def update(self, dt: float, game_map, particles: list = None):
         """Atualiza os estados e timings do Samurai Vermelho."""
@@ -316,10 +415,67 @@ class RedSamurai(Samurai):
             self.state_timer = 0.15
             self.is_invulnerable_dodge = True
 
+        elif self.state == "PARRY_BACKHOP":
+            self.state_timer -= dt
+            step = self.parry_hop_speed * dt
+            dx = self.parry_hop_dir[0] * step
+            dy = self.parry_hop_dir[1] * step
+
+            if game_map is not None:
+                new_wx, new_wy = slide_movement_against_obstacles(self.wx, self.wy, dx, dy, self.radius, game_map)
+                if getattr(game_map, "has_rails", False):
+                    new_wx, new_wy = self.block_pit_entry(game_map, new_wx, new_wy)
+                min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
+                self.wx = max(min_x, min(max_x, new_wx))
+                self.wy = max(min_y, min(max_y, new_wy))
+            else:
+                self.wx += dx
+                self.wy += dy
+
+            # Atualização da altura vertical (Z)
+            if getattr(self, "is_aerial_parry", False):
+                # Deflexão aérea: gravidade rápida descendo ao solo
+                self.wz = max(0.0, self.wz - 9.5 * dt)
+                landed = (self.wz <= 0.0 and self.state_timer <= self.parry_hop_duration * 0.6)
+            else:
+                # Salto parabólico terrestre de recuo
+                prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.parry_hop_duration))))
+                self.wz = max(0.0, math.sin(prog * math.pi) * 0.40)
+                landed = (self.state_timer <= 0)
+
+            # Efeito de rastro zanzou suave
+            self.zanzou_spawn_timer += dt
+            if self.zanzou_spawn_timer >= 0.05:
+                self.zanzou_spawn_timer = 0.0
+                self.zanzou_ghosts.append({
+                    "wx": self.wx, "wy": self.wy,
+                    "facing_x": self.facing_x, "facing_y": self.facing_y,
+                    "alpha": 140, "duration": 0.20
+                })
+
+            if landed or self.state_timer <= 0:
+                self.wz = 0.0
+                self.state = STATE_RECOVERY
+                self.state_timer = self.recovery_duration * 0.55  # ~0.33s embainhando a distância segura
+                self.hitbox_active = False
+                self.is_invulnerable_dodge = False
+                self.roll_recovery_timer = self.roll_recovery_duration
+                self.roll_cooldown_timer = self.roll_cooldown_duration
+                self.dash_recovery_timer = self.roll_recovery_duration
+                if particles is not None:
+                    from src.effects.particles import SmokeParticle, SparkParticle
+                    for _ in range(6):
+                        particles.append(SmokeParticle(self.wx, self.wy, 0.12, color=(230, 230, 235), size=5))
+                    for _ in range(4):
+                        particles.append(SparkParticle(self.wx, self.wy, 0.3, color=(240, 240, 255)))
+
         elif self.state == STATE_STUNNED:
             self.state_timer -= dt
+            if self.wz > 0:
+                self.wz = max(0.0, self.wz - 10.0 * dt)
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
+                self.wz = 0.0
 
     def render(self, surface: pygame.Surface, camera):
         """Renderiza o Samurai Vermelho e suas pós-imagens Shukuchi no estilo Voxel 3D."""

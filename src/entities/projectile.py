@@ -74,11 +74,16 @@ class KunaiProjectile:
 
             # Colisão com rochas ou poço (ricocheteia e cai)
             hit_obstacle = False
-            for r in game_map.rocks:
-                if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
+            for r in getattr(game_map, "rocks", []):
+                if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                    if world_distance(self.wx, self.wy, r.wx, r.wy) < (getattr(r, "radius", 0.5) + 0.15):
+                        r.break_panel((self.dir_x, self.dir_y), particles)
+                        hit_obstacle = True
+                        break
+                elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < getattr(r, "radius", 0.6):
                     hit_obstacle = True
                     break
-            if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
+            if game_map and getattr(game_map, "well", None) and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
                 hit_obstacle = True
 
             if hit_obstacle or hit_bound or self.dist_traveled >= self.max_range:
@@ -185,11 +190,16 @@ class ShurikenProjectile:
 
         # Colisão com rochas ou poço
         hit_obstacle = False
-        for r in game_map.rocks:
-            if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
+        for r in getattr(game_map, "rocks", []):
+            if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                if world_distance(self.wx, self.wy, r.wx, r.wy) < (getattr(r, "radius", 0.5) + 0.15):
+                    r.break_panel((self.dir_x, self.dir_y), particles)
+                    hit_obstacle = True
+                    break
+            elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < getattr(r, "radius", 0.6):
                 hit_obstacle = True
                 break
-        if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
+        if game_map and getattr(game_map, "well", None) and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
             hit_obstacle = True
 
         if hit_obstacle or self.dist_traveled >= self.max_range:
@@ -378,16 +388,29 @@ class RemoteMineEntity:
     def update(self, dt: float, game_map, particles: list = None) -> bool:
         if not self.is_active:
             return False
+        self.game_map = game_map
         self.age += dt
         if self.age >= self.arm_delay:
             self.is_armed = True
         return True
 
-    def detonate(self, fighters: list, particles: list = None, banners: list = None, cinematic_director = None):
+    def detonate(self, fighters: list, particles: list = None, banners: list = None, cinematic_director = None, game_map = None):
         """Detona a mina: danifica todos os combatentes no raio de 2.2m (com imunidade a auto-suicídio se Kasumi tiver <= 1 HP)."""
         if not self.is_active:
             return
         self.is_active = False
+
+        gmap = game_map or getattr(self, "game_map", None)
+        if gmap:
+            for b in getattr(gmap, "bamboos", []):
+                if not getattr(b, "is_cut", False) and world_distance(self.wx, self.wy, b.wx, b.wy) < (self.radius + 0.4):
+                    part = b.cut((1.0, 0.0))
+                    if part and particles is not None:
+                        particles.append(part)
+            for r in getattr(gmap, "rocks", []):
+                if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                    if world_distance(self.wx, self.wy, r.wx, r.wy) < (self.radius + 0.5):
+                        r.break_panel((1.0, 0.0), particles)
 
         if particles is not None:
             from src.effects.particles import SparkParticle
@@ -494,11 +517,16 @@ class KusarigamaChainEntity:
 
             # Colisão com rochas ou poço retrai a corrente
             hit_obs = False
-            for r in game_map.rocks:
-                if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
+            for r in getattr(game_map, "rocks", []):
+                if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                    if world_distance(self.wx, self.wy, r.wx, r.wy) < (getattr(r, "radius", 0.5) + 0.15):
+                        r.break_panel((self.dir_x, self.dir_y), particles)
+                        hit_obs = True
+                        break
+                elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < getattr(r, "radius", 0.6):
                     hit_obs = True
                     break
-            if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
+            if game_map and getattr(game_map, "well", None) and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
                 hit_obs = True
 
             if hit_obs or self.reach_traveled >= self.max_reach:
@@ -625,10 +653,16 @@ class MusketBulletProjectile:
 
         # Colisão com rochas ou poço
         hit_obstacle = False
-        for r in game_map.rocks:
-            if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
-                hit_obstacle = True; break
-        if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
+        for r in getattr(game_map, "rocks", []):
+            if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                if world_distance(self.wx, self.wy, r.wx, r.wy) < (getattr(r, "radius", 0.5) + 0.15):
+                    r.break_panel((self.dir_x, self.dir_y), particles)
+                    hit_obstacle = True
+                    break
+            elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < getattr(r, "radius", 0.6):
+                hit_obstacle = True
+                break
+        if game_map and getattr(game_map, "well", None) and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
             hit_obstacle = True
 
         if hit_obstacle or self.dist_traveled >= self.max_range:
@@ -745,10 +779,16 @@ class KyudoArrowProjectile:
 
         # Colisão com rochas ou poço
         hit_obstacle = False
-        for r in game_map.rocks:
-            if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
-                hit_obstacle = True; break
-        if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
+        for r in getattr(game_map, "rocks", []):
+            if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                if world_distance(self.wx, self.wy, r.wx, r.wy) < (getattr(r, "radius", 0.5) + 0.15):
+                    r.break_panel((self.dir_x, self.dir_y), particles)
+                    hit_obstacle = True
+                    break
+            elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < getattr(r, "radius", 0.6):
+                hit_obstacle = True
+                break
+        if game_map and getattr(game_map, "well", None) and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
             hit_obstacle = True
 
         if hit_obstacle or self.dist_traveled >= self.max_range:
@@ -819,6 +859,13 @@ class HamayaArrowProjectile:
                     part = b.cut((self.dir_x, self.dir_y))
                     if part and particles is not None:
                         particles.append(part)
+
+        # Destruição de biombos quebráveis no caminho sem interromper a flecha
+        if game_map and hasattr(game_map, "rocks"):
+            for r in game_map.rocks:
+                if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                    if world_distance(self.wx, self.wy, r.wx, r.wy) < 0.65:
+                        r.break_panel((self.dir_x, self.dir_y), particles)
 
         # Anular projéteis inimigos interceptados no trajeto
         if projectiles:
@@ -970,6 +1017,17 @@ class SacredArrowVolleyProjectile:
                 for _ in range(12):
                     particles.append(SparkParticle(self.target_wx, self.target_wy, 0.55, color=(255, 255, 240)))
 
+            if game_map:
+                for b in getattr(game_map, "bamboos", []):
+                    if not getattr(b, "is_cut", False) and world_distance(self.target_wx, self.target_wy, b.wx, b.wy) < (self.radius + 0.5):
+                        slice_part = b.cut((1.0, 0.0))
+                        if slice_part and particles is not None:
+                            particles.append(slice_part)
+                for r in getattr(game_map, "rocks", []):
+                    if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                        if world_distance(self.target_wx, self.target_wy, r.wx, r.wy) < (self.radius + 0.65):
+                            r.break_panel((1.0, 0.0), particles)
+
             # Aplica dano letal (2 HP) se fighters fornecidos diretamente
             if fighters and not self.damage_dealt:
                 self.damage_dealt = True
@@ -1100,9 +1158,15 @@ class RopeArrowProjectile:
             # Cravar em obstáculos rígidos da arena (rochas e poço)
             hit = False
             if game_map:
-                for r in game_map.rocks:
-                    if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius + 0.2:
-                        hit = True; break
+                for r in getattr(game_map, "rocks", []):
+                    if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                        if world_distance(self.wx, self.wy, r.wx, r.wy) < (getattr(r, "radius", 0.5) + 0.2):
+                            r.break_panel((self.dir_x, self.dir_y), particles)
+                            hit = True
+                            break
+                    elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius + 0.2:
+                        hit = True
+                        break
                 if not hit and game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius + 0.2:
                     hit = True
 
@@ -1224,6 +1288,16 @@ class CannonballProjectile:
                         particles.append(FlameVoxelParticle(self.wx, self.wy, wz=0.15))
                     for _ in range(16):
                         particles.append(SparkParticle(self.wx, self.wy, 0.45))
+                if game_map:
+                    for b in getattr(game_map, "bamboos", []):
+                        if not getattr(b, "is_cut", False) and world_distance(self.wx, self.wy, b.wx, b.wy) < (self.radius + 0.6):
+                            part = b.cut((1.0, 0.0))
+                            if part and particles is not None:
+                                particles.append(part)
+                    for r in getattr(game_map, "rocks", []):
+                        if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                            if world_distance(self.wx, self.wy, r.wx, r.wy) < (self.radius + 0.8):
+                                r.break_panel((1.0, 0.0), particles)
                 # Dano fatal de área em todos os combatentes no raio de explosão
                 if fighters:
                     for f in fighters:
@@ -1352,11 +1426,14 @@ class MusashiWaveProjectile:
         
         # Colisão com rochas ou poço
         hit_obstacle = False
-        for r in game_map.rocks:
-            if world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
+        for r in getattr(game_map, "rocks", []):
+            if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                if world_distance(self.wx, self.wy, r.wx, r.wy) < 0.65:
+                    r.break_panel((self.dir_x, self.dir_y), particles)
+            elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < getattr(r, "radius", 0.6):
                 hit_obstacle = True
                 break
-        if game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
+        if game_map and getattr(game_map, "well", None) and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
             hit_obstacle = True
         
         if hit_obstacle or self.dist_traveled >= self.max_range:
@@ -1480,7 +1557,7 @@ class NaginataProjectile:
             if hasattr(game_map, "bamboos"):
                 for b in game_map.bamboos:
                     if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.55:
-                        b.cut(self.dir_x, self.dir_y)
+                        b.cut((self.dir_x, self.dir_y))
                         if particles is not None:
                             for _ in range(4):
                                 particles.append(SparkParticle(b.wx, b.wy, 0.2))
@@ -1623,7 +1700,7 @@ class KamaitachiProjectile:
         self.max_range = max_range
         self.dist_traveled = 0.0
         self.is_active = True
-        self.damage = 2
+        self.damage = 1
         self.width = 1.3
         self.pulse_timer = 0.0
         self.has_been_reflected = False
@@ -1656,7 +1733,7 @@ class KamaitachiProjectile:
         if hasattr(game_map, "bamboos"):
             for b in game_map.bamboos:
                 if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.55:
-                    b.cut(self.dir_x, self.dir_y)
+                    b.cut((self.dir_x, self.dir_y))
         if hasattr(game_map, "rocks"):
             for r in game_map.rocks:
                 if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
@@ -1751,6 +1828,16 @@ class AcousticResonanceWave:
                         if getattr(f, "state", "") == "ATTACK":
                             f.stun(0.25)
 
+        # 3. Quebrar biombos e cortar bambus na expansão acústica
+        if game_map:
+            for b in getattr(game_map, "bamboos", []):
+                if not getattr(b, "is_cut", False) and world_distance(self.wx, self.wy, b.wx, b.wy) <= self.radius + 0.2:
+                    b.cut((1.0, 0.0))
+            for r in getattr(game_map, "rocks", []):
+                if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                    if world_distance(self.wx, self.wy, r.wx, r.wy) <= self.radius + 0.35:
+                        r.break_panel((1.0, 0.0), None)
+
         if self.timer >= self.duration:
             self.is_active = False
             return False
@@ -1838,7 +1925,7 @@ class SpiralResonanceProjectile:
         if hasattr(game_map, "bamboos"):
             for b in game_map.bamboos:
                 if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.6:
-                    b.cut(self.dir_x, self.dir_y)
+                    b.cut((self.dir_x, self.dir_y))
         if hasattr(game_map, "rocks"):
             for r in game_map.rocks:
                 if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
@@ -1872,6 +1959,199 @@ class SpiralResonanceProjectile:
         rot_surf = pygame.transform.rotate(wave_surf, ang_deg)
         rw, rh = rot_surf.get_size()
         surface.blit(rot_surf, (sx - rw // 2, sy - rh // 2))
+
+
+class EarthStompShockwave:
+    """Onda de Choque Sísmica Frontal em 120 Graus (Pisotão Sísmico do Goro).
+    Arrasta-se pela terra em um arco frontal de 120° num curto alcance (2 voxels de piso),
+    levantando fisicamente os voxels de terra do piso em cristas de pedra e poeira,
+    desestabilizando e atordoando (STUN) os oponentes apanhados no cone de impacto."""
+
+    def __init__(self, wx: float, wy: float, owner, facing: tuple[float, float] = (1.0, 0.0), max_radius: float = 4.2, duration: float = 0.30):
+        self.wx = wx
+        self.wy = wy
+        self.wz = 0.0
+        self.owner = owner
+        fx, fy = facing if facing != (0.0, 0.0) else (getattr(owner, "facing_x", 1.0), getattr(owner, "facing_y", 0.0))
+        f_norm = math.hypot(fx, fy) or 1.0
+        self.facing_x = fx / f_norm
+        self.facing_y = fy / f_norm
+        self.radius = 0.30
+        self.max_radius = max_radius
+        self.duration = duration
+        self.timer = 0.0
+        self.is_active = True
+        self.hit_fighters = set()
+
+    def update(self, dt: float, *args, **kwargs) -> bool:
+        if not self.is_active:
+            return False
+
+        game_map = kwargs.get("game_map")
+        particles = kwargs.get("particles")
+        fighters = kwargs.get("fighters")
+        projectiles = kwargs.get("projectiles")
+
+        for a in args:
+            if hasattr(a, "cols") or hasattr(a, "rows"):
+                game_map = a
+            elif isinstance(a, list):
+                if a and hasattr(a[0], "is_alive"):
+                    fighters = a
+                elif a and hasattr(a[0], "lifetime"):
+                    particles = a
+                elif a and (hasattr(a[0], "dir_x") or hasattr(a[0], "vx") or hasattr(a[0], "is_active")):
+                    projectiles = a
+
+        is_sub_update = (fighters is None and not any(isinstance(a, list) and a and hasattr(a[0], "is_alive") for a in args))
+        if not is_sub_update or not getattr(self.owner, "active_shockwaves", None) or self not in self.owner.active_shockwaves:
+            self.timer += dt
+        prog = min(1.0, self.timer / self.duration)
+        self.radius = 0.30 + (self.max_radius - 0.30) * prog
+
+        # Spawna partículas de terra e cascalho no arco frontal enquanto avança
+        if particles is not None and random.random() < 0.65:
+            base_ang = math.atan2(self.facing_y, self.facing_x)
+            rnd_offset = random.uniform(-math.pi / 3.0, math.pi / 3.0)
+            ang = base_ang + rnd_offset
+            px = self.wx + math.cos(ang) * self.radius
+            py = self.wy + math.sin(ang) * self.radius
+            particles.append(SparkParticle(px, py, random.uniform(0.15, 0.45), color=random.choice([(140, 105, 65), (175, 135, 85), (95, 70, 45)])))
+
+        # Apagar / dissipar projéteis inimigos na área de impacto sísmico (cone frontal de 120°)
+        if projectiles:
+            for p in projectiles:
+                if p is not self and getattr(p, "is_active", False) and getattr(p, "owner", None) != self.owner:
+                    p_wx = getattr(p, "wx", None)
+                    p_wy = getattr(p, "wy", None)
+                    if p_wx is not None and p_wy is not None:
+                        dist_p = world_distance(self.wx, self.wy, p_wx, p_wy)
+                        if dist_p <= self.radius + 0.45:
+                            dx_p = p_wx - self.wx
+                            dy_p = p_wy - self.wy
+                            dnorm_p = math.hypot(dx_p, dy_p)
+                            if dnorm_p > 0.01:
+                                ndx_p, ndy_p = dx_p / dnorm_p, dy_p / dnorm_p
+                            else:
+                                ndx_p, ndy_p = self.facing_x, self.facing_y
+                            if ndx_p * self.facing_x + ndy_p * self.facing_y >= 0.40:
+                                p.is_active = False
+                                if particles is not None:
+                                    for _ in range(8):
+                                        particles.append(SparkParticle(p_wx, p_wy, 0.30, color=(245, 215, 110)))
+                                    for _ in range(5):
+                                        particles.append(SparkParticle(p_wx, p_wy, 0.20, color=(140, 105, 65)))
+
+        # Desestabilização e Stun nos oponentes dentro do cone frontal de 120°
+        if fighters and game_map:
+            for f in fighters:
+                if f is not self.owner and getattr(f, "is_alive", True) and id(f) not in self.hit_fighters:
+                    dist = world_distance(self.wx, self.wy, f.wx, f.wy)
+                    if dist <= self.radius + getattr(f, "radius", 0.35):
+                        dx = f.wx - self.wx
+                        dy = f.wy - self.wy
+                        dnorm = math.hypot(dx, dy)
+                        if dnorm > 0.01:
+                            ndx, ndy = dx / dnorm, dy / dnorm
+                        else:
+                            ndx, ndy = self.facing_x, self.facing_y
+
+                        # Checar se está dentro do leque frontal de 120° (cos(60°) = 0.5)
+                        dot = ndx * self.facing_x + ndy * self.facing_y
+                        if dot >= 0.45:
+                            self.hit_fighters.add(id(f))
+                            # Tremor sísmico sob os pés com solavanco
+                            f.apply_forced_displacement(ndx * 0.45, ndy * 0.45, game_map)
+                            # Aplica 1 de dano direto do impacto da terra e das rochas
+                            f.take_hit((ndx, ndy), damage=1)
+                            # Aplica atordoamento (STUN) de 0.9s se ainda estiver vivo
+                            if getattr(f, "is_alive", True):
+                                f.stun(0.90)
+                            if particles is not None:
+                                for _ in range(12):
+                                    particles.append(SparkParticle(f.wx, f.wy, 0.35, color=(185, 145, 95)))
+
+        # Quebrar biombos e cortar bambus com a onda de choque no cone frontal
+        if game_map:
+            for b in getattr(game_map, "bamboos", []):
+                if not getattr(b, "is_cut", False) and world_distance(self.wx, self.wy, b.wx, b.wy) <= self.radius + 0.2:
+                    dx, dy = b.wx - self.wx, b.wy - self.wy
+                    dnorm = math.hypot(dx, dy) or 1.0
+                    if (dx / dnorm) * self.facing_x + (dy / dnorm) * self.facing_y >= 0.45:
+                        part = b.cut((self.facing_x, self.facing_y))
+                        if part and particles is not None:
+                            particles.append(part)
+            for r in getattr(game_map, "rocks", []):
+                if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                    if world_distance(self.wx, self.wy, r.wx, r.wy) <= self.radius + 0.35:
+                        dx, dy = r.wx - self.wx, r.wy - self.wy
+                        dnorm = math.hypot(dx, dy) or 1.0
+                        if (dx / dnorm) * self.facing_x + (dy / dnorm) * self.facing_y >= 0.45:
+                            r.break_panel((self.facing_x, self.facing_y), particles)
+
+        if self.timer >= self.duration:
+            self.is_active = False
+            return False
+
+        return True
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+
+        from src.isometric.voxel_renderer import draw_voxel_box
+
+        prog = min(1.0, self.timer / self.duration)
+        base_ang = math.atan2(self.facing_y, self.facing_x)
+
+        # Altura do solo levantado pela onda telúrica (sobe e se assenta)
+        lift_peak = math.sin(prog * math.pi) * 0.36
+        earth_colors = [
+            (115, 85, 55),
+            (145, 110, 75),
+            (85, 60, 40),
+            (160, 125, 85),
+            (100, 75, 50),
+        ]
+
+        # Desenhar 7 colunas de blocos de voxels do piso levantados ao longo do arco frontal de 120 graus (-60° a +60°)
+        offsets_deg = [-55, -36, -18, 0, 18, 36, 55]
+        front_points = []
+        for i, deg in enumerate(offsets_deg):
+            ang = base_ang + math.radians(deg)
+            # Fator de elevação maior no centro do leque
+            center_fact = math.cos(math.radians(deg))
+            cur_lift = lift_peak * (0.55 + 0.45 * center_fact)
+
+            r_front = self.radius
+            bx = self.wx + math.cos(ang) * r_front
+            by = self.wy + math.sin(ang) * r_front
+            col = earth_colors[i % len(earth_colors)]
+
+            # Voxel cúbico de terra levantado do piso
+            box_sz = 0.22
+            box_h = 0.14 + cur_lift * 0.6
+            draw_voxel_box(surface, camera, bx - box_sz * 0.5, by - box_sz * 0.5, cur_lift * 0.5, box_sz, box_sz, box_h, col, outline=True)
+
+            # Ponto em tela para traçar a fissura de solo na crista
+            sx, sy = camera.apply(bx, by, cur_lift * 0.4)
+            front_points.append((sx, sy))
+
+            # Crista secundária menor imediatamente atrás (solo rachado quebrado)
+            if self.radius > 0.6:
+                r_back = max(0.2, self.radius - 0.28)
+                bbx = self.wx + math.cos(ang) * r_back
+                bby = self.wy + math.sin(ang) * r_back
+                sub_h = max(0.06, box_h * 0.45)
+                draw_voxel_box(surface, camera, bbx - 0.08, bby - 0.08, 0.0, 0.16, 0.16, sub_h, (75, 52, 34), outline=True)
+
+        # Traçar linhas de fissura no chão entre os pontos do arco
+        if len(front_points) >= 2:
+            alpha = int((1.0 - prog) * 220)
+            fissure_col = (50, 35, 22)
+            for j in range(len(front_points) - 1):
+                pygame.draw.line(surface, fissure_col, front_points[j], front_points[j + 1], 3)
+
 
 
 
