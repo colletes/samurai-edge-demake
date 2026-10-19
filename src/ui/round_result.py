@@ -234,10 +234,21 @@ class RoundResultScreen:
         surface.blit(k_surf, (seal_x + (seal_size - k_surf.get_width()) // 2, seal_y + (seal_size - k_surf.get_height()) // 2))
 
         title_str = f"{self.winner_name} VENCE A PARTIDA!"
+        max_title_w = panel_w - 116
+        sz = 40
+        while sz > 18:
+            test_font = get_title_font(sz)
+            if test_font.size(title_str)[0] <= max_title_w:
+                font_title = test_font
+                break
+            sz -= 2
+        else:
+            font_title = get_title_font(18)
+
         title_surf = font_title.render(title_str, True, self.winner_color)
         title_shadow = font_title.render(title_str, True, (0, 0, 0))
         tx = panel_x + 88
-        ty = panel_y + 34
+        ty = panel_y + 36 + (38 - title_surf.get_height()) // 2
         surface.blit(title_shadow, (tx + 2, ty + 2))
         surface.blit(title_surf, (tx, ty))
 

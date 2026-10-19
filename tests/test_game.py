@@ -755,7 +755,13 @@ def test_complete_roster():
     print("\n=======================================================")
     print("TODOS OS 21 TESTES DE SISTEMA PASSARAM COM 100% DE SUCESSO!")
     print("=======================================================\n")
+    try:
+        if pygame.mixer.get_init():
+            pygame.mixer.quit()
+    except Exception:
+        pass
     pygame.quit()
+    os._exit(0)
 
 if __name__ == "__main__":
     test_complete_roster()

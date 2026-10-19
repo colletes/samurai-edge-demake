@@ -29,7 +29,7 @@ from src.isometric.mesh_primitives import (
     PORTRAIT_FACE_STYLES,
 )
 from src.isometric.iso_math import rotate_xy
-from src.entities import model_kit, okuni_model, kenshi_model, murasaki_model, musashi_model, hanzo_model, joe_model, saitou_model, teppo_model, kasumi_model, tomoe_model, anne_model, julie_model, ren_model, chiyo_model, benkei_model, orin_model, goro_model, ichi_model, pose_scripts
+from src.entities import model_kit, okuni_model, kenshi_model, murasaki_model, musashi_model, hanzo_model, joe_model, saitou_model, teppo_model, kasumi_model, tomoe_model, anne_model, julie_model, ren_model, chiyo_model, benkei_model, orin_model, goro_model, ichi_model, valerius_model, seimei_model, daiki_model, aoi_model, pose_scripts
 from src.isometric.voxel_rig import calc_leg_joints, calc_blade_slash_3d, calc_character_idle_pose, calc_spine_and_pelvis_rig
 from src.config import (
     COLOR_STEEL, COLOR_GOLD, COLOR_WHITE, COLOR_BLACK,
@@ -76,7 +76,9 @@ def is_female_character(char_type: str) -> bool:
     return c in ("kenshin", "kenshi", "kasumi", "gray", "murasaki", "purple",
                  "okuni", "kabuki", "tomoe", "archer", "anne", "pirate", "julie", "musketeer",
                  "chiyo", "nodachi", "orin", "o-rin", "shamisen",
-                 "ichi", "blind", "shikomizue")
+                 "ichi", "blind", "shikomizue",
+                 "seimei", "onmyoji",
+                 "aoi", "ainu", "huntress")
 
 
 def _canonical_char_type(char_type: str) -> str:
@@ -99,6 +101,10 @@ def _canonical_char_type(char_type: str) -> str:
     if "orin" in char_type or "shamisen" in char_type: return "orin"
     if "goro" in char_type or "farmer" in char_type or "kuwa" in char_type: return "goro"
     if "ichi" in char_type or "blind" in char_type or "shikomizue" in char_type: return "ichi"
+    if "valerius" in char_type or "necromancer" in char_type or "faust" in char_type: return "valerius"
+    if "seimei" in char_type or "onmyoji" in char_type: return "seimei"
+    if "daiki" in char_type or "pilgrim" in char_type or "bostaff" in char_type: return "daiki"
+    if "aoi" in char_type or "ainu" in char_type or "huntress" in char_type: return "aoi"
     return char_type
 
 
@@ -124,6 +130,10 @@ MODEL_FIGHTERS = {
     "orin": orin_model,
     "goro": goro_model,
     "ichi": ichi_model,
+    "valerius": valerius_model,
+    "seimei": seimei_model,
+    "daiki": daiki_model,
+    "aoi": aoi_model,
 }
 
 
@@ -191,23 +201,7 @@ def _render_voxel_humanoid(
     if extra_props is None:
         extra_props = {}
 
-    char_type = char_type.lower()
-    if "yellow" in char_type or "hanzo" in char_type: char_type = "ninja"
-    elif "american" in char_type or "joe" in char_type: char_type = "american"
-    elif "gray" in char_type or "kemuri" in char_type or "kasumi" in char_type: char_type = "kasumi"
-    elif "purple" in char_type or "murasaki" in char_type: char_type = "murasaki"
-    elif "kenshin" in char_type or "kenshi" in char_type or "red" in char_type: char_type = "kenshin"
-    elif "musashi" in char_type or "blue" in char_type: char_type = "musashi"
-    elif "saitou" in char_type or "saito" in char_type: char_type = "saitou"
-    elif "rifle" in char_type or "teppo" in char_type: char_type = "rifleman"
-    elif "kabuki" in char_type or "okuni" in char_type: char_type = "okuni"
-    elif "archer" in char_type or "kyudo" in char_type or "tomoe" in char_type: char_type = "tomoe"
-    elif "pirate" in char_type or "anne" in char_type or "sayuri" in char_type: char_type = "pirate"
-    elif "musketeer" in char_type or "julie" in char_type: char_type = "musketeer"
-    elif "ren" in char_type or "shaolin" in char_type: char_type = "ren"
-    elif "chiyo" in char_type or "nodachi" in char_type: char_type = "chiyo"
-    elif "benkei" in char_type or "naginata" in char_type: char_type = "benkei"
-    elif "orin" in char_type or "shamisen" in char_type: char_type = "orin"
+    char_type = _canonical_char_type(char_type)
 
     # Morte com desmembramento ativo
     if state == "CORPSE_SLICED":
@@ -221,7 +215,7 @@ def _render_voxel_humanoid(
     is_female = is_female_character(char_type)
 
     # Estado de Morte no solo ou imobilizado no chão
-    if (not is_alive and state != "DYING_FREEZE") or state in ("DEAD", "PINNED_DOWN"):
+    if (not is_alive and state not in ("DYING_FREEZE", "DYING_HEADLESS")) or state in ("DEAD", "PINNED_DOWN"):
         sx, sy = camera.apply(wx, wy, 0.0)
         # Poça de sangue dramática no solo
         pygame.draw.ellipse(surface, (120, 16, 20, 180), (sx - 30, sy - 14, 60, 28))
@@ -276,7 +270,7 @@ def _render_voxel_humanoid(
     back_to_camera = (back_rx + back_ry) > 0.0
 
     # Animação de ataque melee
-    is_melee = state in ("ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE", "KIAI", "NODACHI_DANCE", "NAGINATA_THROW", "TACKLE_CHARGE", "RESONANCE")
+    is_melee = state in ("ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE", "KIAI", "NODACHI_DANCE", "NAGINATA_THROW", "TACKLE_CHARGE", "RESONANCE", "POLE_VAULT", "PLANT_TRAP")
     atk_progress = 0.0
     if is_melee:
         atk_dur = 0.20
@@ -304,6 +298,12 @@ def _render_voxel_humanoid(
         elif char_type == "ichi":
             if state == "COUNTER_THRUST": atk_dur = 0.20
             else: atk_dur = 0.16
+        elif char_type == "daiki":
+            if state == "POLE_VAULT": atk_dur = 0.28
+            else: atk_dur = 0.20
+        elif char_type == "aoi":
+            if state == "PLANT_TRAP": atk_dur = 0.20
+            else: atk_dur = 0.17
 
         if state_timer > 0:
             atk_progress = max(0.0, min(1.0, 1.0 - (state_timer / atk_dur)))
@@ -375,7 +375,7 @@ def _render_voxel_humanoid(
             head_w=0.16 if char_type == "benkei" else (0.155 if char_type == "goro" else (0.13 if is_female else 0.15)),
             sh_span=0.21 if char_type == "benkei" else (0.185 if char_type == "goro" else (0.14 if is_female else 0.17)),
             char_type=char_type)
-        if hasattr(model, "draw_behind"):
+        if hasattr(model, "draw_behind") and state != "DYING_HEADLESS" and not (extra_props and extra_props.get("hide_head", False)):
             model.draw_behind(model_c)
         if hasattr(model, "draw_legs"):
             model.draw_legs(model_c)
@@ -861,6 +861,11 @@ def _render_voxel_humanoid(
     # 5. CABEÇA ESCULPIDA 3D, FEIÇÕES DO RETRATO E CABELO
     # -------------------------------------------------------------
     neck_z = torso_z + 0.26
+    if state == "DYING_HEADLESS" or (extra_props and extra_props.get("hide_head", False)):
+        # Coto cervical do pescoço decapitado com sangue arterial carmim
+        draw_voxel_box(surface, camera, base_x - 0.045, base_y - 0.045, neck_z, 0.09, 0.09, 0.03, (155, 18, 26), outline=True, alpha=alpha)
+        return
+
     neck_col = skin_color
     if model is not None and hasattr(model, "pal"):
         p_neck = model.pal()

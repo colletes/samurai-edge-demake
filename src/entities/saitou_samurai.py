@@ -66,6 +66,13 @@ class SaitouSamurai(Samurai):
         self.roll_recovery_duration = 0.18
         self.roll_cooldown_duration = 0.38
 
+    def take_hit(self, slash_dir: tuple[float, float], damage: int = 2) -> tuple[bool, bool]:
+        """Aplica dano e limpa os rastros do Gatotsu ao ser atingido ou morto."""
+        hit, killed = super().take_hit(slash_dir, damage)
+        if hit:
+            self.trail_points.clear()
+        return hit, killed
+
     def can_act(self) -> bool:
         return (
             self.is_alive
@@ -258,6 +265,7 @@ class SaitouSamurai(Samurai):
                 self.hitbox_active = False
                 self.brake_speed = 0.0
                 self.state_timer = 0.25
+                self.trail_points.clear()
                 if particles is not None:
                     for _ in range(5):
                         particles.append(SparkParticle(self.wx, self.wy, 0.3))
@@ -266,6 +274,7 @@ class SaitouSamurai(Samurai):
                 self.hitbox_active = False
                 self.brake_speed = self.charge_speed
                 self.state_timer = self.brake_duration
+                self.trail_points.clear()
 
         # -------------------------------------------------------------
         # 2. ESTADO DE FRENAGEM E DERRAPAGEM (Demora a Frear)
@@ -364,8 +373,8 @@ class SaitouSamurai(Samurai):
 
     def render(self, surface: pygame.Surface, camera):
         """Renderiza Hajime Saitou no autêntico estilo 3D Voxel Art."""
-        # Rastro luminoso ciano do Gatotsu no solo
-        if len(self.trail_points) >= 2:
+        # Rastro luminoso ciano do Gatotsu no solo apenas durante o avanço ativo e se estiver vivo
+        if self.is_alive and self.state in (STATE_GATOTSU_CHARGE, STATE_ZEROSHIKI) and len(self.trail_points) >= 2:
             pts = [camera.apply(px, py, 0.05) for px, py in self.trail_points]
             if len(pts) >= 2:
                 pygame.draw.lines(surface, COLOR_SAITOU_AURA, False, pts, 4)

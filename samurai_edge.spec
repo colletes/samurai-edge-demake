@@ -2,70 +2,41 @@
 import sys
 import os
 
+from PyInstaller.utils.hooks import collect_submodules
+
 block_cipher = None
+
+def get_runtime_assets():
+    datas = []
+    exclude_patterns = [
+        "sound_drafts",
+        "promotional",
+        "HD2D_Concept_Art.pdf",
+        "_gameplay_mockup.jpg",
+        "Take ",
+        ".DS_Store",
+    ]
+    for root, dirs, files in os.walk("assets"):
+        dirs[:] = [d for d in dirs if not any(p in d for p in ("sound_drafts", "promotional"))]
+        for f in files:
+            rel_path = os.path.join(root, f)
+            if any(p in rel_path for p in exclude_patterns):
+                continue
+            dest_dir = os.path.dirname(rel_path)
+            datas.append((rel_path, dest_dir))
+    return datas
 
 a = Analysis(
     ['main.py'],
     pathex=['.'],
     binaries=[],
-    datas=[
-        ('assets', 'assets'),
-        ('assets/icons', 'assets/icons'),
-        ('assets/portraits', 'assets/portraits'),
-        ('assets/fonts', 'assets/fonts'),
-        ('assets/concepts', 'assets/concepts'),
-    ],
-    hiddenimports=[
-        'src',
-        'src.config',
-        'src.ui.svg_icon_renderer',
-        'src.combat',
-        'src.combat.collision',
-        'src.effects',
-        'src.effects.particles',
-        'src.effects.cinematic_director',
-        'src.entities',
-        'src.entities.samurai',
-        'src.entities.red_samurai',
-        'src.entities.blue_samurai',
-        'src.entities.yellow_ninja',
-        'src.entities.american_ninja',
-        'src.entities.gray_ninja',
-        'src.entities.purple_ninja',
-        'src.entities.saitou_samurai',
-        'src.entities.rifleman',
-        'src.entities.kabuki',
-        'src.entities.kyudo_archer',
-        'src.entities.pirate',
-        'src.entities.musketeer',
-        'src.entities.doberman',
-        'src.entities.projectile',
-        'src.entities.pickups',
-        'src.entities.voxel_corpse',
-        'src.entities.voxel_models',
-        'src.entities.ai_controller',
-        'src.i18n',
-        'src.input',
-        'src.input.controller_manager',
-        'src.input.display_scaler',
-        'src.input.touch_controls',
-        'src.isometric',
-        'src.isometric.iso_math',
-        'src.isometric.camera',
-        'src.isometric.voxel_renderer',
-        'src.ui',
-        'src.ui.fonts',
-        'src.ui.title_screen',
-        'src.ui.character_select',
-        'src.ui.arena_select',
-        'src.ui.game_help',
-        'src.ui.portraits',
-        'src.ui.settings_menu',
-        'src.world',
-        'src.world.map_data',
-        'src.world.bamboo',
-        'src.world.obstacles',
-        'src.world.kyoto_map',
+    datas=get_runtime_assets(),
+    hiddenimports=collect_submodules('src') + [
+        'pygame',
+        'pygame._sdl2',
+        'pygame._sdl2.audio',
+        'pygame._sdl2.video',
+        'pygame._sdl2.controller',
     ],
     hookspath=[],
     hooksconfig={},
@@ -117,8 +88,8 @@ if sys.platform == 'darwin':
         info_plist={
             'CFBundleName': 'Samurai Edge Demake',
             'CFBundleDisplayName': 'Samurai Edge Demake',
-            'CFBundleVersion': '1.3.2',
-            'CFBundleShortVersionString': '1.3.2',
+            'CFBundleVersion': '2.0.0',
+            'CFBundleShortVersionString': '2.0.0',
             'NSHighResolutionCapable': 'True',
             'LSMinimumSystemVersion': '10.13.0',
         },

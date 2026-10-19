@@ -370,29 +370,24 @@ class SamuraiAI:
                     return
 
         # -------------------------------------------------------------
-        # 2. Se for Teppo (Rifleman) e estiver SEM MUNIÇÃO: caçar PowderPouch
-        # -------------------------------------------------------------
-        if getattr(ai_fighter, "char_type", "") in ("rifleman", "teppo") and not getattr(ai_fighter, "has_ammo", False) and powder_pouches:
-            active_pouches = [p for p in powder_pouches if getattr(p, "is_active", False)]
-            if active_pouches:
-                nearest_pouch = min(active_pouches, key=lambda p: world_distance(ai_fighter.wx, ai_fighter.wy, p.wx, p.wy))
-                if dist < 1.5:
-                    if hasattr(ai_fighter, "trigger_rifle_butt") and random.random() < 0.70:
-                        aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
-                        ai_fighter.trigger_rifle_butt(aim_x, aim_y)
-                        return
-                    elif hasattr(ai_fighter, "trigger_evasive_backstep") and random.random() < 0.60:
-                        ai_fighter.trigger_evasive_backstep()
-                        return
-
-                dx = nearest_pouch.wx - ai_fighter.wx
-                dy = nearest_pouch.wy - ai_fighter.wy
-                length = math.hypot(dx, dy)
-                if length > 0.05 and ai_fighter.can_move():
-                    self.move_dir_x, self.move_dir_y = dx / length, dy / length
-                    self._steer_around_pits(ai_fighter, nearest_pouch, game_map)
-                    ai_fighter.apply_movement(self.move_dir_x, self.move_dir_y, dt, game_map)
+        # 2. Se for Teppo (Rifleman) e estiver RECARREGANDO: manter distância segura ou coronhada defensiva
+        if getattr(ai_fighter, "char_type", "") in ("rifleman", "teppo") and not getattr(ai_fighter, "has_ammo", False):
+            if dist < 1.6:
+                if hasattr(ai_fighter, "trigger_rifle_butt") and random.random() < 0.70:
+                    aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+                    ai_fighter.trigger_rifle_butt(aim_x, aim_y)
                     return
+                elif hasattr(ai_fighter, "trigger_evasive_backstep") and random.random() < 0.60:
+                    ai_fighter.trigger_evasive_backstep()
+                    return
+            dx = ai_fighter.wx - opponent.wx
+            dy = ai_fighter.wy - opponent.wy
+            length = math.hypot(dx, dy)
+            if length > 0.05 and ai_fighter.can_move():
+                self.move_dir_x, self.move_dir_y = dx / length, dy / length
+                self._steer_around_pits(ai_fighter, opponent, game_map)
+                ai_fighter.apply_movement(self.move_dir_x, self.move_dir_y, dt, game_map)
+                return
 
         # -------------------------------------------------------------
         # 3. REAÇÃO DEFENSIVA HUMANIZADA (Com Reaction Delay)
@@ -869,10 +864,55 @@ class SamuraiAI:
                     ai_fighter.trigger_gyaku_iai(opponent.wx, opponent.wy)
                     return
 
+            # Valerius (Necromante Prussiano): Invocação de Esqueletos e Foice Fúnebre
+            if hasattr(ai_fighter, "trigger_summon_undead"):
+                if getattr(ai_fighter, "summon_timer", 0.0) <= 0 and dist >= 2.5 and random.random() < 0.65:
+                    aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+                    ai_fighter.trigger_summon_undead(aim_x, aim_y, opponent=opponent)
+                    return
+            if hasattr(ai_fighter, "trigger_scythe_reap") and not melee_unsafe:
+                if dist <= 2.30 and random.random() < 0.85:
+                    ai_fighter.trigger_scythe_reap(opponent.wx, opponent.wy)
+                    return
+
+            # Seimei (Onmyoji dos Talismãs): Ofuda Cortante e Selo Sagrado
+            if hasattr(ai_fighter, "trigger_sacred_ward"):
+                if getattr(ai_fighter, "ward_timer", 0.0) <= 0 and dist <= 2.6 and random.random() < 0.70:
+                    ai_fighter.trigger_sacred_ward(opponent.wx, opponent.wy, projectiles=projectiles)
+                    return
+            if hasattr(ai_fighter, "trigger_ofuda_toss"):
+                if getattr(ai_fighter, "ofuda_timer", 0.0) <= 0 and dist <= 6.2 and random.random() < 0.75:
+                    aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+                    ai_fighter.trigger_ofuda_toss(aim_x, aim_y, projectiles)
+                    return
+
+            # Daiki (Peregrino do Bastão Bō): Salto com Vara (Pole Vault) e Bastão Bō de Longo Alcance
+            if hasattr(ai_fighter, "trigger_pole_vault"):
+                if getattr(ai_fighter, "vault_timer", 0.0) <= 0 and 1.8 <= dist <= 4.2 and random.random() < 0.55 \
+                        and self._lunge_clear(ai_fighter, opponent.wx, opponent.wy, game_map, 4.0):
+                    aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+                    ai_fighter.trigger_pole_vault(aim_x, aim_y, opponent=opponent, game_map=game_map)
+                    return
+            if hasattr(ai_fighter, "trigger_bo_strike") and not melee_unsafe:
+                if dist <= 2.65 and random.random() < 0.85:
+                    ai_fighter.trigger_bo_strike(opponent.wx, opponent.wy)
+                    return
+
+            # Aoi (Caçadora Ainu de Hokkaido): Armadilha de Urso (Bear Trap) e Estocada de Lança Op
+            if hasattr(ai_fighter, "trigger_bear_trap"):
+                if getattr(ai_fighter, "trap_timer", 0.0) <= 0 and 1.4 <= dist <= 3.6 and projectiles is not None and random.random() < 0.65:
+                    aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+                    ai_fighter.trigger_bear_trap(aim_x, aim_y, projectiles=projectiles, game_map=game_map)
+                    return
+            if hasattr(ai_fighter, "trigger_spear_thrust") and not melee_unsafe:
+                if dist <= 2.25 and random.random() < 0.85:
+                    ai_fighter.trigger_spear_thrust(opponent.wx, opponent.wy)
+                    return
+
             # Movimentação Não-Linear e Espaçamento
-            if hasattr(ai_fighter, "trigger_kamaitachi_pluck"):
-                # O-Rin é Pure Zoner: se oponente chegar a < 3.2m, recua para manter distância
-                if dist < 3.2:
+            if hasattr(ai_fighter, "trigger_kamaitachi_pluck") or hasattr(ai_fighter, "trigger_ofuda_toss"):
+                # O-Rin & Seimei são Pure Zoners: se oponente chegar a < 3.0m, recua para manter distância
+                if dist < 3.0:
                     dx = ai_fighter.wx - opponent.wx
                     dy = ai_fighter.wy - opponent.wy
                     length = math.hypot(dx, dy)
@@ -983,6 +1023,8 @@ class SamuraiAI:
                 direction = next(h.direction for h in game_map.hazards if hasattr(h, "direction"))
                 self.move_dir_x, self.move_dir_y = 0.0, -direction
             self._steer_around_pits(ai_fighter, opponent, game_map)
+            if getattr(ai_fighter, "confused_timer", 0.0) > 0:
+                self.move_dir_x, self.move_dir_y = -self.move_dir_x, -self.move_dir_y
             ai_fighter.apply_movement(self.move_dir_x, self.move_dir_y, dt, game_map)
             ai_fighter.set_facing(opponent.wx, opponent.wy)
 
@@ -1047,3 +1089,13 @@ class SamuraiAI:
             fighter.trigger_kuwa_cleave(target.wx, target.wy)
         elif hasattr(fighter, "trigger_gyaku_iai"):
             fighter.trigger_gyaku_iai(target.wx, target.wy)
+        elif hasattr(fighter, "trigger_scythe_reap"):
+            fighter.trigger_scythe_reap(target.wx, target.wy)
+        elif hasattr(fighter, "trigger_ofuda_toss"):
+            if projectiles is not None:
+                aim_x, aim_y = self._get_aim_target(fighter, target, target.wx, target.wy)
+                fighter.trigger_ofuda_toss(aim_x, aim_y, projectiles)
+        elif hasattr(fighter, "trigger_bo_strike"):
+            fighter.trigger_bo_strike(target.wx, target.wy)
+        elif hasattr(fighter, "trigger_spear_thrust"):
+            fighter.trigger_spear_thrust(target.wx, target.wy)

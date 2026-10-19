@@ -16,10 +16,10 @@ VICTORY_RETURN = 0.6      # câmera volta à vista clássica depois da pose
 # Duração de cada estado de golpe no renderer (`atk_progress = 1 - state_timer / duração`).
 ATTACK_DURATION = {"kenshin": 0.16, "musashi": 0.18, "pirate": 0.22, "anne": 0.22, "musketeer": 0.24, "julie": 0.24,
                    "purple": 0.16, "ninja": 0.18, "saitou": 0.25, "ren": 0.14, "chiyo": 0.14, "benkei": 0.32, "orin": 0.20,
-                   "goro": 0.26, "ichi": 0.16}
+                   "goro": 0.26, "ichi": 0.16, "valerius": 0.20, "seimei": 0.18, "daiki": 0.20, "aoi": 0.17}
 DEFAULT_ATTACK_DURATION = 0.20
 STATE_DURATION = {"PARRY": 0.45, "CAPE_FLOURISH": 0.5, "KIAI": 0.35, "MAI_DANCE": 0.36}
-MELEE_STATES = ("ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE", "KIAI", "MAI_DANCE")
+MELEE_STATES = ("ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE", "KIAI", "MAI_DANCE", "POLE_VAULT", "PLANT_TRAP")
 
 
 @dataclass
@@ -69,6 +69,14 @@ def canonical(char_type: str) -> str:
         return "goro"
     if "ichi" in c or "blind" in c or "shikomizue" in c:
         return "ichi"
+    if "valerius" in c or "necromancer" in c:
+        return "valerius"
+    if "seimei" in c or "onmyoji" in c:
+        return "seimei"
+    if "daiki" in c or "pilgrim" in c or "bostaff" in c:
+        return "daiki"
+    if "aoi" in c or "ainu" in c or "huntress" in c:
+        return "aoi"
     return c
 
 
@@ -144,6 +152,30 @@ INTRO = {
         _seg(0.25, 0.65, "ATTACK", 0.0, 1.0),
         _idle(0.65, 1.0, pose="sheath_click"),
     ],
+    # Valerius (Necromante Prussiano): Vórtice fúnebre, corte cerimonial da foice e postura aristocrática
+    "valerius": [
+        _idle(0.0, 0.20),
+        _seg(0.20, 0.65, "ATTACK", 0.0, 1.0),
+        _idle(0.65, 1.0, pose="aristocrat_stance"),
+    ],
+    # Seimei (Mestra Onmyoji): Meditação astral, lançamento celestial de Ofuda com leque e reverência
+    "seimei": [
+        _idle(0.0, 0.20),
+        _seg(0.20, 0.65, "ATTACK", 0.0, 1.0),
+        _idle(0.65, 1.0, pose="onmyo_guard"),
+    ],
+    # Daiki (Peregrino do Bastão Bō): Saudação de peregrino, giro veloz de Bō levantando folhas e guarda Chudan
+    "daiki": [
+        _idle(0.0, 0.22, pose="pilgrim_bow"),
+        _seg(0.22, 0.68, "ATTACK", 0.0, 1.0),
+        _idle(0.68, 1.0),
+    ],
+    # Aoi (Caçadora Ainu de Hokkaido): Rastreia o solo nevado, estoca a lança Op e assume guarda de caça
+    "aoi": [
+        _idle(0.0, 0.22, pose="huntress_kneel"),
+        _seg(0.22, 0.66, "ATTACK", 0.0, 1.0),
+        _idle(0.66, 1.0),
+    ],
 }
 
 VICTORY = {
@@ -200,6 +232,29 @@ VICTORY = {
         _idle(0.55, 0.85, pose="sheath_click"),
         _idle(0.85, 1.0),
     ],
+    # Valerius: Giro cerimonial da foice, estalar de dedos e reverência prussiana solene
+    "valerius": [
+        _idle(0.0, 0.15),
+        _seg(0.15, 0.55, "ATTACK", 0.0, 0.8),
+        _idle(0.55, 1.0, pose="aristocrat_bow"),
+    ],
+    # Seimei: Ofuda cósmico incandescente, giro de vestes e reverência tradicional Heian
+    "seimei": [
+        _idle(0.0, 0.15),
+        _seg(0.15, 0.60, "ATTACK", 0.0, 0.9),
+        _idle(0.60, 1.0, pose="heian_bow"),
+    ],
+    # Daiki: Giro aéreo do bastão Bō, cravada firme no chão e saudação de monge peregrino
+    "daiki": [
+        _seg(0.0, 0.45, "POLE_VAULT", 0.0, 1.0, is_vault=True),
+        _idle(0.45, 0.75, pose="bo_plant_stance"),
+        _idle(0.75, 1.0, pose="pilgrim_bow"),
+    ],
+    # Aoi: Giro de lança Op e prece tradicional Ainu (Inonno) aos espíritos Kamuy
+    "aoi": [
+        _seg(0.0, 0.45, "ATTACK", 0.0, 1.0),
+        _idle(0.45, 1.0, pose="ainu_prayer"),
+    ],
 }
 
 SCRIPTS = {"intro": INTRO, "victory": VICTORY}
@@ -225,6 +280,10 @@ BEATS = {
         "orin": [(0.22, "sfx:sword_slash"), (0.50, "fx:petals")],
         "goro": [(0.24, "sfx:obstacle_hit"), (0.45, "sfx:sword_slash"), (0.50, "fx:sparks")],
         "ichi": [(0.18, "sfx:dodge_whoosh"), (0.32, "sfx:sword_slash"), (0.68, "sfx:parry")],
+        "valerius": [(0.22, "sfx:sword_slash"), (0.45, "fx:smoke")],
+        "seimei": [(0.20, "sfx:kunai_throw"), (0.40, "fx:sparks"), (0.65, "fx:petals")],
+        "daiki": [(0.25, "sfx:dodge_whoosh"), (0.48, "sfx:obstacle_hit")],
+        "aoi": [(0.24, "sfx:sword_slash"), (0.52, "sfx:dodge_whoosh")],
     },
     "victory": {
         "kenshin": [(0.17, "sfx:sword_slash"), (0.6, "sfx:sword_slash"), (0.4, "fx:petals")],
@@ -245,6 +304,10 @@ BEATS = {
         "orin": [(0.24, "sfx:sword_slash"), (0.40, "fx:petals"), (0.75, "fx:petals")],
         "goro": [(0.15, "sfx:obstacle_hit"), (0.40, "sfx:sword_slash"), (0.45, "fx:sparks")],
         "ichi": [(0.15, "sfx:sword_slash"), (0.55, "sfx:parry"), (0.65, "fx:petals")],
+        "valerius": [(0.18, "sfx:sword_slash"), (0.50, "fx:smoke")],
+        "seimei": [(0.15, "sfx:kunai_throw"), (0.35, "fx:sparks"), (0.70, "fx:petals")],
+        "daiki": [(0.18, "sfx:dodge_whoosh"), (0.44, "sfx:obstacle_hit")],
+        "aoi": [(0.16, "sfx:sword_slash"), (0.50, "fx:petals")],
     },
 }
 

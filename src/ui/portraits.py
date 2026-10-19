@@ -48,6 +48,17 @@ PORTRAIT_MAP = {
     "ichi": "ichi",
     "blind": "ichi",
     "shikomizue": "ichi",
+    "valerius": "valerius",
+    "necromancer": "valerius",
+    "seimei": "seimei",
+    "onmyoji": "seimei",
+    "daiki": "daiki",
+    "pilgrim": "daiki",
+    "aoi": "aoi",
+    "huntress": "aoi",
+    "gashadokuro": "gashadokuro",
+    "boss": "gashadokuro",
+    "oni": "gashadokuro",
 }
 
 # Cache de superfícies carregadas: (char_key, size, circular) -> pygame.Surface
@@ -100,14 +111,15 @@ def get_portrait(char_id: str, size: tuple[int, int] = (58, 58), circular: bool 
 
 def preload_portraits(sizes=((50, 50), (58, 58), (35, 35), (33, 33), (66, 66), (84, 84), (110, 110))):
     """
-    Pré-carrega todos os retratos dos 12 combatentes nos tamanhos mais comuns do jogo,
+    Pré-carrega todos os retratos dos combatentes nos tamanhos mais comuns do jogo,
     eliminando qualquer micro-travamento (stutter) durante a seleção de personagens,
     transição de lutas do Arcade e introdução orbital.
     """
     unique_chars = (
         "kenshi", "musashi", "hanzo", "joe", "saitou", "teppo",
         "murasaki", "kasumi", "okuni", "tomoe", "anne", "julie",
-        "ren", "chiyo", "benkei", "orin", "goro", "ichi"
+        "ren", "chiyo", "benkei", "orin", "goro", "ichi",
+        "valerius", "seimei", "daiki", "aoi"
     )
     for char in unique_chars:
         for circ in (True, False):

@@ -22,6 +22,15 @@ def get_default_config() -> dict:
             "P2": {},
         },
         "touch_mode": "auto",
+        "ui_mode": "auto",
+        "touch_controls": {
+            "scale": 1.0,
+            "positions": {
+                "attack": [1140, 580],
+                "secondary": [1020, 520],
+                "dash": [1160, 440]
+            }
+        },
         "audio": {
             "master": 1.0,
             "sfx": 0.85,
@@ -58,6 +67,10 @@ def load_controls_config() -> dict:
             data["controllers"] = default_cfg["controllers"]
         if "touch_mode" not in data:
             data["touch_mode"] = default_cfg["touch_mode"]
+        if "ui_mode" not in data:
+            data["ui_mode"] = default_cfg.get("ui_mode", "auto")
+        if "touch_controls" not in data or not isinstance(data["touch_controls"], dict):
+            data["touch_controls"] = default_cfg["touch_controls"]
         if "audio" not in data or not isinstance(data["audio"], dict):
             data["audio"] = default_cfg["audio"]
         else:
@@ -73,7 +86,7 @@ def load_controls_config() -> dict:
         return get_default_config()
 
 
-def save_controls_config(keyboard_controls: dict, controller_mgr=None, touch_mode: str = "auto", audio_cfg: dict = None, ai_difficulty: str = "normal") -> bool:
+def save_controls_config(keyboard_controls: dict, controller_mgr=None, touch_mode: str = "auto", audio_cfg: dict = None, ai_difficulty: str = "normal", ui_mode: str = None, touch_controls_cfg: dict = None) -> bool:
     """
     Persiste as configurações de teclado, gamepads, touch, volumes de áudio e dificuldade da IA em controls_config.json.
     """
@@ -93,7 +106,7 @@ def save_controls_config(keyboard_controls: dict, controller_mgr=None, touch_mod
 
         keyboard_section = {}
         for k, v in keyboard_controls.items():
-            if k in ("audio", "ai_difficulty"):
+            if k in ("audio", "ai_difficulty", "ui_mode", "touch_controls"):
                 continue
             try:
                 keyboard_section[k] = int(v)
@@ -103,6 +116,10 @@ def save_controls_config(keyboard_controls: dict, controller_mgr=None, touch_mod
         if ai_difficulty not in ("easy", "normal", "hard"):
             ai_difficulty = "normal"
 
+        existing = load_controls_config()
+        saved_ui_mode = ui_mode or existing.get("ui_mode", "auto")
+        saved_touch_cfg = touch_controls_cfg or existing.get("touch_controls", default_cfg["touch_controls"])
+
         cfg = {
             "version": "1.4.0",
             "keyboard": keyboard_section,
@@ -111,11 +128,14 @@ def save_controls_config(keyboard_controls: dict, controller_mgr=None, touch_mod
                 "P2": {},
             },
             "touch_mode": touch_mode or "auto",
+            "ui_mode": saved_ui_mode,
+            "touch_controls": saved_touch_cfg,
             "audio": audio_section,
             "ai_difficulty": ai_difficulty,
         }
 
         if controller_mgr:
+            cfg["controllers"]["invert_y"] = getattr(controller_mgr, "invert_y", None)
             for p_idx, p_key in ((0, "P1"), (1, "P2")):
                 ctrl = controller_mgr.get_controller_for_player(p_idx)
                 if ctrl and hasattr(ctrl, "custom_mappings"):

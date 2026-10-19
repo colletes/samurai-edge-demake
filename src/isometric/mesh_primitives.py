@@ -13,7 +13,7 @@ import math
 import pygame
 
 from src.isometric.iso_math import rotate_xy
-from src.isometric.voxel_renderer import _get_alpha_scratch
+from src.isometric.voxel_renderer import _get_alpha_scratch, draw_oriented_voxel_box, draw_voxel_box
 from src.isometric.voxel_textures import draw_face_texture
 
 COLOR_OUTLINE = (22, 18, 24)
@@ -256,17 +256,20 @@ def draw_ribbon_mesh_3d(
         else:
             pygame.draw.polygon(target_surf, c_main, main_poly)
 
-        # Vincos de tecido / brilho de seda ao longo da fita
+        # Vincos de tecido / brilho de seda ao longo da fita (apenas para fitas com largura suficiente em tela)
         p00, p01, p11, p10 = main_poly
-        mid_top = (int(p00[0] * 0.5 + p01[0] * 0.5), int(p00[1] * 0.5 + p01[1] * 0.5))
-        mid_bot = (int(p10[0] * 0.5 + p11[0] * 0.5), int(p10[1] * 0.5 + p11[1] * 0.5))
-        pygame.draw.line(target_surf, (*c_fold, alpha) if alpha < 255 else c_fold, mid_top, mid_bot, 1)
-        sh_top = (int(p00[0] * 0.72 + p01[0] * 0.28), int(p00[1] * 0.72 + p01[1] * 0.28))
-        sh_bot = (int(p10[0] * 0.72 + p11[0] * 0.28), int(p10[1] * 0.72 + p11[1] * 0.28))
-        pygame.draw.line(target_surf, (*c_sheen, alpha) if alpha < 255 else c_sheen, sh_top, sh_bot, 1)
+        w_top_px = math.hypot(p01[0] - p00[0], p01[1] - p00[1])
+        w_bot_px = math.hypot(p11[0] - p10[0], p11[1] - p10[1])
+        if min(w_top_px, w_bot_px) >= 6.0:
+            mid_top = (int(p00[0] * 0.5 + p01[0] * 0.5), int(p00[1] * 0.5 + p01[1] * 0.5))
+            mid_bot = (int(p10[0] * 0.5 + p11[0] * 0.5), int(p10[1] * 0.5 + p11[1] * 0.5))
+            pygame.draw.line(target_surf, (*c_fold, alpha) if alpha < 255 else c_fold, mid_top, mid_bot, 1)
+            sh_top = (int(p00[0] * 0.72 + p01[0] * 0.28), int(p00[1] * 0.72 + p01[1] * 0.28))
+            sh_bot = (int(p10[0] * 0.72 + p11[0] * 0.28), int(p10[1] * 0.72 + p11[1] * 0.28))
+            pygame.draw.line(target_surf, (*c_sheen, alpha) if alpha < 255 else c_sheen, sh_top, sh_bot, 1)
 
         # Contorno APENAS nas bordas laterais externas (sem linhas horizontais entre segmentos!)
-        if outline:
+        if outline and max(w_top_px, w_bot_px) >= 3.0:
             out_col = (*COLOR_OUTLINE, int(alpha * 0.75)) if alpha < 255 else COLOR_OUTLINE
             pygame.draw.line(target_surf, out_col, p00, p10, 1)
             pygame.draw.line(target_surf, out_col, p01, p11, 1)
@@ -372,7 +375,7 @@ def _draw_cranium_with_hair_facets(
              v_ml_bot[2] * (1.0 - t_hair_swoop) + v_ml_top[2] * t_hair_swoop)
 
     v_mr_bot = (v3d[3][0] * 0.25 + v3d[2][0] * 0.75, v3d[3][1] * 0.25 + v3d[2][1] * 0.75, v3d[3][2] * 0.25 + v3d[2][2] * 0.75)
-    v_mr_top = (v3d[7][0] * 0.25 + v3d[6][0] * 0.75, v3d[7][1] * 0.25 + v3d[6][0] * 0.75, v3d[7][2] * 0.25 + v3d[6][2] * 0.75)
+    v_mr_top = (v3d[7][0] * 0.25 + v3d[6][0] * 0.75, v3d[7][1] * 0.25 + v3d[6][1] * 0.75, v3d[7][2] * 0.25 + v3d[6][2] * 0.75)
     hl_mr = (v_mr_bot[0] * (1.0 - t_hair_swoop) + v_mr_top[0] * t_hair_swoop,
              v_mr_bot[1] * (1.0 - t_hair_swoop) + v_mr_top[1] * t_hair_swoop,
              v_mr_bot[2] * (1.0 - t_hair_swoop) + v_mr_top[2] * t_hair_swoop)
@@ -671,6 +674,34 @@ PORTRAIT_FACE_STYLES = {
     "oni": {
         "iris": (255, 65, 35), "brow": (20, 15, 15), "lip": (145, 30, 35),
         "brow_tilt": 0.42,
+    },
+    "valerius": {
+        "iris": (130, 165, 195), "iris_core": (195, 225, 245), "iris_limbal": (50, 75, 100),
+        "brow": (160, 168, 178), "lip": (175, 135, 138),
+        "brow_tilt": 0.28, "delicate_nose": False,
+        "eye_z": 0.080, "brow_z": 0.104, "spacing": 0.036, "mouth_w": 0.025,
+        "hairline_mid": 0.68, "hairline_lat": 0.52,
+    },
+    "seimei": {
+        "iris": (135, 115, 215), "iris_core": (195, 175, 255), "iris_limbal": (55, 40, 115),
+        "brow": (32, 24, 38), "lip": (225, 110, 128), "lip_lower": (245, 140, 155), "lip_shadow": (148, 62, 75),
+        "brow_tilt": 0.12, "lashes": True, "delicate_nose": True, "feminine_lips": True,
+        "hairline_mid": 0.65, "hairline_lat": 0.46,
+        "eye_z": 0.082, "brow_z": 0.106, "spacing": 0.033, "mouth_w": 0.024,
+    },
+    "daiki": {
+        "iris": (82, 54, 34), "iris_core": (145, 98, 56), "iris_limbal": (36, 22, 14),
+        "brow": (24, 20, 18), "lip": (172, 118, 104),
+        "brow_tilt": 0.26, "delicate_nose": False,
+        "eye_z": 0.080, "brow_z": 0.102, "spacing": 0.035, "mouth_w": 0.026,
+        "hairline_mid": 0.66, "hairline_lat": 0.48,
+    },
+    "aoi": {
+        "iris": (168, 102, 38), "iris_core": (235, 175, 78), "iris_limbal": (78, 42, 18),
+        "brow": (28, 22, 26), "lip": (218, 104, 112), "lip_lower": (242, 134, 142), "lip_shadow": (148, 58, 66),
+        "brow_tilt": 0.16, "lashes": True, "delicate_nose": True, "feminine_lips": True,
+        "hairline_mid": 0.65, "hairline_lat": 0.46,
+        "eye_z": 0.082, "brow_z": 0.106, "spacing": 0.033, "mouth_w": 0.024,
     },
 }
 

@@ -166,22 +166,28 @@ class BossHazard:
             pygame.draw.polygon(surface, (120, 100, 80), [(bx - 5, by), (bx + 5, by), (tx, ty)], 1)
 
     def render_air(self, surface, camera):
-        """Bola de fogo caindo do céu durante o aviso (desenhada acima dos lutadores)."""
+        """Crânio em chamas espectrais 3D caindo do céu durante o aviso (desenhado acima dos lutadores)."""
         if self.kind != "fireball" or self.t >= self.warn:
             return
+        from src.isometric.voxel_renderer import draw_voxel_box
         k = self.t / max(0.01, self.warn)
         fall = 1.0 - k
-        for n in range(6, -1, -1):  # rastro de chamas atrás da bola
+        for n in range(5, -1, -1):  # rastro de chamas 3D atrás do crânio
             f = min(1.0, fall + n * 0.05)
-            x, y, z = self.x - 2.2 * f, self.y - 2.2 * f, 0.5 + 9.0 * f ** 1.4
-            px, py = camera.apply(x, y, z)
-            zoom = getattr(camera, "zoom", 1.0)
-            color = (255, 120 + n * 15, 30) if n else (255, 235, 140)
-            pygame.draw.circle(surface, color, (px, py), max(2, int((9 - n) * zoom)))
+            x, y, z = self.x - 2.2 * f, self.y - 2.2 * f, 0.5 + 8.5 * (f ** 1.35)
+            if n == 0:
+                # Crânio de osso 3D envolto em fogo carmesim/violeta
+                draw_voxel_box(surface, camera, x - 0.22, y - 0.22, z - 0.18, 0.44, 0.44, 0.42, (235, 225, 200), outline=True)
+                draw_voxel_box(surface, camera, x - 0.14, y + 0.16, z - 0.10, 0.28, 0.08, 0.18, (35, 20, 28), outline=False)
+            else:
+                w = max(0.10, 0.36 - n * 0.05)
+                col = (185, 50, 235) if n % 2 == 1 else (255, 85, 45)
+                draw_voxel_box(surface, camera, x - w * 0.5, y - w * 0.5, z, w, w, w * 1.2, col, outline=False)
 
     @property
     def air_view(self):
         return _AirView(self)
+
 
 
 class _AirView:

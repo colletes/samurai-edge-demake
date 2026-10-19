@@ -211,29 +211,41 @@ class SoundManager:
                     pass
         return False
 
-    def play_music(self, track: MusicTrack | str, fade_ms: int = 800, loops: int = -1):
+    def play_music(self, track: MusicTrack | str, fade_ms: int = 800, loops: int = -1, force_restart: bool = False):
         """
-        Inicia ou transiciona suavemente a música de fundo (BGM).
-        Se o arquivo não existir em disco, silencia a música mantendo o SFX ativo.
+        Inicia ou transiciona suavemente a música de fundo (BGM) em loop contínuo.
+        Se `force_restart=False` e a mesma faixa já estiver tocando, mantém o loop contínuo sem reiniciar entre rounds.
+        Quando `force_restart=True` (ex.: início de nova luta ou revanche), aplica leve fade-out e reinicia a faixa com fade-in.
         """
         if not self.is_audio_available:
             return
+
+        track_key = track.value if isinstance(track, MusicTrack) else str(track)
+        if not force_restart:
+            if self.current_music_track == track_key and pygame.mixer.music.get_busy():
+                return
+            if self._pending_music and self._pending_music[0] == track_key:
+                return
 
         self._pending_music = None
         self._pending_music_timer = 0.0
         self._pending_music_deadline = 0
 
-        track_key = track.value if isinstance(track, MusicTrack) else str(track)
-        if self.current_music_track == track_key and pygame.mixer.music.get_busy():
-            return
-
         if pygame.mixer.music.get_busy() and fade_ms > 0:
+            fadeout_dur = min(350, fade_ms // 2)
             try:
-                pygame.mixer.music.fadeout(fade_ms)
+                pygame.mixer.music.fadeout(fadeout_dur)
             except Exception:
                 pass
+            self._pending_music = (track_key, loops, fade_ms)
+            self._pending_music_timer = max(0.05, fadeout_dur / 1000.0)
+            if pygame.get_init():
+                self._pending_music_deadline = pygame.time.get_ticks() + fadeout_dur
+            else:
+                self._pending_music_deadline = 0
+        else:
+            self._play_music_file(track_key, loops=loops, fade_in_ms=fade_ms)
 
-        self._play_music_file(track_key, loops=loops, fade_in_ms=fade_ms)
 
     def play_death_music(self, fadeout_ms: int = 350):
         """

@@ -33,6 +33,8 @@ from src.ui.fonts import get_title_font, get_text_font
 from src.effects import parchment as pm
 from src.roster import ROSTER_ORDER
 from src.edition import is_demo, DEMO_FIGHTERS
+from src.input.device_info import is_mobile_device
+from src.ui.font_manager import render_text_fx
 
 # Paleta Sumi-E inspirada no conceito artístico do título
 COLOR_SUMI_INK = (18, 18, 20)
@@ -342,22 +344,55 @@ class PreviewCamera:
 class CharacterSelectScreen:
     arcade_mode = False  # Arcade: só o P1 escolhe, sem modo 2P nem etapa do oponente
 
+    MODE_PVP = "pvp"      # 1P vs 2P (Versus Local)
+    MODE_PVE = "pve"      # 1P vs IA (Treino)
+    MODE_WATCH = "watch"  # IA vs IA (Assistir)
+
     @property
     def vs_ai(self) -> bool:
-        return self._vs_ai
+        return self._match_mode != self.MODE_PVP
 
     @vs_ai.setter
-    def vs_ai(self, value: bool):
-        self._vs_ai = True if self.arcade_mode else value
+    def vs_ai(self, value):
+        if self.arcade_mode:
+            self._match_mode = self.MODE_PVE
+        elif isinstance(value, str) and value in (self.MODE_PVP, self.MODE_PVE, self.MODE_WATCH):
+            self._match_mode = value
+        elif value:
+            self._match_mode = self.MODE_PVE
+        else:
+            self._match_mode = self.MODE_PVP
+
+    @property
+    def match_mode(self) -> str:
+        return self.MODE_PVE if self.arcade_mode else self._match_mode
+
+    @match_mode.setter
+    def match_mode(self, value: str):
+        self._match_mode = self.MODE_PVE if self.arcade_mode else value
+
+    def cycle_vs_mode(self):
+        """Alterna ciclicamente entre: 1P vs IA -> IA vs IA -> 1P vs 2P."""
+        if self.arcade_mode:
+            return
+        if self._match_mode == self.MODE_PVE:
+            self._match_mode = self.MODE_WATCH
+        elif self._match_mode == self.MODE_WATCH:
+            self._match_mode = self.MODE_PVP
+        else:
+            self._match_mode = self.MODE_PVE
+        self.selection_step = "P1"
+        self.p1_ready = False
+        self.p2_ready = False
 
     def __init__(self, ai_difficulty: str = "normal"):
         self.p1_choice_idx = ROSTER_ORDER.index(DEMO_FIGHTERS[0]) if is_demo() else 0  # Kenshin (na demo, Ren)
         self.p2_choice_idx = ROSTER_ORDER.index(DEMO_FIGHTERS[1]) if is_demo() else 1  # Musashi (na demo, Chiyo)
         self.p1_ready = False
         self.p2_ready = False
-        self.vs_ai = True
+        self._match_mode = self.MODE_PVE
         self.ai_difficulty = ai_difficulty if ai_difficulty in ("easy", "normal", "hard") else "normal"
-        self.selection_step = "P1"  # "P1" -> "AI" (no modo 1P vs IA)
+        self.selection_step = "P1"  # "P1" -> "AI" (no modo 1P vs IA ou IA vs IA)
         self.focus_zone = "GRID"    # "GRID" ou "MODE_BTN"
         self._axis_x_held_p1 = False
         self._axis_y_held_p1 = False
@@ -376,6 +411,15 @@ class CharacterSelectScreen:
         self.start_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 210, SCREEN_HEIGHT - 64, 420, 44)
         self.card_rects: list[pygame.Rect] = []
         self.info_btn_rects: list[pygame.Rect] = []
+
+        # Suporte a interface otimizada para smartphones (Mobile Phone)
+        self.mobile_page = 0
+        self.mobile_page_size = 8
+        self.mobile_touch_start = None
+        self.btn_mobile_prev = pygame.Rect(18, 140, 56, 180)
+        self.btn_mobile_next = pygame.Rect(SCREEN_WIDTH - 74, 140, 56, 180)
+        self.btn_mobile_back = pygame.Rect(28, 16, 130, 42)
+        self.btn_mobile_confirm = pygame.Rect(SCREEN_WIDTH // 2 - 200, SCREEN_HEIGHT - 74, 400, 52)
 
         # Carregar imagem conceitual Sumi-E do título com vinheta escurecida
         self.bg_surf = None
@@ -460,7 +504,38 @@ class CharacterSelectScreen:
         return is_demo() and char_info["id"] not in DEMO_FIGHTERS
 
     def _raw_grid_step(self, idx: int, dx: int, dy: int) -> int:
-        """Move o cursor na grade 6x4 de guerreiros mais a carta Aleatório numa quinta linha."""
+        """Move o cursor na grade (desktop 6x4 ou mobile 4 colunas) mais a carta Aleatório."""
+        from src.input.device_info import is_mobile_device
+        if is_mobile_device():
+            cols = 4
+            rnd = self.random_idx
+            total = len(self.characters)
+            if idx == rnd:
+                if dy < 0 or dx < 0:
+                    return max(0, rnd - 1)
+                elif dx > 0 or dy > 0:
+                    return 0
+                return idx
+            row = idx // cols
+            col = idx % cols
+            if dx:
+                new_col = col + dx
+                if new_col < 0:
+                    idx = (idx - 1) % total
+                elif new_col >= cols:
+                    idx = (idx + 1) % total
+                else:
+                    idx = row * cols + new_col
+            if dy:
+                new_idx = idx + dy * cols
+                if 0 <= new_idx < total:
+                    idx = new_idx
+                elif dy > 0:
+                    idx = rnd
+                elif dy < 0 and idx >= cols:
+                    idx = idx - cols
+            return min(total - 1, max(0, idx))
+
         cols, rnd = 6, self.random_idx
         if idx == rnd:
             row, col = 4, self._last_col
@@ -715,55 +790,55 @@ class CharacterSelectScreen:
             },
             {
                 "id": CHAR_VALERIUS,
-                "name": "???",
-                "title": "",
-                "style": "",
+                "name": t("char_valerius_name"),
+                "title": t("char_valerius_title"),
+                "style": t("char_valerius_style"),
                 "color": (140, 70, 180),
-                "speed_stars": "",
-                "damage_desc": "",
-                "special_desc": "",
-                "keys_p1": "",
-                "keys_p2": "",
-                "ready": False,
+                "speed_stars": t("char_valerius_speed"),
+                "damage_desc": t("char_valerius_damage"),
+                "special_desc": t("char_valerius_special"),
+                "keys_p1": t("char_valerius_keys_p1"),
+                "keys_p2": t("char_valerius_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_SEIMEI,
-                "name": "???",
-                "title": "",
-                "style": "",
+                "name": t("char_seimei_name"),
+                "title": t("char_seimei_title"),
+                "style": t("char_seimei_style"),
                 "color": (80, 160, 210),
-                "speed_stars": "",
-                "damage_desc": "",
-                "special_desc": "",
-                "keys_p1": "",
-                "keys_p2": "",
-                "ready": False,
+                "speed_stars": t("char_seimei_speed"),
+                "damage_desc": t("char_seimei_damage"),
+                "special_desc": t("char_seimei_special"),
+                "keys_p1": t("char_seimei_keys_p1"),
+                "keys_p2": t("char_seimei_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_DAIKI,
-                "name": "???",
-                "title": "",
-                "style": "",
-                "color": (190, 150, 90),
-                "speed_stars": "",
-                "damage_desc": "",
-                "special_desc": "",
-                "keys_p1": "",
-                "keys_p2": "",
-                "ready": False,
+                "name": t("char_daiki_name"),
+                "title": t("char_daiki_title"),
+                "style": t("char_daiki_style"),
+                "color": (180, 235, 195),
+                "speed_stars": t("char_daiki_speed"),
+                "damage_desc": t("char_daiki_damage"),
+                "special_desc": t("char_daiki_special"),
+                "keys_p1": t("char_daiki_keys_p1"),
+                "keys_p2": t("char_daiki_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_AOI,
-                "name": "???",
-                "title": "",
-                "style": "",
-                "color": (60, 170, 150),
-                "speed_stars": "",
-                "damage_desc": "",
-                "special_desc": "",
-                "keys_p1": "",
-                "keys_p2": "",
-                "ready": False,
+                "name": t("char_aoi_name"),
+                "title": t("char_aoi_title"),
+                "style": t("char_aoi_style"),
+                "color": (155, 225, 255),
+                "speed_stars": t("char_aoi_speed"),
+                "damage_desc": t("char_aoi_damage"),
+                "special_desc": t("char_aoi_special"),
+                "keys_p1": t("char_aoi_keys_p1"),
+                "keys_p2": t("char_aoi_keys_p2"),
+                "ready": True,
             },
             {
                 "id": CHAR_RAIDEN,
@@ -889,19 +964,17 @@ class CharacterSelectScreen:
         cols = 6
 
         def move_cursor(player: str, dx: int, dy: int):
+            from src.input.device_info import is_mobile_device
             if player == "P1":
                 if self.focus_zone == "MODE_BTN":
                     if dy != 0:
                         self.focus_zone = "GRID"
                     elif dx != 0:
-                        self.vs_ai = not self.vs_ai
-                        self.selection_step = "P1"
-                        self.p1_ready = False
-                        self.p2_ready = False
+                        self.cycle_vs_mode()
                     return
 
                 active_idx = self.p1_choice_idx if (not self.vs_ai or self.selection_step == "P1") else self.p2_choice_idx
-                if dy < 0 and active_idx < cols and not self.arcade_mode:
+                if dy < 0 and active_idx < cols and not self.arcade_mode and not is_mobile_device():
                     self.focus_zone = "MODE_BTN"
                     return
 
@@ -916,16 +989,34 @@ class CharacterSelectScreen:
                     else:
                         self.p2_choice_idx = new_idx
 
+                if is_mobile_device():
+                    sel = self.p1_choice_idx if (not self.vs_ai or self.selection_step == "P1") else self.p2_choice_idx
+                    max_pages = (len(self.characters) + self.mobile_page_size - 1) // self.mobile_page_size
+                    self.mobile_page = max(0, min(max_pages - 1, sel // self.mobile_page_size))
+
+                try:
+                    from src.audio.sound_events import SoundEvent
+                    from src.audio.sound_manager import SoundManager
+                    SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+                except Exception:
+                    pass
+
             elif player == "P2":
                 if not self.vs_ai and not self.p2_ready:
                     self.p2_choice_idx = self._grid_step(self.p2_choice_idx, dx, dy)
+                    if is_mobile_device():
+                        max_pages = (len(self.characters) + self.mobile_page_size - 1) // self.mobile_page_size
+                        self.mobile_page = max(0, min(max_pages - 1, self.p2_choice_idx // self.mobile_page_size))
+                    try:
+                        from src.audio.sound_events import SoundEvent
+                        from src.audio.sound_manager import SoundManager
+                        SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+                    except Exception:
+                        pass
 
         def handle_confirm(player: str) -> str | bool:
             if self.focus_zone == "MODE_BTN":
-                self.vs_ai = not self.vs_ai
-                self.selection_step = "P1"
-                self.p1_ready = False
-                self.p2_ready = False
+                self.cycle_vs_mode()
                 return False
 
             target_idx = self.p1_choice_idx if (self.vs_ai and self.selection_step == "P1") or (not self.vs_ai and player == "P1") else self.p2_choice_idx
@@ -1023,7 +1114,7 @@ class CharacterSelectScreen:
             elif event.button == 3:
                 active_idx = self.p1_choice_idx if (not self.vs_ai or self.selection_step == "P1") else self.p2_choice_idx
                 if active_idx < len(self.characters) and self.characters[active_idx].get("ready", True):
-                    self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=min(active_idx, 11))
+                    self.help_modal.open(GameHelpModal.TAB_FIGHTERS, char_id=self.characters[active_idx]["id"])
                 return False
 
         elif event.type == pygame.JOYHATMOTION:
@@ -1064,13 +1155,14 @@ class CharacterSelectScreen:
                         self._axis_x_held_p1 = False
 
                 elif event.axis == 1:
-                    if event.value > 0.60 and not self._axis_y_held_p1:
+                    val = -event.value if getattr(ctrl_mgr, "invert_y", False) else event.value
+                    if val > 0.60 and not self._axis_y_held_p1:
                         move_cursor("P1", 0, 1)
                         self._axis_y_held_p1 = True
-                    elif event.value < -0.60 and not self._axis_y_held_p1:
+                    elif val < -0.60 and not self._axis_y_held_p1:
                         move_cursor("P1", 0, -1)
                         self._axis_y_held_p1 = True
-                    elif abs(event.value) < 0.30:
+                    elif abs(val) < 0.30:
                         self._axis_y_held_p1 = False
 
             elif target_player == "P2":
@@ -1085,22 +1177,20 @@ class CharacterSelectScreen:
                         self._axis_x_held_p2 = False
 
                 elif event.axis == 1:
-                    if event.value > 0.60 and not self._axis_y_held_p2:
+                    val = -event.value if getattr(ctrl_mgr, "invert_y", False) else event.value
+                    if val > 0.60 and not self._axis_y_held_p2:
                         move_cursor("P2", 0, 1)
                         self._axis_y_held_p2 = True
-                    elif event.value < -0.60 and not self._axis_y_held_p2:
+                    elif val < -0.60 and not self._axis_y_held_p2:
                         move_cursor("P2", 0, -1)
                         self._axis_y_held_p2 = True
-                    elif abs(event.value) < 0.30:
+                    elif abs(val) < 0.30:
                         self._axis_y_held_p2 = False
 
         # --- 2. KEYBOARD EVENTS ---
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_TAB:
-                self.vs_ai = not self.vs_ai
-                self.selection_step = "P1"
-                self.p1_ready = False
-                self.p2_ready = False
+                self.cycle_vs_mode()
                 return False
             elif event.key == pygame.K_h:
                 self.help_modal.open(GameHelpModal.TAB_RULES)
@@ -1108,7 +1198,7 @@ class CharacterSelectScreen:
             elif event.key == pygame.K_f:
                 active_idx = self.p1_choice_idx if (not self.vs_ai or self.selection_step == "P1") else self.p2_choice_idx
                 if active_idx < len(self.characters) and self.characters[active_idx].get("ready", True):
-                    self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=min(active_idx, 11))
+                    self.help_modal.open(GameHelpModal.TAB_FIGHTERS, char_id=self.characters[active_idx]["id"])
                 return False
             elif event.key == pygame.K_l:
                 toggle_lang()
@@ -1196,6 +1286,23 @@ class CharacterSelectScreen:
         elif event.type == pygame.FINGERDOWN:
             vx = event.x * SCREEN_WIDTH
             vy = event.y * SCREEN_HEIGHT
+            self.mobile_touch_start = (event.x, event.y)
+
+            # Botões Mobile Específicos
+            if is_mobile_device():
+                if self.btn_mobile_back.collidepoint(vx, vy):
+                    if self.selection_step == "AI":
+                        self.selection_step = "P1"
+                        return False
+                    return "BACK"
+                if self.btn_mobile_prev.collidepoint(vx, vy):
+                    self.mobile_page = max(0, self.mobile_page - 1)
+                    return False
+                if self.btn_mobile_next.collidepoint(vx, vy):
+                    max_pages = (len(self.characters) + self.mobile_page_size - 1) // self.mobile_page_size
+                    self.mobile_page = min(max_pages - 1, self.mobile_page + 1)
+                    return False
+
             if self.lang_btn_rect.collidepoint(vx, vy):
                 toggle_lang()
                 return False
@@ -1204,13 +1311,11 @@ class CharacterSelectScreen:
                 return False
             for idx, irect in enumerate(self.info_btn_rects):
                 if irect.collidepoint(vx, vy):
-                    self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=idx)
+                    char_id = self.characters[idx]["id"] if idx < len(self.characters) else None
+                    self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=idx, char_id=char_id)
                     return False
             if self.mode_btn_rect.collidepoint(vx, vy):
-                self.vs_ai = not self.vs_ai
-                self.selection_step = "P1"
-                self.p1_ready = False
-                self.p2_ready = False
+                self.cycle_vs_mode()
                 return False
             if self.vs_ai and self.difficulty_btn_rect.collidepoint(vx, vy):
                 self.cycle_ai_difficulty()
@@ -1227,7 +1332,7 @@ class CharacterSelectScreen:
                             self.p2_choice_idx = idx
                         else:
                             self.p1_choice_idx = idx
-            if self.start_btn_rect.collidepoint(vx, vy):
+            if self.start_btn_rect.collidepoint(vx, vy) or (is_mobile_device() and self.btn_mobile_confirm.collidepoint(vx, vy)):
                 if self.vs_ai:
                     res = handle_confirm("P1")
                 else:
@@ -1241,9 +1346,35 @@ class CharacterSelectScreen:
                     return res
                 return False
 
+        elif event.type == pygame.FINGERUP:
+            if hasattr(self, "mobile_touch_start") and self.mobile_touch_start:
+                dx = event.x - self.mobile_touch_start[0]
+                dy = event.y - self.mobile_touch_start[1]
+                if abs(dx) > 0.08 and abs(dy) < 0.12:
+                    max_pages = (len(self.characters) + self.mobile_page_size - 1) // self.mobile_page_size
+                    if dx < 0:
+                        self.mobile_page = min(max_pages - 1, self.mobile_page + 1)
+                    else:
+                        self.mobile_page = max(0, self.mobile_page - 1)
+                self.mobile_touch_start = None
+
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mx, my = event.pos
             if event.button == 1:
+                if is_mobile_device():
+                    if self.btn_mobile_back.collidepoint(mx, my):
+                        if self.selection_step == "AI":
+                            self.selection_step = "P1"
+                            return False
+                        return "BACK"
+                    if self.btn_mobile_prev.collidepoint(mx, my):
+                        self.mobile_page = max(0, self.mobile_page - 1)
+                        return False
+                    if self.btn_mobile_next.collidepoint(mx, my):
+                        max_pages = (len(self.characters) + self.mobile_page_size - 1) // self.mobile_page_size
+                        self.mobile_page = min(max_pages - 1, self.mobile_page + 1)
+                        return False
+
                 if self.lang_btn_rect.collidepoint(mx, my):
                     toggle_lang()
                     return False
@@ -1252,13 +1383,11 @@ class CharacterSelectScreen:
                     return False
                 for idx, irect in enumerate(self.info_btn_rects):
                     if irect.collidepoint(mx, my):
-                        self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=idx)
+                        char_id = self.characters[idx]["id"] if idx < len(self.characters) else None
+                        self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=idx, char_id=char_id)
                         return False
                 if self.mode_btn_rect.collidepoint(mx, my):
-                    self.vs_ai = not self.vs_ai
-                    self.selection_step = "P1"
-                    self.p1_ready = False
-                    self.p2_ready = False
+                    self.cycle_vs_mode()
                     return False
                 if self.vs_ai and self.difficulty_btn_rect.collidepoint(mx, my):
                     self.cycle_ai_difficulty()
@@ -1275,7 +1404,7 @@ class CharacterSelectScreen:
                                 self.p2_choice_idx = idx
                             else:
                                 self.p1_choice_idx = idx
-                if self.start_btn_rect.collidepoint(mx, my):
+                if self.start_btn_rect.collidepoint(mx, my) or (is_mobile_device() and self.btn_mobile_confirm.collidepoint(mx, my)):
                     if self.vs_ai:
                         res = handle_confirm("P1")
                     else:
@@ -1310,7 +1439,7 @@ class CharacterSelectScreen:
             return self._update_reveal(dt)
         return False
 
-    def get_selected_characters(self) -> tuple[str, str, bool]:
+    def get_selected_characters(self) -> tuple[str, str, bool | str]:
         playable_ids = [c["id"] for c in self.characters if c.get("ready", True) and c["id"] != CHAR_RANDOM]
         def pick(idx: int) -> str:
             if idx == self.random_idx:
@@ -1319,7 +1448,8 @@ class CharacterSelectScreen:
             if not self.characters[idx].get("ready", True):
                 return random.choice(playable_ids) if playable_ids else CHAR_KENSHIN
             return char_id
-        return pick(self.p1_choice_idx), pick(self.p2_choice_idx), self.vs_ai
+        mode_val = False if self.match_mode == self.MODE_PVP else (True if self.match_mode == self.MODE_PVE else "watch")
+        return pick(self.p1_choice_idx), pick(self.p2_choice_idx), mode_val
 
     def _render_locked_overlay(self, surface, rect, font, is_demo_lock: bool = False):
         """Escurece a carta bloqueada e exibe aviso de bloqueio/desenvolvimento."""
@@ -1339,9 +1469,7 @@ class CharacterSelectScreen:
             pm.draw_paper_card(surface, rect, seed=97)
             if is_p1 or is_p2 or spinning:
                 pulse = 0.5 + 0.5 * math.sin(self.anim_timer * 6.0)
-                border = pm.make_ink_border(rect, COLOR_HANKO_RED if is_p1 else COLOR_HANKO_BLUE, width=2, seed=99)
-                border.set_alpha(int(150 + 105 * pulse))
-                surface.blit(border, rect.topleft)
+                pm.draw_ink_border(surface, rect, COLOR_HANKO_RED if is_p1 else COLOR_HANKO_BLUE, width=2, seed=99, alpha=int(150 + 105 * pulse))
         else:
             draw_sumie_card(surface, rect, is_p1, is_p2, self.vs_ai, self.selection_step, self.anim_timer)
 
@@ -1361,13 +1489,240 @@ class CharacterSelectScreen:
         title_s = pm.fit_text(font_small, char_info["title"], title_col, rect.right - text_left - name_s.get_width() - 80)
         surface.blit(title_s, (text_left + name_s.get_width() + 14, rect.centery - title_s.get_height() // 2))
 
-        p2_label = "IA" if self.vs_ai else "P2"
+        p1_label = "IA 1" if self.match_mode == self.MODE_WATCH else "P1"
         if is_p1:
-            draw_hanko_stamp(surface, font_stamp, "P1", rect.right - 54, rect.y + 6, size=24, color=COLOR_HANKO_RED, border_w=1)
+            draw_hanko_stamp(surface, font_stamp, p1_label, rect.right - 54, rect.y + 6, size=24, color=COLOR_HANKO_RED, border_w=1)
         if is_p2:
             draw_hanko_stamp(surface, font_stamp, p2_label, rect.right - 28, rect.y + 6, size=24, color=COLOR_HANKO_BLUE, border_w=1)
 
+    def _render_mobile(self, surface: pygame.Surface, font_large, font_mid, font_small):
+        """Layout exclusivo para smartphones: retratos ovais amplos, navegação paginada e fluxo claro."""
+        parch = pm.get_backdrop() is not None
+        if parch:
+            pm.draw_backdrop(surface)
+        else:
+            if self.bg_surf:
+                surface.blit(self.bg_surf, (0, 0))
+            else:
+                surface.fill(COLOR_BG)
+            surface.fill((0, 0, 0, 255), special_flags=pygame.BLEND_RGBA_MAX)
+
+        self.petals.draw(surface)
+
+        lang = get_lang()
+        font_oriental_title = get_title_font(26)
+        font_title_card = get_title_font(18)
+        font_sub_card = get_text_font(12)
+        font_badge = get_title_font(14)
+        font_btn = get_title_font(20)
+
+        # Top Bar (y=16)
+        self.btn_mobile_back = pygame.Rect(28, 16, 130, 42)
+        pygame.draw.rect(surface, (28, 24, 26), self.btn_mobile_back, border_radius=8)
+        pygame.draw.rect(surface, (140, 115, 60), self.btn_mobile_back, 1, border_radius=8)
+        back_label = "< TROCAR P1" if self.selection_step == "AI" else "< MENU"
+        back_s = font_badge.render(back_label, True, COLOR_GOLD)
+        surface.blit(back_s, back_s.get_rect(center=self.btn_mobile_back.center))
+
+        if self.selection_step == "P1":
+            step_title = "ESCOLHA SEU GUERREIRO" if lang == LANG_PT else "CHOOSE YOUR WARRIOR"
+            step_color = COLOR_HANKO_RED
+            p_badge = "P1"
+        else:
+            step_title = "ESCOLHA O ADVERSÁRIO (IA)" if lang == LANG_PT else "CHOOSE AI OPPONENT"
+            step_color = COLOR_HANKO_BLUE
+            p_badge = "IA"
+
+        draw_hanko_stamp(surface, font_badge, p_badge, SCREEN_WIDTH // 2 - 200, 18, size=38, color=step_color, border_w=2)
+        s_title = render_text_fx(font_oriental_title, step_title, COLOR_GOLD, outline=True, outline_color=(20, 16, 12), outline_width=1, shadow=True, shadow_offset=(2, 2))
+        surface.blit(s_title, (SCREEN_WIDTH // 2 - 145, 20))
+
+        # Botão Modo (Versus / IA)
+        self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH - 280, 16, 170, 42)
+        pygame.draw.rect(surface, (28, 24, 26), self.mode_btn_rect, border_radius=8)
+        pygame.draw.rect(surface, (140, 115, 60), self.mode_btn_rect, 1, border_radius=8)
+        if self.arcade_mode:
+            mode_text = t("arcade_title")
+        elif self.match_mode == self.MODE_WATCH:
+            mode_text = "IA vs IA" if lang == LANG_PT else "AI vs AI"
+        elif self.vs_ai:
+            mode_text = "1P vs IA" if lang == LANG_PT else "1P vs AI"
+        else:
+            mode_text = "1P vs 2P"
+        mode_s = font_sub_card.render(mode_text, True, COLOR_GOLD)
+        surface.blit(mode_s, mode_s.get_rect(center=self.mode_btn_rect.center))
+
+        # Botão Idioma
+        self.lang_btn_rect = pygame.Rect(SCREEN_WIDTH - 96, 16, 68, 42)
+        pygame.draw.rect(surface, (28, 24, 26), self.lang_btn_rect, border_radius=8)
+        pygame.draw.rect(surface, (140, 115, 60), self.lang_btn_rect, 1, border_radius=8)
+        lang_s = font_badge.render("PT" if lang == LANG_PT else "EN", True, COLOR_GOLD)
+        surface.blit(lang_s, lang_s.get_rect(center=self.lang_btn_rect.center))
+
+        # Paginação: 8 por página (2 linhas de 4)
+        all_chars = self.characters
+        total_chars = len(all_chars)
+        page_size = self.mobile_page_size
+        max_pages = (total_chars + page_size - 1) // page_size
+        self.mobile_page = max(0, min(max_pages - 1, self.mobile_page))
+
+        start_idx = self.mobile_page * page_size
+        page_chars = all_chars[start_idx:start_idx + page_size]
+
+        card_w = 230
+        card_h = 166
+        gap_x = 24
+        gap_y = 18
+        grid_start_x = (SCREEN_WIDTH - (4 * card_w + 3 * gap_x)) // 2
+        grid_start_y = 78
+
+        self.card_rects = [pygame.Rect(0, 0, 0, 0)] * total_chars
+        self.info_btn_rects = [pygame.Rect(0, 0, 0, 0)] * total_chars
+
+        for slot, char_info in enumerate(page_chars):
+            global_idx = start_idx + slot
+            row = slot // 4
+            col = slot % 4
+            cx = grid_start_x + col * (card_w + gap_x)
+            cy = grid_start_y + row * (card_h + gap_y)
+            rect = pygame.Rect(cx, cy, card_w, card_h)
+            self.card_rects[global_idx] = rect
+
+            is_p1 = (self.p1_choice_idx == global_idx)
+            is_p2 = (self.p2_choice_idx == global_idx)
+            is_sel = (is_p1 or is_p2)
+            char_id = char_info["id"]
+
+            if parch:
+                pm.draw_paper_card(surface, rect, seed=global_idx * 7 + 3)
+            else:
+                bg_col = (36, 42, 40) if is_sel else (24, 28, 26)
+                pygame.draw.rect(surface, bg_col, rect, border_radius=10)
+                pygame.draw.rect(surface, (60, 70, 65), rect, 1, border_radius=10)
+
+            if is_sel:
+                sel_col = COLOR_HANKO_RED if is_p1 else COLOR_HANKO_BLUE
+                pm.draw_brush_highlight(surface, pygame.Rect(rect.x + 10, rect.bottom - 48, card_w - 20, 26),
+                                        pm.SEAL_RED if is_p1 else pm.SEAL_BLUE, seed=global_idx + 2)
+                pulse = 0.5 + 0.5 * math.sin(self.anim_timer * 6.0)
+                pm.draw_ink_border(surface, rect, sel_col, width=2, seed=global_idx + 5, alpha=int(160 + 95 * pulse))
+
+            # Hanko badges
+            if is_p1 and is_p2:
+                draw_hanko_stamp(surface, font_badge, "P1", rect.x + 8, rect.y + 8, size=24, color=COLOR_HANKO_RED, border_w=1)
+                draw_hanko_stamp(surface, font_badge, "IA" if self.vs_ai else "P2", rect.x + 36, rect.y + 8, size=24, color=COLOR_HANKO_BLUE, border_w=1)
+            elif is_p1:
+                draw_hanko_stamp(surface, font_badge, "P1", rect.x + 8, rect.y + 8, size=24, color=COLOR_HANKO_RED, border_w=1)
+            elif is_p2:
+                draw_hanko_stamp(surface, font_badge, "IA" if self.vs_ai else "P2", rect.x + 8, rect.y + 8, size=24, color=COLOR_HANKO_BLUE, border_w=1)
+
+            # Retrato Oval / Circular Grande (80x80)
+            pcx = rect.centerx
+            pcy = rect.y + 54
+            p_radius = 40
+
+            if char_id == CHAR_RANDOM:
+                ring_color = COLOR_GOLD if is_sel else (140, 115, 60)
+                draw_enso_circle(surface, pcx, pcy, p_radius, ring_color, self.anim_timer)
+                pygame.draw.circle(surface, (28, 24, 34), (pcx, pcy), p_radius - 2)
+                q_font = get_title_font(34)
+                q_s = q_font.render("?", True, COLOR_GOLD)
+                surface.blit(q_s, q_s.get_rect(center=(pcx, pcy)))
+            else:
+                ring_color = COLOR_HANKO_RED if is_p1 else (COLOR_HANKO_BLUE if is_p2 else char_info["color"])
+                draw_enso_circle(surface, pcx, pcy, p_radius + 2, ring_color, self.anim_timer)
+                portrait_surf = get_portrait(char_id, size=(p_radius * 2, p_radius * 2), circular=True)
+                if portrait_surf is not None:
+                    surface.blit(portrait_surf, (pcx - p_radius, pcy - p_radius))
+
+            name_col = (255, 245, 220) if is_sel else (pm.darken(char_info["color"], 0.6) if parch else char_info["color"])
+            name_s = font_title_card.render(char_info["name"].upper(), True, name_col)
+            surface.blit(name_s, name_s.get_rect(center=(rect.centerx, rect.bottom - 36)))
+
+            sub_col = pm.INK_SOFT if parch else (175, 170, 165)
+            sub_s = pm.fit_text(font_sub_card, char_info["title"], sub_col, card_w - 16)
+            surface.blit(sub_s, sub_s.get_rect(center=(rect.centerx, rect.bottom - 16)))
+
+            if self.is_locked(global_idx):
+                self._render_locked_overlay(surface, rect, font_sub_card, is_demo_lock=is_demo())
+                self.card_rects[global_idx] = pygame.Rect(0, 0, 0, 0)
+
+        # Botões de Navegação das Páginas (< e >)
+        self.btn_mobile_prev = pygame.Rect(18, 140, 56, 180)
+        self.btn_mobile_next = pygame.Rect(SCREEN_WIDTH - 74, 140, 56, 180)
+
+        if self.mobile_page > 0:
+            pygame.draw.rect(surface, (28, 24, 26), self.btn_mobile_prev, border_radius=10)
+            pygame.draw.rect(surface, COLOR_GOLD, self.btn_mobile_prev, 2, border_radius=10)
+            draw_kanban_arrow(surface, self.btn_mobile_prev.centerx - 10, self.btn_mobile_prev.centery, 24, COLOR_GOLD, direction="left")
+
+        if self.mobile_page < max_pages - 1:
+            pygame.draw.rect(surface, (28, 24, 26), self.btn_mobile_next, border_radius=10)
+            pygame.draw.rect(surface, COLOR_GOLD, self.btn_mobile_next, 2, border_radius=10)
+            draw_kanban_arrow(surface, self.btn_mobile_next.centerx - 14, self.btn_mobile_next.centery, 24, COLOR_GOLD, direction="right")
+
+        # Indicador de Páginas (● ○ ○)
+        dots_y = 452
+        dot_gap = 22
+        dots_start_x = SCREEN_WIDTH // 2 - ((max_pages - 1) * dot_gap) // 2
+        for p in range(max_pages):
+            dot_x = dots_start_x + p * dot_gap
+            if p == self.mobile_page:
+                pygame.draw.circle(surface, COLOR_GOLD, (dot_x, dots_y), 6)
+            else:
+                pygame.draw.circle(surface, (100, 95, 90), (dot_x, dots_y), 4)
+
+        # Mini card P1 (Esquerda) e Mini card IA/P2 (Direita)
+        summary_y = 480
+        p1_info = self.characters[self.p1_choice_idx] if self.p1_choice_idx < len(self.characters) else None
+        p2_info = self.characters[self.p2_choice_idx] if self.p2_choice_idx < len(self.characters) else None
+
+        p1_box = pygame.Rect(SCREEN_WIDTH // 2 - 420, summary_y, 250, 60)
+        pygame.draw.rect(surface, (22, 24, 26), p1_box, border_radius=8)
+        pygame.draw.rect(surface, COLOR_HANKO_RED, p1_box, 1, border_radius=8)
+        draw_hanko_stamp(surface, font_badge, "P1", p1_box.x + 8, p1_box.centery - 14, size=28, color=COLOR_HANKO_RED, border_w=1)
+        if p1_info:
+            p1_name = p1_info["name"].upper()
+            p1_title = p1_info["title"]
+            surface.blit(font_title_card.render(p1_name, True, COLOR_GOLD), (p1_box.x + 44, p1_box.y + 8))
+            surface.blit(pm.fit_text(font_sub_card, p1_title, (180, 175, 170), 190), (p1_box.x + 44, p1_box.y + 34))
+
+        vs_s = font_title_card.render("VS", True, (160, 140, 90))
+        surface.blit(vs_s, vs_s.get_rect(center=(SCREEN_WIDTH // 2, summary_y + 30)))
+
+        p2_box = pygame.Rect(SCREEN_WIDTH // 2 + 170, summary_y, 250, 60)
+        pygame.draw.rect(surface, (22, 24, 26), p2_box, border_radius=8)
+        pygame.draw.rect(surface, COLOR_HANKO_BLUE, p2_box, 1, border_radius=8)
+        draw_hanko_stamp(surface, font_badge, "IA" if self.vs_ai else "P2", p2_box.x + 8, p2_box.centery - 14, size=28, color=COLOR_HANKO_BLUE, border_w=1)
+        if p2_info:
+            p2_name = p2_info["name"].upper()
+            p2_title = p2_info["title"]
+            surface.blit(font_title_card.render(p2_name, True, COLOR_GOLD), (p2_box.x + 44, p2_box.y + 8))
+            surface.blit(pm.fit_text(font_sub_card, p2_title, (180, 175, 170), 190), (p2_box.x + 44, p2_box.y + 34))
+
+        # Botão Principal de Confirmação (Touch Grande)
+        btn_y = SCREEN_HEIGHT - 74
+        self.btn_mobile_confirm = pygame.Rect(SCREEN_WIDTH // 2 - 200, btn_y, 400, 52)
+        self.start_btn_rect = self.btn_mobile_confirm
+
+        pulse = 0.5 + 0.5 * math.sin(self.anim_timer * 5.0)
+        btn_bg = (165 + int(pulse * 30), 38 + int(pulse * 15), 32)
+        pygame.draw.rect(surface, btn_bg, self.btn_mobile_confirm, border_radius=10)
+        pygame.draw.rect(surface, COLOR_GOLD, self.btn_mobile_confirm, 2, border_radius=10)
+
+        if self.selection_step == "P1":
+            btn_txt = "CONFIRMAR GUERREIRO" if lang == LANG_PT else "CONFIRM WARRIOR"
+        else:
+            btn_txt = "INICIAR DUELO" if lang == LANG_PT else "START DUEL"
+
+        btn_s = render_text_fx(font_btn, btn_txt, COLOR_GOLD, outline=True, outline_color=(30, 10, 10), outline_width=1, shadow=True, shadow_offset=(2, 2))
+        surface.blit(btn_s, btn_s.get_rect(center=self.btn_mobile_confirm.center))
+
     def render(self, surface: pygame.Surface, font_large: pygame.font.Font, font_mid: pygame.font.Font, font_small: pygame.font.Font):
+        if is_mobile_device():
+            self._render_mobile(surface, font_large, font_mid, font_small)
+            return
+
         # 1. Carregar tipografia oriental autêntica
         font_oriental_title = get_title_font(28)
         font_oriental_name = get_title_font(17)
@@ -1440,6 +1795,20 @@ class CharacterSelectScreen:
             self.difficulty_btn_rect = pygame.Rect(0, 0, 0, 0)
             arcade_rect = pygame.Rect(SCREEN_WIDTH // 2 - 190, 52, 380, 32)
             draw_kanban_menu_button(surface, font_zen_small, t("arcade_title"), "", arcade_rect, False, True, self.anim_timer)
+        elif self.match_mode == self.MODE_WATCH:
+            self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 290, 52, 350, 32)
+            self.difficulty_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 + 70, 52, 180, 32)
+            mode_text = "MODO: IA vs IA (ASSISTIR)" if lang == LANG_PT else "MODE: AI vs AI (SPECTATE)"
+            mode_hint = "[ CIMA/BAIXO ]" if lang == LANG_PT else "[ UP/DOWN ]"
+            draw_kanban_menu_button(surface, font_zen_small, mode_text, mode_hint, self.mode_btn_rect, is_mode_focused, True, self.anim_timer)
+
+            diff_names = {
+                "easy": "FÁCIL" if lang == LANG_PT else "EASY",
+                "normal": "NORMAL",
+                "hard": "DIFÍCIL" if lang == LANG_PT else "HARD"
+            }
+            d_name = diff_names.get(self.ai_difficulty, "NORMAL")
+            draw_kanban_menu_button(surface, font_zen_small, f"IA: {d_name}", "[ G ]", self.difficulty_btn_rect, False, True, self.anim_timer)
         elif self.vs_ai:
             self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 290, 52, 350, 32)
             self.difficulty_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 + 70, 52, 180, 32)
@@ -1464,7 +1833,16 @@ class CharacterSelectScreen:
         # 5. Banner Indicador de Etapa / Instrução
         step_y = 80
         lang = get_lang()
-        if self.vs_ai:
+        if self.match_mode == self.MODE_WATCH:
+            if self.selection_step == "P1":
+                step_title = "PASSO 1: ESCOLHA O COMBATENTE 1 (IA)" if lang == LANG_PT else "STEP 1: CHOOSE FIGHTER 1 (AI)"
+                step_color = COLOR_HANKO_RED
+                div_color = (160, 50, 45)
+            else:
+                step_title = "PASSO 2: ESCOLHA O COMBATENTE 2 (IA)" if lang == LANG_PT else "STEP 2: CHOOSE FIGHTER 2 (AI)"
+                step_color = COLOR_HANKO_BLUE
+                div_color = (45, 100, 180)
+        elif self.vs_ai:
             if self.selection_step == "P1":
                 step_title = "PASSO 1: ESCOLHA SEU COMBATENTE (P1)" if lang == LANG_PT else "STEP 1: CHOOSE YOUR FIGHTER (P1)"
                 step_color = COLOR_HANKO_RED
@@ -1535,14 +1913,13 @@ class CharacterSelectScreen:
                     pm.draw_brush_highlight(surface, pygame.Rect(rect.x + 58, rect.y + 4, card_w - 74, 24),
                                             pm.SEAL_RED if is_p1 else pm.SEAL_BLUE, seed=idx + 2)
                     pulse = 0.5 + 0.5 * math.sin(self.anim_timer * 6.0)
-                    border = pm.make_ink_border(rect, sel_col, width=2, seed=idx + 5)
-                    border.set_alpha(int(150 + 105 * pulse))
-                    surface.blit(border, rect.topleft)
+                    pm.draw_ink_border(surface, rect, sel_col, width=2, seed=idx + 5, alpha=int(150 + 105 * pulse))
             else:
                 draw_sumie_card(surface, rect, is_p1, is_p2, self.vs_ai, self.selection_step, self.anim_timer)
 
             # Badges Hanko P1 / IA
-            p2_label = "IA" if self.vs_ai else "P2"
+            p1_label = "IA 1" if self.match_mode == self.MODE_WATCH else "P1"
+            p2_label = "IA 2" if self.match_mode == self.MODE_WATCH else ("IA" if self.vs_ai else "P2")
             if parch:
                 ssz = 18
                 first_x, second_x, sy = rect.x - 4, rect.x + 16, rect.y - 6
@@ -1550,10 +1927,10 @@ class CharacterSelectScreen:
                 ssz = 18
                 first_x, second_x, sy = rect.right - 44, rect.right - 22, rect.y + 4
             if is_p1 and is_p2:
-                draw_hanko_stamp(surface, font_zen_stamp, "P1", first_x, sy, size=ssz, color=COLOR_HANKO_RED, border_w=1)
+                draw_hanko_stamp(surface, font_zen_stamp, p1_label, first_x, sy, size=ssz, color=COLOR_HANKO_RED, border_w=1)
                 draw_hanko_stamp(surface, font_zen_stamp, p2_label, second_x, sy, size=ssz, color=COLOR_HANKO_BLUE, border_w=1)
             elif is_p1:
-                draw_hanko_stamp(surface, font_zen_stamp, "P1", second_x if not parch else first_x, sy, size=ssz, color=COLOR_HANKO_RED, border_w=1)
+                draw_hanko_stamp(surface, font_zen_stamp, p1_label, second_x if not parch else first_x, sy, size=ssz, color=COLOR_HANKO_RED, border_w=1)
             elif is_p2:
                 draw_hanko_stamp(surface, font_zen_stamp, p2_label, second_x if not parch else first_x, sy, size=ssz, color=COLOR_HANKO_BLUE, border_w=1)
 
@@ -1669,7 +2046,14 @@ class CharacterSelectScreen:
         enter_space = "ENTER / ESPAÇO" if lang == LANG_PT else "ENTER / SPACE"
         space_only = "ESPAÇO" if lang == LANG_PT else "SPACE"
 
-        if self.vs_ai:
+        if self.match_mode == self.MODE_WATCH:
+            if self.selection_step == "P1":
+                st_label = "CONFIRMAR IA 1" if lang == LANG_PT else "CONFIRM AI 1"
+                hint_label = f"[ {ok1} / {space_only} ]" if has_c1 else f"[ {enter_space} ]"
+            else:
+                st_label = "ASSISTIR DUELO" if lang == LANG_PT else "WATCH DUEL"
+                hint_label = f"[ {ok1} / {space_only} ]" if has_c1 else f"[ {enter_space} ]"
+        elif self.vs_ai:
             if self.selection_step == "P1":
                 st_label = "CONFIRMAR P1" if lang == LANG_PT else "CONFIRM P1"
                 hint_label = f"[ {ok1} / {space_only} ]" if has_c1 else f"[ {enter_space} ]"

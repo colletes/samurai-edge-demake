@@ -13,6 +13,8 @@ from src.config import (
     ARENA_BAMBOO, ARENA_KYOTO, ARENA_RANDOM, ARENA_GANRYU, ARENA_IGA, ARENA_PIRATE_DECK, ARENA_SHADOW_CAVE, ARENA_MIST_TEMPLE, ARENA_FOREST_CAMP, ARENA_NAGASHINO, ARENA_KABUKI_STAGE, ARENA_MOUNTAIN_SHRINE, ARENA_BAROQUE_COURT,
     ARENA_SHAOLIN, ARENA_HIGANBANA, ARENA_GOJO_BRIDGE, ARENA_YOSHIWARA,
     ARENA_RICE_PADDIES, ARENA_RAIN_MILL,
+    ARENA_GOTHIC_CEMETERY, ARENA_HEIAN_SHRINE,
+    ARENA_SACRED_PINES, ARENA_EZO_TUNDRA,
     get_asset_path
 )
 from src.i18n import t, get_lang
@@ -24,6 +26,7 @@ from src.ui.portraits import get_portrait
 from src.ui.fonts import get_title_font, get_text_font
 from src.ui.font_manager import render_text_fx
 from src.ui.character_select import draw_scroll_frame, draw_enso_circle, draw_mystery_silhouette
+from src.input.device_info import is_mobile_device
 
 # Sufixo das chaves de texto das três primeiras arenas; as demais usam o próprio id (arena_<id>_subtitle etc.)
 _DETAIL_KEYS = {ARENA_BAMBOO: "bamboo", ARENA_KYOTO: "kyoto", ARENA_GANRYU: "ganryu", ARENA_RANDOM: "random"}
@@ -33,6 +36,8 @@ _THEME_COLORS = {
     ARENA_SHAOLIN: (220, 135, 45), ARENA_HIGANBANA: (185, 28, 48),
     ARENA_GOJO_BRIDGE: (70, 95, 140), ARENA_YOSHIWARA: (215, 38, 55),
     ARENA_RICE_PADDIES: (145, 115, 55), ARENA_RAIN_MILL: (55, 95, 135),
+    ARENA_GOTHIC_CEMETERY: (75, 80, 110), ARENA_HEIAN_SHRINE: (145, 95, 175),
+    ARENA_SACRED_PINES: (85, 130, 80), ARENA_EZO_TUNDRA: (110, 155, 175),
 }
 _HAZARD_COLORS = {
     ARENA_BAMBOO: (120, 220, 100), ARENA_KYOTO: (255, 75, 45), ARENA_GANRYU: (150, 215, 240), ARENA_RANDOM: COLOR_GOLD,
@@ -40,6 +45,8 @@ _HAZARD_COLORS = {
     ARENA_SHAOLIN: (255, 210, 60), ARENA_HIGANBANA: (255, 60, 85),
     ARENA_GOJO_BRIDGE: (255, 65, 50), ARENA_YOSHIWARA: (255, 180, 70),
     ARENA_RICE_PADDIES: (235, 185, 70), ARENA_RAIN_MILL: (110, 195, 255),
+    ARENA_GOTHIC_CEMETERY: (60, 225, 180), ARENA_HEIAN_SHRINE: (255, 210, 80),
+    ARENA_SACRED_PINES: (150, 225, 140), ARENA_EZO_TUNDRA: (140, 215, 245),
 }
 _LOCKED_COLOR = (108, 102, 96)
 
@@ -94,6 +101,13 @@ class ArenaSelectScreen:
         self._arenas_lang = None
         self._arenas_cache: list[dict] = []
 
+        # Suporte a interface mobile (Carrossel Panorâmico)
+        self.btn_mobile_prev = pygame.Rect(30, 230, 60, 160)
+        self.btn_mobile_next = pygame.Rect(SCREEN_WIDTH - 90, 230, 60, 160)
+        self.btn_mobile_back = pygame.Rect(28, 16, 140, 42)
+        self.btn_mobile_confirm = pygame.Rect(SCREEN_WIDTH // 2 - 200, SCREEN_HEIGHT - 68, 400, 52)
+        self.mobile_touch_start = None
+
     # ------------------------------------------------------------------ dados
     @property
     def arenas(self) -> list[dict]:
@@ -143,7 +157,20 @@ class ArenaSelectScreen:
 
     # -------------------------------------------------------------- navegação
     def _move(self, dx: int, dy: int):
-        """Navega pela grade 8x3 (24 arenas) + faixa da Arena Aleatória na linha 3."""
+        """Navega pela grade 8x3 (24 arenas) + faixa da Arena Aleatória na linha 3 (ou carrossel no mobile)."""
+        from src.input.device_info import is_mobile_device
+        if is_mobile_device():
+            step = dx if dx != 0 else dy
+            if step != 0:
+                self.selected_idx = (self.selected_idx + step) % len(self.arenas)
+                try:
+                    from src.audio.sound_events import SoundEvent
+                    from src.audio.sound_manager import SoundManager
+                    SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+                except Exception:
+                    pass
+            return
+
         rnd = self.random_idx
         if self.selected_idx == rnd:
             row, col = GRID_ROWS, self._last_col
@@ -155,6 +182,12 @@ class ArenaSelectScreen:
         if dx and row != GRID_ROWS:
             col = (col + dx) % GRID_COLS
         self.selected_idx = rnd if row == GRID_ROWS else row * GRID_COLS + col
+        try:
+            from src.audio.sound_events import SoundEvent
+            from src.audio.sound_manager import SoundManager
+            SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+        except Exception:
+            pass
 
     def is_locked(self, idx: int | None = None) -> bool:
         return self.arenas[self.selected_idx if idx is None else idx]["locked"]
@@ -216,9 +249,44 @@ class ArenaSelectScreen:
                 if abs(event.value) < 0.25:
                     self._axis_held = False
                 elif abs(event.value) > 0.65 and not self._axis_held:
-                    step = 1 if event.value > 0 else -1
+                    val = -event.value if (event.axis == 1 and getattr(ctrl_mgr, "invert_y", False)) else event.value
+                    step = 1 if val > 0 else -1
                     self._move(step if event.axis == 0 else 0, step if event.axis == 1 else 0)
                     self._axis_held = True
+
+        elif event.type == pygame.FINGERDOWN:
+            vx = event.x * SCREEN_WIDTH
+            vy = event.y * SCREEN_HEIGHT
+            self.mobile_touch_start = (event.x, event.y)
+            if is_mobile_device():
+                if self.btn_mobile_back.collidepoint(vx, vy):
+                    return "BACK"
+                if self.btn_mobile_prev.collidepoint(vx, vy):
+                    self.selected_idx = (self.selected_idx - 1) % len(self.arenas)
+                    return None
+                if self.btn_mobile_next.collidepoint(vx, vy):
+                    self.selected_idx = (self.selected_idx + 1) % len(self.arenas)
+                    return None
+                if self.btn_mobile_confirm.collidepoint(vx, vy):
+                    return self._confirm()
+            for idx, r in enumerate(self.card_rects):
+                if r.collidepoint(vx, vy):
+                    self.selected_idx = idx
+                    return self._confirm()
+            start_btn = pygame.Rect(SCREEN_WIDTH // 2 - 160, SCREEN_HEIGHT - 54, 320, 40)
+            if start_btn.collidepoint(vx, vy):
+                return self._confirm()
+
+        elif event.type == pygame.FINGERUP:
+            if hasattr(self, "mobile_touch_start") and self.mobile_touch_start:
+                dx = event.x - self.mobile_touch_start[0]
+                dy = event.y - self.mobile_touch_start[1]
+                if abs(dx) > 0.08 and abs(dy) < 0.12:
+                    if dx < 0:
+                        self.selected_idx = (self.selected_idx + 1) % len(self.arenas)
+                    else:
+                        self.selected_idx = (self.selected_idx - 1) % len(self.arenas)
+                self.mobile_touch_start = None
 
         elif event.type == pygame.MOUSEMOTION:
             for idx, r in enumerate(self.card_rects):
@@ -227,6 +295,17 @@ class ArenaSelectScreen:
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
+            if is_mobile_device():
+                if self.btn_mobile_back.collidepoint(mx, my):
+                    return "BACK"
+                if self.btn_mobile_prev.collidepoint(mx, my):
+                    self.selected_idx = (self.selected_idx - 1) % len(self.arenas)
+                    return None
+                if self.btn_mobile_next.collidepoint(mx, my):
+                    self.selected_idx = (self.selected_idx + 1) % len(self.arenas)
+                    return None
+                if self.btn_mobile_confirm.collidepoint(mx, my):
+                    return self._confirm()
             for idx, r in enumerate(self.card_rects):
                 if r.collidepoint(mx, my):
                     self.selected_idx = idx
@@ -428,7 +507,126 @@ class ArenaSelectScreen:
         self._draw_multiline_text(surface, arena["tactics"], x0 + tc_label.get_width() + 8, y,
                                   panel.right - x0 - tc_label.get_width() - 36, fonts["body"], (175, 185, 180), 2)
 
+    def _render_mobile(self, surface: pygame.Surface, font_large, font_mid, font_small):
+        """Layout de carrossel panorâmico exclusivo para smartphones: visual limpo e toque ergonômico."""
+        scene = pm.get_scene_background(dim=150)
+        if scene is not None:
+            surface.blit(scene, (0, 0))
+        else:
+            surface.fill(COLOR_BG)
+
+        font_oriental_title = get_title_font(26)
+        font_name = get_title_font(22)
+        font_sub = get_text_font(15)
+        font_body = get_text_font(13)
+        font_badge = get_title_font(14)
+        font_btn = get_title_font(20)
+
+        # Top Bar
+        self.btn_mobile_back = pygame.Rect(28, 16, 140, 42)
+        pygame.draw.rect(surface, (28, 24, 26), self.btn_mobile_back, border_radius=8)
+        pygame.draw.rect(surface, (140, 115, 60), self.btn_mobile_back, 1, border_radius=8)
+        back_s = font_badge.render("< LUTADORES", True, COLOR_GOLD)
+        surface.blit(back_s, back_s.get_rect(center=self.btn_mobile_back.center))
+
+        title_s = render_text_fx(font_oriental_title, t("select_arena_title"), COLOR_GOLD, outline=True, outline_color=(20, 16, 12), outline_width=1, shadow=True, shadow_offset=(2, 2))
+        surface.blit(title_s, title_s.get_rect(midtop=(SCREEN_WIDTH // 2, 16)))
+
+        counter_txt = f"{self.selected_idx + 1} / {len(self.arenas)}"
+        counter_s = font_badge.render(counter_txt, True, (200, 190, 160))
+        surface.blit(counter_s, (SCREEN_WIDTH - 110, 24))
+
+        arena = self.arenas[self.selected_idx]
+        locked = arena["locked"]
+
+        # Cartão Panorâmico Central
+        card_w = 760
+        card_h = 490
+        card_rect = pygame.Rect((SCREEN_WIDTH - card_w) // 2, 70, card_w, card_h)
+
+        flash = self.locked_flash > 0.0
+        border_col = (220, 70, 60) if flash and int(self.anim_time * 14) % 2 == 0 else (COLOR_GOLD if not locked else (100, 95, 90))
+        pygame.draw.rect(surface, (22, 26, 26), card_rect, border_radius=12)
+        pygame.draw.rect(surface, border_col, card_rect, 2, border_radius=12)
+
+        # Grande Prévia Panorâmica
+        art_w = card_w - 32
+        art_h = 280
+        art_rect = pygame.Rect(card_rect.x + 16, card_rect.y + 16, art_w, art_h)
+        self._draw_art(surface, arena, art_rect, big=True)
+
+        detail_y = art_rect.bottom + 14
+        self._draw_portrait(surface, arena, card_rect.x + 50, detail_y + 36, 32, True)
+
+        info_x = card_rect.x + 96
+        max_txt_w = card_rect.right - info_x - 20
+
+        name_s = font_name.render(arena["name"].upper(), True, COLOR_GOLD if not locked else (180, 175, 165))
+        surface.blit(name_s, (info_x, detail_y))
+
+        if arena["fighter_id"] is not None:
+            owner_txt = t("arena_of_fighter", name=arena["fighter_name"].upper())
+            owner_s = self._fit_text(owner_txt, (170, 190, 200), max_txt_w, 14)
+            surface.blit(owner_s, (info_x, detail_y + 28))
+        else:
+            sub_s = self._fit_text(arena["subtitle"], (180, 185, 180), max_txt_w, 14)
+            surface.blit(sub_s, (info_x, detail_y + 28))
+
+        if locked:
+            lock_label = font_name.render(f"[ {t('arena_locked')} ]", True, (215, 190, 130))
+            surface.blit(lock_label, (info_x, detail_y + 60))
+            hint_s = self._fit_text(t("arena_locked_hint"), (160, 165, 170), max_txt_w, 13)
+            surface.blit(hint_s, (info_x, detail_y + 90))
+        else:
+            hz_label = font_body.render(f"{t('arena_hazard_label')}: ", True, (160, 160, 165))
+            surface.blit(hz_label, (info_x, detail_y + 56))
+            hz_val = font_body.render(arena.get("hazard_level", ""), True, arena.get("hazard_color", COLOR_GOLD))
+            surface.blit(hz_val, (info_x + hz_label.get_width(), detail_y + 56))
+
+            feat_txt = f"{t('arena_features_label')}: {arena.get('features', '')}"
+            feat_s = self._fit_text(feat_txt, (200, 205, 200), max_txt_w, 13)
+            surface.blit(feat_s, (info_x, detail_y + 80))
+
+            tact_txt = f"{t('arena_tactics_label')}: {arena.get('tactics', '')}"
+            tact_s = self._fit_text(tact_txt, (150, 200, 220), max_txt_w, 13)
+            surface.blit(tact_s, (info_x, detail_y + 104))
+
+        # Botões Laterais Grandes de Navegação (< e >)
+        self.btn_mobile_prev = pygame.Rect(30, 230, 60, 160)
+        self.btn_mobile_next = pygame.Rect(SCREEN_WIDTH - 90, 230, 60, 160)
+
+        pygame.draw.rect(surface, (28, 24, 26), self.btn_mobile_prev, border_radius=10)
+        pygame.draw.rect(surface, COLOR_GOLD, self.btn_mobile_prev, 2, border_radius=10)
+        from src.ui.character_select import draw_kanban_arrow
+        draw_kanban_arrow(surface, self.btn_mobile_prev.centerx - 10, self.btn_mobile_prev.centery, 24, COLOR_GOLD, direction="left")
+
+        pygame.draw.rect(surface, (28, 24, 26), self.btn_mobile_next, border_radius=10)
+        pygame.draw.rect(surface, COLOR_GOLD, self.btn_mobile_next, 2, border_radius=10)
+        draw_kanban_arrow(surface, self.btn_mobile_next.centerx - 14, self.btn_mobile_next.centery, 24, COLOR_GOLD, direction="right")
+
+        # Botão Inferior de Confirmação (Touch Grande)
+        btn_w = 400
+        btn_h = 52
+        btn_y = SCREEN_HEIGHT - 68
+        self.btn_mobile_confirm = pygame.Rect(SCREEN_WIDTH // 2 - btn_w // 2, btn_y, btn_w, btn_h)
+
+        if locked:
+            pygame.draw.rect(surface, (45, 45, 50), self.btn_mobile_confirm, border_radius=10)
+            pygame.draw.rect(surface, (95, 95, 105), self.btn_mobile_confirm, 1, border_radius=10)
+            btn_s = font_btn.render(t("arena_locked"), True, (135, 135, 145))
+        else:
+            pulse = 0.5 + 0.5 * math.sin(self.anim_time * 5.0)
+            btn_bg = (35 + int(pulse * 20), 65 + int(pulse * 25), 45)
+            pygame.draw.rect(surface, btn_bg, self.btn_mobile_confirm, border_radius=10)
+            pygame.draw.rect(surface, COLOR_GOLD, self.btn_mobile_confirm, 2, border_radius=10)
+            btn_s = render_text_fx(font_btn, t("arena_start_button"), COLOR_GOLD, outline=True, outline_color=(10, 25, 15), outline_width=1, shadow=True, shadow_offset=(2, 2))
+
+        surface.blit(btn_s, btn_s.get_rect(center=self.btn_mobile_confirm.center))
+
     def render(self, surface: pygame.Surface, font_large, font_mid, font_small):
+        if is_mobile_device():
+            self._render_mobile(surface, font_large, font_mid, font_small)
+            return
         fonts = {"title": get_title_font(22), "body": get_text_font(14)}
         font_oriental_title = get_title_font(28)
         font_oriental_btn = get_title_font(17)

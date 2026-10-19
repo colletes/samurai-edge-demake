@@ -78,10 +78,11 @@ def attack_arms(c):
 
 
 def _blade_dir(c, p):
-    """Direção da lâmina: sai pela linha da bainha e gira rápido até a tangente do arco do corte."""
+    """Direção da lâmina: sai pela boca da bainha apontando para frente e gira rápido até a tangente do arco do corte."""
     _, b = _sword_frame(c)
     arc = calc_blade_slash_3d("kenshin", "ATTACK", p, c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py)["dir"]
-    return mk.norm(mk.lerp(b, arc, _smooth((p - 0.2) / 0.1)))
+    forward_draw = (-b[0], -b[1], -b[2])
+    return mk.norm(mk.lerp(forward_draw, arc, _smooth((p - 0.2) / 0.1)))
 
 
 # ---------------------------------------------------------------------------------------------------------------------

@@ -89,6 +89,7 @@ def test_benkei_mechanics():
     assert target.state_timer >= 1.0, f"Stun deve durar pelo menos 1.0s, obtido {target.state_timer}"
 
     # 4. Recuperação da Arma
+    benkei.state = "IDLE"
     benkei.wx = nag_proj.wx
     benkei.wy = nag_proj.wy
     benkei.update(0.05, game_map, particles, opponent=target, banners=banners)
@@ -250,4 +251,5 @@ if __name__ == "__main__":
     print("\n=======================================================")
     print("TODOS OS TESTES DO CICLO 2 (BENKEI & O-RIN) PASSARAM!")
     print("=======================================================")
+    pygame.quit()
 

@@ -6,7 +6,8 @@ Aqui ficam os dados de cada arena e o registro dos tipos de prop, estrutura e pe
 """
 from src.config import (
     ARENA_BAMBOO, ARENA_KYOTO, ARENA_GANRYU, ARENA_IGA, ARENA_PIRATE_DECK, ARENA_SHADOW_CAVE, ARENA_MIST_TEMPLE, ARENA_FOREST_CAMP, ARENA_NAGASHINO, ARENA_KABUKI_STAGE, ARENA_MOUNTAIN_SHRINE, ARENA_BAROQUE_COURT, ARENA_GASHADOKURO,
-    ARENA_SHAOLIN, ARENA_HIGANBANA, ARENA_GOJO_BRIDGE, ARENA_YOSHIWARA, ARENA_RICE_PADDIES, ARENA_RAIN_MILL, COLOR_BG, COLOR_KYOTO_BG,
+    ARENA_SHAOLIN, ARENA_HIGANBANA, ARENA_GOJO_BRIDGE, ARENA_YOSHIWARA, ARENA_RICE_PADDIES, ARENA_RAIN_MILL,
+    ARENA_GOTHIC_CEMETERY, ARENA_HEIAN_SHRINE, ARENA_SACRED_PINES, ARENA_EZO_TUNDRA, COLOR_BG, COLOR_KYOTO_BG,
     COLOR_GRASS, COLOR_GRASS_LIGHT, COLOR_EARTH, COLOR_WATER, COLOR_WATER_HIGHLIGHT,
     COLOR_KYOTO_STONE, COLOR_KYOTO_STONE_LIGHT, COLOR_KYOTO_STONE_DARK, COLOR_KYOTO_CURB, COLOR_KYOTO_PAVEMENT,
     MAP_COLS, MAP_ROWS,
@@ -22,8 +23,15 @@ from src.world.decor import (
     ArcheryTarget, Fountain, HedgeBlock, MarbleStatue, PineTree, ScreenPanel, SnareTrap, StripedCurtain, SupplyCrate,
     VoxelCricket, VoxelSparrow, Scarecrow, HayBale, WaterMillWheel, DuneGrass,
     GojoRailing, KagaribiBrazier, BladeCluster, BridgeSupport, WaterChute,
+    GothicHeadstone, MausoleumCrypt, WroughtIronFence, GothicDeadTree, HeianTorii, GinkgoTree, ShimenawaBanner, HeianToro,
+    SoulFissure, BoneMound, SpectralToro,
+    AkamatsuPine, MountainHokora, TimberLogPile, AinuInauTotem, HideDryingRack, SnowSpruceTree,
 )
-from src.world.hazards import ChainPendulum, FireworkMortars, RotatingStage, ShipRoll, TideSurge
+from src.world.hazards import (
+    ChainPendulum, FireworkMortars, RotatingStage, ShipRoll, TideSurge,
+    GothicCemeteryHazard, HeianShrineHazard, GashadokuroArenaHazard,
+    PineForestHazard, EzoTaigaHazard,
+)
 from src.world.solid_props import Cannon, PowderBarrel, ShrineBell, SolidProp
 from src.world.kyoto_map import (
     CarriageTraffic, DebrisRain, KyotoLantern, MachiyaFacade,
@@ -87,6 +95,23 @@ register_prop("kagaribi", lambda x, y, **p: KagaribiBrazier(x, y, **p), "rocks")
 register_prop("blade_cluster", lambda x, y, **p: BladeCluster(x, y, **p), "rocks")
 register_prop("bridge_support", lambda x, y, **p: BridgeSupport(x, y, **p), "lanterns")
 register_prop("water_chute", lambda x, y, **p: WaterChute(x, y, **p), "lanterns")
+register_prop("gothic_headstone", lambda x, y, **p: GothicHeadstone(x, y, **p), "rocks")
+register_prop("mausoleum", lambda x, y, **p: MausoleumCrypt(x, y, **p), "buildings")
+register_prop("iron_fence", lambda x, y, **p: WroughtIronFence(x, y, **p), "rocks")
+register_prop("dead_tree", lambda x, y, **p: GothicDeadTree(x, y), "trees")
+register_prop("heian_torii", lambda x, y, **p: HeianTorii(x, y), "torii_gates")
+register_prop("ginkgo_tree", lambda x, y, **p: GinkgoTree(x, y), "trees")
+register_prop("shimenawa", lambda x, y, **p: ShimenawaBanner(x, y, **p), "lanterns")
+register_prop("heian_toro", lambda x, y, **p: HeianToro(x, y), "rocks")
+register_prop("soul_fissure", lambda x, y, **p: SoulFissure(x, y, **p), "lanterns")
+register_prop("bone_mound", lambda x, y, **p: BoneMound(x, y, **p), "rocks")
+register_prop("spectral_toro", lambda x, y, **p: SpectralToro(x, y), "rocks")
+register_prop("akamatsu_pine", lambda x, y, **p: AkamatsuPine(x, y, **p), "trees")
+register_prop("mountain_hokora", lambda x, y, **p: MountainHokora(x, y), "rocks")
+register_prop("timber_logs", lambda x, y, **p: TimberLogPile(x, y), "rocks")
+register_prop("ainu_inau", lambda x, y, **p: AinuInauTotem(x, y), "rocks")
+register_prop("hide_rack", lambda x, y, **p: HideDryingRack(x, y), "rocks")
+register_prop("snow_spruce", lambda x, y, **p: SnowSpruceTree(x, y, **p), "trees")
 register_structure("arched_bridge", ArchedBridge)
 register_structure("roof_beam", RoofBeam)
 register_structure("plank_bridge", PlankBridge)
@@ -97,6 +122,12 @@ register_hazard("ship_roll", ShipRoll)
 register_hazard("chain_pendulum", ChainPendulum)
 register_hazard("firework_mortars", FireworkMortars)
 register_hazard("rotating_stage", RotatingStage)
+register_hazard("gothic_cemetery_hazard", GothicCemeteryHazard)
+register_hazard("heian_shrine_hazard", HeianShrineHazard)
+register_hazard("gashadokuro_hazard", GashadokuroArenaHazard)
+register_hazard("pine_forest_hazard", PineForestHazard)
+register_hazard("ezo_taiga_hazard", EzoTaigaHazard)
+
 
 # ---------------------------------------------------------------------------
 # Floresta de Bambu
@@ -397,14 +428,16 @@ IGA_SPEC = ArenaSpec(
 )
 
 # ---------------------------------------------------------------------------
-# Convés na Tempestade (Anne) — 6.3.5
+# Convés na Tempestade (Anne) — 6.3.5 (Revamp Visual Ciclo 5)
 # ---------------------------------------------------------------------------
 TILE_DECK = 27
+TILE_DECK_GRATE = 115
+TILE_DECK_QUARTER = 116
 
 _SEA_PIT = dict(depth=1.9, floor_color=(18, 52, 70), wall_colors=((96, 68, 46), (22, 54, 68)), rim_color=(108, 76, 50),
                 water=((24, 70, 92), (196, 224, 234)))
 _HOLE_PIT = dict(depth=1.6, floor_color=(6, 12, 18), wall_colors=((96, 68, 46), (10, 14, 20)), rim_color=(96, 68, 46))
-_PIRATE_LANTERNS = ((7.9, 10.0), (14.7, 10.0), (1.2, 4.6), (20.8, 17.4))
+_PIRATE_LANTERNS = ((7.9, 10.0), (14.7, 10.0), (1.2, 4.6), (20.8, 17.4), (3.6, 10.5), (18.4, 10.5))
 
 PIRATE_SPEC = ArenaSpec(
     id=ARENA_PIRATE_DECK,
@@ -415,22 +448,36 @@ PIRATE_SPEC = ArenaSpec(
     music="bgm_pirate_deck",
     wind=WindSpec(1, 0.6, 1.8, 0.9),
     tile_styles={
-        TILE_DECK: TileStyle("flat", ((124, 92, 64), (110, 80, 56)), pattern="parity", edge=(64, 44, 30), surface="wood"),
+        TILE_DECK: TileStyle("flat", ((124, 92, 64), (110, 80, 56)), pattern="rows", edge=(64, 44, 30), surface="wood"),
+        TILE_DECK_GRATE: TileStyle("flat", ((76, 52, 34), (62, 42, 28)), pattern="parity", edge=(42, 28, 18), surface="wood"),
+        TILE_DECK_QUARTER: TileStyle("flat", ((138, 102, 70), (126, 92, 62)), pattern="rows", edge=(82, 58, 38), surface="wood"),
     },
-    layers=(FillLayer(TILE_DECK),),
-    drift_count=0,
+    layers=(
+        FillLayer(TILE_DECK),
+        RectLayer(TILE_DECK_QUARTER, 0, 3, 4, 17),
+        RectLayer(TILE_DECK_QUARTER, 18, 21, 4, 17),
+        RectLayer(TILE_DECK_GRATE, 9, 12, 9, 12),
+    ),
+    drift_count=28,
+    drift_petals=0.15,
     props=(
-        PropSpec("mast", 7.6, 10.7, {"width": 0.6, "depth": 0.6, "height": 3.4, "color": (112, 80, 52)}),
-        PropSpec("mast", 14.4, 10.7, {"width": 0.6, "depth": 0.6, "height": 3.4, "color": (112, 80, 52)}),
+        PropSpec("mast", 7.6, 10.7, {"width": 0.65, "depth": 0.65, "height": 3.6, "color": (112, 80, 52)}),
+        PropSpec("mast", 14.4, 10.7, {"width": 0.65, "depth": 0.65, "height": 3.6, "color": (112, 80, 52)}),
+        PropSpec("bunting", 7.6, 10.7, {"x1": 14.4, "y1": 10.7, "z": 3.1}),
         PropSpec("cannon", 1.0, 12.0, {"facing": (1.0, 0.0)}),
         PropSpec("cannon", 19.5, 8.5, {"facing": (-1.0, 0.0)}),
+        PropSpec("powder_barrel", 3.0, 6.2),
+        PropSpec("powder_barrel", 18.2, 15.2),
         PropSpec("barrel", 3.0, 4.6, {"width": 0.7, "depth": 0.7, "height": 0.8, "color": (104, 70, 44)}),
         PropSpec("barrel", 3.9, 4.9, {"width": 0.7, "depth": 0.7, "height": 0.8, "color": (96, 64, 42)}),
         PropSpec("barrel", 17.6, 16.6, {"width": 0.7, "depth": 0.7, "height": 0.8, "color": (104, 70, 44)}),
         PropSpec("barrel", 18.5, 16.9, {"width": 0.7, "depth": 0.7, "height": 0.8, "color": (96, 64, 42)}),
         PropSpec("barrel", 9.0, 16.6, {"width": 0.7, "depth": 0.7, "height": 0.8, "color": (104, 70, 44)}),
+        PropSpec("crate", 12.5, 4.8),
         PropSpec("solid_block", 19.8, 4.6, {"width": 0.9, "depth": 0.9, "height": 0.7, "color": (118, 92, 62)}),
         PropSpec("solid_block", 1.2, 16.6, {"width": 0.9, "depth": 0.9, "height": 0.7, "color": (118, 92, 62)}),
+        PropSpec("paper_lantern", 7.6, 10.2, {"color": (245, 165, 65)}),
+        PropSpec("paper_lantern", 14.4, 10.2, {"color": (245, 165, 65)}),
     ),
     hazards=(HazardSpec("ship_roll", {"push_speed": 3.4, "warn_time": 2.2, "active_time": 1.3, "interval": (7.0, 10.0),
                                       "initial_delay": 5.0, "x_range": (0.0, float(MAP_COLS)), "y_center": 11.0}),),
@@ -445,9 +492,13 @@ PIRATE_SPEC = ArenaSpec(
     spawns=SpawnRule(x_range=(2.0, 20.0), margin=5.0, min_distance=7.0, fallback=((3.5, 13.5), (18.5, 12.5))),
     stage=StageSpec(11.0, 12.5),
     lighting=LightingEnvironment(
-        ambient_color=(70, 92, 112), ambient_strength=0.40, vignette=0.40,
+        ambient_color=(70, 92, 112), ambient_strength=0.42, vignette=0.42,
         lights=tuple(LightSource(x, y, 1.6, (255, 190, 100), 3.2, flicker=0.30) for x, y in _PIRATE_LANTERNS),
-        atmosphere=(AtmosphereEffect("rain", density=1.0), AtmosphereEffect("fog", density=0.3)),
+        atmosphere=(
+            AtmosphereEffect("rain", density=1.0),
+            AtmosphereEffect("mist", density=0.55),
+            AtmosphereEffect("fog", density=0.30),
+        ),
     ),
 )
 
@@ -736,7 +787,7 @@ KABUKI_STAGE_SPEC = ArenaSpec(
 )
 
 # ---------------------------------------------------------------------------
-# Santuário na Montanha (Tomoe) — 6.3.12
+# Santuário na Montanha (Tomoe) — 6.3.12 (Revamp Visual Ciclo 5)
 # ---------------------------------------------------------------------------
 TILE_SHRINE_GRASS = 50
 TILE_SHRINE_STONE = 51
@@ -770,7 +821,13 @@ MOUNTAIN_SHRINE_SPEC = ArenaSpec(
     ),
     props=(
         tuple(PropSpec("torii", x, y) for x, y in _SHRINE_TORII)
-        + (PropSpec("shrine_bell", 5.2, 6.2),)
+        + (
+            PropSpec("shimenawa", 10.5, 2.6, {"span": 3.4, "z": 2.4, "ribbons": 5}),
+            PropSpec("shimenawa", 10.5, 16.2, {"span": 3.4, "z": 2.4, "ribbons": 5}),
+            PropSpec("shrine_bell", 5.2, 6.2),
+            PropSpec("mountain_hokora", 3.6, 11.5),
+            PropSpec("akamatsu_pine", 19.2, 7.2, {"scale": 0.95}),
+        )
         + tuple(PropSpec("archery_target", x, 3.8) for x in (15.7, 16.9, 18.1))
         + (PropSpec("cabin", 14.9, 17.8, {"width": 3.6, "depth": 2.2, "height": 1.3, "color": (176, 142, 100)}),)
         + tuple(PropSpec("stone_lantern", x, y) for x, y in _SHRINE_LANTERNS)
@@ -779,12 +836,16 @@ MOUNTAIN_SHRINE_SPEC = ArenaSpec(
     ),
     spawns=SpawnRule(x_range=(3.0, 19.0), margin=4.0, min_distance=7.0, fallback=((6.5, 13.0), (14.0, 13.5))),
     stage=StageSpec(10.5, 11.0),
-    drift_count=36,
-    drift_petals=0.7,
+    drift_count=44,
+    drift_petals=0.78,
     lighting=LightingEnvironment(
-        ambient_color=(205, 224, 255), ambient_strength=0.85, vignette=0.15,
+        ambient_color=(205, 224, 255), ambient_strength=0.85, vignette=0.18,
         lights=tuple(LightSource(x, y, 0.9, (255, 220, 160), 2.4, flicker=0.08) for x, y in _SHRINE_LANTERNS),
-        atmosphere=(AtmosphereEffect("fog", density=0.3),),
+        atmosphere=(
+            AtmosphereEffect("sunbeams", density=0.45),
+            AtmosphereEffect("mist", density=0.35),
+            AtmosphereEffect("fog", density=0.25),
+        ),
     ),
 )
 
@@ -1272,6 +1333,360 @@ RAIN_MILL_SPEC = ArenaSpec(
     ),
 )
 
+
+# ---------------------------------------------------------------------------
+# Cemitério Gótico (Ciclo 4 - Valerius)
+# ---------------------------------------------------------------------------
+TILE_CEMETERY_DIRT = 101
+TILE_CEMETERY_FLAGSTONE = 102
+TILE_CEMETERY_GRAVEPLOT = 103
+TILE_CEMETERY_CRYPT_BASE = 104
+
+_CEMETERY_HEADSTONES = (
+    # Quadrante Noroeste (NW)
+    PropSpec("gothic_headstone", 4.0, 4.2, {"style": "cross"}),
+    PropSpec("gothic_headstone", 6.2, 4.2, {"style": "slab"}),
+    PropSpec("gothic_headstone", 4.0, 6.4, {"style": "slab"}),
+    PropSpec("gothic_headstone", 6.2, 6.4, {"style": "cross"}),
+    # Quadrante Nordeste (NE)
+    PropSpec("gothic_headstone", 14.5, 4.2, {"style": "slab"}),
+    PropSpec("gothic_headstone", 16.8, 4.2, {"style": "cross"}),
+    PropSpec("gothic_headstone", 14.5, 6.4, {"style": "cross"}),
+    PropSpec("gothic_headstone", 16.8, 6.4, {"style": "slab"}),
+    # Quadrante Sudoeste (SW)
+    PropSpec("gothic_headstone", 4.0, 14.2, {"style": "cross"}),
+    PropSpec("gothic_headstone", 6.2, 14.2, {"style": "slab"}),
+    PropSpec("gothic_headstone", 4.0, 16.5, {"style": "slab"}),
+    PropSpec("gothic_headstone", 6.2, 16.5, {"style": "cross"}),
+    # Quadrante Sudeste (SE)
+    PropSpec("gothic_headstone", 14.5, 14.2, {"style": "slab"}),
+    PropSpec("gothic_headstone", 16.8, 14.2, {"style": "cross"}),
+    PropSpec("gothic_headstone", 14.5, 16.5, {"style": "cross"}),
+    PropSpec("gothic_headstone", 16.8, 16.5, {"style": "slab"}),
+)
+
+_CEMETERY_TREES = (
+    PropSpec("dead_tree", 2.2, 2.5),
+    PropSpec("dead_tree", 18.8, 2.5),
+    PropSpec("dead_tree", 2.0, 18.5),
+    PropSpec("dead_tree", 18.5, 18.5),
+)
+
+_CEMETERY_FENCES = (
+    PropSpec("iron_fence", 7.6, 2.2, {"length": 1.6, "orientation": "x"}),
+    PropSpec("iron_fence", 13.4, 2.2, {"length": 1.6, "orientation": "x"}),
+    PropSpec("iron_fence", 2.0, 10.5, {"length": 1.8, "orientation": "y"}),
+    PropSpec("iron_fence", 19.0, 10.5, {"length": 1.8, "orientation": "y"}),
+)
+
+_CEMETERY_LIGHTS = (
+    LightSource(10.5, 2.2, 0.8, (60, 225, 180), 3.4, flicker=0.20),
+    LightSource(5.0, 5.5, 0.6, (120, 180, 240), 2.5, flicker=0.15),
+    LightSource(15.5, 5.5, 0.6, (120, 180, 240), 2.5, flicker=0.15),
+    LightSource(5.0, 15.5, 0.6, (120, 180, 240), 2.5, flicker=0.15),
+    LightSource(15.5, 15.5, 0.6, (120, 180, 240), 2.5, flicker=0.15),
+)
+
+GOTHIC_CEMETERY_SPEC = ArenaSpec(
+    id=ARENA_GOTHIC_CEMETERY,
+    name="Cemitério Gótico",
+    cols=MAP_COLS,
+    rows=MAP_ROWS,
+    bg_color=(12, 10, 16),
+    music="bgm_prussian_cemetery",
+    wind=WindSpec(0.8, 0.2, 0.5, 0.6),
+    tile_styles={
+        TILE_CEMETERY_DIRT: TileStyle("flat", ((36, 34, 40), (44, 40, 48)), pattern="parity", edge=(22, 20, 26), surface="earth"),
+        TILE_CEMETERY_FLAGSTONE: TileStyle("flat", ((64, 66, 74), (54, 56, 64)), pattern="parity", edge=(38, 40, 46), surface="stone"),
+        TILE_CEMETERY_GRAVEPLOT: TileStyle("flat", ((26, 24, 30), (32, 28, 36)), pattern="parity", edge=(18, 16, 22), surface="earth"),
+        TILE_CEMETERY_CRYPT_BASE: TileStyle("slab", ((48, 50, 58),), height=0.16, outline=True, top_edge=(32, 34, 40), surface="stone"),
+    },
+    layers=(
+        FillLayer(TILE_CEMETERY_DIRT),
+        # Caminhos em cruz de lajes de granito
+        RectLayer(TILE_CEMETERY_FLAGSTONE, 9, 11, 0, 20),
+        RectLayer(TILE_CEMETERY_FLAGSTONE, 0, 20, 9, 11),
+        EllipseLayer(TILE_CEMETERY_FLAGSTONE, cx=10.5, cy=10.5, radius=3.6),
+        # Covas e talhões fúnebres nos 4 quadrantes
+        RectLayer(TILE_CEMETERY_GRAVEPLOT, 3, 7, 3, 7),
+        RectLayer(TILE_CEMETERY_GRAVEPLOT, 13, 17, 3, 7),
+        RectLayer(TILE_CEMETERY_GRAVEPLOT, 3, 7, 13, 17),
+        RectLayer(TILE_CEMETERY_GRAVEPLOT, 13, 17, 13, 17),
+        # Base da cripta monumental ao norte
+        RectLayer(TILE_CEMETERY_CRYPT_BASE, 9, 12, 1, 3),
+    ),
+    props=(
+        (PropSpec("mausoleum", 9.3, 1.2, {"width": 2.4, "depth": 1.8, "height": 2.3}),)
+        + _CEMETERY_TREES
+        + _CEMETERY_HEADSTONES
+        + _CEMETERY_FENCES
+    ),
+    hazards=(HazardSpec("gothic_cemetery_hazard", {}),),
+    playable_bounds=(2.0, 3.0, 19.0, 19.0),
+    spawns=SpawnRule(x_range=(6.0, 15.0), margin=4.0, min_distance=6.5, fallback=((6.5, 10.5), (14.5, 10.5))),
+    stage=StageSpec(10.5, 10.5),
+    drift_count=35,
+    drift_petals=0.15,
+    lighting=LightingEnvironment(
+        ambient_color=(65, 80, 120), ambient_strength=0.40, vignette=0.50,
+        lights=_CEMETERY_LIGHTS,
+        atmosphere=(
+            AtmosphereEffect("mist", density=0.90),
+            AtmosphereEffect("fogbank", density=0.70),
+            AtmosphereEffect("dust", density=0.35),
+        ),
+    ),
+)
+
+
+# ---------------------------------------------------------------------------
+# Pavilhão Astral Heian (Ciclo 4 - Seimei)
+# ---------------------------------------------------------------------------
+TILE_HEIAN_COURT = 105
+TILE_HEIAN_BORDER = 106
+TILE_HEIAN_MANDALA = 107
+TILE_HEIAN_PEBBLE = 108
+
+_HEIAN_TORO_PROPS = (
+    PropSpec("heian_toro", 6.8, 6.8),
+    PropSpec("heian_toro", 14.2, 6.8),
+    PropSpec("heian_toro", 6.8, 14.2),
+    PropSpec("heian_toro", 14.2, 14.2),
+    PropSpec("heian_toro", 7.2, 18.2),
+    PropSpec("heian_toro", 13.8, 18.2),
+)
+
+_HEIAN_GINKGO = (
+    PropSpec("ginkgo_tree", 2.4, 3.5),
+    PropSpec("ginkgo_tree", 18.6, 3.5),
+    PropSpec("ginkgo_tree", 2.2, 16.5),
+    PropSpec("ginkgo_tree", 18.8, 16.5),
+)
+
+_HEIAN_LIGHTS = (
+    LightSource(6.8, 6.8, 0.9, (255, 190, 80), 2.8, flicker=0.12),
+    LightSource(14.2, 6.8, 0.9, (255, 190, 80), 2.8, flicker=0.12),
+    LightSource(6.8, 14.2, 0.9, (255, 190, 80), 2.8, flicker=0.12),
+    LightSource(14.2, 14.2, 0.9, (255, 190, 80), 2.8, flicker=0.12),
+    LightSource(7.2, 18.2, 0.9, (255, 180, 70), 2.5, flicker=0.12),
+    LightSource(13.8, 18.2, 0.9, (255, 180, 70), 2.5, flicker=0.12),
+    LightSource(10.5, 10.5, 0.5, (160, 140, 255), 3.2, flicker=0.08),
+)
+
+HEIAN_SHRINE_SPEC = ArenaSpec(
+    id=ARENA_HEIAN_SHRINE,
+    name="Pavilhão Astral Heian",
+    cols=MAP_COLS,
+    rows=MAP_ROWS,
+    bg_color=(18, 14, 28),
+    music="bgm_heian_temple",
+    wind=WindSpec(0.5, 0.4, 0.35, 0.30),
+    tile_styles={
+        TILE_HEIAN_COURT: TileStyle("flat", ((228, 224, 216), (214, 210, 202)), pattern="parity", edge=(185, 180, 170), surface="stone"),
+        TILE_HEIAN_BORDER: TileStyle("flat", ((180, 48, 38), (160, 40, 32)), pattern="parity", edge=(120, 30, 24), surface="stone"),
+        TILE_HEIAN_MANDALA: TileStyle("flat", ((52, 48, 82), (68, 62, 105)), pattern="parity", edge=(195, 165, 60), surface="stone"),
+        TILE_HEIAN_PEBBLE: TileStyle("flat", ((196, 192, 186), (180, 176, 170)), pattern="parity", edge=(150, 146, 140), surface="gravel"),
+    },
+    layers=(
+        FillLayer(TILE_HEIAN_PEBBLE),
+        # Pátio cerimonial
+        RectLayer(TILE_HEIAN_BORDER, 3, 17, 3, 17),
+        RectLayer(TILE_HEIAN_COURT, 4, 16, 4, 16),
+        # Corredor sagrado de entrada (Sul)
+        RectLayer(TILE_HEIAN_BORDER, 8, 12, 16, 20),
+        RectLayer(TILE_HEIAN_COURT, 9, 11, 16, 20),
+        # Mandala Astral de Onmyodo no centro
+        EllipseLayer(TILE_HEIAN_BORDER, cx=10.5, cy=10.5, radius=4.6),
+        EllipseLayer(TILE_HEIAN_MANDALA, cx=10.5, cy=10.5, radius=4.0),
+        EllipseLayer(TILE_HEIAN_COURT, cx=10.5, cy=10.5, radius=2.2),
+        EllipseLayer(TILE_HEIAN_MANDALA, cx=10.5, cy=10.5, radius=1.0),
+    ),
+    props=(
+        (
+            PropSpec("heian_torii", 10.5, 18.0),
+            PropSpec("shimenawa", 10.5, 18.0, {"span": 4.0, "z": 2.7, "ribbons": 5}),
+            PropSpec("shimenawa", 10.5, 3.5, {"span": 6.0, "z": 2.6, "ribbons": 7}),
+        )
+        + _HEIAN_GINKGO
+        + _HEIAN_TORO_PROPS
+    ),
+    hazards=(HazardSpec("heian_shrine_hazard", {}),),
+    playable_bounds=(2.0, 2.0, 19.0, 19.0),
+    spawns=SpawnRule(x_range=(5.0, 16.0), margin=4.0, min_distance=6.5, fallback=((6.5, 10.5), (14.5, 10.5))),
+    stage=StageSpec(10.5, 10.5),
+    drift_count=55,
+    drift_petals=0.85,
+    lighting=LightingEnvironment(
+        ambient_color=(120, 95, 145), ambient_strength=0.50, vignette=0.35,
+        lights=_HEIAN_LIGHTS,
+        atmosphere=(
+            AtmosphereEffect("sunbeams", density=0.45),
+            AtmosphereEffect("mist", density=0.40),
+            AtmosphereEffect("dust", density=0.50),
+        ),
+    ),
+)
+
+
+# ---------------------------------------------------------------------------
+# Floresta dos Pinheiros (Ciclo 5 - Daiki)
+# ---------------------------------------------------------------------------
+TILE_PINE_MOSS = 109
+TILE_PINE_EARTH = 110
+TILE_PINE_STEPS = 111
+
+_PINE_TREES = (
+    PropSpec("akamatsu_pine", 2.8, 3.0, {"scale": 1.10}),
+    PropSpec("akamatsu_pine", 18.2, 3.0, {"scale": 1.15}),
+    PropSpec("akamatsu_pine", 2.5, 10.5, {"scale": 1.00}),
+    PropSpec("akamatsu_pine", 18.5, 10.5, {"scale": 1.05}),
+    PropSpec("akamatsu_pine", 2.8, 18.0, {"scale": 1.10}),
+    PropSpec("akamatsu_pine", 18.2, 18.0, {"scale": 1.08}),
+)
+
+_PINE_LIGHTS = (
+    LightSource(6.5, 4.2, 0.9, (255, 200, 110), 2.8, flicker=0.14),
+    LightSource(14.5, 4.2, 0.9, (255, 200, 110), 2.8, flicker=0.14),
+    LightSource(10.5, 2.6, 0.8, (255, 215, 120), 3.2, flicker=0.10),
+    LightSource(10.5, 10.5, 1.2, (240, 220, 145), 4.0, flicker=0.05),
+)
+
+SACRED_PINES_SPEC = ArenaSpec(
+    id=ARENA_SACRED_PINES,
+    name="Floresta dos Pinheiros",
+    cols=MAP_COLS,
+    rows=MAP_ROWS,
+    bg_color=(28, 38, 32),
+    music="bgm_pine_forest",
+    wind=WindSpec(1.0, 0.55, 1.35, 0.75),
+    tile_styles={
+        TILE_PINE_MOSS: TileStyle("flat", ((58, 92, 52), (50, 82, 46)), pattern="third", edge=(36, 62, 34), surface="grass"),
+        TILE_PINE_EARTH: TileStyle("flat", ((132, 98, 66), (120, 88, 58)), pattern="parity", edge=(88, 64, 42), surface="dirt"),
+        TILE_PINE_STEPS: TileStyle("flat", ((138, 142, 134), (124, 128, 120)), pattern="rows", edge=(88, 92, 86), surface="stone"),
+    },
+    layers=(
+        FillLayer(TILE_PINE_MOSS),
+        # Trilha de degraus de pedra musgosa norte-sul
+        RectLayer(TILE_PINE_STEPS, 9, 12, 0, 21),
+        # Clareira central de terra batida e agulhas de pinheiro
+        EllipseLayer(TILE_PINE_EARTH, cx=10.5, cy=10.5, radius=6.4),
+        EllipseLayer(TILE_PINE_STEPS, cx=10.5, cy=10.5, radius=1.8),
+    ),
+    props=(
+        _PINE_TREES
+        + (
+            PropSpec("mountain_hokora", 10.5, 2.6),
+            PropSpec("stone_lantern", 6.5, 4.2),
+            PropSpec("stone_lantern", 14.5, 4.2),
+            PropSpec("jizo", 6.2, 16.5),
+            PropSpec("jizo", 14.8, 16.5),
+            PropSpec("timber_logs", 4.6, 7.2),
+            PropSpec("timber_logs", 16.4, 14.2),
+            PropSpec("rock", 4.4, 14.2, {"radius": 0.75, "height": 1.1}),
+            PropSpec("rock", 16.6, 6.8, {"radius": 0.80, "height": 1.2}),
+        )
+    ),
+    hazards=(HazardSpec("pine_forest_hazard", {}),),
+    playable_bounds=(2.5, 2.5, 18.5, 18.5),
+    spawns=SpawnRule(x_range=(5.0, 16.0), margin=4.0, min_distance=6.5, fallback=((6.5, 10.5), (14.5, 10.5))),
+    stage=StageSpec(10.5, 10.5),
+    drift_count=52,
+    drift_petals=0.45,
+    lighting=LightingEnvironment(
+        ambient_color=(215, 195, 145), ambient_strength=0.68, vignette=0.28,
+        lights=_PINE_LIGHTS,
+        atmosphere=(
+            AtmosphereEffect("sunbeams", density=0.65),
+            AtmosphereEffect("mist", density=0.45),
+            AtmosphereEffect("dust", density=0.50),
+        ),
+    ),
+)
+
+
+# ---------------------------------------------------------------------------
+# Taiga de Ezo (Ciclo 5 - Aoi)
+# ---------------------------------------------------------------------------
+TILE_EZO_SNOW = 112
+TILE_EZO_ICE = 113
+TILE_EZO_FROZEN_EARTH = 114
+
+_EZO_SPRUCES = (
+    PropSpec("snow_spruce", 2.4, 2.8, {"scale": 1.10}),
+    PropSpec("snow_spruce", 18.6, 2.8, {"scale": 1.05}),
+    PropSpec("snow_spruce", 2.2, 10.5, {"scale": 1.00}),
+    PropSpec("snow_spruce", 18.8, 10.5, {"scale": 1.08}),
+    PropSpec("snow_spruce", 2.6, 18.2, {"scale": 1.12}),
+    PropSpec("snow_spruce", 18.4, 18.2, {"scale": 1.05}),
+)
+
+_EZO_INAUS = (
+    PropSpec("ainu_inau", 5.8, 4.2),
+    PropSpec("ainu_inau", 15.2, 4.2),
+    PropSpec("ainu_inau", 5.8, 16.8),
+    PropSpec("ainu_inau", 15.2, 16.8),
+)
+
+_EZO_LIGHTS = (
+    LightSource(6.8, 6.8, 0.7, (255, 155, 65), 3.6, flicker=0.32),
+    LightSource(14.2, 14.2, 0.7, (255, 155, 65), 3.6, flicker=0.32),
+    LightSource(10.5, 10.5, 1.0, (175, 215, 255), 3.4, flicker=0.06),
+)
+
+EZO_TUNDRA_SPEC = ArenaSpec(
+    id=ARENA_EZO_TUNDRA,
+    name="Taiga de Ezo",
+    cols=MAP_COLS,
+    rows=MAP_ROWS,
+    bg_color=(20, 32, 48),
+    music="bgm_ezo_taiga",
+    wind=WindSpec(1.0, 0.65, 1.45, 0.85),
+    tile_styles={
+        TILE_EZO_SNOW: TileStyle("flat", ((226, 236, 248), (212, 224, 240)), pattern="parity", edge=(170, 188, 212), surface="sand"),
+        TILE_EZO_ICE: TileStyle("flat", ((152, 198, 236), (138, 184, 226)), pattern="rows", edge=(102, 148, 194), speed_mult=1.18, surface="marble"),
+        TILE_EZO_FROZEN_EARTH: TileStyle("flat", ((96, 88, 86), (84, 76, 74)), pattern="parity", edge=(62, 56, 56), surface="earth"),
+    },
+    layers=(
+        FillLayer(TILE_EZO_SNOW),
+        # Anel externo de gelo escorregadio azul-cristalino
+        EllipseLayer(TILE_EZO_ICE, cx=10.5, cy=10.5, radius=7.6),
+        # Clareira central de neve compactada
+        EllipseLayer(TILE_EZO_SNOW, cx=10.5, cy=10.5, radius=5.4),
+        # Círculos de terra descongelada ao redor das fogueiras de caça
+        EllipseLayer(TILE_EZO_FROZEN_EARTH, cx=6.8, cy=6.8, radius=1.5),
+        EllipseLayer(TILE_EZO_FROZEN_EARTH, cx=14.2, cy=14.2, radius=1.5),
+    ),
+    props=(
+        _EZO_SPRUCES
+        + _EZO_INAUS
+        + (
+            PropSpec("campfire", 6.8, 6.8),
+            PropSpec("campfire", 14.2, 14.2),
+            PropSpec("hide_rack", 10.5, 3.0),
+            PropSpec("hide_rack", 4.2, 13.5),
+            PropSpec("snare", 13.8, 7.2),
+            PropSpec("snare", 7.2, 13.8),
+            PropSpec("rock", 16.2, 8.2, {"radius": 0.72, "height": 1.0}),
+        )
+    ),
+    hazards=(HazardSpec("ezo_taiga_hazard", {}),),
+    playable_bounds=(2.5, 2.5, 18.5, 18.5),
+    spawns=SpawnRule(x_range=(5.0, 16.0), margin=4.0, min_distance=6.5, fallback=((6.5, 10.5), (14.5, 10.5))),
+    stage=StageSpec(10.5, 10.5),
+    drift_count=64,
+    drift_petals=0.0,
+    lighting=LightingEnvironment(
+        ambient_color=(155, 188, 230), ambient_strength=0.62, vignette=0.34,
+        lights=_EZO_LIGHTS,
+        atmosphere=(
+            AtmosphereEffect("mist", density=0.65),
+            AtmosphereEffect("embers", density=0.45),
+            AtmosphereEffect("fogbank", density=0.40),
+        ),
+    ),
+)
+
+
 # ---------------------------------------------------------------------------
 # Registro de arenas jogáveis
 # ---------------------------------------------------------------------------
@@ -1289,54 +1704,96 @@ ARENA_SPECS: dict[str, ArenaSpec] = {
     ARENA_YOSHIWARA: YOSHIWARA_SPEC,
     ARENA_RICE_PADDIES: RICE_PADDIES_SPEC,
     ARENA_RAIN_MILL: RAIN_MILL_SPEC,
+    ARENA_GOTHIC_CEMETERY: GOTHIC_CEMETERY_SPEC,
+    ARENA_HEIAN_SHRINE: HEIAN_SHRINE_SPEC,
+    ARENA_SACRED_PINES: SACRED_PINES_SPEC,
+    ARENA_EZO_TUNDRA: EZO_TUNDRA_SPEC,
 }
 
 
 # ---------------------------------------------------------------------------
-# Campo dos Mortos de Fome (chefe Oni Gashadokuro) — 8.2.3, fora das telas de seleção
+# Campo dos Mortos de Fome (chefe Oni Gashadokuro) — Etapa 5.3, fora das telas de seleção
 # ---------------------------------------------------------------------------
 TILE_GY_SOIL = 58
 TILE_GY_PATH = 59
 TILE_GY_MOUND = 60
+TILE_GY_FISSURE = 77
 
-_GY_GRAVES = ((5.5, 5.5), (16.5, 5.5), (3.5, 11.0), (18.5, 11.0), (5.5, 16.5), (16.5, 16.5), (9.0, 13.5), (13.0, 8.5))
-_GY_LANTERNS = ((7.0, 3.5), (15.0, 3.5), (7.0, 18.5), (15.0, 18.5))
+_GY_GRAVES = ((5.2, 5.2), (15.8, 5.2), (3.4, 10.5), (17.6, 10.5), (5.2, 15.8), (15.8, 15.8))
+_GY_LANTERNS = ((6.8, 3.6), (14.2, 3.6), (6.8, 17.4), (14.2, 17.4))
+_GY_FISSURES = (
+    (6.2, 6.5, {"length": 2.2, "angle": 0.55, "seed": 1}),
+    (14.8, 6.5, {"length": 2.2, "angle": -0.55, "seed": 2}),
+    (4.8, 11.0, {"length": 2.0, "angle": 0.15, "seed": 3}),
+    (16.2, 11.0, {"length": 2.0, "angle": -0.15, "seed": 4}),
+    (6.5, 15.2, {"length": 2.3, "angle": -0.45, "seed": 5}),
+    (14.5, 15.2, {"length": 2.3, "angle": 0.45, "seed": 6}),
+)
+_GY_BONE_MOUNDS = ((3.2, 4.2, 1), (17.8, 4.2, 2), (3.2, 16.8, 3), (17.8, 16.8, 4))
+_GY_BLADES = ((8.5, 3.2, 11), (12.5, 3.2, 22), (3.8, 7.5, 33), (17.2, 7.5, 44), (8.5, 18.2, 55), (12.5, 18.2, 66))
+_GY_TREES = ((1.8, 2.2), (19.2, 2.2), (1.8, 18.8), (19.2, 18.8))
+_GY_NOBORI = (
+    (4.5, 2.6, {"text": "怨", "cloth": (44, 16, 28), "ink": (220, 60, 80)}),
+    (16.5, 2.6, {"text": "骸", "cloth": (36, 18, 42), "ink": (195, 110, 255)}),
+    (4.5, 18.4, {"text": "飢", "cloth": (36, 18, 42), "ink": (195, 110, 255)}),
+    (16.5, 18.4, {"text": "鬼", "cloth": (44, 16, 28), "ink": (220, 60, 80)}),
+)
 
 GASHADOKURO_SPEC = ArenaSpec(
     id=ARENA_GASHADOKURO,
     name="Campo dos Mortos de Fome",
     cols=MAP_COLS,
     rows=MAP_ROWS,
-    bg_color=(18, 8, 12),
+    bg_color=(16, 6, 14),
     music="bgm_gashadokuro",
-    wind=WindSpec(1, 0.3, 0.2, 0.5),
+    wind=WindSpec(1, 0.45, 0.30, 0.65),
     tile_styles={
-        TILE_GY_SOIL: TileStyle("flat", ((58, 44, 40), (52, 39, 36)), pattern="parity", edge=(30, 22, 22), surface="earth"),
-        TILE_GY_PATH: TileStyle("flat", ((92, 74, 68), (84, 67, 62)), pattern="parity", edge=(48, 36, 34), surface="earth"),
-        TILE_GY_MOUND: TileStyle("flat", ((120, 96, 84), (110, 88, 77)), pattern="parity", edge=(62, 46, 42), surface="earth"),
+        TILE_GY_SOIL: TileStyle("flat", ((42, 28, 32), (36, 24, 28)), pattern="parity", edge=(24, 14, 18), surface="earth"),
+        TILE_GY_PATH: TileStyle("flat", ((68, 48, 52), (60, 42, 46)), pattern="parity", edge=(38, 24, 28), surface="earth"),
+        TILE_GY_MOUND: TileStyle("flat", ((92, 64, 66), (82, 56, 58)), pattern="parity", edge=(52, 34, 38), surface="earth"),
+        TILE_GY_FISSURE: TileStyle("flat", ((64, 22, 82), (82, 28, 104)), pattern="parity", edge=(175, 55, 225), surface="stone"),
     },
     layers=(
         FillLayer(TILE_GY_SOIL),
-        EllipseLayer(TILE_GY_PATH, cx=10.5, cy=10.5, radius=9.0),
-        EllipseLayer(TILE_GY_MOUND, cx=10.5, cy=7.5, radius=2.6),
+        EllipseLayer(TILE_GY_PATH, cx=10.5, cy=10.5, radius=8.8),
+        # Veios espirituais da fenda abissal
+        RectLayer(TILE_GY_FISSURE, 6, 6, 6, 15),
+        RectLayer(TILE_GY_FISSURE, 14, 14, 6, 15),
+        EllipseLayer(TILE_GY_MOUND, cx=10.5, cy=10.5, radius=3.4),
+        EllipseLayer(TILE_GY_FISSURE, cx=10.5, cy=10.5, radius=1.4),
     ),
     props=(
         tuple(PropSpec("jizo", x, y) for x, y in _GY_GRAVES)
-        + tuple(PropSpec("stone_lantern", x, y) for x, y in _GY_LANTERNS)
+        + tuple(PropSpec("spectral_toro", x, y) for x, y in _GY_LANTERNS)
+        + tuple(PropSpec("soul_fissure", x, y, params) for x, y, params in _GY_FISSURES)
+        + tuple(PropSpec("bone_mound", x, y, {"seed": s}) for x, y, s in _GY_BONE_MOUNDS)
+        + tuple(PropSpec("blade_cluster", x, y, {"seed": s}) for x, y, s in _GY_BLADES)
+        + tuple(PropSpec("dead_tree", x, y) for x, y in _GY_TREES)
+        + tuple(PropSpec("nobori", x, y, params) for x, y, params in _GY_NOBORI)
     ),
-    playable_bounds=(2.0, 2.0, 20.0, 20.0),
-    spawns=SpawnRule(x_range=(4.0, 18.0), margin=4.0, min_distance=7.0, fallback=((10.5, 17.5), (10.5, 7.5))),
+    hazards=(HazardSpec("gashadokuro_hazard", {}),),
+    playable_bounds=(2.0, 2.0, 19.0, 19.0),
+    spawns=SpawnRule(x_range=(4.0, 17.0), margin=4.0, min_distance=7.0, fallback=((10.5, 16.5), (10.5, 7.5))),
     stage=StageSpec(10.5, 10.5),
-    drift_count=0,
+    drift_count=46,
+    drift_petals=0.85,
     lighting=LightingEnvironment(
-        ambient_color=(130, 60, 70), ambient_strength=0.4, vignette=0.5,
-        lights=tuple(LightSource(x, y, 0.9, (255, 80, 60), 3.6, flicker=0.25) for x, y in _GY_LANTERNS),
-        atmosphere=(AtmosphereEffect("mist", density=0.7),),
+        ambient_color=(125, 45, 75), ambient_strength=0.42, vignette=0.52,
+        lights=(
+            tuple(LightSource(x, y, 0.9, (220, 55, 185), 3.6, flicker=0.25) for x, y in _GY_LANTERNS)
+            + tuple(LightSource(x, y, 0.3, (165, 45, 235), 2.6, flicker=0.20) for x, y, _ in _GY_FISSURES)
+            + (LightSource(10.5, 10.5, 0.5, (235, 45, 85), 3.8, flicker=0.18),)
+        ),
+        atmosphere=(
+            AtmosphereEffect("mist", density=0.75),
+            AtmosphereEffect("embers", density=0.65),
+        ),
     ),
 )
 
 # Arenas que só o Arcade usa: ficam fora de `arena_ids()` e, portanto, das telas de seleção e do sorteio
 HIDDEN_ARENA_SPECS = {ARENA_GASHADOKURO: GASHADOKURO_SPEC}
+
 
 
 def arena_ids() -> list[str]:

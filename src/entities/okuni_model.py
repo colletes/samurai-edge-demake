@@ -182,7 +182,6 @@ def _render_fans_and_hands(c, arm_l, arm_r):
     if is_atk and c.atk_progress >= 0.25:
         P = pal()
         tip_r = mk.add(hand_r, mk.norm(dir_r_fwd), 0.28)
-        c_mid = mk.add(c.base_x + fx * 0.35, c.base_y + fy * 0.35, c.torso_z + 0.18)
         pts = [
             (tip_r[0] + px * 0.12, tip_r[1] + py * 0.12, tip_r[2] + 0.06),
             (tip_r[0] - px * 0.12, tip_r[1] - py * 0.12, tip_r[2] - 0.06),

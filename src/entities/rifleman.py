@@ -119,7 +119,8 @@ class Rifleman(Samurai):
         # Mecânica de Munição e Pólvora
         self.has_ammo = True           # Inicia CARREGADO com munição
         self.cocking_timer = 0.80      # Delay de armação de cão antes do tiro no início do round
-        self.reload_time = 0.0
+        self.reload_cooldown = 2.0     # Cooldown de 2s de recarga automática (sem bolsas de pólvora)
+        self.reload_timer = 0.0
         self.is_reloading = False
         self.reload_progress = 0.0
 
@@ -277,6 +278,7 @@ class Rifleman(Samurai):
 
         self.set_facing(target_wx, target_wy)
         self.has_ammo = False
+        self.reload_timer = self.reload_cooldown
         self.is_reloading = False
         self.reload_progress = 0.0
 
@@ -359,6 +361,16 @@ class Rifleman(Samurai):
 
         if self.cocking_timer > 0:
             self.cocking_timer -= dt
+
+        # Recarga automática com 2.0s de cooldown após o tiro
+        if not self.has_ammo:
+            self.reload_timer -= dt
+            if self.reload_timer <= 0:
+                self.has_ammo = True
+                self.cocking_timer = 0.20
+                if particles is not None:
+                    for _ in range(8):
+                        particles.append(SparkParticle(self.wx, self.wy, 0.45, color=(255, 210, 80)))
 
         if self.state == STATE_ATTACK:
             self.state_timer -= dt

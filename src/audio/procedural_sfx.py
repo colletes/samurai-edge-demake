@@ -266,19 +266,46 @@ def generate_arrow_hit() -> pygame.mixer.Sound:
     return _samples_to_sound(samples)
 
 
-def generate_shuriken_throw() -> pygame.mixer.Sound:
-    """Zumbido cortante e rotativo de shuriken em voo."""
-    duration = 0.16
+def generate_kunai_throw() -> pygame.mixer.Sound:
+    """Estocada/arremesso afiado de faca tática ou kunai: corte aerodinâmico veloz com brilho de aço forjado."""
+    duration = 0.22
     num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
     samples = []
 
     for i in range(num_samples):
         t = i / SAMPLE_RATE
-        env = math.sin(math.pi * (t / duration)) ** 1.5
-        # Modulação de frequência simulando rotação
-        freq = 920.0 + math.sin(2.0 * math.pi * 45.0 * t) * 150.0
-        tone = math.sin(2.0 * math.pi * freq * t) * env * 0.65
-        samples.append(tone)
+        # Envelope rápido com ataque instantâneo e decaimento afiado
+        env = math.exp(-18.0 * t) * (1.0 - math.exp(-320.0 * t))
+        # Componente de ar cortado em alta velocidade (ruído sibilante)
+        wind = noise[i] * env * 0.45
+        # Brilho harmônico metálico de lâmina de aço (2600Hz fundamental + parciais)
+        ring1 = math.sin(2.0 * math.pi * 2650.0 * t) * math.exp(-28.0 * t) * 0.35
+        ring2 = math.sin(2.0 * math.pi * 4100.0 * t) * math.exp(-38.0 * t) * 0.20
+        # Zumbido suave de ponta afiada penetrando o ar
+        whoosh = math.sin(2.0 * math.pi * (1400.0 - 600.0 * (t / duration)) * t) * env * 0.25
+        samples.append(wind + ring1 + ring2 + whoosh)
+
+    return _samples_to_sound(samples)
+
+
+def generate_shuriken_throw() -> pygame.mixer.Sound:
+    """Zumbido cortante e rotativo de lâminas de shuriken em alta rotação."""
+    duration = 0.18
+    num_samples = int(SAMPLE_RATE * duration)
+    noise = _white_noise(num_samples)
+    samples = []
+
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        env = math.exp(-16.0 * t) * (1.0 - math.exp(-260.0 * t))
+        # Modulação aerodinâmica sibilante das 4 pontas da estrela girando a alta velocidade
+        rot_flutter = 0.65 + 0.35 * math.sin(2.0 * math.pi * 120.0 * t)
+        air_cut = noise[i] * env * rot_flutter * 0.40
+        # Tom metálico cortante
+        steel_edge = math.sin(2.0 * math.pi * 3200.0 * t) * math.exp(-24.0 * t) * 0.25
+        steel_ring = math.sin(2.0 * math.pi * 5100.0 * t) * math.exp(-35.0 * t) * 0.15
+        samples.append(air_cut + steel_edge + steel_ring)
 
     return _samples_to_sound(samples)
 
@@ -879,6 +906,7 @@ _GENERATOR_MAP = {
     SoundEvent.ARROW_RELEASE: generate_arrow_release,
     SoundEvent.ARROW_HIT: generate_arrow_hit,
     SoundEvent.SHURIKEN_THROW: generate_shuriken_throw,
+    SoundEvent.KUNAI_THROW: generate_kunai_throw,
     SoundEvent.CHAIN_WHIP: generate_chain_whip,
     SoundEvent.DODGE_WHOOSH: generate_dodge_whoosh,
     SoundEvent.SHUKUCHI: generate_shukuchi,

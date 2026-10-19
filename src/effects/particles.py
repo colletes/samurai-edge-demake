@@ -326,7 +326,7 @@ class FloatingBanner:
 
 class FlameVoxelParticle:
     """Partícula de estilhaço flamejante tridimensional (voxel 3D) para explosões balísticas."""
-    def __init__(self, wx: float, wy: float, wz: float = 0.2):
+    def __init__(self, wx: float, wy: float, wz: float = 0.2, color=None):
         self.wx = wx
         self.wy = wy
         self.wz = wz
@@ -339,13 +339,16 @@ class FlameVoxelParticle:
         self.lifetime = random.uniform(0.40, 0.75)
         self.age = 0.0
         self.size = random.uniform(0.09, 0.16)
-        self.colors = [
-            (255, 245, 180),  # Incandescente zenital
-            (255, 180, 40),   # Amarelo/laranja vivo
-            (240, 90, 20),    # Fogo alaranjado
-            (190, 35, 15),    # Brasa carmim
-            (65, 45, 45)      # Fuligem cinza escuro
-        ]
+        if color is not None:
+            self.colors = [color, color, color]
+        else:
+            self.colors = [
+                (255, 245, 180),  # Incandescente zenital
+                (255, 180, 40),   # Amarelo/laranja vivo
+                (240, 90, 20),    # Fogo alaranjado
+                (190, 35, 15),    # Brasa carmim
+                (65, 45, 45)      # Fuligem cinza escuro
+            ]
 
     def update(self, dt: float) -> bool:
         self.age += dt

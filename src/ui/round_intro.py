@@ -106,9 +106,10 @@ class RoundIntroScreen:
             p1_surf = font_title.render(self.p1_name, True, pm.darken(self.p1_color, 0.6) if parch else self.p1_color)
             vs_surf = font_vs.render("対", True, pm.SEAL_RED if parch else (60, 40, 20))
             p2_surf = font_title.render(self.p2_name, True, pm.darken(self.p2_color, 0.6) if parch else self.p2_color)
-            p1_surf.set_alpha(text_alpha)
-            vs_surf.set_alpha(text_alpha)
-            p2_surf.set_alpha(text_alpha)
+            if text_alpha < 255:
+                p1_surf.fill((255, 255, 255, text_alpha), special_flags=pygame.BLEND_RGBA_MULT)
+                vs_surf.fill((255, 255, 255, text_alpha), special_flags=pygame.BLEND_RGBA_MULT)
+                p2_surf.fill((255, 255, 255, text_alpha), special_flags=pygame.BLEND_RGBA_MULT)
 
             cy = scroll_y + scroll_h // 2
             surface.blit(p1_surf, (scroll_x + scroll_w // 2 - p1_surf.get_width() // 2, cy - 90))
@@ -118,5 +119,6 @@ class RoundIntroScreen:
             if self.round_label:
                 font_round = get_text_font(16)
                 r_surf = font_round.render(self.round_label, True, pm.SEAL_RED if parch else (70, 45, 20))
-                r_surf.set_alpha(text_alpha)
+                if text_alpha < 255:
+                    r_surf.fill((255, 255, 255, text_alpha), special_flags=pygame.BLEND_RGBA_MULT)
                 surface.blit(r_surf, (scroll_x + scroll_w // 2 - r_surf.get_width() // 2, scroll_y + 46 if parch else scroll_y - 26))

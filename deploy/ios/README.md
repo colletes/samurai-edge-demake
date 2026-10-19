@@ -16,8 +16,9 @@ Este guia orienta como gerar o projeto nativo do **Xcode**, assinar com sua **Co
 
 ## 🛠️ Passo 1: Gerar o Projeto Xcode
 
-No Terminal do Mac, na pasta do jogo, execute:
+> **Atenção (Caminho sem Espaços)**: Devido ao utilitário `make` da compilação do OpenSSL/Python C, o caminho completo da pasta do projeto **não pode conter espaços** (ex: use `SamuraiEdge` ou `Samurai_Edge_Bakumatsu`).
 
+No Terminal do Mac, na pasta do jogo, execute:
 ```bash
 ./deploy/ios/setup_ios_project.sh
 ```
@@ -26,7 +27,7 @@ O script irá:
 1. Instalar a ferramenta de compilação C/Python (`kivy-ios`).
 2. Compilar as receitas do Python 3 e bibliotecas SDL2 para a arquitetura do iOS (arm64).
 3. Gerar a pasta do projeto nativo em:
-   `build/samuraiedge-ios/samuraiedge-ios.xcodeproj`
+   `build/samuraiedge-ios/samuraiedge.xcodeproj`
 4. Injetar o arquivo `Info.plist` com as permissões e orientação correta.
 
 ---
@@ -35,10 +36,10 @@ O script irá:
 
 1. Abra o projeto no Xcode executando:
    ```bash
-   open build/samuraiedge-ios/samuraiedge-ios.xcodeproj
+   open build/samuraiedge-ios/samuraiedge.xcodeproj
    ```
 
-2. No painel lateral esquerdo do Xcode, clique no nó raiz do projeto (**samuraiedge-ios**).
+2. No painel lateral esquerdo do Xcode, clique no nó raiz do projeto (**samuraiedge**).
 
 3. Vá até a aba **Signing & Capabilities**:
    - Marque a opção: `Automatically manage signing`.

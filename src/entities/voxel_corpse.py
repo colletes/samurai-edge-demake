@@ -26,7 +26,10 @@ STUCK_WEAPON = {
     "ARMORED_HEART_IMPALE": "naginata", "SKEWERED_LANCE_FLAG": "naginata",
     "HEART_IMPALE_LUNGE": "blade", "BLIND_SPINE_PIERCE": "blade",
     "FOREHEAD_PIN": "kunai",
+    "PINNED_TO_EARTH": "arrow", "HAMAYA_HOLY_PIERCE": "arrow",
+    "SPEAR_HEART_SLIDE": "naginata", "TRAP_AND_EXECUTE": "kunai",
 }
+
 
 
 class _LayerCamera:
@@ -637,11 +640,144 @@ class VoxelCorpse:
             for _ in range(26):
                 self._add_blood_drop(spread=0.75)
 
+        elif style == "SOUL_REAP":
+            # Valerius Primário: Foice decapita a cabeça do rival (presa/recolhida) e reanima o cadáver decapitado em esqueleto!
+            self.reanimated_skeleton = True
+            self.skeleton_time = 0.0
+            # Cabeça decepada descansando no solo próxima ao esqueleto reanimado
+            head_target_x = x + dx * 0.55
+            head_target_y = y + dy * 0.55
+            self.severed_head = P(head_target_x, head_target_y, 0.08, 0.16, 0.16, 0.16, self.col_hair,
+                                  vx=0.0, vy=0.0, vz=0.0, rot_speed=0.0, piece_type="head",
+                                  region=lambda c: c.band(None, NECK_Z), pivot="center", floor_z=0.08)
+            self.pieces.append(self.severed_head)
+            for _ in range(32):
+                self._add_blood_drop(spread=0.75)
+
+        elif style == "DRAGGED_TO_GRAVE":
+            # Valerius Secundário: A vítima foi arrastada inteiramente para o fundo do solo
+            self.is_grave_pit = True
+            self.grave_pit_time = 0.0
+            self.pieces = []
+            for _ in range(16):
+                self._add_blood_drop(spread=0.55)
+
+        elif style in ("SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR"):
+            # Seimei Primário & Secundário: O amuleto atinge o alvo, que é consumido em chamas verdes até restarem cinzas
+            self.is_ash_mound = True
+            self.ash_mound_time = 0.0
+            self.pieces = []  # O corpo foi totalmente desintegrado em cinzas
+            self.blood_droplets = []  # Sem carne ou sangue residual
+
+        # ---------------------------------------------------------------
+        # Ciclo 5 Fatalities: Okuni, Tomoe, Daiki, Aoi
+        # ---------------------------------------------------------------
+        elif style == "TESSEN_DECAP":
+            # Okuni Primário: Pirueta teatral com leques de ferro Tessen que degola a garganta do rival em arco gracioso
+            self.severed_head = P(x, y, NECK_Z + 0.14, 0.16, 0.16, 0.16, self.col_hair,
+                                  vx=dx * 2.5 - dy * 1.4, vy=dy * 2.5 + dx * 1.4, vz=3.8,
+                                  rot_speed=360.0, piece_type="head", region=lambda c: c.band(None, NECK_Z),
+                                  pivot="center", floor_z=0.15)
+            self.headless_body = P(x, y, 0.0, 0.28, 0.22, 0.85, self.col_torso,
+                                   vx=dx * 0.4, vy=dy * 0.4, vz=0.0,
+                                   piece_type="headless_body", region=lambda c: c.band(NECK_Z, None),
+                                   rot_target=FALL_DEG, rot_speed=120.0, rot_delay=0.28)
+            self.pieces.extend([self.severed_head, self.headless_body])
+            for _ in range(38):
+                self._add_blood_drop(spread=0.85)
+
+        elif style == "DOKUKIRI_MELT":
+            # Okuni Secundário: Sopro ácido Dokukiri dissolve a carne em poça esmeralda fumegante com ossos expostos
+            self.acid_radius = 0.25
+            self.acid_max_radius = 0.92
+            self.pieces.append(P(x, y, 0.0, 0.40, 0.30, 0.70, (60, 180, 90), piece_type="melting_body",
+                                 region=lambda c: c.band(None, None), squash="melt"))
+            for _ in range(10):
+                angle = random.uniform(0, math.pi * 2)
+                sp = random.uniform(0.6, 1.8)
+                self.pieces.append(P(x, y, 0.25, 0.08, 0.08, 0.08, (225, 220, 205),
+                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(0.8, 2.0),
+                                     rot_speed=random.uniform(-180, 180), piece_type="bone_gib"))
+
+        elif style == "PINNED_TO_EARTH":
+            # Tomoe Primário: Flecha de arco Yumi atravessa o peito e prega o rival estatelado ao solo
+            self.pieces.append(P(x, y, 0.0, 0.44, 0.34, 0.75, self.col_torso,
+                                 vx=dx * 3.8, vy=dy * 3.8, vz=1.5,
+                                 piece_type="impaled_body", region=lambda c: c.band(None, None),
+                                 rot_target=FALL_DEG, rot_speed=240.0))
+            for _ in range(28):
+                self._add_blood_drop(spread=0.75)
+
+        elif style == "HAMAYA_HOLY_PIERCE":
+            # Tomoe Secundário: Flecha Sagrada Hama-no-Ya transfixa o peito com pilar de luz dourada purificadora
+            self.is_holy_pierced = True
+            self.holy_pierce_time = 0.0
+            self.pieces.append(P(x, y, 0.0, 0.44, 0.34, 0.75, self.col_torso,
+                                 vx=dx * 1.2, vy=dy * 1.2, vz=0.6,
+                                 piece_type="impaled_body", region=lambda c: c.band(None, None),
+                                 rot_target=FALL_DEG, rot_speed=160.0))
+            for _ in range(24):
+                self._add_blood_drop(spread=0.70)
+
+        elif style == "THROAT_TEMPLE_CRUSH":
+            # Daiki Primário: Estocada de bastão Bō na garganta + giro de 360° que esmaga a têmpora
+            self.cleaved_body = P(x, y, 0.0, 0.44, 0.34, 0.78, self.col_torso,
+                                  vx=dx * 2.8 - dy * 1.2, vy=dy * 2.8 + dx * 1.2, vz=1.2,
+                                  piece_type="cleaved_body", region=lambda c: c.band(None, None),
+                                  rot_target=FALL_DEG, rot_speed=230.0)
+            self.pieces.append(self.cleaved_body)
+            for _ in range(10):
+                angle = random.uniform(0, math.pi * 2)
+                sp = random.uniform(1.4, 3.8)
+                self.pieces.append(P(x, y, 0.85, 0.07, 0.07, 0.07, random.choice([self.col_hair, COLOR_BLOOD, (225, 220, 210)]),
+                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(1.4, 3.5),
+                                     rot_speed=random.uniform(-280, 280), piece_type="skull_gib"))
+            for _ in range(32):
+                self._add_blood_drop(spread=0.80)
+
+        elif style == "METEOR_STAFF_CRUSH":
+            # Daiki Secundário: Salto com vara e descida vertical meteórica esmagando o crânio e coluna contra o solo
+            self.pieces.append(P(x, y, 0.0, 0.52, 0.38, 0.55, self.col_torso, piece_type="crushed_body",
+                                 region=lambda c: c.band(None, None), squash="crush"))
+            for _ in range(36):
+                self._add_blood_drop(spread=0.95)
+            for _ in range(12):
+                angle = random.uniform(0, math.pi * 2)
+                sp = random.uniform(1.6, 4.2)
+                self.pieces.append(P(x, y, 0.12, 0.08, 0.08, 0.08, (135, 95, 58),
+                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(1.2, 3.2),
+                                     rot_speed=random.uniform(-260, 260), piece_type="earth_shard"))
+
+        elif style == "SPEAR_HEART_SLIDE":
+            # Aoi Primário: Deslize na neve por baixo da guarda cravando a lança Op diretamente no coração
+            self.pieces.append(P(x, y, 0.0, 0.45, 0.34, 0.76, self.col_torso,
+                                 vx=dx * 2.6, vy=dy * 2.6, vz=1.1,
+                                 piece_type="impaled_body", region=lambda c: c.band(None, None),
+                                 rot_target=FALL_DEG, rot_speed=210.0))
+            for _ in range(34):
+                self._add_blood_drop(spread=0.82)
+
+        elif style == "TRAP_AND_EXECUTE":
+            # Aoi Secundário: Armadilha de urso de ferro prende as pernas enquanto a faca Makiri/lança degola e executa
+            self.has_bear_trap_clamped = True
+            self.severed_head = P(x, y, NECK_Z + 0.12, 0.16, 0.16, 0.16, self.col_hair,
+                                  vx=dx * 2.0 + dy * 0.9, vy=dy * 2.0 - dx * 0.9, vz=3.4,
+                                  rot_speed=300.0, piece_type="head", region=lambda c: c.band(None, NECK_Z),
+                                  pivot="center", floor_z=0.15)
+            self.headless_body = P(x, y, 0.0, 0.30, 0.22, 0.82, self.col_torso,
+                                   vx=0.0, vy=0.0, vz=0.0,
+                                   piece_type="headless_body", region=lambda c: c.band(NECK_Z, None),
+                                   rot_target=72.0, rot_speed=110.0, rot_delay=0.22)
+            self.pieces.extend([self.severed_head, self.headless_body])
+            for _ in range(42):
+                self._add_blood_drop(spread=0.90)
+
         else:
             # Padrão e BLUNT_FALL: tombo cinematográfico para trás
             self.pieces.append(P(x, y, 0.0, 0.45, 0.32, 0.70, self.col_torso, vx=dx * 1.4, vy=dy * 1.4, vz=0.8,
                                  piece_type="fallen_body", region=lambda c: c.band(None, None),
                                  rot_target=FALL_DEG, rot_speed=190.0))
+
 
     def _add_blood_drop(self, spread: float = 0.2):
         self.blood_droplets.append({
@@ -738,9 +874,74 @@ class VoxelCorpse:
                 })
 
         # Expansão de poça ácida para Okuni
-        if self.death_style == "OKUNI_MELT" and hasattr(self, "acid_radius"):
+        if self.death_style in ("OKUNI_MELT", "DOKUKIRI_MELT") and hasattr(self, "acid_radius"):
             if self.acid_radius < self.acid_max_radius:
                 self.acid_radius += dt * 0.35
+
+        # Luz purificadora para Flecha Sagrada Hama-no-Ya de Tomoe
+        if getattr(self, "is_holy_pierced", False):
+            self.holy_pierce_time = getattr(self, "holy_pierce_time", 0.0) + dt
+            if self.holy_pierce_time < 3.0 and particles is not None and random.random() < 0.25:
+                from src.effects.particles import SparkParticle
+                particles.append(SparkParticle(
+                    self.wx + random.uniform(-0.18, 0.18),
+                    self.wy + random.uniform(-0.18, 0.18),
+                    random.uniform(0.08, 0.65),
+                    color=random.choice([(255, 235, 110), (255, 250, 210)])
+                ))
+
+        # Pulsação do esqueleto reanimado de Valerius (fagulhas espectrais no pescoço decapitado)
+        if getattr(self, "reanimated_skeleton", False):
+            self.skeleton_time = getattr(self, "skeleton_time", 0.0) + dt
+            if particles is not None and random.random() < 0.22:
+                from src.effects.particles import SparkParticle
+                particles.append(SparkParticle(
+                    self.wx + random.uniform(-0.05, 0.05),
+                    self.wy + random.uniform(-0.05, 0.05),
+                    0.65 + random.uniform(0.0, 0.12),
+                    color=random.choice([(65, 240, 175), (90, 255, 200), (140, 70, 200)])
+                ))
+
+        # Cinzas fumegantes e brasas verdes sagradas de Seimei
+        if getattr(self, "is_ash_mound", False):
+            self.ash_mound_time = getattr(self, "ash_mound_time", 0.0) + dt
+            if self.ash_mound_time < 3.5 and particles is not None:
+                from src.effects.particles import SparkParticle, SmokeParticle
+                if random.random() < 0.18:
+                    particles.append(SparkParticle(
+                        self.wx + random.uniform(-0.16, 0.16),
+                        self.wy + random.uniform(-0.16, 0.16),
+                        0.04 + random.uniform(0.0, 0.12),
+                        color=(50, 240, 120)
+                    ))
+                if random.random() < 0.10:
+                    particles.append(SmokeParticle(
+                        self.wx + random.uniform(-0.10, 0.10),
+                        self.wy + random.uniform(-0.10, 0.10),
+                        wz=0.06,
+                        color=(35, 38, 40),
+                        radius=0.18
+                    ))
+
+        if getattr(self, "is_grave_pit", False):
+            self.grave_pit_time = getattr(self, "grave_pit_time", 0.0) + dt
+            if self.grave_pit_time < 4.0 and particles is not None:
+                from src.effects.particles import SparkParticle, SmokeParticle
+                if random.random() < 0.16:
+                    particles.append(SparkParticle(
+                        self.wx + random.uniform(-0.20, 0.20),
+                        self.wy + random.uniform(-0.20, 0.20),
+                        0.04 + random.uniform(0.0, 0.14),
+                        color=random.choice([(60, 240, 160), (140, 60, 210)])
+                    ))
+                if random.random() < 0.10:
+                    particles.append(SmokeParticle(
+                        self.wx + random.uniform(-0.12, 0.12),
+                        self.wy + random.uniform(-0.12, 0.12),
+                        wz=0.06,
+                        color=(25, 14, 32),
+                        radius=0.22
+                    ))
 
     # ------------------------------------------------------------------ desenho
     @staticmethod
@@ -781,7 +982,7 @@ class VoxelCorpse:
             pygame.draw.circle(surface, d["color"], (sx, sy), d["size"])
 
         # Poça de veneno de Okuni
-        if self.death_style == "OKUNI_MELT" and hasattr(self, "acid_radius"):
+        if self.death_style in ("OKUNI_MELT", "DOKUKIRI_MELT") and hasattr(self, "acid_radius"):
             sx, sy = camera.apply(self.wx, self.wy, 0.02)
             rw = max(2, int(self.acid_radius * 48 * camera.zoom))
             rh = max(2, int(self.acid_radius * 24 * camera.zoom))
@@ -790,12 +991,31 @@ class VoxelCorpse:
             pygame.draw.ellipse(acid_surf, (120, 240, 140, 220), (rw // 2, rh // 2, rw, rh))
             surface.blit(acid_surf, (sx - rw, sy - rh))
 
+        # Armadilha de urso de ferro de Aoi fechada nas pernas do cadáver (TRAP_AND_EXECUTE)
+        if getattr(self, "has_bear_trap_clamped", False):
+            draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 0.0, 0.36, 0.36, 0.035, (48, 52, 60), outline=True)
+            draw_voxel_box(surface, camera, self.wx - 0.07, self.wy - 0.15, 0.03, 0.06, 0.30, 0.18, (82, 88, 98), outline=True)
+            draw_voxel_box(surface, camera, self.wx + 0.01, self.wy - 0.15, 0.03, 0.06, 0.30, 0.18, (82, 88, 98), outline=True)
+
         # Marca de queimado sob os estilhaços da explosão
         if self.death_style == "KASUMI_EXPLODE":
             sx, sy = camera.apply(self.wx, self.wy, 0.01)
             scorch = pygame.Surface((int(76 * camera.zoom), int(36 * camera.zoom)), pygame.SRCALPHA)
             pygame.draw.ellipse(scorch, (18, 16, 16, 150), scorch.get_rect())
             surface.blit(scorch, (sx - scorch.get_width() // 2, sy - scorch.get_height() // 2))
+
+        # 1.6. Esqueleto Reanimado de Valerius (cadáver decapitado em pé)
+        if getattr(self, "reanimated_skeleton", False):
+            self._render_reanimated_skeleton(surface, camera)
+
+        # 1.7. Montículo de cinzas sagradas de Seimei
+        if getattr(self, "is_ash_mound", False):
+            self._render_ash_mound(surface, camera)
+
+        # 1.8. Fenda tumular profunda de Valerius (DRAGGED_TO_GRAVE)
+        if getattr(self, "is_grave_pit", False):
+            self._render_grave_pit(surface, camera)
+
 
         # 2. Peças: recortes do modelo, tampas anatômicas 3D de corte e estilhaços em malha 3D
         fall = fall_factor(camera, self.wx, self.wy, self.dx, self.dy)
@@ -834,6 +1054,109 @@ class VoxelCorpse:
             (155, 18, 26),
             outline=False,
         )
+
+    def _render_reanimated_skeleton(self, surface: pygame.Surface, camera):
+        """Renderiza o esqueleto decapitado reanimado por Valerius, em pé no campo de batalha."""
+        c_bone = (235, 230, 215)
+        c_bone_shadow = (185, 180, 168)
+        c_emerald = (65, 240, 175)
+
+        base_x, base_y = self.wx, self.wy
+        # Sombra no solo
+        sx, sy = camera.apply(base_x, base_y, 0.0)
+        sw = int(32 * camera.zoom)
+        sh = int(16 * camera.zoom)
+        shadow_surf = pygame.Surface((sw * 2, sh * 2), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow_surf, (15, 18, 15, 120), (0, 0, sw * 2, sh * 2))
+        surface.blit(shadow_surf, (sx - sw, sy - sh))
+
+        # 1. Pernas esqueléticas (Fêmur + Tíbia)
+        draw_voxel_box(surface, camera, base_x - 0.08, base_y - 0.03, 0.02, 0.05, 0.05, 0.20, c_bone_shadow, outline=True)
+        draw_voxel_box(surface, camera, base_x + 0.03, base_y - 0.03, 0.02, 0.05, 0.05, 0.20, c_bone, outline=True)
+
+        # 2. Pélvis óssea
+        draw_voxel_box(surface, camera, base_x - 0.08, base_y - 0.05, 0.22, 0.16, 0.10, 0.06, c_bone, outline=True)
+
+        # 3. Coluna vertebral (Spine)
+        draw_voxel_box(surface, camera, base_x - 0.03, base_y - 0.03, 0.28, 0.06, 0.06, 0.28, c_bone_shadow, outline=True)
+
+        # 4. Caixa torácica (3 camadas de costelas)
+        draw_voxel_box(surface, camera, base_x - 0.11, base_y - 0.07, 0.34, 0.22, 0.14, 0.04, c_bone, outline=True)
+        draw_voxel_box(surface, camera, base_x - 0.13, base_y - 0.08, 0.42, 0.26, 0.16, 0.05, c_bone, outline=True)
+        draw_voxel_box(surface, camera, base_x - 0.11, base_y - 0.07, 0.50, 0.22, 0.14, 0.04, c_bone, outline=True)
+
+        # 5. Clavículas e ombros
+        draw_voxel_box(surface, camera, base_x - 0.14, base_y - 0.05, 0.56, 0.28, 0.10, 0.04, c_bone, outline=True)
+
+        # 6. Braços pendentes articulados
+        draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.03, 0.36, 0.04, 0.04, 0.20, c_bone_shadow, outline=True)
+        draw_voxel_box(surface, camera, base_x + 0.12, base_y - 0.03, 0.36, 0.04, 0.04, 0.20, c_bone, outline=True)
+
+        # 7. Coto cervical decapitado com labareda de alma esmeralda
+        draw_voxel_box(surface, camera, base_x - 0.035, base_y - 0.035, 0.59, 0.07, 0.07, 0.04, (200, 195, 180), outline=True)
+        # Chama verde espectral emanando do pescoço
+        draw_voxel_box(surface, camera, base_x - 0.025, base_y - 0.025, 0.63, 0.05, 0.05, 0.05, c_emerald, outline=False)
+
+    def _render_ash_mound(self, surface: pygame.Surface, camera):
+        """Renderiza o montículo de cinzas e brasas místicas deixado por Seimei."""
+        sx, sy = camera.apply(self.wx, self.wy, 0.01)
+        aw = int(34 * camera.zoom)
+        ah = int(18 * camera.zoom)
+
+        ash_surf = pygame.Surface((aw * 2 + 8, ah * 2 + 8), pygame.SRCALPHA)
+        cx, cy = aw + 4, ah + 4
+
+        # 1. Anel externo de terra chamuscada
+        pygame.draw.ellipse(ash_surf, (22, 24, 25, 190), (cx - aw, cy - ah, aw * 2, ah * 2))
+
+        # 2. Base de cinzas escuras de carvão
+        bw, bh = int(aw * 0.75), int(ah * 0.75)
+        pygame.draw.ellipse(ash_surf, (50, 52, 56, 230), (cx - bw, cy - bh, bw * 2, bh * 2))
+
+        # 3. Crista central de cinzas finas cinza-claras
+        cw, ch = int(aw * 0.45), int(ah * 0.45)
+        pygame.draw.ellipse(ash_surf, (86, 90, 96, 255), (cx - cw, cy - ch, cw * 2, ch * 2))
+
+        # 4. Pequenas brasas verdes reluzentes
+        for off_x, off_y, rad in ((-4, -2, 2.5), (3, 1, 2.0), (-1, 3, 1.8), (5, -3, 1.5)):
+            rx = int(cx + off_x * camera.zoom)
+            ry = int(cy + off_y * camera.zoom)
+            pygame.draw.circle(ash_surf, (60, 245, 135), (rx, ry), max(1, int(rad * camera.zoom)))
+
+        # 5. Resto carbonizado do talismã de papel Ofuda
+        ofuda_pts = [
+            (cx - int(6 * camera.zoom), cy - int(4 * camera.zoom)),
+            (cx + int(3 * camera.zoom), cy - int(8 * camera.zoom)),
+            (cx + int(5 * camera.zoom), cy - int(2 * camera.zoom)),
+            (cx - int(3 * camera.zoom), cy + int(1 * camera.zoom)),
+        ]
+        pygame.draw.polygon(ash_surf, (230, 225, 205), ofuda_pts)
+        pygame.draw.polygon(ash_surf, (25, 25, 25), ofuda_pts, 1)
+
+        surface.blit(ash_surf, (sx - cx, sy - cy))
+
+    def _render_grave_pit(self, surface: pygame.Surface, camera):
+        """Renderiza a fenda profunda no solo de onde a vítima foi arrastada para as profundezas."""
+        from src.isometric.voxel_renderer import draw_voxel_box
+        c_pit_deep = (12, 10, 15)
+        c_rim = (38, 30, 25)
+        c_bone = (230, 225, 210)
+        c_bone_shadow = (175, 170, 160)
+
+        hole_r = 0.52
+        draw_voxel_box(surface, camera, self.wx - hole_r, self.wy - hole_r, -0.18, hole_r * 2, hole_r * 2, 0.18, c_pit_deep, outline=True)
+        draw_voxel_box(surface, camera, self.wx - hole_r - 0.05, self.wy - hole_r - 0.05, 0.0, (hole_r + 0.05) * 2, (hole_r + 0.05) * 2, 0.03, c_rim, outline=True)
+
+        # Mãos e dedos esqueléticos cravados nas bordas da terra
+        offsets = [
+            (-hole_r * 0.7, -hole_r * 0.5, 0.12),
+            (hole_r * 0.7, -hole_r * 0.4, 0.15),
+            (-hole_r * 0.5, hole_r * 0.6, 0.16),
+            (hole_r * 0.6, hole_r * 0.5, 0.14),
+        ]
+        for ox, oy, arm_h in offsets:
+            draw_voxel_box(surface, camera, self.wx + ox, self.wy + oy, -0.05, 0.04, 0.04, arm_h, c_bone_shadow, outline=True)
+            draw_voxel_box(surface, camera, self.wx + ox * 0.85, self.wy + oy * 0.85, arm_h - 0.05, 0.055, 0.055, 0.035, c_bone, outline=True)
 
 
 def draw_fallen_model(surface: pygame.Surface, camera, wx: float, wy: float, wz: float, facing_x: float, facing_y: float, draw) -> bool:

@@ -142,6 +142,15 @@ COLOR_ORIN_AURA = (235, 75, 120)           # Aura magenta floral/sônica Yoshiwa
 COLOR_GORO_AURA = (115, 165, 235)          # Azul índigo rústico de camponês
 COLOR_ICHI_AURA = (215, 140, 230)          # Violeta místico sereno de lâmina cega
 
+# Cores dos Guerreiros do Ciclo 4 (Valerius & Seimei)
+COLOR_VALERIUS_AURA = (65, 230, 170)        # Verde-esmeralda espectral fúnebre
+COLOR_SEIMEI_AURA = (170, 140, 255)         # Violeta celestial sagrado Onmyodo
+COLOR_BOSS_AURA = (190, 50, 240)           # Púrpura miasmático espectral Oni
+
+# Cores dos Guerreiros do Ciclo 5 (Daiki & Aoi)
+COLOR_DAIKI_AURA = (180, 235, 195)          # Brisa montanhesa esmeralda/pinho
+COLOR_AOI_AURA = (155, 225, 255)            # Geada boreal cristalina de Ezo
+
 
 # Identificadores de Personagens (12 Guerreiros: 6 Mulheres e 6 Homens)
 CHAR_KENSHIN = "kenshin"
@@ -247,7 +256,9 @@ ARENA_RAIN_MILL = "rain_mill"
 ARENA_GOTHIC_CEMETERY = "gothic_cemetery"
 ARENA_HEIAN_SHRINE = "heian_shrine"
 ARENA_SACRED_PINES = "sacred_pines"
+ARENA_PINE_FOREST = ARENA_SACRED_PINES
 ARENA_EZO_TUNDRA = "ezo_tundra"
+ARENA_EZO_TAIGA = ARENA_EZO_TUNDRA
 ARENA_DOHYO = "sacred_dohyo"
 ARENA_DEJIMA = "dejima_warehouse"
 ARENA_GASHADOKURO = "gashadokuro_graveyard"  # arena do chefe do Arcade, fora das telas de seleção

@@ -13,7 +13,7 @@ package.domain = com.antigravity
 source.dir = .
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,jpeg,json,txt,spec,ttf
+source.include_exts = py,png,jpg,jpeg,json,txt,spec,ttf,mp3,wav,ogg,mp4
 
 # (list) List of directory to include
 source.include_patterns = assets/*,src/*
@@ -25,7 +25,7 @@ source.exclude_exts = spec,pyc,pyo,dmg,tar,gz
 source.exclude_dirs = tests,bin,build,dist,.git,.pyinstaller,.github,__pycache__,venv,deploy
 
 # (str) Application versioning (method 1)
-version = 1.6.0
+version = 2.0.0
 
 # (list) Application requirements
 # pygame-ce runs on python3 and SDL2

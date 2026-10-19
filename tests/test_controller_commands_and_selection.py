@@ -112,10 +112,12 @@ def test_char_select_mode_toggle_navigation():
     screen.handle_event(e_up)
     assert screen.focus_zone == "MODE_BTN", "Navegar para cima na linha 0 deve focar no botão de modo!"
 
-    # Pressionar confirmação com o botão de modo focado alterna o modo
+    # Pressionar confirmação com o botão de modo focado alterna o modo (PVE -> WATCH -> PVP)
     e_confirm = pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN})
     screen.handle_event(e_confirm)
-    assert screen.vs_ai is False, "Confirmar no botão de modo deve alternar para 1P vs 2P!"
+    assert screen.match_mode == screen.MODE_WATCH, "Primeira alternância deve ir para Assistir (WATCH)!"
+    screen.handle_event(e_confirm)
+    assert screen.vs_ai is False and screen.match_mode == screen.MODE_PVP, "Segunda alternância deve ir para 1P vs 2P (PVP)!"
 
     # Pressionar para BAIXO retorna o foco para a grade
     e_down = pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_s})

@@ -74,6 +74,34 @@ class CinematicDirector:
         self.goro_cleaved_timer = 0.0
         self.goro_sound_played = False
 
+        # Valerius: Decapitação com Foice, Cabeça na Ponta e Reanimação em Esqueleto
+        self.valerius_attacker = None
+        self.valerius_victim = None
+        self.valerius_decap_timer = 0.0
+        self.valerius_hook_timer = 0.0
+        self.valerius_reanimate_timer = 0.0
+        self.valerius_sound_played = False
+        self.valerius_reanimate_sound_played = False
+        self.valerius_head_x = 0.0
+        self.valerius_head_y = 0.0
+        self.valerius_head_z = 0.0
+
+        # Valerius: Arrastado para a Cova (DRAGGED_TO_GRAVE)
+        self.dragged_attacker = None
+        self.dragged_victim = None
+        self.dragged_timer = 0.0
+        self.dragged_duration = 1.45
+        self.dragged_sound_played = False
+
+        # Seimei: Ofuda Cravado, Chamas Verdes e Cinzas Sagradas
+        self.seimei_attacker = None
+        self.seimei_victim = None
+        self.seimei_talisman_timer = 0.0
+        self.seimei_fire_timer = 0.0
+        self.seimei_ash_timer = 0.0
+        self.seimei_sound_played = False
+        self.seimei_fire_sound_played = False
+
         # Coreografia universal de golpe final no ângulo fechado (após descongelar o tempo)
         self.finisher_attacker = None
         self.finisher_victim = None
@@ -182,7 +210,24 @@ class CinematicDirector:
             "TORSO_BLAST_THRUST": ("零式爆突", "ZEROSHIKI BAKUTOTSU — EXPLOSÃO DE TRONCO À QUEIMA-ROUPA"),
             "FOREHEAD_PIN": ("苦無眉間", "KUNAI MIKEN — KUNAI FINCADA NA TESTA"),
             "HEART_THROAT_STAB": ("短刀急所", "TANTOU KYUUSHO — GOLPE MORTAL NA GARGANTA"),
+            # Ciclo 4 Fatalities
+            "SOUL_REAP": ("首刈骸生", "DECAPITATION & SKELETON REANIMATION — CEIFADA CADAVÉRICA E TRANSFORMAÇÃO EM ESQUELETO"),
+            "DRAGGED_TO_GRAVE": ("黄泉引摺", "DRAGGED TO GRAVE — ARRASTADO PARA A COVA"),
+            "SEAL_STASIS_COLLAPSE": ("青炎灰燼", "SEIEN KAIJIN — CONSUMIDO EM CHAMAS VERDES ÀS CINZAS"),
+            "OFUDA_PURIFICATION_PILLAR": ("青炎灰燼", "SEIEN KAIJIN — CONSUMIDO EM CHAMAS VERDES ÀS CINZAS"),
+            # Ciclo 5 Fatalities: Okuni, Tomoe, Daiki, Aoi
+            "TESSEN_DECAP": ("鉄扇斬首", "TESSEN ZANSHU — DECAPITAÇÃO DO LEQUE DE FERRO"),
+            "DOKUKIRI_MELT": ("毒霧融骸", "DOKUKIRI YUUGAI — DISSOLUÇÃO DA NÉVOA VENENOSA"),
+            "OKUNI_MELT": ("毒霧融骸", "DOKUKIRI YUUGAI — DISSOLUÇÃO DA NÉVOA VENENOSA"),
+            "PINNED_TO_EARTH": ("地縫強弓", "JIFUU KYOUKYUU — FLECHA PREGADA À TERRA"),
+            "ARROW_PIN": ("地縫強弓", "JIFUU KYOUKYUU — FLECHA PREGADA À TERRA"),
+            "HAMAYA_HOLY_PIERCE": ("破魔天貫", "HAMA TENKAN — PERFURAÇÃO SAGRADA HAMA-NO-YA"),
+            "THROAT_TEMPLE_CRUSH": ("六尺砕頭", "ROKUSHAKU SAITOU — QUEBRA-TÊMPORA DE SEIS SHAKU"),
+            "METEOR_STAFF_CRUSH": ("金剛墜撃", "KONGOU TSUIGEKI — IMPACTO METEORO DO BASTÃO"),
+            "SPEAR_HEART_SLIDE": ("氷滑心貫", "HYOUKATSU SHINKAN — DESLIZE DA LANÇA NO CORAÇÃO"),
+            "TRAP_AND_EXECUTE": ("獣罠処刑", "JUUWANA SHOKEI — ARMADILHA DE CAÇA E EXECUÇÃO"),
         }
+
         # Pool de expressões clássicas de cinema samurai
         phrases = [
             ("一刀両断", "ITTOU RYOUDAN — CORTE CERTEIRO"),
@@ -228,13 +273,12 @@ class CinematicDirector:
     def trigger_fatal_strike(self, attacker, victim, death_style: str, slash_dir: tuple[float, float]):
         """Dispara a sequência de cinema samurai no golpe letal."""
         from src.audio.sound_manager import get_sound_manager
-        get_sound_manager().play_death_music(fadeout_ms=350)
+        from src.audio.sound_events import SoundEvent
+        from src.i18n import t
 
         if getattr(victim, "is_boss", False):
-            from src.i18n import t
-            from src.audio.sound_events import SoundEvent
             self.is_active = True
-            self.camera_setup_timer = self.CAMERA_SETUP_DURATION
+            self.camera_setup_timer = 0.0
             self.freeze_timer = 0.5
             self.bw_flash_timer = 0.7
             self.delayed_death_timer = 0.6
@@ -428,6 +472,91 @@ class CinematicDirector:
             self.delayed_death_timer = 1.20
             self._arm_closeup_finisher_strike(attacker, victim, duration=1.20)
 
+        elif death_style == "SOUL_REAP":
+            # Valerius (Ciclo 4): Ceifada decapita a cabeça do rival, prende na ponta da foice, recolhe e reanima o esqueleto decapitado!
+            self.valerius_attacker = attacker
+            self.valerius_victim = victim
+            self.valerius_decap_timer = 0.35
+            self.valerius_hook_timer = 0.45
+            self.valerius_reanimate_timer = 0.80
+            self.valerius_sound_played = False
+            self.valerius_reanimate_sound_played = False
+            if attacker is not None:
+                attacker.set_facing(victim.wx, victim.wy)
+                attacker.state = "ATTACK"
+                attacker.state_timer = 0.35
+                scythe_tip_x = attacker.wx + attacker.facing_x * 0.75 - attacker.facing_y * 0.30
+                scythe_tip_y = attacker.wy + attacker.facing_y * 0.75 + attacker.facing_x * 0.30
+                scythe_tip_z = 0.82
+            else:
+                scythe_tip_x, scythe_tip_y, scythe_tip_z = victim.wx, victim.wy, 0.82
+            self.valerius_head_x = scythe_tip_x
+            self.valerius_head_y = scythe_tip_y
+            self.valerius_head_z = scythe_tip_z
+            self.freeze_timer = 1.60
+            self.bw_flash_duration = 2.05
+            self.bw_flash_timer = 2.05
+            self.delayed_death_timer = 1.60
+
+        elif death_style in ("SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR"):
+            # Seimei (Ciclo 4): Ofuda atinge o peito/testa, chamas verdes espirituais consomem o rival até que só sobrem cinzas!
+            self.seimei_attacker = attacker
+            self.seimei_victim = victim
+            self.seimei_talisman_timer = 0.32
+            self.seimei_fire_timer = 0.88
+            self.seimei_ash_timer = 0.40
+            self.seimei_sound_played = False
+            self.seimei_fire_sound_played = False
+            self.freeze_timer = 1.60
+            self.bw_flash_duration = 2.05
+            self.bw_flash_timer = 2.05
+            self.delayed_death_timer = 1.60
+            if attacker is not None:
+                attacker.set_facing(victim.wx, victim.wy)
+                attacker.state = "ATTACK"
+                attacker.state_timer = 0.30
+
+        elif death_style == "DRAGGED_TO_GRAVE":
+            # Valerius Secundário: Lacaios da terra funerária arrastam o rival para as profundezas
+            self.dragged_attacker = attacker
+            self.dragged_victim = victim
+            self.dragged_timer = 1.45
+            self.dragged_duration = 1.45
+            self.dragged_sound_played = False
+            self.freeze_timer = 1.45
+            self.bw_flash_duration = 1.85
+            self.bw_flash_timer = 1.85
+            self.delayed_death_timer = 1.45
+            self._arm_closeup_finisher_strike(attacker, victim, duration=1.45)
+            if attacker is not None:
+                attacker.set_facing(victim.wx, victim.wy)
+                attacker.state = "ATTACK"
+                attacker.state_timer = 0.40
+
+        elif death_style == "VERTICAL_BISECTION":
+            # Kenshi: Ryuu Tsui Sen — Queda cortante vertical cravando os pés no solo
+            if attacker is not None:
+                attacker.wz = 0.0
+                attacker.set_facing(victim.wx, victim.wy)
+                attacker.state = "ATTACK"
+                attacker.state_timer = 0.32
+            dur = 0.58
+            self.bw_flash_duration = dur + 0.10
+            self.freeze_timer = dur
+            self.bw_flash_timer = dur + 0.10
+            self.delayed_death_timer = dur
+            self._arm_closeup_finisher_strike(attacker, victim, duration=dur)
+
+        elif death_style in ("TESSEN_DECAP", "THROAT_TEMPLE_CRUSH", "METEOR_STAFF_CRUSH", "SPEAR_HEART_SLIDE", "TRAP_AND_EXECUTE", "PINNED_TO_EARTH", "HAMAYA_HOLY_PIERCE", "DOKUKIRI_MELT"):
+            if attacker is not None and death_style == "METEOR_STAFF_CRUSH":
+                attacker.wz = 0.0
+            dur = 0.72 if attacker is not None else 0.52
+            self.bw_flash_duration = dur + 0.25
+            self.freeze_timer = dur
+            self.bw_flash_timer = dur + 0.25
+            self.delayed_death_timer = dur
+            self._arm_closeup_finisher_strike(attacker, victim, duration=dur)
+
         else:
             dur = 0.38 if attacker is None else 0.48
             self.bw_flash_duration = dur + 0.06
@@ -435,6 +564,7 @@ class CinematicDirector:
             self.bw_flash_timer = dur + 0.06
             self.delayed_death_timer = dur
             self._arm_closeup_finisher_strike(attacker, victim, duration=dur)
+
 
         # Deixar a vítima no estado congelado de morte iminente (ou caída no solo imobilizada por Yamato)
         victim.is_alive = False
@@ -824,7 +954,200 @@ class CinematicDirector:
                                                    vic.wy + random.uniform(-0.08, 0.08),
                                                    0.75 - c_prog * 0.10))
 
-        # 6. Coreografia universal de golpe final no ângulo fechado (após descongelar o tempo)
+        # 6. Valerius (Decapitação por Foice, Cabeça na Ponta, Recolhimento e Reanimação Esquelética)
+        if self.valerius_decap_timer > 0:
+            self.valerius_decap_timer = max(0.0, self.valerius_decap_timer - effective_dt)
+            atk = self.valerius_attacker
+            vic = self.valerius_victim
+            if atk is not None and vic is not None:
+                atk.state = "ATTACK"
+                dp = 1.0 - (self.valerius_decap_timer / 0.35)
+                atk.state_timer = max(0.01, (1.0 - dp) * 0.28)
+                # A ponta curva da foice decepa o pescoço e prende a cabeça diretamente na ponta
+                scythe_tip_x = atk.wx + atk.facing_x * (0.85 - 0.25 * dp) - atk.facing_y * (0.40 - 0.20 * dp)
+                scythe_tip_y = atk.wy + atk.facing_y * (0.85 - 0.25 * dp) + atk.facing_x * (0.40 - 0.20 * dp)
+                scythe_tip_z = 0.82
+                self.valerius_head_x = scythe_tip_x
+                self.valerius_head_y = scythe_tip_y
+                self.valerius_head_z = scythe_tip_z
+                vic.state = "DYING_HEADLESS"
+                if self.valerius_decap_timer <= 0:
+                    if not self.valerius_sound_played:
+                        self.valerius_sound_played = True
+                        from src.audio.sound_manager import get_sound_manager
+                        from src.audio.sound_events import SoundEvent
+                        try:
+                            get_sound_manager().play(SoundEvent.FLESH_CLEAVE, volume_scale=1.0)
+                            get_sound_manager().play(SoundEvent.ARTERIAL_SPRAY, volume_scale=0.9)
+                        except Exception:
+                            pass
+                    if particles is not None:
+                        from src.effects.particles import BloodParticle, SparkParticle
+                        for _ in range(22):
+                            particles.append(BloodParticle(vic.wx, vic.wy, 0.84))
+                        for _ in range(8):
+                            particles.append(SparkParticle(vic.wx, vic.wy, 0.84, color=(255, 90, 90)))
+
+        elif self.valerius_hook_timer > 0:
+            self.valerius_hook_timer = max(0.0, self.valerius_hook_timer - effective_dt)
+            atk = self.valerius_attacker
+            vic = self.valerius_victim
+            hp = 1.0 - (self.valerius_hook_timer / 0.45)
+            if atk is not None and vic is not None:
+                vic.state = "DYING_HEADLESS"
+                # A foice recolhe a cabeça decepada da ponta em direção à mão esquerda de Valerius
+                start_x = atk.wx + atk.facing_x * 0.60 - atk.facing_y * 0.20
+                start_y = atk.wy + atk.facing_y * 0.60 + atk.facing_x * 0.20
+                hand_x = atk.wx + atk.facing_x * 0.28 - atk.facing_y * 0.20
+                hand_y = atk.wy + atk.facing_y * 0.28 + atk.facing_x * 0.20
+
+                if hp < 0.60:
+                    prog_pull = hp / 0.60
+                    self.valerius_head_x = start_x + (hand_x - start_x) * prog_pull
+                    self.valerius_head_y = start_y + (hand_y - start_y) * prog_pull
+                    self.valerius_head_z = 0.82 + 0.08 * math.sin(prog_pull * math.pi)
+                    atk.state = "ATTACK"
+                    atk.state_timer = 0.05
+                else:
+                    # Valerius estende a mão livre e pega a cabeça da ponta da foice
+                    hand_prog = (hp - 0.60) / 0.40
+                    self.valerius_head_x = hand_x
+                    self.valerius_head_y = hand_y
+                    self.valerius_head_z = 0.88 + 0.04 * hand_prog
+                    atk.state = "IDLE"
+
+                if particles is not None and random.random() < 0.45:
+                    from src.effects.particles import BloodParticle
+                    particles.append(BloodParticle(self.valerius_head_x, self.valerius_head_y, max(0.1, self.valerius_head_z - 0.1)))
+
+        elif self.valerius_reanimate_timer > 0:
+            self.valerius_reanimate_timer = max(0.0, self.valerius_reanimate_timer - effective_dt)
+            atk = self.valerius_attacker
+            vic = self.valerius_victim
+            rp = 1.0 - (self.valerius_reanimate_timer / 0.80)
+            if atk is not None and vic is not None:
+                vic.state = "DYING_HEADLESS"
+                atk.state = "IDLE"
+                self.valerius_head_x = atk.wx + atk.facing_x * 0.28 - atk.facing_y * 0.20
+                self.valerius_head_y = atk.wy + atk.facing_y * 0.28 + atk.facing_x * 0.20
+                self.valerius_head_z = 0.95 + 0.10 * min(1.0, rp * 2.0)
+
+                if not self.valerius_reanimate_sound_played:
+                    self.valerius_reanimate_sound_played = True
+                    from src.audio.sound_manager import get_sound_manager
+                    from src.audio.sound_events import SoundEvent
+                    try:
+                        get_sound_manager().play(SoundEvent.SHUKUCHI, volume_scale=0.9)
+                        get_sound_manager().play(SoundEvent.BONE_CRUSH, volume_scale=0.8)
+                    except Exception:
+                        pass
+
+                # Feixe de almas verdes/violetas fluindo da cabeça/Valerius para o corpo decapitado
+                if particles is not None:
+                    from src.effects.particles import SparkParticle, SmokeParticle
+                    for _ in range(4):
+                        arc_t = random.uniform(0.0, 1.0)
+                        px = self.valerius_head_x + (vic.wx - self.valerius_head_x) * arc_t + random.uniform(-0.08, 0.08)
+                        py = self.valerius_head_y + (vic.wy - self.valerius_head_y) * arc_t + random.uniform(-0.08, 0.08)
+                        pz = self.valerius_head_z + (0.50 - self.valerius_head_z) * arc_t + 0.15 * math.sin(arc_t * math.pi)
+                        particles.append(SparkParticle(px, py, pz, color=random.choice([(65, 240, 175), (90, 255, 200), (140, 70, 200)])))
+                    if random.random() < 0.60:
+                        particles.append(SmokeParticle(vic.wx, vic.wy, wz=0.35, color=(45, 20, 55), radius=0.30))
+
+        # 7. Seimei (Ofuda Cravado, Chamas Verdes Espirituais e Cinzas Sagradas)
+        if self.seimei_talisman_timer > 0:
+            self.seimei_talisman_timer = max(0.0, self.seimei_talisman_timer - effective_dt)
+            atk = self.seimei_attacker
+            vic = self.seimei_victim
+            if vic is not None:
+                vic.state = "DYING_FREEZE"
+                if not self.seimei_sound_played:
+                    self.seimei_sound_played = True
+                    from src.audio.sound_manager import get_sound_manager
+                    from src.audio.sound_events import SoundEvent
+                    try:
+                        get_sound_manager().play(SoundEvent.PARRY, volume_scale=0.9)
+                    except Exception:
+                        pass
+                if particles is not None and random.random() < 0.50:
+                    from src.effects.particles import SparkParticle
+                    particles.append(SparkParticle(vic.wx, vic.wy, 0.70, color=(120, 255, 180)))
+
+        elif self.seimei_fire_timer > 0:
+            self.seimei_fire_timer = max(0.0, self.seimei_fire_timer - effective_dt)
+            atk = self.seimei_attacker
+            vic = self.seimei_victim
+            if vic is not None:
+                vic.state = "DYING_FREEZE"
+                if not self.seimei_fire_sound_played:
+                    self.seimei_fire_sound_played = True
+                    from src.audio.sound_manager import get_sound_manager
+                    from src.audio.sound_events import SoundEvent
+                    try:
+                        get_sound_manager().play(SoundEvent.POISON_BREATH, volume_scale=1.0)
+                    except Exception:
+                        pass
+                if particles is not None:
+                    from src.effects.particles import FlameVoxelParticle, SparkParticle, SmokeParticle
+                    for _ in range(4):
+                        particles.append(FlameVoxelParticle(
+                            vic.wx + random.uniform(-0.22, 0.22),
+                            vic.wy + random.uniform(-0.22, 0.22),
+                            random.uniform(0.1, 0.95),
+                            color=random.choice([(40, 220, 100), (80, 255, 140), (180, 255, 210)])
+                        ))
+                    for _ in range(3):
+                        particles.append(SparkParticle(
+                            vic.wx + random.uniform(-0.25, 0.25),
+                            vic.wy + random.uniform(-0.25, 0.25),
+                            random.uniform(0.1, 1.1),
+                            color=random.choice([(60, 255, 130), (140, 255, 200), (220, 255, 240)])
+                        ))
+                    if random.random() < 0.35:
+                        particles.append(SmokeParticle(
+                            vic.wx + random.uniform(-0.15, 0.15),
+                            vic.wy + random.uniform(-0.15, 0.15),
+                            wz=0.6,
+                            color=(25, 45, 30),
+                            radius=0.25
+                        ))
+
+        elif self.seimei_ash_timer > 0:
+            self.seimei_ash_timer = max(0.0, self.seimei_ash_timer - effective_dt)
+            vic = self.seimei_victim
+            if vic is not None:
+                vic.state = "CORPSE_SLICED"  # O corpo físico foi completamente consumido
+                if particles is not None and random.random() < 0.50:
+                    from src.effects.particles import SparkParticle, SmokeParticle
+                    particles.append(SparkParticle(vic.wx, vic.wy, 0.08, color=(60, 240, 130)))
+                    particles.append(SmokeParticle(vic.wx, vic.wy, wz=0.05, color=(40, 42, 45), radius=0.20))
+
+        # 8. Valerius: Arrastado para a Cova (DRAGGED_TO_GRAVE)
+        if self.dragged_timer > 0:
+            self.dragged_timer = max(0.0, self.dragged_timer - effective_dt)
+            vic = self.dragged_victim
+            atk = self.dragged_attacker
+            if vic is not None:
+                dp = 1.0 - (self.dragged_timer / self.dragged_duration)
+                vic.wz = -0.02 - 0.85 * min(1.0, dp * 1.25)
+                vic.state = "DYING_FREEZE"
+                if not self.dragged_sound_played:
+                    self.dragged_sound_played = True
+                    from src.audio.sound_manager import get_sound_manager
+                    from src.audio.sound_events import SoundEvent
+                    try:
+                        get_sound_manager().play(SoundEvent.EARTH_CRACK, volume_scale=1.0)
+                        get_sound_manager().play(SoundEvent.BONE_CRUSH, volume_scale=0.8)
+                    except Exception:
+                        pass
+                if particles is not None:
+                    from src.effects.particles import SmokeParticle, SparkParticle
+                    if random.random() < 0.65:
+                        particles.append(SmokeParticle(vic.wx + random.uniform(-0.25, 0.25), vic.wy + random.uniform(-0.25, 0.25), wz=0.05, color=(35, 18, 45), radius=0.35))
+                    if random.random() < 0.45:
+                        particles.append(SparkParticle(vic.wx + random.uniform(-0.2, 0.2), vic.wy + random.uniform(-0.2, 0.2), 0.1, color=random.choice([(60, 240, 160), (140, 60, 210)])))
+
+        # 8. Coreografia universal de golpe final no ângulo fechado (após descongelar o tempo)
         if self.finisher_strike_timer > 0:
             self.finisher_strike_timer = max(0.0, self.finisher_strike_timer - effective_dt)
             atk = self.finisher_attacker
@@ -891,7 +1214,7 @@ class CinematicDirector:
                 # O suspense acabou: O corpo se parte e o geiser explode!
                 self.shuriken_active = False
                 ds = getattr(self.pending_corpse, "death_style", "")
-                if ds in ("WINDMILL_SHURIKEN_DECAP", "DUAL_IMPALE_X_SPREAD", "KUWA_SKULL_CLEAVE", "EARTH_STOMP_CRUSH", "BLIND_CAROTID_SLICE", "BLIND_SPINE_PIERCE", "KENSHIN_SPLIT", "VERTICAL_BISECTION"):
+                if ds in ("WINDMILL_SHURIKEN_DECAP", "DUAL_IMPALE_X_SPREAD", "KUWA_SKULL_CLEAVE", "EARTH_STOMP_CRUSH", "BLIND_CAROTID_SLICE", "BLIND_SPINE_PIERCE", "KENSHIN_SPLIT", "VERTICAL_BISECTION", "SOUL_REAP", "DRAGGED_TO_GRAVE", "SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR"):
                     try:
                         from src.audio.sound_manager import get_sound_manager
                         from src.audio.sound_events import SoundEvent
@@ -911,6 +1234,18 @@ class CinematicDirector:
                     self.goro_attacker.state = "IDLE"
                 if self.goro_victim is not None:
                     self.goro_victim.wz = 0.0
+                if self.valerius_attacker is not None:
+                    self.valerius_attacker.state = "IDLE"
+                    self.valerius_attacker = None
+                if self.valerius_victim is not None:
+                    self.valerius_victim.state = "CORPSE_SLICED"
+                    self.valerius_victim = None
+                if self.seimei_attacker is not None:
+                    self.seimei_attacker.state = "IDLE"
+                    self.seimei_attacker = None
+                if self.seimei_victim is not None:
+                    self.seimei_victim.state = "CORPSE_SLICED"
+                    self.seimei_victim = None
                 self.finisher_attacker = None
                 self.finisher_victim = None
                 self.corpses.append(self.pending_corpse)
@@ -943,6 +1278,12 @@ class CinematicDirector:
             or self.goro_windup_timer > 0
             or self.goro_cleaved_timer > 0
             or self.finisher_strike_timer > 0
+            or self.valerius_decap_timer > 0
+            or self.valerius_hook_timer > 0
+            or self.valerius_reanimate_timer > 0
+            or self.seimei_talisman_timer > 0
+            or self.seimei_fire_timer > 0
+            or self.seimei_ash_timer > 0
         )
 
     def apply_camera(self, camera, dt: float):
@@ -1044,6 +1385,134 @@ class CinematicDirector:
 
             surface.blit(shuriken_surf, (gx - cx, gy - cy))
 
+        # 2. Valerius: Cabeça decepada na foice / erguida na mão e esqueleto decapitado reanimado
+        if (self.valerius_decap_timer > 0 or self.valerius_hook_timer > 0 or self.valerius_reanimate_timer > 0) and self.valerius_victim is not None:
+            vic = self.valerius_victim
+            hx, hy, hz = self.valerius_head_x, self.valerius_head_y, self.valerius_head_z
+            from src.entities.voxel_models import _get_char_hair_color, _skin_colors
+            vic_char = getattr(vic, "char_type", "kenshin")
+            c_hair = _get_char_hair_color(vic_char)
+            c_skin, _ = _skin_colors(vic_char)
+
+            # Cabeça decepada (caixa 3D facetada com pele, cabelo e corte arterial carmim)
+            from src.isometric.voxel_renderer import draw_voxel_box
+            draw_voxel_box(surface, camera, hx - 0.07, hy - 0.07, hz, 0.14, 0.14, 0.13, c_skin, outline=True)
+            draw_voxel_box(surface, camera, hx - 0.075, hy - 0.075, hz + 0.04, 0.15, 0.15, 0.10, c_hair, outline=True)
+            draw_voxel_box(surface, camera, hx - 0.05, hy - 0.05, hz - 0.02, 0.10, 0.10, 0.03, (155, 18, 26), outline=True)
+
+            # Se a cabeça estiver presa na ponta curvada da foice (durante decapitação e recolhimento antes da mão pegar)
+            if self.valerius_decap_timer > 0 or (self.valerius_hook_timer > 0 and (1.0 - self.valerius_hook_timer / 0.45) < 0.60):
+                c_steel = (210, 215, 225)
+                c_dark_iron = (45, 48, 55)
+                # Ponta curvada de aço gótico cravada atravessando a cabeça
+                draw_voxel_box(surface, camera, hx - 0.02, hy - 0.02, hz - 0.04, 0.04, 0.04, 0.22, c_steel, outline=True)
+                draw_voxel_box(surface, camera, hx - 0.06, hy - 0.02, hz + 0.12, 0.10, 0.04, 0.04, c_dark_iron, outline=True)
+
+        if self.valerius_reanimate_timer > 0 and self.valerius_victim is not None:
+            # Transformação do cadáver decapitado em esqueleto reanimado
+            rp = 1.0 - (self.valerius_reanimate_timer / 0.80)
+            vic = self.valerius_victim
+            if rp >= 0.35:
+                from src.isometric.voxel_renderer import draw_voxel_box
+                c_bone = (235, 230, 215)
+                c_bone_shadow = (185, 180, 168)
+                c_emerald = (65, 240, 175)
+
+                draw_voxel_box(surface, camera, vic.wx - 0.03, vic.wy - 0.03, 0.28, 0.06, 0.06, 0.28, c_bone_shadow, outline=True)
+                draw_voxel_box(surface, camera, vic.wx - 0.08, vic.wy - 0.05, 0.22, 0.16, 0.10, 0.06, c_bone, outline=True)
+                draw_voxel_box(surface, camera, vic.wx - 0.11, vic.wy - 0.07, 0.34, 0.22, 0.14, 0.04, c_bone, outline=True)
+                draw_voxel_box(surface, camera, vic.wx - 0.13, vic.wy - 0.08, 0.42, 0.26, 0.16, 0.05, c_bone, outline=True)
+                draw_voxel_box(surface, camera, vic.wx - 0.11, vic.wy - 0.07, 0.50, 0.22, 0.14, 0.04, c_bone, outline=True)
+                draw_voxel_box(surface, camera, vic.wx - 0.14, vic.wy - 0.05, 0.56, 0.28, 0.10, 0.04, c_bone, outline=True)
+
+                draw_voxel_box(surface, camera, vic.wx - 0.035, vic.wy - 0.035, 0.59, 0.07, 0.07, 0.04, (200, 195, 180), outline=True)
+                draw_voxel_box(surface, camera, vic.wx - 0.025, vic.wy - 0.025, 0.63, 0.05, 0.05, 0.05, c_emerald, outline=False)
+
+        # 3. Valerius: Fenda tumular e mãos esqueléticas arrastando a vítima para o solo (DRAGGED_TO_GRAVE)
+        if self.dragged_timer > 0 and self.dragged_victim is not None:
+            vic = self.dragged_victim
+            dp = 1.0 - (self.dragged_timer / self.dragged_duration)
+            from src.isometric.voxel_renderer import draw_voxel_box
+            c_fissure_deep = (12, 10, 15)
+            c_fissure_rim = (38, 30, 25)
+            c_bone = (230, 225, 210)
+            c_bone_shadow = (175, 170, 160)
+
+            # Boca da cova / fenda subterrânea (anéis concêntricos escuros 3D no solo)
+            hole_r = min(0.60, 0.20 + 0.45 * dp)
+            draw_voxel_box(surface, camera, vic.wx - hole_r, vic.wy - hole_r, -0.15, hole_r * 2, hole_r * 2, 0.15, c_fissure_deep, outline=True)
+            draw_voxel_box(surface, camera, vic.wx - hole_r - 0.05, vic.wy - hole_r - 0.05, 0.0, (hole_r + 0.05) * 2, (hole_r + 0.05) * 2, 0.03, c_fissure_rim, outline=True)
+
+            # Mãos e garras de esqueletos emergindo pelas bordas da cova e segurando a vítima
+            offsets = [
+                (-hole_r * 0.7, -hole_r * 0.5, 0.15),
+                (hole_r * 0.7, -hole_r * 0.4, 0.18),
+                (-hole_r * 0.5, hole_r * 0.6, 0.22),
+                (hole_r * 0.6, hole_r * 0.5, 0.16),
+            ]
+            for ox, oy, arm_h in offsets:
+                cur_h = arm_h * min(1.0, dp * 2.5)
+                draw_voxel_box(surface, camera, vic.wx + ox, vic.wy + oy, vic.wz + 0.05, 0.045, 0.045, cur_h, c_bone_shadow, outline=True)
+                draw_voxel_box(surface, camera, vic.wx + ox * 0.8, vic.wy + oy * 0.8, vic.wz + cur_h, 0.06, 0.06, 0.04, c_bone, outline=True)
+
+        # 4. Seimei: Ofuda sagrado cravado, chamas verdes espirituais e cinzas
+        if self.seimei_talisman_timer > 0 and self.seimei_victim is not None:
+            vic = self.seimei_victim
+            sx, sy = camera.apply(vic.wx, vic.wy, 0.65)
+            ow, oh = int(14 * camera.zoom), int(26 * camera.zoom)
+            ofuda_surf = pygame.Surface((ow, oh), pygame.SRCALPHA)
+            ofuda_surf.fill((245, 242, 230))
+            pygame.draw.rect(ofuda_surf, (210, 45, 35), (1, 1, ow - 2, oh - 2), 1)
+            pygame.draw.line(ofuda_surf, (245, 200, 50), (ow // 2, 4), (ow // 2, oh - 5), 2)
+            pygame.draw.line(ofuda_surf, (245, 200, 50), (ow // 2 - 3, 10), (ow // 2 + 3, 10), 1)
+            pygame.draw.line(ofuda_surf, (245, 200, 50), (ow // 2 - 2, 17), (ow // 2 + 2, 17), 1)
+            surface.blit(ofuda_surf, (sx - ow // 2, sy - oh // 2))
+
+            pulse_r = int((16 + 5 * math.sin(self.sumie_anim_timer * 18.0)) * camera.zoom)
+            aura_surf = pygame.Surface((pulse_r * 2, pulse_r * 2), pygame.SRCALPHA)
+            pygame.draw.circle(aura_surf, (70, 255, 140, 95), (pulse_r, pulse_r), pulse_r)
+            surface.blit(aura_surf, (sx - pulse_r, sy - pulse_r))
+
+        elif self.seimei_fire_timer > 0 and self.seimei_victim is not None:
+            vic = self.seimei_victim
+            prog = 1.0 - (self.seimei_fire_timer / 0.88)
+            from src.isometric.voxel_renderer import draw_voxel_box
+            c_outer = (35, 180, 85)
+            c_core = (60, 240, 130)
+            c_intense = (180, 255, 215)
+            c_center = (240, 255, 250)
+
+            # Vórtice 3D de chamas espirituais em camadas espirais ascendentes (sem borrão 2D)
+            layers = 7
+            for i in range(layers):
+                z_base = (i / layers) * 1.30
+                layer_p = (i * 0.18 + self.sumie_anim_timer * 9.0)
+                twist_x = 0.12 * math.sin(layer_p)
+                twist_y = 0.12 * math.cos(layer_p)
+                box_sz = max(0.12, 0.40 - i * 0.04)
+
+                # Manto exterior de chamas esmeralda
+                draw_voxel_box(surface, camera, vic.wx + twist_x - box_sz * 0.5, vic.wy + twist_y - box_sz * 0.5, z_base, box_sz, box_sz, 0.16, c_outer, outline=True)
+                # Corpo vibrante de fogo
+                draw_voxel_box(surface, camera, vic.wx - twist_x * 0.6 - box_sz * 0.35, vic.wy - twist_y * 0.6 - box_sz * 0.35, z_base + 0.02, box_sz * 0.7, box_sz * 0.7, 0.14, c_core, outline=False)
+                # Núcleo celeste de alta temperatura
+                draw_voxel_box(surface, camera, vic.wx + twist_y * 0.3 - box_sz * 0.2, vic.wy - twist_x * 0.3 - box_sz * 0.2, z_base + 0.04, box_sz * 0.4, box_sz * 0.4, 0.12, c_intense, outline=False)
+                # Coração branco puro espiritual
+                if i < 4:
+                    draw_voxel_box(surface, camera, vic.wx - box_sz * 0.1, vic.wy - box_sz * 0.1, z_base + 0.06, box_sz * 0.2, box_sz * 0.2, 0.08, c_center, outline=False)
+
+        elif self.seimei_ash_timer > 0 and self.seimei_victim is not None:
+            vic = self.seimei_victim
+            ax, ay = camera.apply(vic.wx, vic.wy, 0.01)
+            aw = int(32 * camera.zoom)
+            ah = int(16 * camera.zoom)
+            ash_surf = pygame.Surface((aw * 2, ah * 2), pygame.SRCALPHA)
+            pygame.draw.ellipse(ash_surf, (22, 24, 25, 200), (0, 0, aw * 2, ah * 2))
+            pygame.draw.ellipse(ash_surf, (55, 58, 62, 240), (aw // 4, ah // 4, aw * 3 // 2, ah * 3 // 2))
+            pygame.draw.ellipse(ash_surf, (88, 92, 98, 255), (aw // 2, ah // 2, aw, ah))
+            pygame.draw.circle(ash_surf, (60, 250, 140), (aw, ah), max(2, int(2.5 * camera.zoom)))
+            surface.blit(ash_surf, (ax - aw, ay - ah))
+
     def render_letterbox(self, surface: pygame.Surface):
         """Desenha barras pretas CinemaScope 2.39:1 (1280x540) com filete dourado sutil (zero-alloc)."""
         if self.letterbox_prog <= 0.005:
@@ -1094,7 +1563,7 @@ class CinematicDirector:
             kanji_alpha = int(min(255, (self.bw_flash_timer / self.bw_flash_duration) * 255))
             self.cached_kanji_surf.set_alpha(kanji_alpha)
             cx = SCREEN_WIDTH // 2
-            cy = 104
+            cy = 140
 
             # Traço de pincelada rápida (diagonal slash) enquanto timer < 0.28s
             if self.sumie_anim_timer < 0.28:
@@ -1125,9 +1594,11 @@ class CinematicDirector:
             if scale > 1.01:
                 scaled_surf = pygame.transform.smoothscale(self.cached_kanji_surf, (target_w, target_h))
             else:
-                scaled_surf = self.cached_kanji_surf
+                scaled_surf = self.cached_kanji_surf.copy()
 
-            scaled_surf.set_alpha(kanji_alpha)
+            if kanji_alpha < 255:
+                scaled_surf.fill((255, 255, 255, kanji_alpha), special_flags=pygame.BLEND_RGBA_MULT)
+
             kx = cx - target_w // 2
             ky = cy - target_h // 2
             surface.blit(scaled_surf, (kx, ky))
@@ -1180,6 +1651,20 @@ class CinematicDirector:
         self.goro_windup_timer = 0.0
         self.goro_cleaved_timer = 0.0
         self.goro_sound_played = False
+        self.valerius_attacker = None
+        self.valerius_victim = None
+        self.valerius_decap_timer = 0.0
+        self.valerius_hook_timer = 0.0
+        self.valerius_reanimate_timer = 0.0
+        self.valerius_sound_played = False
+        self.valerius_reanimate_sound_played = False
+        self.seimei_attacker = None
+        self.seimei_victim = None
+        self.seimei_talisman_timer = 0.0
+        self.seimei_fire_timer = 0.0
+        self.seimei_ash_timer = 0.0
+        self.seimei_sound_played = False
+        self.seimei_fire_sound_played = False
         self.finisher_attacker = None
         self.finisher_victim = None
         self.finisher_style = ""

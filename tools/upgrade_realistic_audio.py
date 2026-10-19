@@ -345,6 +345,28 @@ def build_all_audio():
     normalize_wav(dodge_out, -2.0)
     print("  ✓ chain_rattle.wav, chain_whip.wav, dodge_whoosh.wav (Kusarigama e esquiva)")
 
+    # 17. KUNAI & TACTICAL KNIFE & SHURIKEN (Faca de combate, kunai e estrela ninja em foley real)
+    kunai_out = os.path.join(SFX_DIR, "kunai_throw.wav")
+    shuriken_out = os.path.join(SFX_DIR, "shuriken_throw.wav")
+    sword_knife = os.path.join(RAW_DIR, "attacks/sword - StarNinjas/sword.4.ogg")
+    sword_shuriken = os.path.join(RAW_DIR, "attacks/sword - StarNinjas/sword.6.ogg")
+    swish_tight = os.path.join(RAW_DIR, "battle/battle_sound_effects/swish_4.wav")
+
+    run_ffmpeg([
+        "-i", sword_knife, "-i", swish_tight,
+        "-filter_complex", "[0:a]asetrate=44100*1.30,aresample=44100,highpass=f=750,volume=1.7[a0];[1:a]asetrate=44100*1.25,aresample=44100,volume=1.3[a1];[a0][a1]amix=inputs=2:duration=first,afade=t=out:st=0.20:d=0.06",
+        "-t", "0.26", "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", kunai_out
+    ])
+    normalize_wav(kunai_out, -1.0)
+
+    run_ffmpeg([
+        "-i", sword_shuriken, "-i", whoosh_fast,
+        "-filter_complex", "[0:a]asetrate=44100*1.45,aresample=44100,highpass=f=900,volume=1.5[a0];[1:a]asetrate=44100*1.35,aresample=44100,volume=1.4[a1];[a0][a1]amix=inputs=2:duration=first,afade=t=out:st=0.18:d=0.06",
+        "-t", "0.24", "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", shuriken_out
+    ])
+    normalize_wav(shuriken_out, -1.0)
+    print("  ✓ kunai_throw.wav & shuriken_throw.wav (Faca tática e lâminas afiadas)")
+
     print("\n✨ Masterização acústica concluída com sucesso! Todos os efeitos agora usam gravações reais!")
 
 if __name__ == "__main__":

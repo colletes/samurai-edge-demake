@@ -29,6 +29,7 @@ hd2d_edition/
 # Local drafts and media experiments
 assets/sound_drafts/
 assets/Opening Videos/Take*
+assets/Opening Videos/Samurai_Edge_Opening.mp4
 src/i18n_backup.py
 
 # Tournament result dumps
@@ -37,6 +38,10 @@ tournament_results*.json
 # Distribution archives
 *.zip
 *.tar.gz
+
+# Local caches & tournament balance reports
+.cache/
+BALANCE_REPORT*.md
 
 # User runtime saves and settings
 arcade_save.json

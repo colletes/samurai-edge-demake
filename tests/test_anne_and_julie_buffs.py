@@ -75,8 +75,8 @@ def test_julie_fleche_and_recovery():
     g_map = GameMap()
     julie.update(0.21, g_map)
     assert julie.state == "RECOVERY"
-    assert math.isclose(julie.state_timer, 0.18, abs_tol=0.03)
-    print("[PASS] Teste 5: Fleche Thrust de Julie possui hitbox 0.70m e recovery reduzido para 0.18s")
+    assert math.isclose(julie.state_timer, 0.26, abs_tol=0.03)
+    print("[PASS] Teste 5: Fleche Thrust de Julie possui hitbox 0.70m e recovery balanceado para 0.26s")
 
 def test_julie_cape_deflection_and_coup_de_pied():
     julie = Musketeer(10.0, 10.0)
@@ -110,7 +110,7 @@ def test_julie_pocket_flintlock():
     assert len(projs) == 1
     assert isinstance(projs[0], MusketBulletProjectile)
     assert projs[0].owner == julie
-    assert julie.flintlock_timer == 4.5
+    assert julie.flintlock_timer == julie.flintlock_cooldown
     print("[PASS] Teste 8: Pocket Flintlock de Julie dispara projétil de chumbo à distância")
 
 def test_julie_cape_deflects_frontal_but_not_rear():

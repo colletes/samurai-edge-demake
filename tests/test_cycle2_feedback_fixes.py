@@ -1,5 +1,9 @@
 import os
 import sys
+
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+os.environ["SDL_AUDIODRIVER"] = "dummy"
+
 import math
 import pygame
 
@@ -21,7 +25,8 @@ from src.ui.arena_select import ArenaSelectScreen
 from src.isometric.camera import Camera
 
 def test_all_feedback_fixes():
-    pygame.init()
+    pygame.display.init()
+    pygame.font.init()
     surf = pygame.Surface((640, 360))
     cam = Camera()
 
@@ -127,7 +132,7 @@ def test_all_feedback_fixes():
     orin.state = "IDLE"
     assert _get_death_style_for_attacker(benkei) == "NAGINATA_HOIST_SLAM"
     assert _get_death_style_for_attacker(orin) in ("SONIC_SLICER", "KAMAITACHI_MINCE")
-    assert _get_death_style_for_attacker(joe) == "WINDMILL_SHURIKEN_DECAP"
+    assert _get_death_style_for_attacker(joe, weapon="dog") == "WINDMILL_SHURIKEN_DECAP"
     assert _get_death_style_for_attacker(julie) == "RAPIER_FLURRY_POINTBLANK"
 
     director = CinematicDirector()
@@ -150,3 +155,4 @@ def test_all_feedback_fixes():
 
 if __name__ == "__main__":
     test_all_feedback_fixes()
+    pygame.quit()

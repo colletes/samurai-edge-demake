@@ -70,6 +70,12 @@ class PauseMenu:
     def _move(self, step: int):
         self.confirm_abandon = False
         self.selected = (self.selected + step) % len(self.items)
+        try:
+            from src.audio.sound_events import SoundEvent
+            from src.audio.sound_manager import SoundManager
+            SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+        except Exception:
+            pass
 
     def handle_event(self, event, ctrl_mgr=None) -> str | None:
         """Devolve a ação escolhida (ACTION_*) ou None."""
@@ -108,13 +114,14 @@ class PauseMenu:
                     return ACTION_RESUME
 
         elif event.type == pygame.JOYAXISMOTION and event.axis == 1:
-            if event.value > 0.65 and not self._axis_held:
+            val = -event.value if (ctrl_mgr and getattr(ctrl_mgr, "invert_y", False)) else event.value
+            if val > 0.65 and not self._axis_held:
                 self._move(1)
                 self._axis_held = True
-            elif event.value < -0.65 and not self._axis_held:
+            elif val < -0.65 and not self._axis_held:
                 self._move(-1)
                 self._axis_held = True
-            elif abs(event.value) < 0.25:
+            elif abs(val) < 0.25:
                 self._axis_held = False
 
         return None

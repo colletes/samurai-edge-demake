@@ -157,21 +157,19 @@ Com a implementação do **Plano Mestre de Modernização & Performance**, o flu
 
 ```mermaid
 flowchart LR
-    Step0["0. Plano Mestre<br>(Engine, Câmera, Rig & SFX)"] --> Step1["1. Portraits HD-2D<br>(1 Homem + 1 Mulher)"]
-    Step1 --> Step2["2. Malhas 3D Esculpidas<br>(Tecido/Cabelo Contínuo & Rostos 2.5D)"]
-    Step2 --> Step3["3. Arenas Voxel & BGMs<br>(Cacheadas, Física Reativa & Prompts BGM)"]
-    Step3 --> Step4["4. Integração & Fatalities 3D<br>(Coreografia Pareada & Desmembramento 3D)"]
-    Step4 --> Step5["5. Torneios & Balanceamento<br>(1500+ Duelos com Novas Hitboxes)"]
-    Step5 --> Step6["6. Modo Arcade<br>(Árvore de Duelos & Diálogos)"]
+    Step1["1. Conceitos Base<br>(Personagens Portrait Corpo Inteiro + Arenas 16:9)"] --> Step2["2. Crops de Retrato<br>(Quadrado 256x256 & Oval/Circular)"]
+    Step2 --> Step3["3. Modelos 3D Esculpidos<br>(Personagens & Arenas Voxel 3D)"]
+    Step3 --> Step4["4. Prompts de Música<br>(Suno/Gemini em GEMINI.md & Docs)"]
+    Step4 --> Step5["5. Implementação Completa<br>(Combate, Fatalities, Hazards, Revamps & Arcade)"]
 ```
 
-### Protocolo Atualizado de Cada Ciclo:
-1. **Design de Portrait**: Geração e desenho dos retratos de busto HD-2D circular e retangular em `assets/portraits/` para os dois novos personagens do ciclo.
-2. **Design de Malha 3D Esculpida**: Modelagem paramétrica com primitivas cônicas/suaves, tecidos e cabelos contínuos sem linhas de tijolo, materiais de seda/metal e reprodução das feições dos portraits em 3D.
-3. **Arenas Voxel (Novas + 2 Revamps) & Prompts Musicais (Gemini)**: Criação das arenas com cache de superfície estática, física reativa de vento e água, destruição direcional e prompts especializados para BGM.
-4. **Integração & Fatalities 3D Pareados**: Implementação das classes dos lutadores, alinhamento magnético agressor-vítima nos golpes letais e física tridimensional de corpos e armas cravadas.
-5. **Testes de Balanceamento**: Execução automatizada de baterias de duelos em `simulate_tournament.py` com as novas hitboxes de cápsula/arco.
-6. **Inclusão no Modo Arcade**: Progressão na árvore de duelos do Modo Arcade e checkpoints de dificuldade.
+### Protocolo Obrigatório de Cada Ciclo (Ordem Estrita):
+1. **Conceito em Formato Portrait (Corpo Inteiro) & Arena 16:9**: Geração da arte conceitual vertical de corpo inteiro dos dois novos personagens (`assets/concepts/<id>_full_concept.jpg`) e da arte conceitual panorâmica 16:9 das duas novas arenas (`assets/concepts/<arena>_concept.jpg`).
+2. **Crop Quadrado e Oval para Personagens**: Derivação do retrato de busto quadrado `256x256` (`assets/portraits/<id>_bust.png`) e do medalhão oval/circular emoldurado (`assets/portraits/<id>_circle.png`).
+3. **Modelos 3D Esculpidos (Personagens e Arenas)**: Modelagem 3D facetada low-poly dos personagens (`head_<id>.py` e `body_<id>.py`) e das arenas/props (`decor.py` e `arenas.py`) fielmente ancorada nos conceitos gerados.
+4. **Prompts de Música Suno / Gemini**: Registro dos prompts de geração musical das novas arenas em `GEMINI.md` e `docs/GEMINI_MUSIC_PROMPTS.md`.
+5. **Implementação, Fatalities, Revamps & Testes**: Classes de combate dos lutadores, fatalities 3D pareados, hazards das novas arenas, revamp visual das 2 arenas clássicas do ciclo, sincronização com Model/Arena/Studio Inspector, Game Help, Modo Arcade e bateria de testes automatizados.
+
 
 ---
 
@@ -227,9 +225,9 @@ Cada fatality é acionado de forma **contextual de acordo com o ataque que desfe
 | | | **Secundário** (*Pisotão Sísmico*) | **EARTH_STOMP_CRUSH**: O tremor quebra os joelhos do rival e Goro esmaga o crânio no solo com pisada colossal de bota. | Desestabilização sem fatality. |
 | **18** | **Ichi** | **Primário** (*Gyaku-Iai Cego*) | **BLIND_CAROTID_SLICE**: Corte imperceptível na carótida; Ichi embainha a lâmina na bengala com um clique oco de madeira e só então o sangue jorra em leque com colapso do rival. | Desabamento silencioso para a frente. |
 | | | **Secundário** (*Postura Escuta*) | **BLIND_SPINE_PIERCE**: Esquiva do golpe do rival e estocada cega nas costas atravessando a espinha dorsal e o coração. | Contra-ataque simples. |
-| **19** | **Valerius** | **Primário** (*Foice Fúnebre*) | **SOUL_REAP**: A foice corta o peito; a carne do rival congela em cinza cadavérico e Valerius ceifa uma sombra espectral brilhante enquanto o corpo desaba oco. | Colapso asfixiado pelo frio dos mortos. |
+| **19** | **Valerius** | **Primário** (*Foice Fúnebre*) | **SOUL_REAP**: Ataque de foice contra a cabeça do rival, separando-a do corpo e a prendendo na ponta da foice. Valerius a recolhe na mão e reanima o cadáver decapitado, transformando-o em um esqueleto servo erguido no campo. | Decapitação e transformação em esqueleto. |
 | | | **Secundário** (*Summons Mortos*) | **DRAGGED_TO_GRAVE**: Os esqueletos agarram o rival e mãos emergem do solo puxando o corpo para dentro da terra funerária. | Queda puxada pelos mortos. |
-| **20** | **Seimei** | **Primário** (*Ofuda Cortante*) | **SEAL_STASIS_COLLAPSE**: O talismã crava na testa/peito brilhando com kanjis dourados sagrados; a vítima congela em transe místico e desaba de joelhos. | Queda paralisada pelo selo. |
+| **20** | **Seimei** | **Primário** (*Ofuda Cortante*) | **SEAL_STASIS_COLLAPSE**: Ao acertar o amuleto contra o alvo, este é consumido em chamas verdes espirituais até que só sobrem cinzas fumegantes no solo. | Incineração em chamas verdes às cinzas. |
 | | | **Secundário** (*Detonação Selos*) | **OFUDA_PURIFICATION_PILLAR**: Pilar de fogo sagrado azul/branco incinera o rival, desintegrando o corpo em cinzas prateadas e borboletas de luz. | Queima espiritual simples. |
 | **21** | **Daiki** | **Primário** (*Estocada Bastão*) | **THROAT_TEMPLE_CRUSH**: Estocada quebra a laringe com estalo seco e giro na têmpora projeta a vítima no solo sem ar. | Queda por contusão de madeira. |
 | | | **Secundário** (*Salto com Vara*) | **METEOR_STAFF_CRUSH**: Desce do ar cravando o bastão e os dois pés no peito do rival, estilhaçando a caixa torácica contra o solo rachado. | Rasteira sem fatality. |
@@ -358,6 +356,6 @@ flowchart TD
 | **1** | **Ren** (Shaolin) & **Chiyo** (2 Kodachi) | **Pátio dos Sinos Shaolin** & **Jardim dos Lírios Carmim** | **Nagashino Field** & **Shadow Cave** | **Teppo**, **Anne**, **Ren**, **Chiyo** | ✅ Concluído |
 | **2** | **Benkei** (Naginata) & **O-Rin** (Shamisen) | **Ponte Gojo** & **Beco Yoshiwara** | **Forest Camp** & **Baroque Court** | **Kenshi**, **Musashi**, **Benkei**, **O-Rin** | ✅ Concluído |
 | **3** | **Goro** (Fazendeiro) & **Ichi** (Lâmina Cega) | Arrozais Terraciados & Moinho na Chuva | **Ganryū Island** & **Iga Rooftops** | **Saitou**, **Hanzo**, **Goro**, **Ichi** | ✅ Concluído |
-| **4** | **Valerius** (Necromante) & **Seimei** (Onmyoji) | Cemitério Barroco & Santuário Heian | **Mist Temple** & **Kabuki Stage** | **Murasaki**, **Kasumi**, **Valerius**, **Seimei** | 📅 Na Fila pós-Master |
+| **4** | **Valerius** (Necromante) & **Seimei** (Onmyoji) | Cemitério Barroco & Santuário Heian | **Mist Temple** & **Kabuki Stage** | **Murasaki**, **Kasumi**, **Valerius**, **Seimei** | ✅ Concluído |
 | **5** | **Daiki** (Bastão) & **Aoi** (Caçadora Ainu) | Floresta dos Pinheiros & Taiga de Ezo | **Storm Pirate Deck** & **Mountain Shrine** | **Okuni**, **Tomoe**, **Daiki**, **Aoi** | 📅 Na Fila pós-Master |
 | **6** | **Raiden** (Sumô) & **Hendrika** (Alquimista) | Dohyo Sagrado & Armazém de Dejima | **Sacred Bamboo** & **Kyoto Bakumatsu** | **Joe**, **Julie**, **Raiden**, **Hendrika** | 📅 Na Fila pós-Master |

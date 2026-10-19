@@ -191,9 +191,15 @@ def make_paper(w: int, h: int, seed: int = 1, **kw) -> pygame.Surface:
     if key in _cache:
         return _cache[key]
     rgb, alpha = _paper_array(w, h, seed, **kw)
-    surf = pygame.Surface((w, h), pygame.SRCALPHA)
-    pygame.surfarray.blit_array(surf, rgb)
-    pygame.surfarray.pixels_alpha(surf)[:] = alpha
+    try:
+        rgba = np.zeros((w, h, 4), dtype=np.uint8)
+        rgba[..., :3] = rgb
+        rgba[..., 3] = alpha
+        surf = pygame.image.frombuffer(np.ascontiguousarray(rgba.transpose(1, 0, 2)).tobytes(), (w, h), "RGBA").convert_alpha()
+    except Exception:
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.surfarray.blit_array(surf, rgb)
+        pygame.surfarray.pixels_alpha(surf)[:] = alpha
     _cache[key] = surf
     return surf
 
@@ -218,6 +224,22 @@ def draw_paper_card(surface: pygame.Surface, rect: pygame.Rect, seed: int = 1, s
     if shadow:
         surface.blit(_soft_shadow(paper), (rect.x + 3, rect.y + 5))
     surface.blit(paper, rect.topleft)
+
+
+def draw_ink_border(surface: pygame.Surface, rect: pygame.Rect, color, width: int = 2, seed: int = 1, alpha: int = 255):
+    """Desenha contorno de nanquim irregular diretamente sobre a superfície de destino (evita artefatos de alfa)."""
+    rng = random.Random(seed)
+    c_rgb = color[:3] if isinstance(color, (tuple, list)) else (180, 40, 35)
+    for i in range(width):
+        j = lambda: rng.randint(-1, 1)
+        pts = [
+            (rect.x + 2 + j() + i, rect.y + 2 + j() + i),
+            (rect.right - 3 + j() - i, rect.y + 2 + j() + i),
+            (rect.right - 3 + j() - i, rect.bottom - 3 + j() - i),
+            (rect.x + 2 + j() + i, rect.bottom - 3 + j() - i)
+        ]
+        line_a = max(0, min(255, int(alpha * (235 - i * 30) / 255.0)))
+        pygame.draw.lines(surface, (*c_rgb, line_a), True, pts, 2)
 
 
 def make_ink_border(rect: pygame.Rect, color, width: int = 2, seed: int = 1) -> pygame.Surface:
@@ -264,9 +286,18 @@ def make_brush_stroke(w: int, h: int, color=SEAL_RED, seed: int = 3) -> pygame.S
     base = np.array(color, np.float32)
     shade = 1.0 - 0.28 * np.clip((yn - 0.5) * 2, 0, 1) - 0.10 * np.abs(rng.normal(0, 1, (w, h)))
     rgb = np.clip(shade[..., None] * base[None, None, :], 0, 255).astype(np.uint8)
-    surf = pygame.Surface((w, h), pygame.SRCALPHA)
-    pygame.surfarray.blit_array(surf, rgb)
-    pygame.surfarray.pixels_alpha(surf)[:] = (np.clip(alpha, 0, 1) * 235).astype(np.uint8)
+    a = (np.clip(alpha, 0, 1) * 235).astype(np.uint8)
+
+    try:
+        rgba = np.zeros((w, h, 4), dtype=np.uint8)
+        rgba[..., :3] = rgb
+        rgba[..., 3] = a
+        surf = pygame.image.frombuffer(np.ascontiguousarray(rgba.transpose(1, 0, 2)).tobytes(), (w, h), "RGBA").convert_alpha()
+    except Exception:
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.surfarray.blit_array(surf, rgb)
+        pygame.surfarray.pixels_alpha(surf)[:] = a
+
     _cache[key] = surf
     return surf
 
@@ -275,7 +306,7 @@ def draw_brush_highlight(surface: pygame.Surface, rect: pygame.Rect, color=SEAL_
     stroke = make_brush_stroke(rect.width, rect.height, color, seed)
     if alpha < 255:
         stroke = stroke.copy()
-        stroke.set_alpha(alpha)
+        stroke.fill((255, 255, 255, alpha), special_flags=pygame.BLEND_RGBA_MULT)
     surface.blit(stroke, rect.topleft)
 
 

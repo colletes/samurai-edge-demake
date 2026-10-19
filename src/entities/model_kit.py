@@ -96,6 +96,10 @@ def add(a, b, k=1.0):
     return (a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k)
 
 
+def sub(a, b):
+    return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
+
+
 def facing_camera(c) -> bool:
     """O rosto está voltado para a câmera (ou de perfil)? Detalhes do rosto só aparecem nesse caso."""
     rx, ry = rotate_xy(c.fx, c.fy, c.azimuth)

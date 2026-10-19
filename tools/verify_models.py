@@ -21,8 +21,8 @@ def main():
         inspector.render()
         out_path = f"scratch/test_v2_char_{i+1}_{k}.png"
         pygame.image.save(inspector.screen, out_path)
-        print(f"OK: [{i+1}/12] {k} -> {out_path}", flush=True)
-    print("ALL 12 MODELS VERIFIED SUCCESSFULLY!", flush=True)
+        print(f"OK: [{i+1}/{len(CHARACTERS)}] {k} -> {out_path}", flush=True)
+    print(f"ALL {len(CHARACTERS)} MODELS VERIFIED SUCCESSFULLY!", flush=True)
 
 if __name__ == "__main__":
     main()

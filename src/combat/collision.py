@@ -15,11 +15,11 @@ from src.entities.projectile import (
     KyudoArrowProjectile, RopeArrowProjectile, CannonballProjectile,
     RemoteMineEntity, HamayaArrowProjectile, MusashiWaveProjectile,
     SacredArrowVolleyProjectile, NaginataProjectile, KamaitachiProjectile,
-    SpiralResonanceProjectile
+    SpiralResonanceProjectile, OfudaProjectile, TalismanWard, BearTrapProjectile
 )
 from src.entities.doberman import STATE_DOG_CHARGE, STATE_DOG_KNOCKED_OUT, STATE_DOG_BARK
 
-def _get_death_style_for_attacker(attacker, weapon: str | None = None):
+def _get_death_style_for_attacker(attacker, weapon: str | None = None, victim=None):
     """Estilo de morte contextual pelo golpe recebido: reflete a natureza do ataque que gerou a morte."""
     char_type = getattr(attacker, "char_type", "").lower()
     state = getattr(attacker, "state", "")
@@ -29,7 +29,7 @@ def _get_death_style_for_attacker(attacker, weapon: str | None = None):
             return "FOREHEAD_PIN"
         return "KUNAI_PIN"
     if weapon == "arrow":
-        return "ARROW_PIN"
+        return "PINNED_TO_EARTH"
 
     # 1. Kenshi: Iai Flash (KENSHIN_SPLIT) vs Ryuu Tsui Sen (VERTICAL_BISECTION)
     if "kenshin" in char_type or "kenshi" in char_type or "red" in char_type:
@@ -91,8 +91,12 @@ def _get_death_style_for_attacker(attacker, weapon: str | None = None):
         return "STAB_FALL"
     elif "gray" in char_type or "kasumi" in char_type or "kemuri" in char_type:
         return "STAB_FALL"
-    elif "rifle" in char_type or "teppo" in char_type or "tomoe" in char_type or "archer" in char_type:
+    elif "rifle" in char_type or "teppo" in char_type:
         return "BLUNT_FALL"
+    elif "tomoe" in char_type or "archer" in char_type:
+        if weapon in ("hamaya", "sacred_volley"):
+            return "HAMAYA_HOLY_PIERCE"
+        return "PINNED_TO_EARTH"
     elif "benkei" in char_type or "sohei" in char_type:
         if weapon == "naginata_throw" or state == "THROW_NAGINATA":
             return "SKEWERED_LANCE_FLAG"
@@ -101,13 +105,32 @@ def _get_death_style_for_attacker(attacker, weapon: str | None = None):
         if weapon in ("resonance", "deadly_chord") or state in ("RESONANCE", "ACOUSTIC_RESONANCE"):
             return "RESONANCE_WIND_GALE"
         return "KAMAITACHI_MINCE"
+    elif "valerius" in char_type or "necromancer" in char_type:
+        if weapon in ("summon", "undead", "skeleton") or state in ("SUMMON", "SKELETON_SUMMON"):
+            return "DRAGGED_TO_GRAVE"
+        return "SOUL_REAP"
+    elif "seimei" in char_type or "onmyoji" in char_type:
+        if weapon in ("ward", "fire_pillar", "purification") or state in ("SACRED_WARD", "WARD"):
+            return "OFUDA_PURIFICATION_PILLAR"
+        return "SEAL_STASIS_COLLAPSE"
     elif "kabuki" in char_type or "okuni" in char_type:
-        return "MURASAKI_DECAP"
+        if weapon == "poison":
+            return "DOKUKIRI_MELT"
+        return "TESSEN_DECAP"
+    elif "daiki" in char_type or "pilgrim" in char_type:
+        if state == "POLE_VAULT" or weapon == "vault":
+            return "METEOR_STAFF_CRUSH"
+        return "THROAT_TEMPLE_CRUSH"
+    elif "aoi" in char_type or "huntress" in char_type:
+        if weapon == "trap" or (victim is not None and (getattr(victim, "state", "") == STATE_STUNNED or getattr(victim, "slow_timer", 0.0) > 0)):
+            return "TRAP_AND_EXECUTE"
+        return "SPEAR_HEART_SLIDE"
     if weapon in ("kunai", "shuriken"):
         return "KUNAI_PIN"
     if weapon == "arrow":
-        return "ARROW_PIN"
+        return "PINNED_TO_EARTH"
     return "KENSHIN_SPLIT"
+
 
 # Maior que o alcance do combo de Musashi (hitbox 0.9 + 2.06 + raio), para o ferido não contra-atacar na hora.
 HIT_KNOCKBACK_DISTANCE = 3.6
@@ -298,9 +321,37 @@ class CombatSystem:
                                 camera.add_shake(5.5)
                                 self._play_sound("parry")
 
+            # 9. Daiki: Salto com Vara (frames iniciais desviam projéteis girando o Bō)
+            elif (char_t == "daiki" or getattr(def_fighter, "pole_vault_deflect_active", False)) and getattr(def_fighter, "pole_vault_deflect_active", False):
+                for proj in projectiles:
+                    if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter and not isinstance(proj, (TalismanWard, BearTrapProjectile, TimedBombEntity, RemoteMineEntity)):
+                        dist = world_distance(def_fighter.wx, def_fighter.wy, proj.wx, proj.wy)
+                        if dist <= 1.85:
+                            proj.is_active = False
+                            for _ in range(12):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6, color=(235, 195, 110)))
+                            banners.append(FloatingBanner("BO DEFLECT!", def_fighter.wx, def_fighter.wy, wz=1.8, color=(235, 195, 110)))
+                            if camera is not None:
+                                camera.add_shake(4.5)
+                            self._play_sound("parry")
+
         active_projectiles = []
         for proj in projectiles:
-            if isinstance(proj, HamayaArrowProjectile) or getattr(proj, "__class__", None).__name__ == "EarthStompShockwave":
+            if isinstance(proj, (TalismanWard, BearTrapProjectile)):
+                still_valid = proj.update(
+                    dt, game_map, particles,
+                    fighters=[p1, p2], projectiles=projectiles,
+                    banners=banners, cinematic_director=cinematic_director
+                )
+                if not p1.is_alive and winner is None:
+                    winner = "P2_WINS"
+                    self.hitstop_timer = 0.14
+                    self._play_sound("fatal_strike")
+                elif not p2.is_alive and winner is None:
+                    winner = "P1_WINS"
+                    self.hitstop_timer = 0.14
+                    self._play_sound("fatal_strike")
+            elif isinstance(proj, HamayaArrowProjectile) or getattr(proj, "__class__", None).__name__ == "EarthStompShockwave":
                 still_valid = proj.update(dt, game_map, particles, projectiles=projectiles)
             else:
                 still_valid = proj.update(dt, game_map, particles)
@@ -335,6 +386,28 @@ class CombatSystem:
                     banners.append(FloatingBanner("DOG STUNNED! (2.0s)", target_dog.wx, target_dog.wy, wz=1.4, color=(255, 80, 80)))
                     for _ in range(12):
                         particles.append(SparkParticle(target_dog.wx, target_dog.wy, 0.4))
+                    if isinstance(proj, KunaiProjectile):
+                        proj.state = "ON_GROUND"
+                        proj.wz = 0.05
+                    else:
+                        proj.is_active = False
+                    continue
+
+            # Item 24: O lacaio esqueleto de Valerius é atingível por projéteis inimigos
+            target_summon = None
+            if getattr(proj, "owner", None) == p1 and getattr(p2, "summon", None) and p2.summon.is_alive:
+                target_summon = p2.summon
+            elif getattr(proj, "owner", None) == p2 and getattr(p1, "summon", None) and p1.summon.is_alive:
+                target_summon = p1.summon
+
+            if target_summon and not isinstance(proj, (TimedBombEntity, RemoteMineEntity)):
+                proj_flying = (getattr(proj, "state", "FLYING") == "FLYING") if hasattr(proj, "state") else getattr(proj, "is_active", True)
+                if proj_flying and world_distance(proj.wx, proj.wy, target_summon.wx, target_summon.wy) < (0.45 + target_summon.radius):
+                    target_summon.take_hit(damage=1, particles=particles)
+                    camera.add_shake(5.0)
+                    if banners is not None:
+                        banners.append(FloatingBanner("SUMMON DESTROYED!", target_summon.wx, target_summon.wy, wz=1.4, color=(160, 220, 255)))
+                    self._play_sound("bone_crush")
                     if isinstance(proj, KunaiProjectile):
                         proj.state = "ON_GROUND"
                         proj.wz = 0.05
@@ -683,7 +756,7 @@ class CombatSystem:
                             winner = winner_id
                             self._play_sound("fatal_strike")
                             if cinematic_director:
-                                cinematic_director.trigger_fatal_strike(proj.owner, target, "ARROW_PIN", (proj.vx, proj.vy))
+                                cinematic_director.trigger_fatal_strike(proj.owner, target, "PINNED_TO_EARTH", (proj.vx, proj.vy))
 
             # Se for FLECHA SAGRADA DE KYUDO (HamayaArrowProjectile)
             elif isinstance(proj, HamayaArrowProjectile) and proj.is_active:
@@ -703,7 +776,7 @@ class CombatSystem:
                         winner = winner_id
                         self._play_sound("fatal_strike")
                         if cinematic_director:
-                            cinematic_director.trigger_fatal_strike(proj.owner, target, "ARROW_PIN", (proj.vx, proj.vy))
+                            cinematic_director.trigger_fatal_strike(proj.owner, target, "HAMAYA_HOLY_PIERCE", (proj.vx, proj.vy))
 
             # Se for BOMBA DE FUMAÇA (SmokeCloudEntity)
             elif isinstance(proj, SmokeCloudEntity) and proj.is_active:
@@ -830,7 +903,7 @@ class CombatSystem:
                                         winner = win_id
                                     self._play_sound("fatal_strike")
                                     if cinematic_director:
-                                        cinematic_director.trigger_fatal_strike(proj.owner, target, "ARROW_PIN", (0, 0))
+                                        cinematic_director.trigger_fatal_strike(proj.owner, target, "HAMAYA_HOLY_PIERCE", (0, 0))
 
             # Se for ARREMESSO DE NAGINATA (NaginataProjectile)
             elif isinstance(proj, NaginataProjectile) and proj.is_active and proj.state == "FLYING":
@@ -922,6 +995,51 @@ class CombatSystem:
                             self._play_sound("sword_slash")
                         proj.is_active = False
 
+            # Se for OFUDA CORTANTE (OfudaProjectile - Ciclo 4 Seimei)
+            elif isinstance(proj, OfudaProjectile) and proj.is_active:
+                target = p2 if proj.owner == p1 else p1
+                winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
+                if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.50 + target.radius):
+                    if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
+                        can_reflect = (
+                            target.state == "MAI_DANCE" or
+                            (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0) or
+                            (target.state == "LISTEN" and hasattr(target, "is_facing_target") and target.is_facing_target(proj.wx, proj.wy))
+                        )
+                        if can_reflect and not getattr(proj, "has_been_reflected", False):
+                            proj.dir_x = -proj.dir_x
+                            proj.dir_y = -proj.dir_y
+                            proj.owner = target
+                            proj.has_been_reflected = True
+                            proj.dist_traveled = 0
+                            banners.append(FloatingBanner("OFUDA REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
+                            camera.add_shake(6.0)
+                            self._play_sound("parry")
+                        else:
+                            for _ in range(10):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6, color=(140, 205, 255)))
+                            banners.append(FloatingBanner("PARRY OFUDA!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
+                            camera.add_shake(5.0)
+                            self._play_sound("parry")
+                            proj.is_active = False
+                    else:
+                        hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=2)
+                        if dead:
+                            camera.add_shake(16.0)
+                            for _ in range(25):
+                                particles.append(BloodParticle(target.wx, target.wy, 0.6))
+                            self.hitstop_timer = 0.12
+                            winner = winner_id
+                            self._play_sound("fatal_strike")
+                            if cinematic_director:
+                                cinematic_director.trigger_fatal_strike(proj.owner, target, "SEAL_STASIS_COLLAPSE", (proj.dir_x, proj.dir_y))
+                        else:
+                            camera.add_shake(7.0)
+                            for _ in range(12):
+                                particles.append(BloodParticle(target.wx, target.wy, 0.5))
+                            self._play_sound("sword_slash")
+                        proj.is_active = False
+
             if proj.is_active:
                 active_projectiles.append(proj)
 
@@ -940,7 +1058,8 @@ class CombatSystem:
                     "arrow_cooldown_timer", "ofuda_cooldown_timer", "cannon_cooldown_timer",
                     "volley_cooldown_timer", "sacred_volley_cooldown_timer",
                     "flintlock_timer", "cape_timer", "trap_timer", "zeroshiki_timer",
-                    "shuriken_timer", "thrust_timer", "kama_timer", "backstep_timer", "cleave_timer"
+                    "shuriken_timer", "thrust_timer", "kama_timer", "backstep_timer", "cleave_timer",
+                    "vault_timer", "spear_timer"
                 ):
                     val = getattr(fighter, cd_attr, 0.0)
                     if val > 0:
@@ -957,7 +1076,8 @@ class CombatSystem:
                         if winner is None:
                             winner = other_id
                         if cinematic_director:
-                            cinematic_director.trigger_fatal_strike(None, fighter, "OKUNI_MELT", (0, 0))
+                            other_fighter = p2 if fighter == p1 else p1
+                            cinematic_director.trigger_fatal_strike(other_fighter, fighter, "DOKUKIRI_MELT", (0, 0))
                     else:
                         for _ in range(10):
                             particles.append(BloodParticle(fighter.wx, fighter.wy, 0.6))
@@ -1049,6 +1169,16 @@ class CombatSystem:
                             ctrl_mgr.rumble_player(1, 0.8, 1.0, 320)
                             ctrl_mgr.rumble_player(0, 1.0, 1.0, 400)
 
+        # Esqueleto Invocado de Valerius contra ataques corpo a corpo
+        for owner_p, enemy_p in ((p1, p2), (p2, p1)):
+            if getattr(owner_p, "summon", None) and owner_p.summon.is_alive:
+                skel = owner_p.summon
+                if enemy_p.is_alive and enemy_p.hitbox_active and world_distance(enemy_p.hitbox_center[0], enemy_p.hitbox_center[1], skel.wx, skel.wy) < (enemy_p.hitbox_radius + skel.radius):
+                    skel.take_hit(damage=1, particles=particles)
+                    self._play_sound("bone_crush")
+                    camera.add_shake(5.0)
+                    banners.append(FloatingBanner("SUMMON SHATTERED!", skel.wx, skel.wy, wz=1.4, color=(235, 230, 215)))
+
         # -------------------------------------------------------------
         # 3. CORTE DE BAMBUS E FAÍSCAS EM ROCHAS
         # -------------------------------------------------------------
@@ -1058,6 +1188,11 @@ class CombatSystem:
         self._check_obstacle_sparks(p2, game_map, particles, camera, ctrl_mgr, p_idx=1)
         if getattr(game_map, "interactives", None):
             self._check_interactives(p1, p2, game_map, projectiles)
+
+        # Checagem de combate contra perigos da arena (ex: zumbis e mãos no cemitério gótico)
+        for h in getattr(game_map, "hazards", []):
+            if hasattr(h, "check_combat_interactions"):
+                h.check_combat_interactions(p1, p2, projectiles, particles, banners, camera)
 
         if not p1.is_alive or not p2.is_alive:
             return winner
@@ -1141,7 +1276,7 @@ class CombatSystem:
             if check_fighter_melee_hit(p1, p2.wx, p2.wy, p2.radius) and getattr(p2, "wz", 0.0) < 0.65:
                 p1.hitbox_active = False
 
-                if p2.state == STATE_PARRY:
+                if p2.state == STATE_PARRY and p1.state != "POLE_VAULT":
                     for _ in range(12):
                         particles.append(SparkParticle(p2.wx, p2.wy, 0.7))
                     parry_msg = "PARRY GATOTSU!" if p1.state == "GATOTSU_CHARGE" else "PARRY!"
@@ -1228,6 +1363,8 @@ class CombatSystem:
                             align_finisher_pair(p1, p2, game_map)
                             cinematic_director.trigger_fatal_strike(p1, p2, "BLUNT_FALL", p1.slash_dir)
                 else:
+                    if p2.state == STATE_PARRY and p1.state == "POLE_VAULT":
+                        banners.append(FloatingBanner("GUARD CRUSH!", p2.wx, p2.wy, wz=1.8, color=(255, 195, 70)))
                     is_ninja = (getattr(p1, "char_type", "") == "ninja" or hasattr(p1, "has_kunai"))
                     if is_ninja:
                         # 1-Hit Kill em Contra-Ataque (adversário em recovery/stunned) ou Costas (backstab)
@@ -1254,7 +1391,7 @@ class CombatSystem:
                         self._play_sound("fatal_strike", weapon=getattr(p1, "char_type", None))
                         if cinematic_director:
                             align_finisher_pair(p1, p2, game_map)
-                            death_style = _get_death_style_for_attacker(p1)
+                            death_style = _get_death_style_for_attacker(p1, victim=p2)
                             cinematic_director.trigger_fatal_strike(p1, p2, death_style, p1.slash_dir)
                     elif hit:
                         camera.add_shake(7.0)
@@ -1280,7 +1417,7 @@ class CombatSystem:
             if check_fighter_melee_hit(p2, p1.wx, p1.wy, p1.radius) and getattr(p1, "wz", 0.0) < 0.65:
                 p2.hitbox_active = False
 
-                if p1.state == STATE_PARRY:
+                if p1.state == STATE_PARRY and p2.state != "POLE_VAULT":
                     for _ in range(12):
                         particles.append(SparkParticle(p1.wx, p1.wy, 0.7))
                     parry_msg = "PARRY GATOTSU!" if p2.state == "GATOTSU_CHARGE" else "PARRY!"
@@ -1367,6 +1504,8 @@ class CombatSystem:
                             align_finisher_pair(p2, p1, game_map)
                             cinematic_director.trigger_fatal_strike(p2, p1, "BLUNT_FALL", p2.slash_dir)
                 else:
+                    if p1.state == STATE_PARRY and p2.state == "POLE_VAULT":
+                        banners.append(FloatingBanner("GUARD CRUSH!", p1.wx, p1.wy, wz=1.8, color=(255, 195, 70)))
                     is_ninja = getattr(p2, "char_type", "") == "ninja"
                     if is_ninja:
                         dot_facing = p2.facing_x * p1.facing_x + p2.facing_y * p1.facing_y
@@ -1392,7 +1531,7 @@ class CombatSystem:
                         self._play_sound("fatal_strike", weapon=getattr(p2, "char_type", None))
                         if cinematic_director:
                             align_finisher_pair(p2, p1, game_map)
-                            death_style = _get_death_style_for_attacker(p2)
+                            death_style = _get_death_style_for_attacker(p2, victim=p1)
                             cinematic_director.trigger_fatal_strike(p2, p1, death_style, p2.slash_dir)
                     elif hit:
                         camera.add_shake(7.0)

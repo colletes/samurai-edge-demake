@@ -3,10 +3,10 @@
 tools/model_inspector.py - Model Inspector 3D para Samurai Edge (Roster Completo)
 
 Visualizador interativo 3D dedicado para examinar de perto os novos modelos dos
-18 combatentes criados no padrão de malha 3D esculpida, fitas contínuas de tecido/cabelo
+20 combatentes criados no padrão de malha 3D esculpida, fitas contínuas de tecido/cabelo
 e feições faciais fiéis aos portraits:
-  - 18 Combatentes: Kenshi, Musashi, Saitou, Okuni, Hanzo, Joe, Kasumi, Murasaki,
-    Teppo, Tomoe, Anne, Julie, Ren, Chiyo, Benkei, O-Rin, Goro, Ichi.
+  - 20 Combatentes: Kenshi, Musashi, Saitou, Okuni, Hanzo, Joe, Kasumi, Murasaki,
+    Teppo, Tomoe, Anne, Julie, Ren, Chiyo, Benkei, O-Rin, Goro, Ichi, Valerius, Seimei.
   - Câmera Orbital 3D: Azimute (360°), Elevação (Pitch 6°-84°), Zoom Suave Macro (até 8.0x).
   - Foco Facial Macro (Tecla 'F' / '2'): Aproximação direta na face para ver cicatrizes,
     olhos 3D, delineados, maquiagem teatral Kumadori e cortes de cabelo.
@@ -24,6 +24,13 @@ import time
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
+
+if sys.platform == "darwin":
+    os.environ.setdefault("SDL_JOYSTICK_MFI", "0")
+
+if "--headless" in sys.argv or "--snapshot" in sys.argv or "--save-all" in sys.argv:
+    os.environ["SDL_VIDEODRIVER"] = "dummy"
+    os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 import pygame
 
@@ -60,30 +67,44 @@ class InspectorCamera:
         self.ground_z = 0.0
         self.shake_offset_x = 0.0
         self.shake_offset_y = 0.0
-        self.height_fn = None
+        self.height_fn = lambda wx, wy: 0.0
 
-    def reset(self, target: str = "body"):
+    def reset(self, target: str = "body", is_colossal: bool = False):
         """Restaura a câmera para enquadramento ideal."""
         self.azimuth = 0.0
         self.elevation = math.radians(30.0)
         self.screen_x = self.screen_w // 2 + 100
         self.screen_y = int(self.screen_h * 0.58)
-        self.set_focus_target(target)
+        self.set_focus_target(target, is_colossal=is_colossal)
 
-    def set_focus_target(self, target: str):
+    def set_focus_target(self, target: str, is_colossal: bool = False):
         """Alterna o ponto de foco vertical (rosto, corpo inteiro, armas, pés)."""
-        if target == "head":
-            self.target_z = 0.72
-            self.zoom = 5.6
-        elif target == "hands":
-            self.target_z = 0.40
-            self.zoom = 4.4
-        elif target == "feet":
-            self.target_z = 0.12
-            self.zoom = 4.6
-        else:  # "body"
-            self.target_z = 0.45
-            self.zoom = 3.4
+        if is_colossal:
+            if target == "head":
+                self.target_z = 2.45
+                self.zoom = 2.2
+            elif target == "hands":
+                self.target_z = 1.40
+                self.zoom = 1.8
+            elif target == "feet":
+                self.target_z = 0.35
+                self.zoom = 1.9
+            else:  # "body"
+                self.target_z = 1.40
+                self.zoom = 1.35
+        else:
+            if target == "head":
+                self.target_z = 0.72
+                self.zoom = 5.6
+            elif target == "hands":
+                self.target_z = 0.40
+                self.zoom = 4.4
+            elif target == "feet":
+                self.target_z = 0.12
+                self.zoom = 4.6
+            else:  # "body"
+                self.target_z = 0.45
+                self.zoom = 3.4
 
     def rotate_orbit(self, d_azimuth: float, d_elevation: float):
         """Aplica rotação horizontal e vertical."""
@@ -92,10 +113,18 @@ class InspectorCamera:
         max_elev = math.radians(84.0)
         self.elevation = max(min_elev, min(max_elev, self.elevation + d_elevation))
 
+    def orbit(self, d_azimuth: float, d_elevation: float):
+        """Alias compatível para rotate_orbit."""
+        self.rotate_orbit(d_azimuth, d_elevation)
+
     def pan(self, dx: int, dy: int):
         """Desloca a câmera na tela 2D."""
         self.screen_x += dx
         self.screen_y += dy
+
+    def pan_screen(self, dx: int, dy: int):
+        """Alias compatível para pan."""
+        self.pan(dx, dy)
 
     def zoom_in(self, factor: float = 1.15):
         self.zoom = max(0.8, min(8.5, self.zoom * factor))
@@ -314,6 +343,56 @@ CHARACTERS = {
         "portrait_file": "ichi_bust.png",
         "color_accent": (120, 185, 225),
     },
+    "valerius": {
+        "name": "Valerius",
+        "char_type": "valerius",
+        "title": "Necromante Prussiano & Aristocrata Ocultista",
+        "weapon": "Foice Fúnebre de Ferro Forjado e Ébano",
+        "description": "Sobretudo militar gótico azul-noite com dragonas prateadas, cravat alto de seda branca e cabelos platinados.",
+        "concept_file": "valerius_concept.jpg",
+        "portrait_file": "valerius_bust.png",
+        "color_accent": (145, 175, 215),
+    },
+    "seimei": {
+        "name": "Seimei",
+        "char_type": "seimei",
+        "title": "Onmyoji dos Talismãs & Sacerdotisa de Heian",
+        "weapon": "Talismãs Ofuda Sagrados de Seda e Fogo Espiritual",
+        "description": "Vestes Kariginu de seda branca pura e índigo celestial, chapéu cerimonial Eboshi laqueado e longos cabelos negros.",
+        "concept_file": "seimei_concept.jpg",
+        "portrait_file": "seimei_bust.png",
+        "color_accent": (175, 130, 225),
+    },
+    "daiki": {
+        "name": "Daiki",
+        "char_type": "daiki",
+        "title": "Peregrino do Bastão Bō & Yamabushi",
+        "weapon": "Bastão Bō de Carvalho com Ponteiras de Ferro",
+        "description": "Túnica monástica índigo com ombro exposto, contas Juzu gigantes no peito, hachimaki de palha e bastão Bō de duas mãos.",
+        "concept_file": "daiki_full_concept.jpg",
+        "portrait_file": "daiki_bust.png",
+        "color_accent": (180, 235, 195),
+    },
+    "aoi": {
+        "name": "Aoi",
+        "char_type": "aoi",
+        "title": "A Caçadora Ainu de Hokkaido",
+        "weapon": "Lança Op de Caça e Armadilha de Urso",
+        "description": "Traje tradicional Attush índigo com bordados Moreu brancos, gola de pele de lobo, tiara Matanpushi e lança Op.",
+        "concept_file": "aoi_full_concept.jpg",
+        "portrait_file": "aoi_bust.png",
+        "color_accent": (155, 225, 255),
+    },
+    "gashadokuro": {
+        "name": "Gashadokuro",
+        "char_type": "gashadokuro",
+        "title": "Oni Colossal & Espírito da Fome Insaciável (Final Boss)",
+        "weapon": "Ossos Ancestrais, Clava Titânica e Fogo Espectral",
+        "description": "Crânio colossal de marfim antigo desgastado com chifres demoníacos curvados, órbitas em chamas roxas e carmesins e 5 fases transmórficas.",
+        "concept_file": "gashadokuro_concept.jpg",
+        "portrait_file": "gashadokuro_bust.png",
+        "color_accent": (175, 55, 230),
+    },
 }
 
 POSES = ["IDLE", "WALK", "ATTACK", "RECOVERY", "INTRO", "VICTORY"]
@@ -372,8 +451,21 @@ class ModelInspector:
 
         # Botões clicáveis do menu lateral e ações
         self.sidebar_rects: list[tuple[pygame.Rect, int]] = []
+        self.pose_btn_rects: list[tuple[str, pygame.Rect]] = []
         self.reload_btn_rect = pygame.Rect(0, 0, 0, 0)
         self.reset_cam_btn_rect = pygame.Rect(0, 0, 0, 0)
+
+        # Joystick / Fightstick support
+        if not pygame.joystick.get_init():
+            try:
+                pygame.joystick.init()
+            except Exception:
+                pass
+        for i in range(pygame.joystick.get_count()):
+            try:
+                joy = pygame.joystick.Joystick(i)
+            except Exception:
+                pass
 
         # Mensagem toast de status do reload
         self.status_message = ""
@@ -389,7 +481,11 @@ class ModelInspector:
         return POSES[self.current_pose_idx]
 
     def select_character(self, idx: int):
+        prev_colossal = (self.char_keys[self.current_char_idx] == "gashadokuro")
         self.current_char_idx = idx % len(self.char_keys)
+        now_colossal = (self.char_keys[self.current_char_idx] == "gashadokuro")
+        if prev_colossal != now_colossal:
+            self.camera.reset(self.macro_focus, is_colossal=now_colossal)
 
     def next_character(self):
         self.select_character(self.current_char_idx + 1)
@@ -409,7 +505,8 @@ class ModelInspector:
         cur_idx = targets.index(self.macro_focus) if self.macro_focus in targets else 0
         next_target = targets[(cur_idx + 1) % len(targets)]
         self.macro_focus = next_target
-        self.camera.set_focus_target(next_target)
+        now_colossal = (self.char_keys[self.current_char_idx] == "gashadokuro")
+        self.camera.set_focus_target(next_target, is_colossal=now_colossal)
 
     def reload_modules(self) -> bool:
         """
@@ -497,8 +594,10 @@ class ModelInspector:
         surface.blit(shadow_surf, (sx0 - shadow_w, sy0 - shadow_h // 2))
 
         # Pedestal cilíndrico de madeira tradicional com anéis concêntricos
-        num_segments = 28
-        radius = 0.70
+        char_info = self.current_char_info
+        is_colossal = (char_info["char_type"] == "gashadokuro")
+        num_segments = 32 if is_colossal else 28
+        radius = 1.65 if is_colossal else 0.70
         top_points = []
         for i in range(num_segments):
             angle = (i / num_segments) * math.pi * 2.0
@@ -519,10 +618,54 @@ class ModelInspector:
             pygame.draw.polygon(surface, (48, 42, 36), inner_points)
             pygame.draw.polygon(surface, (85, 72, 55), inner_points, 1)
 
+    def draw_boss(self, surface: pygame.Surface):
+        """Renderiza o Oni Gashadokuro com suas 5 formas transmórficas no estúdio 3D."""
+        if getattr(self, "_boss_instance", None) is None:
+            from src.entities.boss_oni import BossOni
+            self._boss_instance = BossOni(0.0, 0.0)
+        boss = self._boss_instance
+        boss.time = self.anim_time
+        boss.wx = 0.0
+        boss.wy = 0.0
+        boss.wz = 0.0
+
+        pose_to_phase = {
+            "IDLE": 0,       # Fase 1: Bípede com cutelo
+            "WALK": 1,       # Fase 2: Serpente rastejante
+            "ATTACK": 2,     # Fase 3: Torso com salto
+            "RECOVERY": 3,   # Fase 4: Clava viva
+            "INTRO": 4,      # Fase 5: Crânio colossal
+            "VICTORY": 4,    # Fase 5: Gargalhada
+        }
+        phase_idx = pose_to_phase.get(self.current_pose, 0)
+        if boss.phase != phase_idx:
+            boss.set_phase(phase_idx)
+
+        # Configurações cinemáticas da pose
+        if self.current_pose == "IDLE":
+            boss.pose["stomp"] = (math.sin(self.anim_time * 2.2) * 0.5 + 0.5) * 0.35
+            boss.pose["head_up"] = 1.0 + 0.08 * math.sin(self.anim_time * 1.5)
+        elif self.current_pose == "WALK":
+            boss.pose["head_up"] = 0.8 + 0.2 * math.sin(self.anim_time * 2.0)
+        elif self.current_pose == "ATTACK":
+            boss.pose["head_up"] = 0.4 + 0.6 * (math.sin(self.anim_time * 3.0) * 0.5 + 0.5)
+        elif self.current_pose == "RECOVERY":
+            boss.pose["raise"] = 0.3 + 0.7 * (math.sin(self.anim_time * 2.0) * 0.5 + 0.5)
+        elif self.current_pose == "INTRO":
+            boss.pose["jaw"] = (math.sin(self.anim_time * 5.0) * 0.5 + 0.5) * 0.32
+        elif self.current_pose == "VICTORY":
+            boss.pose["jaw"] = (math.sin(self.anim_time * 8.0) * 0.5 + 0.5) * 0.45
+
+        boss.render(surface, self.camera, self.anim_time)
+
     def draw_character(self, surface: pygame.Surface):
         """Renderiza o combatente selecionado utilizando o motor oficial de modelos do jogo."""
         char_info = self.current_char_info
         char_type = char_info["char_type"]
+
+        if char_type == "gashadokuro":
+            self.draw_boss(surface)
+            return
 
         # Orientação do guerreiro (vetor frontal padrão: 1.0, 1.0)
         facing_x, facing_y = 1.0, 1.0
@@ -596,14 +739,15 @@ class ModelInspector:
         pygame.draw.line(surface, (55, 60, 75), (sidebar_w, 0), (sidebar_w, self.height), 2)
 
         # Título da Barra Lateral
-        title_s = self.font_header.render("ROSTER (18)", True, (240, 215, 120))
+        title_s = self.font_header.render(f"ROSTER ({len(self.char_keys)})", True, (240, 215, 120))
         surface.blit(title_s, (16, 16))
         sub_s = self.font_small.render("Clique ou use [ / ] para navegar", True, (160, 165, 180))
-        surface.blit(sub_s, (16, 46))
+        surface.blit(sub_s, (16, 44))
 
         self.sidebar_rects.clear()
-        btn_y = 72
-        btn_h = 32
+        btn_y = 66
+        btn_h = 28 if len(self.char_keys) > 18 else 32
+        spacing = 2 if len(self.char_keys) > 18 else 3
         for idx, key in enumerate(self.char_keys):
             info = CHARACTERS[key]
             is_selected = (idx == self.current_char_idx)
@@ -622,7 +766,7 @@ class ModelInspector:
             name_s = self.font_body.render(f"{idx+1}. {info['name']}", True, text_color)
             surface.blit(name_s, (btn_rect.x + 22, btn_rect.centery - 6))
 
-            btn_y += btn_h + 3
+            btn_y += btn_h + spacing
 
         # -------------------------------------------------------------
         # 1.5 Barra de Ação Superior: Hot-Reload e Reset de Câmera
@@ -771,14 +915,34 @@ class ModelInspector:
         surface.blit(cam_s, (hud_bar_x + 16, hud_bar_y + 10))
 
         # Controles
-        ctrl_text = "Mouse: Girar (Esq) | Pan (Dir) | Zoom (Roda)  ||  [F5 / R] Recarregar Código  |  [F] Foco Rosto  |  [P] Pose  |  [Espaço] Turntable  |  [C] Reset Câmera"
+        ctrl_text = "Mouse: Girar (Esq) | Pan (Dir) | Zoom  ||  [F] Foco  |  [P] Pose  |  [Espaço] Turntable"
         ctrl_s = self.font_small.render(ctrl_text, True, (170, 175, 190))
         surface.blit(ctrl_s, (hud_bar_x + 16, hud_bar_y + 32))
 
-        # Indicador de Pose atual no canto
-        pose_text = f"POSE: {self.current_pose}"
-        pose_s = self.font_body.render(pose_text, True, (100, 220, 255))
-        surface.blit(pose_s, (hud_bar_x + hud_bar_w - 140, hud_bar_y + 16))
+        # Botões Interativos de Pose 1 a 6
+        self.pose_btn_rects.clear()
+        is_boss = (self.char_keys[self.current_char_idx] == "gashadokuro")
+        boss_phase_labels = {
+            "IDLE": "P1: Bípede",
+            "WALK": "P2: Serp.",
+            "ATTACK": "P3: Torso",
+            "RECOVERY": "P4: Clava",
+            "INTRO": "P5: Crânio",
+            "VICTORY": "P5: Riso",
+        }
+        bx = hud_bar_x + hud_bar_w - 6 * 84 - 12
+        for p_idx, p_name in enumerate(POSES):
+            p_rect = pygame.Rect(bx + p_idx * 84, hud_bar_y + 11, 80, 32)
+            self.pose_btn_rects.append((p_name, p_rect))
+            is_active = (p_name == self.current_pose)
+            col_bg = (55, 40, 80) if (is_boss and is_active) else ((45, 52, 70) if is_active else (22, 26, 34))
+            col_border = (215, 125, 255) if (is_boss and is_active) else ((230, 195, 90) if is_active else (48, 54, 66))
+            pygame.draw.rect(surface, col_bg, p_rect, border_radius=4)
+            pygame.draw.rect(surface, col_border, p_rect, 2 if is_active else 1, border_radius=4)
+
+            display_lbl = boss_phase_labels.get(p_name, p_name) if is_boss else p_name
+            lbl_s = self.font_small.render(f"[{p_idx+1}] {display_lbl}", True, (255, 255, 255) if is_active else (160, 165, 175))
+            surface.blit(lbl_s, (p_rect.centerx - lbl_s.get_width() // 2, p_rect.centery - lbl_s.get_height() // 2))
 
     def _wrap_text(self, text: str, font: pygame.font.Font, max_width: int) -> list[str]:
         words = text.split(" ")
@@ -822,11 +986,17 @@ class ModelInspector:
                         clicked_btn = True
                     # Verificar clique na lista lateral de personagens
                     elif self.show_hud:
-                        for rect, idx in self.sidebar_rects:
-                            if rect.collidepoint(event.pos):
-                                self.select_character(idx)
+                        for p_name, p_rect in self.pose_btn_rects:
+                            if p_rect.collidepoint(event.pos):
+                                self.set_pose_by_name(p_name)
                                 clicked_btn = True
                                 break
+                        if not clicked_btn:
+                            for rect, idx in self.sidebar_rects:
+                                if rect.collidepoint(event.pos):
+                                    self.select_character(idx)
+                                    clicked_btn = True
+                                    break
                     if not clicked_btn:
                         self.is_dragging_orbit = True
                         self.drag_start_x, self.drag_start_y = event.pos
@@ -878,6 +1048,8 @@ class ModelInspector:
                 elif event.key == pygame.K_4:
                     self.set_pose_by_name("RECOVERY")
                 elif event.key == pygame.K_5:
+                    self.set_pose_by_name("INTRO")
+                elif event.key == pygame.K_6:
                     self.set_pose_by_name("VICTORY")
 
                 # Foco Macro (Rosto / Cabeça)
@@ -913,6 +1085,31 @@ class ModelInspector:
                     snap_name = f"model_inspector_{self.char_keys[self.current_char_idx]}_{self.current_pose.lower()}.png"
                     snap_path = os.path.join(ROOT, "docs", "screenshots", snap_name)
                     self.snapshot(snap_path)
+
+            elif event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 6:  # Options -> Reset Câmera
+                    self.camera.reset(self.macro_focus)
+                elif event.button in (0, 2):  # ✕ / ▢ -> Próxima Pose
+                    self.next_pose()
+                elif event.button == 3:  # △ -> Alternar Foco Macro (Rosto / Corpo)
+                    self.toggle_focus_target()
+                elif event.button == 1:  # ○ -> Turntable Automático
+                    self.auto_rotate = not self.auto_rotate
+                elif event.button == 9:  # L1 -> Guerreiro Anterior
+                    self.prev_character()
+                elif event.button == 10:  # R1 -> Próximo Guerreiro
+                    self.next_character()
+
+            elif event.type == pygame.JOYHATMOTION:
+                hx, hy = event.value
+                if hx > 0:
+                    self.next_character()
+                elif hx < 0:
+                    self.prev_character()
+                if hy > 0:
+                    self.camera.zoom_in(1.10)
+                elif hy < 0:
+                    self.camera.zoom_out(1.10)
 
         return True
 
@@ -952,7 +1149,15 @@ class ModelInspector:
             self.clock.tick(60)
             self.fps = self.clock.get_fps()
 
-        pygame.quit()
+        try:
+            pygame.joystick.quit()
+        except Exception:
+            pass
+        try:
+            pygame.quit()
+        except Exception:
+            pass
+        os._exit(0)
 
     def snapshot(self, output_path: str):
         """Renderiza e salva um frame PNG em alta fidelidade no caminho especificado."""
@@ -998,8 +1203,15 @@ def main():
             snap_face_path = os.path.join(out_dir, f"model_{key}_face.png")
             inspector.snapshot(snap_face_path)
         print(f"[ModelInspector] Todos os 18 modelos salvos em: {out_dir}")
-        pygame.quit()
-        sys.exit(0)
+        try:
+            pygame.joystick.quit()
+        except Exception:
+            pass
+        try:
+            pygame.quit()
+        except Exception:
+            pass
+        os._exit(0)
 
     char_idx = list(CHARACTERS.keys()).index(args.char)
     inspector.select_character(char_idx)
@@ -1013,8 +1225,15 @@ def main():
 
     if args.snapshot:
         inspector.snapshot(args.snapshot)
-        pygame.quit()
-        sys.exit(0)
+        try:
+            pygame.joystick.quit()
+        except Exception:
+            pass
+        try:
+            pygame.quit()
+        except Exception:
+            pass
+        os._exit(0)
     else:
         inspector.run()
 

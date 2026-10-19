@@ -139,6 +139,7 @@ class Samurai:
         self.hitbox_center: tuple[float, float] = (0.0, 0.0)
         self.slash_dir: tuple[float, float] = (0.0, 0.0)
         self.slow_timer = 0.0
+        self.confused_timer = 0.0
         self.is_invulnerable_dodge = False
         self.is_agile_dodge = False  # False = Padrão/Pesada, True = Especial/Ágil
         self.roll_speed = 8.5        # Padrão pesada: 8.5 (ágil: 10.5)
@@ -177,6 +178,14 @@ class Samurai:
             from src.effects.particles import FloatingBanner
             banners.append(FloatingBanner("SLOW!", self.wx, self.wy, wz=1.7, color=(190, 180, 170), duration=1.2))
 
+    def apply_confusion(self, duration: float = 2.4, banners: list = None):
+        """Inverte os controles do personagem temporariamente devido a choque astral."""
+        was_confused = self.confused_timer > 0
+        self.confused_timer = max(self.confused_timer, duration)
+        if not was_confused and banners is not None:
+            from src.effects.particles import FloatingBanner
+            banners.append(FloatingBanner("CONFUSÃO! / CONFUSED!", self.wx, self.wy, wz=1.85, color=(215, 90, 255), duration=1.4))
+
     def set_facing(self, target_wx: float, target_wy: float):
         """Vira o samurai para encarar o alvo."""
         dx = target_wx - self.wx
@@ -202,13 +211,21 @@ class Samurai:
         )
 
     def update_dodge_timers(self, dt: float):
-        """Atualiza cronômetros universais de recuperação pós-esquiva e cooldown de re-esquiva."""
+        """Atualiza cronômetros universais de recuperação pós-esquiva, cooldowns e status."""
+        self.anim_time = getattr(self, "anim_time", 0.0) + dt
+        if not getattr(self, "is_moving", False):
+            # Respiração e sway orgânico de vestes em postura Idle
+            self.walk_cycle = getattr(self, "walk_cycle", 0.0) + dt * 1.0
         if self.roll_recovery_timer > 0:
             self.roll_recovery_timer = max(0.0, self.roll_recovery_timer - dt)
         if self.roll_cooldown_timer > 0:
             self.roll_cooldown_timer = max(0.0, self.roll_cooldown_timer - dt)
         if self.dash_recovery_timer > 0:
             self.dash_recovery_timer = max(0.0, self.dash_recovery_timer - dt)
+        if self.slow_timer > 0:
+            self.slow_timer = max(0.0, self.slow_timer - dt)
+        if self.confused_timer > 0:
+            self.confused_timer = max(0.0, self.confused_timer - dt)
 
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
         """Terceira Ação Universal: Rolamento / Esquiva com frames de invulnerabilidade (i-frames)."""
@@ -257,9 +274,6 @@ class Samurai:
         dy = self.facing_y * step
         new_wx, new_wy = slide_movement_against_obstacles(self.wx, self.wy, dx, dy, self.radius, game_map)
 
-        if getattr(game_map, "has_rails", False):
-            new_wx, new_wy = self.block_pit_entry(game_map, new_wx, new_wy)
-
         self.wx, self.wy = new_wx, new_wy
 
         if self.state_timer <= 0:
@@ -304,9 +318,9 @@ class Samurai:
         from src.audio.sound_manager import get_sound_manager
         from src.audio.sound_events import SoundEvent
         sm = get_sound_manager()
-        sm.play_death_music(fadeout_ms=350)
         sm.play(SoundEvent.FALL)
         self.state = STATE_FALL
+
         self.fall_timer = 0.0
         self.fall_pit = pit
         self.hp = 0
@@ -403,7 +417,6 @@ class Samurai:
             return
 
         self.state = STATE_WALK
-        self.walk_cycle += dt * 10.0
 
         # Velocidade base: veneno confere adrenalina (+25% velocidade); slow ou água reduzem
         current_speed = self.speed
@@ -417,6 +430,11 @@ class Samurai:
             current_speed *= speed_mult_at(self.wx, self.wy)
         elif game_map.is_water(self.wx, self.wy):
             current_speed *= 0.55
+
+        # Avanço do ciclo de caminhada: taxa de 2.6 rad/s na velocidade base gera a passada visual
+        # perfeitamente fluida e articulada (~3.7 passos/s) sincronizada com o motor de rigs 3D
+        stride_rate = 2.6 * (current_speed / max(0.1, self.speed))
+        self.walk_cycle += dt * stride_rate
 
         # Vira na direção do movimento
         self.facing_x = move_x

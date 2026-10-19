@@ -24,7 +24,7 @@ class _SoundEventMeta(EnumMeta):
             "BOMB_FUSE": "SMOKE_PUFF",
             "BOMB_EXPLOSION": "BOMB_EXPLODE",
             "BOW_RELEASE": "ARROW_RELEASE",
-            "KUNAI_THROW": "SHURIKEN_THROW",
+            "KNIFE_SLASH": "KUNAI_THROW",
             "CHAIN_SPIN": "CHAIN_WHIP",
             "DASH_ROLL": "DODGE_WHOOSH",
             "FOOTSTEP_GRASS": "FOOTSTEP",
@@ -75,8 +75,9 @@ class SoundEvent(str, Enum, metaclass=_SoundEventMeta):
     ARROW_RELEASE = "arrow_release"        # Disparo da corda do arco Yumi (Tomoe)
     BOW_RELEASE = "arrow_release"          # Alias para disparo de arco
     ARROW_HIT = "arrow_hit"                # Flecha cravando no chão ou alvo
-    SHURIKEN_THROW = "shuriken_throw"      # Arremesso de shuriken
-    KUNAI_THROW = "shuriken_throw"         # Alias para arremesso de kunai
+    SHURIKEN_THROW = "shuriken_throw"      # Arremesso de shuriken giratória
+    KUNAI_THROW = "kunai_throw"            # Estocada / arremesso de faca tática ou kunai (Joe, Hanzo)
+    KNIFE_SLASH = "kunai_throw"            # Alias para corte de faca tática
     CHAIN_WHIP = "chain_whip"              # Movimento da corrente Kusarigama (Murasaki)
     CHAIN_SPIN = "chain_whip"              # Alias para giro de corrente
 
@@ -124,21 +125,25 @@ def get_weapon_swing_event(char_type: str) -> SoundEvent:
         return SoundEvent.SLASH_CHAIN
     elif c in ("orin", "o-rin"):
         return SoundEvent.SWING_SHAMISEN
+    elif c in ("american", "joe", "ninja", "hanzo"):
+        return SoundEvent.KUNAI_THROW
+    elif c in ("aoi",):
+        return SoundEvent.SLASH_HEAVY
     return SoundEvent.SLASH_KATANA
 
 
 def get_surface_footstep_event(tile_type: str) -> SoundEvent:
     """Retorna o evento sonoro de passo correspondente ao tipo de terreno."""
     t = str(tile_type).lower()
-    if any(k in t for k in ("grass", "moss", "foliage", "leaf", "turf")):
+    if any(k in t for k in ("grass", "moss", "foliage", "leaf", "turf", "pine")):
         return SoundEvent.FOOTSTEP_GRASS
     elif any(k in t for k in ("wood", "bridge", "deck", "plank", "tatami", "floor")):
         return SoundEvent.FOOTSTEP_WOOD
     elif any(k in t for k in ("stone", "rock", "street", "pavement", "curb", "temple", "slate")):
         return SoundEvent.FOOTSTEP_STONE
-    elif any(k in t for k in ("gravel", "sand", "dirt", "earth", "dune")):
+    elif any(k in t for k in ("gravel", "sand", "dirt", "earth", "dune", "snow")):
         return SoundEvent.FOOTSTEP_GRAVEL
-    elif any(k in t for k in ("water", "puddle", "river", "sea", "lake", "tide")):
+    elif any(k in t for k in ("water", "puddle", "river", "sea", "lake", "tide", "ice")):
         return SoundEvent.FOOTSTEP_WATER
     elif any(k in t for k in ("mud", "swamp", "rice", "paddy", "bog")):
         return SoundEvent.FOOTSTEP_MUD
@@ -158,3 +163,8 @@ class MusicTrack(str, Enum):
     YOSHIWARA_THEME = "bgm_yoshiwara_alley" # Tema do Beco Yoshiwara (O-Rin)
     RICE_PADDIES_THEME = "bgm_rice_paddies" # Tema dos Arrozais Terraciados (Goro)
     RAIN_MILL_THEME = "bgm_rain_mill"       # Tema do Moinho na Chuva (Ichi)
+    PRUSSIAN_CEMETERY_THEME = "bgm_prussian_cemetery" # Tema do Cemitério Gótico (Valerius)
+    HEIAN_TEMPLE_THEME = "bgm_heian_temple" # Tema do Pavilhão Astral Heian (Seimei)
+    SACRED_PINES_THEME = "bgm_sacred_pines" # Tema da Floresta dos Pinheiros (Daiki)
+    EZO_TUNDRA_THEME = "bgm_ezo_tundra"     # Tema da Taiga Gelada de Ezo (Aoi)
+

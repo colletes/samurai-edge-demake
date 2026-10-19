@@ -9,7 +9,27 @@ Reconhece modelos específicos:
 Fornece mapeamento ergonômico padronizado, glifos visuais para HUD,
 suporte a navegação por menus com analógico/D-Pad, pausa e rumble.
 """
+import os
+import sys
 import math
+
+def _is_running_on_ios() -> bool:
+    if sys.platform == "ios":
+        return True
+    if os.environ.get("PYGAME_IOS") == "1" or os.environ.get("KIVY_BUILD") == "ios" or os.environ.get("OS_IOS") == "1":
+        return True
+    bundle_path = os.path.dirname(os.path.abspath(__file__))
+    if "/private/var/containers/Bundle/Application" in bundle_path or ".app" in bundle_path:
+        return True
+    return False
+
+# No macOS desktop, desativar MFi do SDL para permitir detecção direta de arcade sticks USB / HID (ex: Hori Fighting Stick).
+# No iOS, NUNCA desativar MFi pois é o único subsistema de gamepads bluetooth/USB-C (GameSir, Backbone, etc.)
+if sys.platform == "darwin" and not _is_running_on_ios():
+    os.environ.setdefault("SDL_JOYSTICK_MFI", "0")
+elif _is_running_on_ios():
+    os.environ["SDL_JOYSTICK_MFI"] = "1"
+
 import pygame
 from src.i18n import t
 
@@ -67,6 +87,15 @@ def detect_controller_type(name: str, guid: str = "") -> str:
             return CONTROLLER_TYPE_DUALSENSE
         return CONTROLLER_TYPE_DUALSHOCK
 
+    # Hori Arcade / Fighting Stick (PS4 / PS3 / PC)
+    if "hori" in name_lower or "0f0d" in guid_lower or "0d0f" in guid_lower:
+        if "switch" in name_lower or "nintendo" in name_lower:
+            return CONTROLLER_TYPE_NINTENDO
+        if "xbox" in name_lower:
+            return CONTROLLER_TYPE_XBOX
+        # Hori PS3/PS4 fighting stick (ex: Hori Fighting Stick mini 4)
+        return CONTROLLER_TYPE_DUALSHOCK
+
     # 2. Xbox (360, One, Series, Microsoft XInput)
     if (
         "xbox" in name_lower
@@ -89,13 +118,29 @@ def detect_controller_type(name: str, guid: str = "") -> str:
     ):
         return CONTROLLER_TYPE_NINTENDO
 
-    # 4. Genérico
+    # 4. Controles Mobile MFi / iOS (GameSir, Backbone, Razer Kishi, MFi standard)
+    if (
+        "gamesir" in name_lower
+        or "backbone" in name_lower
+        or "kishi" in name_lower
+        or "mfi" in name_lower
+        or "extended" in name_lower
+        or "steelseries" in name_lower
+        or "nimbus" in name_lower
+        or "rotor" in name_lower
+        or "stratus" in name_lower
+        or "leadjoy" in name_lower
+        or "game controller" in name_lower
+    ):
+        return CONTROLLER_TYPE_XBOX
+
+    # 5. Genérico
     return CONTROLLER_TYPE_GENERIC
 
 
 class ControllerDevice:
     """Representa uma instância ativa de controle conectado."""
-    def __init__(self, joystick: pygame.joystick.Joystick):
+    def __init__(self, joystick: pygame.joystick.Joystick, invert_y: bool | None = None):
         self.joystick = joystick
         self.instance_id = joystick.get_instance_id()
         self.name = joystick.get_name()
@@ -105,6 +150,7 @@ class ControllerDevice:
             self.guid = ""
         self.controller_type = detect_controller_type(self.name, self.guid)
         self.deadzone = 0.22
+        self.invert_y = _is_running_on_ios() if invert_y is None else bool(invert_y)
 
         # Debounce de eixos analógicos para navegação em menus
         self._axis_x_held = False
@@ -116,6 +162,11 @@ class ControllerDevice:
             ACTION_SECONDARY: [],
             ACTION_DASH: [],
         }
+
+    @property
+    def is_fightstick(self) -> bool:
+        n = (self.name or "").lower()
+        return "fighting stick" in n or "fightstick" in n or "arcade stick" in n or ("hori" in n and "stick" in n)
 
     @property
     def is_playstation(self) -> bool:
@@ -135,6 +186,19 @@ class ControllerDevice:
 
     @property
     def friendly_name(self) -> str:
+        n_low = (self.name or "").lower()
+        if "gamesir" in n_low:
+            return f"GameSir ({self.name[:18]})"
+        if "backbone" in n_low:
+            return f"Backbone One ({self.name[:18]})"
+        if "kishi" in n_low:
+            return f"Razer Kishi ({self.name[:18]})"
+        if "mfi" in n_low or "extended" in n_low:
+            return f"Controle MFi ({self.name[:18]})"
+        if self.is_fightstick:
+            if "hori" in n_low:
+                return "HORI Fighting Stick (PS4)"
+            return f"Arcade Stick ({self.name[:16]})"
         if self.controller_type == CONTROLLER_TYPE_DUALSENSE:
             return "PlayStation DualSense (PS5)"
         elif self.controller_type == CONTROLLER_TYPE_DUALSHOCK:
@@ -143,7 +207,7 @@ class ControllerDevice:
             return "Xbox Wireless / One Controller"
         elif self.controller_type == CONTROLLER_TYPE_NINTENDO:
             return "Nintendo Switch Controller"
-        return f"Controle Genérico ({self.name[:16]})"
+        return f"Controle ({self.name[:18]})"
 
     def get_button_glyph(self, action: str) -> str:
         """Retorna o glifo visual correspondente à ação de acordo com a fabricante."""
@@ -220,6 +284,8 @@ class ControllerDevice:
             if self.joystick.get_numaxes() >= 2:
                 raw_x = self.joystick.get_axis(0)
                 raw_y = self.joystick.get_axis(1)
+                if self.invert_y:
+                    raw_y = -raw_y
                 mag = math.hypot(raw_x, raw_y)
                 if mag > self.deadzone:
                     norm = min(1.0, (mag - self.deadzone) / (1.0 - self.deadzone))
@@ -403,8 +469,9 @@ class ControllerDevice:
 
                 # Eixo Vertical
                 if abs(ay) > 0.65:
+                    eff_ay = -ay if self.invert_y else ay
                     if not self._axis_y_held:
-                        step_y = 1 if ay > 0 else -1
+                        step_y = 1 if eff_ay > 0 else -1
                         self._axis_y_held = True
                 elif abs(ay) < 0.25:
                     self._axis_y_held = False
@@ -415,64 +482,79 @@ class ControllerDevice:
 
     def get_default_action_buttons(self, action: str) -> list[int]:
         """Retorna a lista canônica padrão de botões de acordo com o modelo de controle."""
-        if self.is_playstation:
+        if self.is_fightstick:
             if action in (ACTION_ATTACK,):
                 return [2, 10]        # ▢ Quadrado e R1
             elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
-                return [0, 3]         # ✕ Cruz e △ Triângulo
+                return [3]            # △ Triângulo
             elif action in (ACTION_DASH,):
-                return [1, 9]         # ○ Círculo e L1
+                return [1, 0, 9]      # ○ Círculo, ✕ Cruz e L1
             elif action == ACTION_CONFIRM:
-                return [0]            # ✕ Cruz
+                return [0, 2]         # ✕ Cruz ou ▢ Quadrado
             elif action == ACTION_CANCEL:
                 return [1]            # ○ Círculo
             elif action == ACTION_MENU:
-                return [6]            # Options
+                return [6, 10]        # Options / Menu
             elif action == ACTION_RESTART:
                 return [4, 15]        # Share, Touchpad
+        elif self.is_playstation:
+            if action in (ACTION_ATTACK,):
+                return [2, 5, 10] if _is_running_on_ios() else [2, 10]     # ▢ Quadrado, R1 (5 MFi / 10 desktop)
+            elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
+                return [0, 3]         # ✕ Cruz e △ Triângulo
+            elif action in (ACTION_DASH,):
+                return [1, 4, 9] if _is_running_on_ios() else [1, 9]      # ○ Círculo, L1 (4 MFi / 9 desktop)
+            elif action == ACTION_CONFIRM:
+                return [0, 2]         # ✕ Cruz ou ▢ Quadrado
+            elif action == ACTION_CANCEL:
+                return [1]            # ○ Círculo
+            elif action == ACTION_MENU:
+                return [6, 10, 8]     # Options / Start
+            elif action == ACTION_RESTART:
+                return [4, 8, 15]     # Share, Touchpad
         elif self.is_xbox:
             if action in (ACTION_ATTACK,):
-                return [2, 10]        # X e RB
+                return [2, 5, 10]     # X, RB (5 MFi / 10 desktop)
             elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
-                return [0, 3]         # A e Y
+                return [3, 0]         # Y (Triângulo), A
             elif action in (ACTION_DASH,):
-                return [1, 9]         # B e LB
+                return [1, 4, 9]      # B, LB (4 MFi / 9 desktop)
             elif action == ACTION_CONFIRM:
-                return [0]
+                return [0, 2]         # A ou X
             elif action == ACTION_CANCEL:
-                return [1]
+                return [1]            # B
             elif action == ACTION_MENU:
-                return [6]
+                return [10, 8, 6]     # Menu / Start / Options
             elif action == ACTION_RESTART:
-                return [4]
+                return [8, 4]         # View / Back
         elif self.is_nintendo:
             if action in (ACTION_ATTACK,):
                 return [2, 3]         # Y e X
             elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
-                return [0, 10]        # B e R
+                return [0, 5, 10]     # B e R
             elif action in (ACTION_DASH,):
-                return [1, 9]         # A e L
+                return [1, 4, 9]      # A e L
             elif action == ACTION_CONFIRM:
-                return [1, 0]
+                return [1, 0, 2]
             elif action == ACTION_CANCEL:
                 return [0, 1]
             elif action == ACTION_MENU:
-                return [6]
+                return [6, 10]        # + / Menu
             elif action == ACTION_RESTART:
-                return [4]
+                return [4, 8]         # - / Select
         else: # Genérico
             if action in (ACTION_ATTACK,):
-                return [2, 3]
+                return [2, 3, 5, 10]
             elif action in (ACTION_SECONDARY, ACTION_PARRY, ACTION_SPECIAL):
-                return [0, 5]
+                return [0, 3, 5]
             elif action in (ACTION_DASH,):
-                return [1, 4]
+                return [1, 4, 9]
             elif action == ACTION_CONFIRM:
-                return [0]
+                return [0, 2]
             elif action == ACTION_CANCEL:
                 return [1]
             elif action == ACTION_MENU:
-                return [6, 7]
+                return [6, 7, 10, 8]
             elif action == ACTION_RESTART:
                 return [4, 8]
         return []
@@ -511,6 +593,12 @@ class ControllerDevice:
         Verifica se o botão que acabou de ser pressionado corresponde à ação.
         Suporta múltiplos botões mapeados simultaneamente para a mesma ação.
         """
+        if action == ACTION_MENU:
+            # Garante que um botão atribuído a combate (ataque, secundária, dash)
+            # NUNCA abra o menu de pausa acidentalmente!
+            for combat_act in (ACTION_ATTACK, ACTION_SECONDARY, ACTION_DASH):
+                if button_index in self.get_action_buttons(combat_act):
+                    return False
         return button_index in self.get_action_buttons(action)
 
     def is_action_down(self, action: str) -> bool:
@@ -535,7 +623,19 @@ class ControllerManager:
     def __init__(self):
         self.controllers: dict[int, ControllerDevice] = {} # instance_id -> ControllerDevice
         self.player_map: list[int | None] = [None, None]   # [P1_instance_id, P2_instance_id]
+        self.invert_y: bool = _is_running_on_ios()
         self._init_joysticks()
+
+    def set_invert_y(self, val: bool):
+        self.invert_y = bool(val)
+        for cdev in self.controllers.values():
+            cdev.invert_y = self.invert_y
+
+    def toggle_invert_y(self) -> bool:
+        self.invert_y = not self.invert_y
+        for cdev in self.controllers.values():
+            cdev.invert_y = self.invert_y
+        return self.invert_y
 
     def _init_joysticks(self):
         if not pygame.joystick.get_init():
@@ -567,9 +667,10 @@ class ControllerManager:
     def _add_device(self, device_index: int):
         try:
             joy = pygame.joystick.Joystick(device_index)
-            joy.init()
+            if not joy.get_init():
+                joy.init()
             inst_id = joy.get_instance_id()
-            dev = ControllerDevice(joy)
+            dev = ControllerDevice(joy, invert_y=self.invert_y)
             self.controllers[inst_id] = dev
             self._reassign_players()
 
@@ -593,6 +694,54 @@ class ControllerManager:
             self.player_map[1] = None
         self._reassign_players()
 
+    def poll_controllers(self):
+        """Verifica dinamicamente a contagem de joysticks do SDL e atualiza dispositivos."""
+        if not pygame.joystick.get_init():
+            try:
+                pygame.joystick.init()
+            except Exception:
+                return
+
+        try:
+            count = pygame.joystick.get_count()
+        except Exception:
+            return
+
+        if count != len(self.controllers):
+            active_ids = set()
+            new_added = False
+            for i in range(count):
+                try:
+                    j = pygame.joystick.Joystick(i)
+                    if not j.get_init():
+                        j.init()
+                    iid = j.get_instance_id()
+                    active_ids.add(iid)
+                    if iid not in self.controllers:
+                        self.controllers[iid] = ControllerDevice(j, invert_y=self.invert_y)
+                        new_added = True
+                except Exception:
+                    pass
+
+            for dead_id, ctrl in list(self.controllers.items()):
+                # Preserve test mocks or non-native joysticks that are injected directly
+                if hasattr(pygame.joystick, "JoystickType") and not isinstance(ctrl.joystick, pygame.joystick.JoystickType):
+                    continue
+                if dead_id not in active_ids:
+                    del self.controllers[dead_id]
+
+            self._reassign_players()
+            if new_added:
+                try:
+                    from src.input.controls_storage import load_controls_config
+                    cfg = load_controls_config()
+                    if "controllers" in cfg:
+                        self.apply_saved_mappings(cfg["controllers"])
+                except Exception:
+                    pass
+
+            self._reassign_players()
+
     def handle_event(self, event: pygame.event.Event):
         """Atualiza a lista de controles em caso de plug/unplug."""
         if event.type == pygame.JOYDEVICEADDED:
@@ -601,18 +750,56 @@ class ControllerManager:
             self._remove_device(event.instance_id)
 
     def get_controller_for_player(self, player_idx: int) -> ControllerDevice | None:
+        self.poll_controllers()
         if 0 <= player_idx < len(self.player_map):
             inst_id = self.player_map[player_idx]
-            if inst_id is not None and inst_id in self.controllers:
-                return self.controllers[inst_id]
+            if inst_id is not None:
+                return self.controllers.get(inst_id)
+            if self.player_map[0] is not None or self.player_map[1] is not None:
+                return None
         if player_idx == 0 and len(self.controllers) > 0:
             return next(iter(self.controllers.values()))
         if player_idx == 1 and len(self.controllers) > 1:
-            first_id = self.player_map[0] if (self.player_map[0] is not None and self.player_map[0] in self.controllers) else next(iter(self.controllers.keys()))
+            first_id = next(iter(self.controllers.keys()))
             for cid, cdev in self.controllers.items():
                 if cid != first_id:
                     return cdev
         return None
+
+    def get_player_controller_name(self, player_idx: int) -> str:
+        ctrl = self.get_controller_for_player(player_idx)
+        if ctrl:
+            return ctrl.friendly_name
+        return t("pad_none")
+
+    def cycle_player_controller(self, player_idx: int, direction: int = 1):
+        """Alterna o controle atribuído ao jogador (P1 ou P2) entre os controles conectados e Nenhum."""
+        if player_idx not in (0, 1):
+            return
+        available: list[int | None] = [None] + list(self.controllers.keys())
+        if len(available) <= 1:
+            return
+        current = self.player_map[player_idx]
+        if current not in available:
+            current = None
+        idx = available.index(current)
+        new_idx = (idx + direction) % len(available)
+        chosen = available[new_idx]
+
+        # Se o controle escolhido já estiver em uso pelo outro jogador, trocar (swap)
+        other_idx = 1 if player_idx == 0 else 0
+        if chosen is not None and self.player_map[other_idx] == chosen:
+            self.player_map[other_idx] = current
+
+        self.player_map[player_idx] = chosen
+
+    def set_player_controller(self, player_idx: int, instance_id: int | None):
+        """Atribui explicitamente um controle a P1 ou P2, trocando com o outro se em uso."""
+        if player_idx in (0, 1):
+            other_idx = 1 if player_idx == 0 else 0
+            if instance_id is not None and self.player_map[other_idx] == instance_id:
+                self.player_map[other_idx] = self.player_map[player_idx]
+            self.player_map[player_idx] = instance_id
 
     def has_controller(self, player_idx: int = 0) -> bool:
         return self.get_controller_for_player(player_idx) is not None
@@ -713,6 +900,8 @@ class ControllerManager:
         """Aplica mapeamentos persistidos de controls_config.json nos controles conectados."""
         if not saved_controllers:
             return
+        if "invert_y" in saved_controllers and saved_controllers["invert_y"] is not None:
+            self.set_invert_y(saved_controllers["invert_y"])
         for p_idx, p_key in ((0, "P1"), (1, "P2")):
             if p_key in saved_controllers:
                 ctrl = self.get_controller_for_player(p_idx)

@@ -18,11 +18,11 @@ BRONZE, BRONZE_DARK = (142, 110, 58), (104, 82, 46)
 BRIM, BRIM_EDGE = (150, 132, 66), (196, 164, 64)
 GOLD, GOLD_LIGHT, GOLD_DARK = (214, 170, 50), (244, 206, 84), (152, 112, 30)
 GUARD_A, GUARD_B, GUARD_TRIM = (112, 76, 46), (176, 102, 52), (206, 130, 60)
-HORN, HORN_RIDGE = (72, 62, 48), (100, 86, 62)
+HORN, HORN_RIDGE = (45, 38, 32), (75, 62, 50)
 CORD = (176, 72, 44)
 
-EYE_CENTER = (0.34, 0.2, 0.08)  # f, |s|, h (antes de SCALE)
-SCALE = 1.3  # a cabeça é maior que um crânio comum, mas os voxels continuam pequenos (mais cubos, não cubos maiores)
+EYE_CENTER = (0.30, 0.17, 0.05)  # f, |s|, h (antes de SCALE)
+SCALE = 0.88  # Escala proporcional de titã esqueleto colossal (sem efeito chibi/cabeçudo)
 
 
 def _noise(i: int, j: int, k: int) -> int:
@@ -64,193 +64,203 @@ def _spheres(v: float, spheres, color_fn) -> dict:
     return cells
 
 
-# ---------------------------------------------------------------------------------------------- partes
+# ---------------------------------------------------------------------------------------------- elmo Kabuto e crânio Oni
 def _helmet_h_min(f: float) -> float:
-    return 0.22 - 0.43 * max(0.0, min(1.0, (0.25 - f) / 0.8))
+    return 0.14 - 0.32 * max(0.0, min(1.0, (0.22 - f) / 0.6))
 
 
 def _inside_helmet(f: float, s: float, h: float, grow: float = 0.0) -> bool:
-    e = ((f + 0.08) / (0.66 + grow)) ** 2 + (s / (0.62 + grow)) ** 2 + ((h - 0.06) / (0.62 + grow)) ** 2
+    e = ((f + 0.05) / (0.50 + grow)) ** 2 + (s / (0.44 + grow)) ** 2 + ((h - 0.02) / (0.46 + grow)) ** 2
     return e <= 1.0 and h >= _helmet_h_min(f)
 
 
 def _skull(f, s, h):
-    if _inside_helmet(f, s, h, 0.04):
+    if _inside_helmet(f, s, h, 0.02):
         return None
     sa = abs(s)
-    sock = math.sqrt((f - 0.42) ** 2 + (sa - 0.2) ** 2 + (h - 0.08) ** 2)
-    if sock < 0.15:
+    # Órbitas oculares fundas
+    sock = math.sqrt((f - 0.36) ** 2 + (sa - 0.17) ** 2 + (h - 0.05) ** 2)
+    if sock < 0.14:
         return None
-    if f > 0.4 and abs(s) < 0.07 and -0.24 < h < -0.07:  # cavidade nasal
+    # Cavidade nasal
+    if f > 0.32 and abs(s) < 0.055 and -0.22 < h < -0.06:
         return None
-    solid = ((f + 0.05) / 0.58) ** 2 + (s / 0.5) ** 2 + ((h - 0.05) / 0.55) ** 2 <= 1.0
-    if not solid and 0.0 <= f <= 0.52 and -0.42 <= h <= 0.02 and sa <= 0.3 - 0.3 * max(0.0, f - 0.2):
+
+    # Abóbada craniana completa e sólida sob o elmo
+    solid = ((f + 0.02) / 0.50) ** 2 + (s / 0.42) ** 2 + ((h + 0.02) / 0.46) ** 2 <= 1.0
+
+    # Maçãs do rosto (arcos zigomáticos)
+    if not solid and math.sqrt((f - 0.26) ** 2 + (sa - 0.25) ** 2 + (h + 0.08) ** 2) <= 0.12:
         solid = True
-    if not solid and math.sqrt((f - 0.34) ** 2 + (sa - 0.3) ** 2 + (h + 0.12) ** 2) <= 0.12:  # maçã do rosto
+    # Maxila e dentes superiores
+    if not solid and 0.0 <= f <= 0.42 and -0.36 <= h <= 0.0 and sa <= 0.25 - 0.20 * max(0.0, f - 0.15):
         solid = True
-    if not solid and 0.3 <= f <= 0.56 and sa <= 0.38 and 0.13 <= h <= 0.24 - 0.09 * (1.0 - sa / 0.38):  # sobrancelha pesada
+    # Arcada supraciliar pesada e ameaçadora
+    if not solid and 0.22 <= f <= 0.46 and sa <= 0.30 and 0.08 <= h <= 0.20 - 0.06 * (1.0 - sa / 0.30):
         return BONE_BROW
+
     if not solid:
         return None
-    if sock < 0.25:
+
+    if sock < 0.22:
         return SOCKET
-    if f > 0.36 and h < -0.33:
-        return TOOTH if round(s / 0.1) % 2 == 0 else GAP
+
+    # Dentes da maxila
+    if f > 0.30 and h < -0.26:
+        return TOOTH if round(s / 0.08) % 2 == 0 else GAP
+
+    # Textura de osso antigo envelhecido
     n = _noise(int(f * 40), int(s * 40), int(h * 40))
-    return BONE_BROW if n < 14 else BONE_TONES[n % 3]
+    return BONE_BROW if n < 18 else BONE_TONES[n % 3]
 
 
 def _bowl(f, s, h):
+    """Cúpula de ferro forjado do elmo samurai Kabuto com anéis e rebites."""
     if not _inside_helmet(f, s, h):
         return None
     rim = _helmet_h_min(f)
-    if h < rim + 0.12:
+    if h < rim + 0.08:
         return GOLD
-    if h > 0.6 and f * f + s * s < 0.02:
+    if h > 0.45 and f * f + s * s < 0.015:
         return GOLD_LIGHT
-    band = int((math.atan2(s, f + 0.08) + math.pi) / (math.pi / 10.0))
-    return BRONZE if (band + int((h - rim) / 0.14)) % 2 == 0 else BRONZE_DARK
+    band = int((math.atan2(s, f + 0.05) + math.pi) / (math.pi / 8.0))
+    return (52, 48, 50) if (band + int((h - rim) / 0.10)) % 2 == 0 else (36, 33, 35)
 
 
 def _brim(f, s, h):
-    u = (f - 0.3) / 0.26
+    """Aba frontal (Mabizashi) laqueada em preto com friso dourado."""
+    u = (f - 0.22) / 0.22
     if u < 0.0 or u > 1.0:
         return None
-    s_max = 0.5 * math.sqrt(1.0 - u * u)
+    s_max = 0.38 * math.sqrt(max(0.0, 1.0 - u * u))
     if abs(s) > s_max:
         return None
-    hc = 0.28 + 0.3 * (f - 0.3) - 0.1 * (s / 0.58) ** 2
-    if abs(h - hc) > 0.05:
+    hc = 0.18 + 0.16 * (f - 0.22) - 0.08 * (s / 0.42) ** 2
+    if abs(h - hc) > 0.045:
         return None
-    return BRIM_EDGE if abs(s) > s_max - 0.1 or u > 0.88 else BRIM
+    return (185, 145, 55) if abs(s) > s_max - 0.06 or u > 0.85 else (42, 38, 40)
 
 
 def _shikoro(f, s, h):
-    if f > 0.08 or not -0.78 <= h <= 0.1:
+    """Protetores de nuca (Shikoro) em lâminas escalonadas compactas."""
+    if f > 0.04 or not -0.55 <= h <= 0.10:
         return None
-    k = 1.0 + (0.1 - h) * 0.55
-    a, b = 0.66 * k, 0.66 * k
-    e = (f + 0.08) ** 2 / (a * a) + s * s / (b * b)
-    if not 0.65 <= e <= 1.0:
+    k = 1.0 + (0.10 - h) * 0.32
+    a, b = 0.50 * k, 0.46 * k
+    e = (f + 0.05) ** 2 / (a * a) + s * s / (b * b)
+    if not 0.72 <= e <= 1.0:
         return None
-    tier = int((0.1 - h) / 0.15)
-    if (0.1 - h) % 0.15 < 0.06:
-        return GUARD_TRIM
-    return GUARD_A if tier % 2 == 0 else GUARD_B
+    tier = int((0.10 - h) / 0.11)
+    if (0.10 - h) % 0.11 < 0.04:
+        return (165, 125, 55)
+    return (58, 48, 46) if tier % 2 == 0 else (85, 68, 58)
 
 
 def _wing(sign):
+    """Abas laterais (Fukikaeshi) do elmo dobradas discretamente contra o crânio."""
     def fn(f, s, h):
-        s = s * sign
-        if not -0.1 <= f <= 0.42 or not -0.22 <= h <= 0.2 + 0.1 * f:
+        s_val = s * sign
+        if not -0.05 <= f <= 0.28 or not -0.10 <= h <= 0.18 + 0.08 * f:
             return None
-        if abs(s - (0.62 + 0.5 * (f + 0.1))) > 0.07:
+        if abs(s_val - (0.42 + 0.22 * (f + 0.05))) > 0.055:
             return None
-        if abs(h - (0.2 + 0.1 * f)) < 0.08:
+        if abs(h - (0.16 + 0.08 * f)) < 0.05:
             return GOLD
-        stud = (round(f / 0.14) + round(h / 0.14)) % 3 == 0 and abs(f / 0.14 - round(f / 0.14)) < 0.15
-        return (200, 70, 40) if stud else GUARD_B
+        return (85, 68, 58)
     return fn
 
 
 def _horn_cells(sign: int) -> dict:
+    """Chifres demoníacos curvados de Oni que emergem da arcada e recurvam para trás."""
     sph = []
-    for n in range(30):
-        t = n / 29.0
-        f = -0.12 - 0.3 * t
-        s = sign * (0.5 + 0.8 * t ** 0.9)
-        h = 0.1 + 1.25 * t ** 1.4
-        sph.append((f, s, h, 0.2 * (1.0 - t) ** 0.8 + 0.08))
+    for n in range(24):
+        t = n / 23.0
+        f = 0.12 - 0.34 * (t ** 1.1)
+        s = sign * (0.36 + 0.34 * (t ** 0.85))
+        h = 0.18 + 0.78 * (t ** 0.95)
+        r = 0.10 * (1.0 - t * 0.75)
+        sph.append((f, s, h, r))
 
     def color(f, s, h, n):
-        t = n / 29.0
-        if t < 0.07:
-            return GOLD
-        return HORN_RIDGE if int(t * 15) % 2 == 0 else HORN
-    return _spheres(0.15, sph, color)
+        t = n / 23.0
+        if t > 0.82:
+            return (28, 22, 20)
+        return HORN_RIDGE if (int(t * 14) % 2 == 0) else HORN
+    return _spheres(0.08, sph, color)
 
 
 def _crest_cells() -> dict:
-    """Maedate dourado: medalhão, crescente e duas hastes curvas, inclinados para trás seguindo a testa do elmo."""
+    """Maedate de ouro esculpido no elmo: medalhão e crescente dourado compacto na fronte."""
     sph = []
 
     def fc(h):
-        return 0.5 - 0.4 * max(0.0, h - 0.5)
+        return 0.38 - 0.28 * max(0.0, h - 0.32)
 
     def add(s, h, r):
         sph.append((fc(h), s, h, r))
 
-    for a in range(0, 24):  # medalhão em anel
-        ang = a / 24 * math.tau
-        add(0.18 * math.cos(ang), 0.86 + 0.18 * math.sin(ang), 0.04)
-    add(0.0, 0.86, 0.065)
-    for a in range(0, 15):  # crescente sob o medalhão
-        ang = math.pi + a / 14 * math.pi
-        add(0.45 * math.cos(ang), 0.8 + 0.45 * math.sin(ang), 0.065)
-    for sign in (-1, 1):  # hastes douradas que sobem e se curvam para fora
-        for n in range(14):
-            u = n / 13.0
-            add(sign * (0.45 + 0.28 * math.sin(u * 1.4)), 0.8 + 0.6 * u, 0.06 + 0.03 * u)
-        add(sign * 0.6, 1.42, 0.1)
-        add(sign * 0.5, 1.37, 0.07)
-
-    def color(f, s, h, n):
-        return GOLD_LIGHT if (round(h / 0.09) + round(s / 0.09)) % 4 == 0 else (GOLD_DARK if n % 5 == 0 else GOLD)
-    return _spheres(0.09, sph, color)
-
-
-def _cord_cells() -> dict:
-    sph = []
+    for a in range(16):
+        ang = a / 16.0 * math.tau
+        add(0.10 * math.cos(ang), 0.50 + 0.10 * math.sin(ang), 0.035)
+    add(0.0, 0.50, 0.05)
+    for a in range(12):
+        ang = math.pi + a / 11.0 * math.pi
+        add(0.26 * math.cos(ang), 0.46 + 0.26 * math.sin(ang), 0.045)
     for sign in (-1, 1):
         for n in range(10):
             u = n / 9.0
-            sph.append((0.0 + 0.3 * u, sign * (0.56 - 0.36 * u), -0.22 - 0.55 * u, 0.05))
-        sph.append((0.3, sign * 0.12, -0.95, 0.1))  # laço
-        for n in range(8):
-            u = n / 7.0
-            sph.append((0.3, sign * (0.06 + 0.06 * u), -1.0 - 0.3 * u, 0.045))
-    sph.append((0.3, 0.0, -0.95, 0.09))
-    return _spheres(0.09, sph, lambda f, s, h, n: CORD)
+            add(sign * (0.24 + 0.16 * math.sin(u * 1.3)), 0.46 + 0.38 * u, 0.04 + 0.02 * u)
+        add(sign * 0.38, 0.86, 0.06)
+
+    def color(f, s, h, n):
+        return GOLD_LIGHT if n % 4 == 0 else (GOLD_DARK if n % 3 == 0 else GOLD)
+    return _spheres(0.08, sph, color)
 
 
 def _jaw_cells() -> dict:
-    """Mandíbula em U ao redor do centro do osso `jaw`; os ramos até a articulação são desenhados à parte."""
-    v = 0.09
+    """Mandíbula em U com dentes pontiagudos."""
+    v = 0.07
     cells = {}
-    for n in range(23):
-        phi = math.radians(-100 + 200 * n / 22.0)
-        f, s = (0.2 * math.cos(phi) - 0.05) * SCALE, 0.34 * math.sin(phi) * SCALE
+    for n in range(21):
+        phi = math.radians(-95 + 190 * n / 20.0)
+        f, s = (0.18 * math.cos(phi) - 0.04) * SCALE, 0.27 * math.sin(phi) * SCALE
         base = (round(f / v), round(s / v))
         for dk in (-1, 0):
             cells[(base[0], base[1], dk)] = BONE_TONES[(n + dk) % 3]
-        if abs(phi) < math.radians(62) and n % 2 == 0:
+        if abs(phi) < math.radians(65) and n % 2 == 0:
             cells[(base[0], base[1], 1)] = TOOTH
     return cells
 
 
 def _build():
     parts = []
-    parts += _shell(_fill(0.1, (-0.62, 0.62), (-0.62, 0.62), (-0.66, 0.66), _skull), 0.1)
-    parts += _shell(_fill(0.12, (-0.8, 0.8), (-0.8, 0.8), (-0.3, 0.8), _bowl), 0.12)
-    parts += _shell(_fill(0.1, (0.2, 0.7), (-0.65, 0.65), (0.0, 0.5), _brim), 0.1)
-    parts += _shell(_fill(0.12, (-1.1, 0.1), (-1.1, 1.1), (-0.8, 0.2), _shikoro), 0.12)
+    # Crânio esculpido de marfim e osso ancestral completo
+    parts += _shell(_fill(0.08, (-0.52, 0.52), (-0.46, 0.46), (-0.48, 0.52), _skull), 0.08)
+    # Cúpula de ferro do elmo Kabuto
+    parts += _shell(_fill(0.09, (-0.60, 0.60), (-0.52, 0.52), (-0.20, 0.60), _bowl), 0.09)
+    # Aba frontal com borda dourada
+    parts += _shell(_fill(0.08, (0.15, 0.52), (-0.48, 0.48), (0.0, 0.38), _brim), 0.08)
+    # Protetor de nuca (Shikoro)
+    parts += _shell(_fill(0.09, (-0.75, 0.08), (-0.68, 0.68), (-0.58, 0.15), _shikoro), 0.09)
+    # Abas laterais e Chifres demoníacos curvados de Oni
     for sign in (-1, 1):
-        parts += _shell(_fill(0.1, (-0.15, 0.45), (-1.1, 1.1), (-0.3, 0.35), _wing(sign)), 0.1)
-        parts += _shell(_horn_cells(sign), 0.15)
-    parts += _shell(_crest_cells(), 0.09)
-    parts += _shell(_cord_cells(), 0.09)
+        parts += _shell(_fill(0.08, (-0.08, 0.32), (-0.62, 0.62), (-0.15, 0.25), _wing(sign)), 0.08)
+        parts += _shell(_horn_cells(sign), 0.08)
+    # Maedate dourado: crescente na fronte
+    parts += _shell(_crest_cells(), 0.08)
+    # Órbitas oculares com núcleo espectral
     for sign in (-1, 1):
         ef, es, eh = (c * SCALE for c in EYE_CENTER)
-        parts.append((ef, sign * es, eh, 0.19, EYE_CORE))
-        parts.append((ef + 0.09, sign * es, eh + 0.03, 0.07, EYE_SPARK))
-    jaw = _shell(_jaw_cells(), 0.09)
+        parts.append((ef, sign * es, eh, 0.14, EYE_CORE))
+        parts.append((ef + 0.06, sign * es, eh + 0.02, 0.06, EYE_SPARK))
+    jaw = _shell(_jaw_cells(), 0.07)
     return parts, jaw
 
 
 HEAD_VOXELS, JAW_VOXELS = _build()
-JAW_MID = (0.33 * SCALE, 0.0, -0.55 * SCALE)  # centro da mandíbula fechada, relativo ao centro do crânio
-JAW_ENDS = tuple((-0.085 * SCALE, sg * 0.335 * SCALE, 0.0) for sg in (-1, 1))  # onde os ramos saem da mandíbula (f, s, h locais do jaw)
-HINGE = tuple((0.0, sg * 0.36 * SCALE, -0.1 * SCALE) for sg in (-1, 1))         # articulação no crânio (f, s, h locais do crânio)
+JAW_MID = (0.28 * SCALE, 0.0, -0.40 * SCALE)  # centro da mandíbula fechada, relativo ao centro do crânio
+JAW_ENDS = tuple((-0.07 * SCALE, sg * 0.27 * SCALE, 0.0) for sg in (-1, 1))  # onde os ramos saem da mandíbula
+HINGE = tuple((0.0, sg * 0.27 * SCALE, -0.08 * SCALE) for sg in (-1, 1))     # articulação no crânio
 HEAD_MIN_H = min(h - size / 2.0 for _, _, h, size, _ in HEAD_VOXELS)
 
 
@@ -262,7 +272,7 @@ def head_yaw(skull, eye_l, eye_r, fallback=(1.0, 0.0)):
 
 
 def head_cubes(skull, jaw_mid, yaw):
-    """Cubos da cabeça no mundo, (x, y, z, tamanho, cor), e o centro do crânio já erguido. Cabeça no chão repousa no kabuto."""
+    """Cubos da cabeça no mundo, (x, y, z, tamanho, cor), e o centro do crânio já erguido."""
     fx, fy = yaw
     ox, oy, oz = skull
     lift = max(0.0, 0.02 - (oz + HEAD_MIN_H))
@@ -271,11 +281,11 @@ def head_cubes(skull, jaw_mid, yaw):
     jx, jy, jz = jaw_mid
     jz += lift
     out += [(jx + f * fx - s * fy, jy + f * fy + s * fx, jz + h, size, color) for f, s, h, size, color in JAW_VOXELS]
-    for (jf, js, jh), (hf, hs, hh) in zip(JAW_ENDS, HINGE):  # ramos da mandíbula esticam até a articulação
+    for (jf, js, jh), (hf, hs, hh) in zip(JAW_ENDS, HINGE):
         a = (jx + jf * fx - js * fy, jy + jf * fy + js * fx, jz + jh)
         b = (ox + hf * fx - hs * fy, oy + hf * fy + hs * fx, oz + hh)
-        n = max(2, int(math.dist(a, b) / 0.08))
-        out += [(a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n, a[2] + (b[2] - a[2]) * i / n, 0.09, BONE_TONES[i % 3])
+        n = max(2, int(math.dist(a, b) / 0.07))
+        out += [(a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n, a[2] + (b[2] - a[2]) * i / n, 0.08, BONE_TONES[i % 3])
                 for i in range(n + 1)]
     return out, (ox, oy, oz)
 
@@ -284,19 +294,41 @@ _glow_cache: dict = {}
 
 
 def draw_eye_glow(surface, camera, skull, yaw, t: float):
-    """Brilho vermelho aditivo sobre os olhos (pulsa de leve)."""
+    """Brilho espectral roxo e carmesim aditivo com labaredas espirituais sobre os olhos."""
     zoom = getattr(camera, "zoom", 1.0)
-    radius = max(5, int((11 + 2 * math.sin(t * 7.0)) * zoom))
+    radius = max(5, int((9 + 2 * math.sin(t * 8.5)) * zoom))
     spr = _glow_cache.get(radius)
     if spr is None:
         spr = pygame.Surface((radius * 2, radius * 2))
-        for r in range(radius, 0, -2):
-            k = (1.0 - r / radius) ** 2
-            pygame.draw.circle(spr, (int(150 * k), int(26 * k), int(10 * k)), (radius, radius), r)
+        for r in range(radius, 0, -1):
+            k = (1.0 - r / radius) ** 1.8
+            # Gradiente de chamas espirituais: violeta cósmico na borda -> carmesim no meio -> branco no centro
+            if r > radius * 0.55:
+                u = (r - radius * 0.55) / (radius * 0.45)
+                col = (int((140 + 60 * (1 - u)) * k), int(25 * k), int((210 + 45 * (1 - u)) * k))
+            elif r > radius * 0.22:
+                u = (r - radius * 0.22) / (radius * 0.33)
+                col = (int((240 + 15 * (1 - u)) * k), int((40 + 30 * (1 - u)) * k), int((100 * u + 180 * (1 - u)) * k))
+            else:
+                col = (int(255 * k), int(220 * k), int(245 * k))
+            pygame.draw.circle(spr, col, (radius, radius), r)
         _glow_cache[radius] = spr
     fx, fy = yaw
     for sign in (-1, 1):
-        f, s, h = (EYE_CENTER[0] + 0.1) * SCALE, sign * EYE_CENTER[1] * SCALE, EYE_CENTER[2] * SCALE
+        f, s, h = (EYE_CENTER[0] + 0.08) * SCALE, sign * EYE_CENTER[1] * SCALE, EYE_CENTER[2] * SCALE
         x, y, z = skull[0] + f * fx - s * fy, skull[1] + f * fy + s * fx, skull[2] + h
         px, py = camera.apply(x, y, z)
         surface.blit(spr, (px - radius, py - radius), special_flags=pygame.BLEND_RGB_ADD)
+
+        # Labaredas ascendentes dinâmicas de alma (flickering wisps)
+        for w_i in range(3):
+            w_phase = t * 9.0 + sign * 1.5 + w_i * 2.1
+            flicker_h = 0.05 + 0.05 * math.sin(w_phase)
+            flicker_s = 0.02 * math.cos(w_phase * 1.3)
+            fx_w, fy_w, fz_w = x - fx * 0.02 + (-fy) * flicker_s, y - fy * 0.02 + fx * flicker_s, z + flicker_h
+            fl_px, fl_py = camera.apply(fx_w, fy_w, fz_w)
+            fl_r = max(2, int((2.6 - w_i * 0.6) * zoom))
+            fl_surf = pygame.Surface((fl_r * 2, fl_r * 2))
+            fl_col = (190, 50, 240) if w_i % 2 == 0 else (255, 60, 90)
+            pygame.draw.circle(fl_surf, fl_col, (fl_r, fl_r), fl_r)
+            surface.blit(fl_surf, (fl_px - fl_r, fl_py - fl_r), special_flags=pygame.BLEND_RGB_ADD)

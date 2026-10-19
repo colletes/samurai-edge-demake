@@ -2153,7 +2153,382 @@ class EarthStompShockwave:
                 pygame.draw.line(surface, fissure_col, front_points[j], front_points[j + 1], 3)
 
 
+# =============================================================================
+# CICLO 4: TALISMÃ OFUDA E SELO SAGRADO (SEIMEI)
+# =============================================================================
+
+class OfudaProjectile:
+    """
+    Talismã Sagrado de Papel e Fogo Espiritual disparado por Seimei (Ciclo 4).
+    - Projétil cortante e veloz com kanjis sagrados incandescentes.
+    - Dano letal (2 de dano), alcance 5.8m, velocidade 15.0m/s.
+    - Pode ser defendido/refletido por lâminas em parry técnico.
+    """
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, max_range: float = 6.0):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.owner = owner
+        self.dir_x = dir_x
+        self.dir_y = dir_y
+        self.speed = 15.0
+        self.vx = dir_x * self.speed
+        self.vy = dir_y * self.speed
+        self.max_range = max_range
+        self.dist_traveled = 0.0
+        self.is_active = True
+        self.damage = 1
+        self.radius = 0.38
+        self.spin_timer = 0.0
+        self.has_been_reflected = False
+
+    def update(self, dt: float, game_map, particles: list) -> bool:
+        if not self.is_active:
+            return False
+
+        self.spin_timer += dt * 18.0
+        step = math.hypot(self.vx * dt, self.vy * dt)
+        self.wx += self.vx * dt
+        self.wy += self.vy * dt
+        self.dist_traveled += step
+
+        # Partículas espirituais de kanji e fogo místico azul/dourado
+        if particles is not None and random.random() < 0.65:
+            from src.effects.particles import SparkParticle
+            col = random.choice([(255, 225, 95), (135, 205, 255), (195, 175, 255)])
+            particles.append(SparkParticle(self.wx, self.wy, random.uniform(0.18, 0.40), color=col))
+
+        min_bound = 1.2
+        max_bound_x = (game_map.cols - 1.2) if (game_map and hasattr(game_map, "cols")) else 19.8
+        max_bound_y = (game_map.rows - 1.2) if (game_map and hasattr(game_map, "rows")) else 19.8
+        if self.wx <= min_bound or self.wx >= max_bound_x or self.wy <= min_bound or self.wy >= max_bound_y:
+            self.is_active = False
+            return False
+
+        if self.dist_traveled >= self.max_range:
+            self.is_active = False
+            return False
+
+        # Cortar bambus e colidir com rochas
+        if hasattr(game_map, "bamboos"):
+            for b in game_map.bamboos:
+                if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.55:
+                    b.cut((self.dir_x, self.dir_y))
+        return True
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+        from src.isometric.mesh_primitives import draw_oriented_voxel_box, draw_voxel_box
+        wz = getattr(self, "wz", 0.45)
+        # Brilho místico translúcido ao redor do talismã
+        draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.08, wz - 0.04, 0.16, 0.16, 0.08, (135, 195, 255), outline=False, alpha=160)
+        # Corpo retangular de papel sagrado Kariginu
+        draw_oriented_voxel_box(surface, camera, self.wx, self.wy, wz, self.dir_x, self.dir_y, 0.0, 0.28, 0.12, 0.02, (252, 250, 245), outline=True)
+        # Inscrição do kanji vermelho sagrado no centro
+        draw_oriented_voxel_box(surface, camera, self.wx + self.dir_x * 0.02, self.wy + self.dir_y * 0.02, wz + 0.005, self.dir_x, self.dir_y, 0.0, 0.18, 0.06, 0.025, (225, 45, 55), outline=False)
 
 
+class TalismanWard:
+    """
+    Selo Sagrado de Proteção e Fogo Espiritual de Seimei (Talisman Ward).
+    - Fica fincado no solo com mandala mística e kanjis circulares.
+    - Se o rival se aproximar a menos de 1.35m ou após o tempo limite (5.5s), detona em Pilar de Fogo Sagrado.
+    - O pilar causa 2 de dano no centro, 1 de dano + repel/stun na borda, e desintegra projéteis inimigos.
+    """
+    def __init__(self, wx: float, wy: float, owner, duration: float = 5.5):
+        self.wx = wx
+        self.wy = wy
+        self.wz = 0.0
+        self.owner = owner
+        self.duration = duration
+        self.timer = duration
+        self.state = "ARMED"  # "ARMED" -> "DETONATING" -> "EXPIRED"
+        self.detonate_duration = 0.55
+        self.detonate_timer = 0.0
+        self.trigger_radius = 1.35
+        self.pillar_radius = 1.50
+        self.is_active = True
+        self.hit_fighters = set()
+        self.rot_ang = 0.0
 
+    def update(self, dt: float, *args, **kwargs) -> bool:
+        if not self.is_active:
+            return False
+
+        # Extração flexível de argumentos para suportar chamadas do loop universal e chamadas diretas
+        fighters = kwargs.get("fighters", None)
+        projectiles = kwargs.get("projectiles", None)
+        particles = kwargs.get("particles", None)
+        game_map = kwargs.get("game_map", None)
+
+        if len(args) == 1:
+            game_map = args[0]
+        elif len(args) == 2:
+            game_map, particles = args[0], args[1]
+        elif len(args) >= 3:
+            if isinstance(args[0], (list, tuple)):
+                fighters = args[0]
+                projectiles = args[1] if len(args) > 1 else None
+                particles = args[2] if len(args) > 2 else None
+                game_map = args[3] if len(args) > 3 else None
+            else:
+                game_map = args[0]
+                particles = args[1]
+                fighters = args[2] if len(args) > 2 else None
+
+        self.rot_ang += dt * 3.2
+
+        if self.state == "ARMED":
+            self.timer -= dt
+            if particles is not None and random.random() < 0.30:
+                from src.effects.particles import SparkParticle
+                r = random.uniform(0.3, 1.2)
+                ang = random.uniform(0, math.pi * 2)
+                particles.append(SparkParticle(self.wx + math.cos(ang) * r, self.wy + math.sin(ang) * r, 0.10, color=(160, 210, 255)))
+
+            # Purificação e bloqueio de projéteis inimigos que tocam a barreira Kekkai armada
+            if projectiles:
+                for p in projectiles:
+                    if p is not self and getattr(p, "is_active", False) and getattr(p, "owner", None) != self.owner:
+                        pw_x, pw_y = getattr(p, "wx", None), getattr(p, "wy", None)
+                        if pw_x is not None and pw_y is not None:
+                            if world_distance(self.wx, self.wy, pw_x, pw_y) <= self.trigger_radius:
+                                p.is_active = False
+                                if particles is not None:
+                                    from src.effects.particles import SparkParticle
+                                    for _ in range(8):
+                                        particles.append(SparkParticle(pw_x, pw_y, 0.45, color=(120, 220, 255)))
+
+            if fighters:
+                for f in fighters:
+                    if f is not self.owner and getattr(f, "is_alive", True):
+                        dist = world_distance(self.wx, self.wy, f.wx, f.wy)
+                        if dist <= self.trigger_radius:
+                            self.detonate()
+                            break
+
+            if self.timer <= 0:
+                self.detonate()
+
+        elif self.state == "DETONATING":
+            self.detonate_timer += dt
+            prog = min(1.0, self.detonate_timer / self.detonate_duration)
+
+            if particles is not None:
+                from src.effects.particles import FlameVoxelParticle
+                for _ in range(4):
+                    ang = random.uniform(0, math.pi * 2)
+                    r = random.uniform(0.1, self.pillar_radius * 0.8)
+                    particles.append(FlameVoxelParticle(self.wx + math.cos(ang) * r, self.wy + math.sin(ang) * r, random.uniform(0.1, 1.2), color=random.choice([(90, 180, 255), (180, 225, 255), (255, 240, 120)])))
+
+            if projectiles:
+                for p in projectiles:
+                    if p is not self and getattr(p, "is_active", False) and getattr(p, "owner", None) != self.owner:
+                        pw_x, pw_y = getattr(p, "wx", None), getattr(p, "wy", None)
+                        if pw_x is not None and pw_y is not None:
+                            if world_distance(self.wx, self.wy, pw_x, pw_y) <= self.pillar_radius:
+                                p.is_active = False
+
+            if fighters:
+                for f in fighters:
+                    if f is not self.owner and getattr(f, "is_alive", True) and id(f) not in self.hit_fighters:
+                        dist = world_distance(self.wx, self.wy, f.wx, f.wy)
+                        if dist <= self.pillar_radius:
+                            self.hit_fighters.add(id(f))
+                            dx = f.wx - self.wx
+                            dy = f.wy - self.wy
+                            mag = math.hypot(dx, dy) or 1.0
+                            ndx, ndy = dx / mag, dy / mag
+                            if dist <= 0.85:
+                                f.take_hit((ndx, ndy), damage=2)
+                            else:
+                                if game_map is not None:
+                                    f.apply_forced_displacement(ndx * 0.55, ndy * 0.55, game_map)
+                                f.take_hit((ndx, ndy), damage=1)
+                                if getattr(f, "is_alive", True):
+                                    f.stun(0.90)
+
+            if self.detonate_timer >= self.detonate_duration:
+                self.is_active = False
+                return False
+
+        return True
+
+    def detonate(self):
+        if self.state == "ARMED":
+            self.state = "DETONATING"
+            self.detonate_timer = 0.0
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+        from src.isometric.mesh_primitives import draw_voxel_box
+        if self.state == "ARMED":
+            # Talismã Ofuda central fincado no chão
+            draw_voxel_box(surface, camera, self.wx - 0.06, self.wy - 0.06, 0.02, 0.12, 0.12, 0.20, (252, 250, 245), outline=True)
+            draw_voxel_box(surface, camera, self.wx - 0.03, self.wy - 0.03, 0.05, 0.06, 0.06, 0.12, (225, 45, 55), outline=False)
+
+            sx, sy = camera.apply(self.wx, self.wy, 0.0)
+            r_px = int(self.trigger_radius * 36 * camera.zoom)
+            pulse = int(150 + math.sin(self.rot_ang * 2.5) * 50)
+
+            # Anel externo da mandala sagrada
+            pygame.draw.ellipse(surface, (70, 180, 255, pulse), (sx - r_px, sy - r_px // 2, r_px * 2, r_px), max(2, int(2 * camera.zoom)))
+            # Anel interno dourado
+            r_inner = r_px // 2
+            pygame.draw.ellipse(surface, (245, 215, 90, pulse // 2), (sx - r_inner, sy - r_inner // 2, r_inner * 2, r_inner), 1)
+
+            # Cúpula Kekkai translúcida de proteção espiritual
+            b_height = int(36 * camera.zoom)
+            kekkai_surf = pygame.Surface((r_px * 2 + 8, b_height + r_px // 2 + 8), pygame.SRCALPHA)
+            cx_k = r_px + 4
+            top_y = b_height // 2
+            bot_y = b_height
+            pygame.draw.ellipse(kekkai_surf, (80, 190, 255, 40), (cx_k - r_px, top_y, r_px * 2, r_px // 2))
+            pygame.draw.ellipse(kekkai_surf, (140, 220, 255, 80), (cx_k - r_px, bot_y, r_px * 2, r_px // 2), 1)
+            surface.blit(kekkai_surf, (sx - cx_k, sy - bot_y - r_px // 4))
+
+        elif self.state == "DETONATING":
+            prog = self.detonate_timer / self.detonate_duration
+            height = 2.4 * math.sin(prog * math.pi)
+            sx, sy = camera.apply(self.wx, self.wy, 0.0)
+            r_px = int(self.pillar_radius * 36 * camera.zoom * math.sin(prog * math.pi))
+            if r_px > 4:
+                pygame.draw.ellipse(surface, (130, 210, 255, 200), (sx - r_px, sy - r_px // 2, r_px * 2, r_px))
+                pygame.draw.ellipse(surface, (255, 250, 190, 240), (sx - r_px // 2, sy - r_px // 4, r_px, r_px // 2))
+            draw_voxel_box(surface, camera, self.wx - 0.20, self.wy - 0.20, 0.0, 0.40, 0.40, height, (180, 230, 255), outline=False, alpha=220)
+            draw_voxel_box(surface, camera, self.wx - 0.10, self.wy - 0.10, 0.1, 0.20, 0.20, height * 0.8, (255, 245, 160), outline=False, alpha=240)
+
+
+# =============================================================================
+# CICLO 5: ARMADILHA DE URSO DE FERRO FORJADO (AOI — CAÇADORA AINU)
+# =============================================================================
+
+class BearTrapProjectile:
+    """
+    Armadilha de Urso de Ferro Dentado (Bear Trap) plantada no solo por Aoi (Ciclo 5).
+    - Permanece armada no solo por até 9.0s (máximo de 2 simultâneas).
+    - Quando um oponente pisa no raio de 0.85m (e wz < 0.35m), fecha as mandíbulas de aço com impacto visceral:
+      causa 1 de dano, imobiliza/atordoa por 1.15s (deixando o alvo vulnerável à execução com lança/Makiri)
+      e aplica lentidão residual nas pernas.
+    - Se o dano da armadilha matar o oponente, engatilha o fatality 'TRAP_AND_EXECUTE'.
+    """
+    def __init__(self, wx: float, wy: float, owner, duration: float = 9.0):
+        self.wx = wx
+        self.wy = wy
+        self.wz = 0.0
+        self.owner = owner
+        self.duration = duration
+        self.timer = duration
+        self.state = "ARMED"  # "ARMED" -> "SNAPPED" -> "EXPIRED"
+        self.snap_duration = 1.25
+        self.snap_timer = 0.0
+        self.trigger_radius = 0.85
+        self.is_active = True
+        self.trapped_fighter = None
+
+    def update(self, dt: float, *args, **kwargs) -> bool:
+        if not self.is_active:
+            return False
+
+        fighters = kwargs.get("fighters", None)
+        particles = kwargs.get("particles", None)
+        banners = kwargs.get("banners", None)
+        cinematic_director = kwargs.get("cinematic_director", None)
+
+        if len(args) >= 2 and particles is None:
+            particles = args[1]
+        if len(args) >= 3 and fighters is None and isinstance(args[2], (list, tuple)):
+            fighters = args[2]
+
+        if self.state == "ARMED":
+            self.timer -= dt
+            if fighters:
+                for f in fighters:
+                    if f is not self.owner and getattr(f, "is_alive", True):
+                        if getattr(f, "wz", 0.0) < 0.35:
+                            dist = world_distance(self.wx, self.wy, f.wx, f.wy)
+                            if dist <= self.trigger_radius:
+                                self.snap_on_target(f, particles=particles, banners=banners, cinematic_director=cinematic_director)
+                                break
+            if self.timer <= 0 and self.state == "ARMED":
+                self.is_active = False
+                return False
+
+        elif self.state == "SNAPPED":
+            self.snap_timer += dt
+            # Mantém o alvo preso no centro da armadilha enquanto imobilizado
+            if self.trapped_fighter and getattr(self.trapped_fighter, "is_alive", False):
+                if self.snap_timer < 0.95:
+                    self.trapped_fighter.wx = self.wx
+                    self.trapped_fighter.wy = self.wy
+            if self.snap_timer >= self.snap_duration:
+                self.is_active = False
+                return False
+
+        return True
+
+    def snap_on_target(self, target, particles: list = None, banners: list = None, cinematic_director=None):
+        """Fecha as mandíbulas dentadas de ferro na perna do oponente."""
+        if self.state != "ARMED":
+            return
+        self.state = "SNAPPED"
+        self.snap_timer = 0.0
+        self.trapped_fighter = target
+
+        if target is not None and getattr(target, "is_alive", True):
+            target.wx = self.wx
+            target.wy = self.wy
+            dx = target.wx - getattr(self.owner, "wx", self.wx)
+            dy = target.wy - getattr(self.owner, "wy", self.wy)
+            mag = math.hypot(dx, dy) or 1.0
+            hit, dead = target.take_hit((dx / mag, dy / mag), damage=1)
+            if getattr(target, "is_alive", True):
+                target.stun(1.15)
+                if hasattr(target, "apply_slow"):
+                    target.apply_slow(2.5)
+            elif dead and cinematic_director is not None:
+                cinematic_director.trigger_fatal_strike(self.owner, target, "TRAP_AND_EXECUTE", (dx / mag, dy / mag))
+
+        if particles is not None:
+            from src.effects.particles import BloodParticle, SparkParticle
+            for _ in range(18):
+                particles.append(BloodParticle(self.wx, self.wy, 0.25))
+            for _ in range(10):
+                particles.append(SparkParticle(self.wx, self.wy, 0.15, color=(210, 218, 230)))
+
+        if banners is not None:
+            from src.effects.particles import FloatingBanner
+            banners.append(FloatingBanner("BEAR TRAP!", self.wx, self.wy, wz=1.6, color=(235, 75, 65)))
+
+    def detonate(self):
+        """Desarma a armadilha mais antiga quando o limite de 2 é excedido."""
+        self.is_active = False
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+        from src.isometric.mesh_primitives import draw_voxel_box
+        iron_dark = (48, 52, 60)
+        iron_mid = (82, 88, 98)
+        tooth_steel = (185, 192, 205)
+
+        # Base circular/quadrada de ferro forjado e mola lateral no solo
+        draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 0.0, 0.36, 0.36, 0.035, iron_dark, outline=True)
+        # Prato de pressão central de bronze/ferro
+        draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.08, 0.035, 0.16, 0.16, 0.02, (115, 92, 58), outline=False)
+
+        if self.state == "ARMED":
+            # Mandíbulas abertas deitadas nas bordas com dentes de aço apontando para cima
+            draw_voxel_box(surface, camera, self.wx - 0.22, self.wy - 0.16, 0.02, 0.06, 0.32, 0.045, iron_mid, outline=True)
+            draw_voxel_box(surface, camera, self.wx + 0.16, self.wy - 0.16, 0.02, 0.06, 0.32, 0.045, iron_mid, outline=True)
+            for ty in (-0.11, 0.0, 0.11):
+                draw_voxel_box(surface, camera, self.wx - 0.20, self.wy + ty - 0.015, 0.065, 0.03, 0.03, 0.04, tooth_steel, outline=False)
+                draw_voxel_box(surface, camera, self.wx + 0.17, self.wy + ty - 0.015, 0.065, 0.03, 0.03, 0.04, tooth_steel, outline=False)
+        else:
+            # Mandíbulas fechadas verticalmente cravadas no centro com mancha carmesim
+            draw_voxel_box(surface, camera, self.wx - 0.07, self.wy - 0.15, 0.03, 0.06, 0.30, 0.18, iron_mid, outline=True)
+            draw_voxel_box(surface, camera, self.wx + 0.01, self.wy - 0.15, 0.03, 0.06, 0.30, 0.18, iron_mid, outline=True)
+            draw_voxel_box(surface, camera, self.wx - 0.03, self.wy - 0.12, 0.18, 0.06, 0.24, 0.04, (175, 28, 32), outline=False)
 

@@ -91,11 +91,17 @@ class SumieTitleScreen:
                 _, dy = d_dir
                 if dy != 0:
                     self.selected_mode = (self.selected_mode + dy) % 3
+                    try:
+                        from src.audio.sound_events import SoundEvent
+                        from src.audio.sound_manager import SoundManager
+                        SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+                    except Exception:
+                        pass
                 return None
 
-            if ctrl_mgr.is_event_menu_confirm(event) or event.button in (0, 2):
+            if ctrl_mgr.is_event_menu_confirm(event) or ctrl_mgr.is_event_menu_pause(event) or event.button in (0, 2, 3, 6, 7):
                 return self._activate_current_mode()
-            elif ctrl_mgr.is_event_menu_cancel(event) or event.button == 1:
+            elif event.button in (4, 5): # Share / Guide para sair da tela inicial
                 return "QUIT"
 
         elif event.type == pygame.JOYHATMOTION:
@@ -105,17 +111,36 @@ class SumieTitleScreen:
                 _, dy = d_dir
                 if dy != 0:
                     self.selected_mode = (self.selected_mode + dy) % 3
+                    try:
+                        from src.audio.sound_events import SoundEvent
+                        from src.audio.sound_manager import SoundManager
+                        SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+                    except Exception:
+                        pass
 
         elif event.type == pygame.JOYAXISMOTION:
             # Analógico esquerdo para navegação vertical nas opções
             if event.axis == 1:
-                if event.value > 0.65 and not self._axis_y_held:
+                val = -event.value if getattr(ctrl_mgr, "invert_y", False) else event.value
+                if val > 0.65 and not self._axis_y_held:
                     self.selected_mode = (self.selected_mode + 1) % 3
                     self._axis_y_held = True
-                elif event.value < -0.65 and not self._axis_y_held:
+                    try:
+                        from src.audio.sound_events import SoundEvent
+                        from src.audio.sound_manager import SoundManager
+                        SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+                    except Exception:
+                        pass
+                elif val < -0.65 and not self._axis_y_held:
                     self.selected_mode = (self.selected_mode - 1) % 3
                     self._axis_y_held = True
-                elif abs(event.value) < 0.25:
+                    try:
+                        from src.audio.sound_events import SoundEvent
+                        from src.audio.sound_manager import SoundManager
+                        SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+                    except Exception:
+                        pass
+                elif abs(val) < 0.25:
                     self._axis_y_held = False
 
         elif event.type == pygame.MOUSEMOTION:

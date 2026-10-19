@@ -292,7 +292,7 @@ class Cannon(SolidProp):
         return cx + self.facing[0] * (self.width / 2.0 if self.facing[0] else 0.0), \
             cy + self.facing[1] * (self.depth / 2.0 if self.facing[1] else 0.0)
 
-    def ignite(self, hx: float, hy: float, radius: float) -> bool:
+    def ignite(self, hx: float, hy: float, radius: float, striker=None) -> bool:
         """Chamado por golpes e projéteis; só acende com o pavio apagado e fora da recarga."""
         if self.state != "idle":
             return False
@@ -506,7 +506,7 @@ class PowderBarrel(SolidProp):
             return False, 0.0, 0.0
         return super().check_collision(px, py, p_radius)
 
-    def ignite(self, hx: float, hy: float, radius: float) -> bool:
+    def ignite(self, hx: float, hy: float, radius: float, striker=None) -> bool:
         if self.state != "idle":
             return False
         if _aabb_distance((self.wx, self.wy, self.wx + self.width, self.wy + self.depth), hx, hy) > radius + 0.1:
@@ -658,8 +658,8 @@ class ShrineBell(SolidProp):
         if self._pending:
             self._pending = False
             arena.dispel_requested = True
-            Cannon._play("round_win")
-            camera.add_shake(5.5)
+            if camera is not None:
+                camera.add_shake(5.5)
 
             # Iniciar expansão da onda de choque sônica
             self.soundwave_active = True

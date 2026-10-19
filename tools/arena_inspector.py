@@ -40,6 +40,9 @@ from src.config import HALF_TILE_W, HALF_TILE_H, MAP_COLS, MAP_ROWS
 from src.isometric.iso_math import PIXELS_PER_Z, iso_depth
 from src.world.arenas import ARENA_SPECS, HIDDEN_ARENA_SPECS, arena_ids, create_arena
 from src.world.arena_cache import get_terrain_cache, get_prop_cache
+from src.effects.lighting import ArenaLighting
+from src.effects.fog import FogVolume
+from src.effects.particles import AmbientLeafParticle, set_wind_source
 
 
 # =============================================================================
@@ -72,7 +75,7 @@ class FreeFlyCamera:
         self.ground_z = 0.0
         self.shake_offset_x = 0.0
         self.shake_offset_y = 0.0
-        self.height_fn = None
+        self.height_fn = lambda wx, wy: 0.0
 
     def reset(self, center_x: float = 10.5, center_y: float = 10.5):
         """Restaura a câmera para o centro da arena atual com ângulo padrão."""
@@ -112,6 +115,12 @@ class FreeFlyCamera:
         self.wy += fwd_y * forward + right_y * right
         self.wz += up
 
+    def move_world(self, dx: float, dy: float, dz: float):
+        """Desloca a câmera diretamente em coordenadas absolutas de mundo."""
+        self.wx += dx
+        self.wy += dy
+        self.wz += dz
+
     def pan_screen(self, dx: int, dy: int):
         """Desloca a câmera em pixels na tela."""
         self.screen_x += dx
@@ -123,6 +132,14 @@ class FreeFlyCamera:
         min_elev = math.radians(5.0)   # Quase rente ao chão
         max_elev = math.radians(85.0)  # Quase vista superior (satélite)
         self.elevation = max(min_elev, min(max_elev, self.elevation + d_elevation))
+
+    def orbit(self, d_azimuth: float, d_elevation: float):
+        """Alias compatível para rotate_orbit."""
+        self.rotate_orbit(d_azimuth, d_elevation)
+
+    def pan(self, dx: int, dy: int):
+        """Alias compatível para pan_screen."""
+        self.pan_screen(dx, dy)
 
     def zoom_in(self, factor: float = 1.12):
         self.zoom = max(0.35, min(4.8, self.zoom * factor))
@@ -173,6 +190,8 @@ ARENA_DISPLAY_INFO = {
     "yoshiwara_alley": {"title": "Beco Yoshiwara", "subtitle": "O Labirinto das Sombras Rubras", "fighter": "O-Rin"},
     "rice_paddies": {"title": "Arrozais Terraciados", "subtitle": "A Fúria dos Campos Alagados", "fighter": "Goro"},
     "rain_mill": {"title": "Moinho na Chuva", "subtitle": "O Pranto das Águas do Moinho", "fighter": "Ichi"},
+    "gothic_cemetery": {"title": "Cemitério Gótico", "subtitle": "Cripta de Névoa e Mausoléus Fúnebres", "fighter": "Valerius"},
+    "heian_shrine": {"title": "Pavilhão Astral Heian", "subtitle": "Santuário das Cinco Fases e Talismãs", "fighter": "Seimei"},
     "dojo": {"title": "Dojo Clássico", "subtitle": "O Tatami Sagrado do Duelo", "fighter": "Veteranos"},
     "forest_camp": {"title": "Acampamento Florestal", "subtitle": "Fogueiras sob o Luar", "fighter": "Joe"},
     "nagashino_field": {"title": "Campo de Nagashino", "subtitle": "A Batalha dos Arcabuzes", "fighter": "Teppo"},
@@ -184,7 +203,9 @@ ARENA_DISPLAY_INFO = {
     "kabuki_stage": {"title": "Palco Kabuki", "subtitle": "O Teatro das Ilusões", "fighter": "Okuni"},
     "pirate_deck": {"title": "Convés Pirata", "subtitle": "O Galeão da Tempestade", "fighter": "Anne"},
     "mountain_shrine": {"title": "Santuário da Montanha", "subtitle": "O Sino dos Deuses", "fighter": "Saitou"},
-    "gashadokuro_graveyard": {"title": "Cemitério Gashadokuro", "subtitle": "O Despertar do Titã de Ossos", "fighter": "Boss Oni"},
+    "sacred_pines": {"title": "Clareira dos Pinheiros", "subtitle": "Trilha Monástica nas Nuvens", "fighter": "Daiki"},
+    "ezo_tundra": {"title": "Tundra Nevada de Ezo", "subtitle": "Pegadas na Neve de Hokkaido", "fighter": "Aoi"},
+    "gashadokuro_graveyard": {"title": "Campo dos Mortos de Fome", "subtitle": "O Despertar de Gashadokuro (Teclas 1-5: Fase)", "fighter": "Gashadokuro (Final Boss)"},
 }
 
 
@@ -218,6 +239,13 @@ class ArenaInspector:
 
         # Arena carregada
         self.game_map = None
+        self.lighting_fx = None
+        self.fog = None
+        self.ambient_leaves = []
+        self.arena_particles = []
+        self.boss_phase = 0
+        self.show_fog = True
+        self.show_weather = True
         self.load_arena(self.available_arenas[self.current_arena_idx])
 
         # Estado e modos de exibição
@@ -257,8 +285,26 @@ class ArenaInspector:
             cols = getattr(self.game_map, "cols", MAP_COLS)
             rows = getattr(self.game_map, "rows", MAP_ROWS)
             self.camera.reset(cols / 2.0, rows / 2.0)
+
+            # Efeitos visuais atmosféricos, névoa volumétrica e iluminação 2.5D
+            self.lighting_fx = ArenaLighting(self.game_map)
+            self.fog = self.game_map.fog = FogVolume(self.game_map)
+            self.arena_particles = []
+            set_wind_source(lambda x, y: self.game_map.wind_at(x, y, self.current_time))
+            self.ambient_leaves = [
+                AmbientLeafParticle(self.game_map.cols, self.game_map.rows, self.game_map.spec.drift_petals)
+                for _ in range(getattr(self.game_map.spec, "drift_count", 24))
+            ]
+            self.set_boss_phase(self.boss_phase)
         except Exception as e:
             print(f"[ArenaInspector] Erro ao carregar arena '{arena_id}': {e}")
+
+    def set_boss_phase(self, phase: int):
+        self.boss_phase = max(0, min(4, phase))
+        if self.game_map:
+            for h in getattr(self.game_map, "hazards", []):
+                if hasattr(h, "set_phase"):
+                    h.set_phase(self.boss_phase)
 
     def next_arena(self):
         self.current_arena_idx = (self.current_arena_idx + 1) % len(self.available_arenas)
@@ -338,6 +384,10 @@ class ArenaInspector:
                 elif event.key == pygame.K_LEFTBRACKET:
                     self.prev_arena()
 
+                # Seletor de Fase (1-5) para Arena Gashadokuro
+                elif event.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5):
+                    self.set_boss_phase(event.key - pygame.K_1)
+
                 # Toggles de Exibição
                 elif event.key == pygame.K_p:
                     self.is_paused = not self.is_paused
@@ -347,6 +397,10 @@ class ArenaInspector:
                     self.show_grid = not self.show_grid
                 elif event.key == pygame.K_l:
                     self.show_lighting = not self.show_lighting
+                elif event.key == pygame.K_n:
+                    self.show_fog = not self.show_fog
+                elif event.key in (pygame.K_k, pygame.K_c):
+                    self.show_weather = not self.show_weather
                 elif event.key == pygame.K_o:
                     self.show_props = not self.show_props
                 elif event.key == pygame.K_b:
@@ -383,6 +437,16 @@ class ArenaInspector:
         """Atualiza a física de voo da câmera livre e animações do mundo."""
         if not self.is_paused:
             self.current_time += dt
+            if getattr(self, "fog", None):
+                self.fog.update(dt, self.current_time)
+            for leaf in getattr(self, "ambient_leaves", []):
+                leaf.update(dt)
+            if self.game_map and hasattr(self.game_map, "update"):
+                try:
+                    self.game_map.update(dt, [], self.camera, self.arena_particles, [])
+                except Exception:
+                    pass
+            self.arena_particles = [p for p in self.arena_particles if p.update(dt)]
 
         # Velocidade de voo livre
         base_speed = 7.5 * dt
@@ -427,21 +491,22 @@ class ArenaInspector:
             return
 
         # 1. Terreno (Cache Estático ou Voxel 3D Dinâmico)
-        if self.use_cache and self.camera.azimuth == 0.0:
-            cache = get_terrain_cache()
-            # Se a rotação for 0, utiliza o cache acelerado de superfície
-            self.game_map.render_terrain(surface, self.camera, self.current_time)
-        else:
-            # Desenho volumétrico contínuo de terreno com rotação livre 360°
-            self.game_map.render_terrain(surface, self.camera, self.current_time)
+        self.game_map.render_terrain(surface, self.camera, self.current_time)
+
+        # Perigos de solo (Pentagrama, Gêiseres de Miasma, Vórtice de Almas, etc.)
+        if hasattr(self.game_map, "render_ground_hazards"):
+            try:
+                self.game_map.render_ground_hazards(surface, self.camera, self.current_time)
+            except Exception:
+                pass
 
         # 2. Grid Isométrico Auxiliar (se ativo)
         if self.show_grid:
             self.draw_debug_grid(surface)
 
         # 3. Fila de Renderização com Y-Sorting Contínuo
+        render_queue = []
         if self.show_props:
-            render_queue = []
             for r in getattr(self.game_map, "rocks", []):
                 render_queue.append((self.camera.depth(r.wx, r.wy), "rock", r))
             if getattr(self.game_map, "well", None):
@@ -460,20 +525,50 @@ class ArenaInspector:
             for sp in getattr(self.game_map, "solid_props", []):
                 render_queue.append((self.camera.depth(sp.wx, sp.wy), "solid_prop", sp))
 
-            render_queue.sort(key=lambda item: item[0])
-            for _, item_type, obj in render_queue:
+        # Entidades dinâmicas de hazards (Almas Sombrias, Espíritos, Zumbis, Kitsune, etc.)
+        for h in getattr(self.game_map, "hazards", []):
+            if hasattr(h, "get_render_items"):
                 try:
-                    if item_type in ("bamboo", "building", "lantern") or getattr(obj, "animated", False):
-                        obj.render(surface, self.camera, self.current_time)
-                    else:
-                        obj.render(surface, self.camera)
+                    render_queue.extend(h.get_render_items(self.camera))
                 except Exception:
                     pass
 
-        # 4. Elementos Aéreos, Iluminação e Atmosfera
-        if self.show_lighting and hasattr(self.game_map, "render_overhead"):
+        for p in getattr(self, "arena_particles", []):
+            render_queue.append((self.camera.depth(p.wx, p.wy), "particle", p))
+
+        # Névoa volumétrica 3D nos planos da câmera
+        if self.show_fog and getattr(self, "fog", None):
+            render_queue.extend(self.fog.queue_items(self.camera))
+
+        render_queue.sort(key=lambda item: item[0])
+        for _, item_type, obj in render_queue:
+            try:
+                if item_type in ("bamboo", "building", "lantern") or getattr(obj, "animated", False):
+                    obj.render(surface, self.camera, self.current_time)
+                else:
+                    obj.render(surface, self.camera)
+            except Exception:
+                pass
+
+        # 4. Elementos Aéreos, Clima e Iluminação 2.5D
+        if hasattr(self.game_map, "render_overhead"):
             try:
                 self.game_map.render_overhead(surface, self.camera, self.current_time)
+            except Exception:
+                pass
+
+        # Pétalas, folhas e partículas flutuantes da atmosfera
+        if self.show_weather:
+            for leaf in getattr(self, "ambient_leaves", []):
+                try:
+                    leaf.render(surface, self.camera)
+                except Exception:
+                    pass
+
+        # Iluminação, vinheta e atmosfera da arena (névoa de base, feixes, brasas, chuva)
+        if self.show_lighting and getattr(self, "lighting_fx", None):
+            try:
+                self.lighting_fx.render(surface, self.camera, self.current_time)
             except Exception:
                 pass
 
@@ -516,7 +611,7 @@ class ArenaInspector:
             return
 
         # -------------------------------------------------------------
-        # 1. Barra Lateral: Lista das 18 Arenas
+        # 1. Barra Lateral: Lista das Arenas
         # -------------------------------------------------------------
         sidebar_w = 230
         sidebar_surf = pygame.Surface((sidebar_w, self.height), pygame.SRCALPHA)
@@ -524,14 +619,14 @@ class ArenaInspector:
         surface.blit(sidebar_surf, (0, 0))
         pygame.draw.line(surface, (55, 60, 75), (sidebar_w, 0), (sidebar_w, self.height), 2)
 
-        title_s = self.font_header.render("ARENAS (18+)", True, (240, 215, 120))
+        title_s = self.font_header.render(f"ARENAS ({len(self.available_arenas)})", True, (240, 215, 120))
         surface.blit(title_s, (16, 16))
         sub_s = self.font_small.render("Tab / Clique para carregar", True, (160, 165, 180))
         surface.blit(sub_s, (16, 46))
 
         self.sidebar_rects.clear()
         btn_y = 70
-        btn_h = 28
+        btn_h = 26
         for idx, key in enumerate(self.available_arenas):
             meta = ARENA_DISPLAY_INFO.get(key, {"title": key, "fighter": "—"})
             is_selected = (idx == self.current_arena_idx)
@@ -545,10 +640,11 @@ class ArenaInspector:
                 pygame.draw.rect(surface, (22, 26, 34), btn_rect, border_radius=4)
 
             text_color = (255, 255, 255) if is_selected else (175, 180, 195)
-            name_s = self.font_body.render(f"{idx+1}. {meta['title']}", True, text_color)
+            short_title = meta["title"] if len(meta["title"]) <= 20 else meta["title"][:19] + "…"
+            name_s = self.font_body.render(f"{idx+1}. {short_title}", True, text_color)
             surface.blit(name_s, (btn_rect.x + 10, btn_rect.centery - 7))
 
-            btn_y += btn_h + 3
+            btn_y += btn_h + 2
 
         # -------------------------------------------------------------
         # 2. Painel Superior Direito: Informações da Arena Atual
@@ -556,7 +652,7 @@ class ArenaInspector:
         cur_key = self.available_arenas[self.current_arena_idx]
         cur_meta = ARENA_DISPLAY_INFO.get(cur_key, {"title": cur_key, "subtitle": "—", "fighter": "—"})
 
-        card_w, card_h = 360, 105
+        card_w, card_h = 395, 118
         card_x = self.width - card_w - 18
         card_y = 18
 
@@ -573,6 +669,12 @@ class ArenaInspector:
 
         f_s = self.font_body.render(f"Guerreiro-Tema: {cur_meta['fighter']}", True, (160, 210, 255))
         surface.blit(f_s, (card_x + 16, card_y + 64))
+
+        if cur_key == "gashadokuro_graveyard":
+            phase_names = ("1: Colosso em Pé", "2: Serpente Óssea", "3: Torso Saltador", "4: Clava de Osso", "5: Crânio Voraz")
+            p_s = self.font_body.render(f"Hazards da Fase [{self.boss_phase + 1}/5] — {phase_names[self.boss_phase]}", True, (235, 120, 255))
+            surface.blit(p_s, (card_x + 16, card_y + 88))
+
 
         # -------------------------------------------------------------
         # 3. Painel Inferior: Telemetria da Câmera Livre & Teclas
@@ -595,9 +697,10 @@ class ArenaInspector:
         t_s = self.font_body.render(telemetry, True, (240, 215, 120))
         surface.blit(t_s, (hud_bar_x + 16, hud_bar_y + 10))
 
-        controls = "Voo: [W/A/S/D] Plano | [E/Q] Altitude Z | [Mouse E/D] Órbita/Pan | [Roda] Zoom  ||  Toggles: [V] 3D Voxel | [L] Luz | [G] Grid | [P] Pausar | [H] Ocultar HUD"
+        controls = f"Voo: [W/A/S/D] Plano | [E/Q] Alt Z | [1-5] Fase Boss || Toggles: [L] Luz {'ON' if self.show_lighting else 'OFF'} | [N] Névoa {'ON' if self.show_fog else 'OFF'} | [K] Clima {'ON' if self.show_weather else 'OFF'} | [G] Grid"
         c_s = self.font_small.render(controls, True, (170, 175, 190))
         surface.blit(c_s, (hud_bar_x + 16, hud_bar_y + 34))
+
 
     def render(self):
         # Cor de fundo padrão da arena

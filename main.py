@@ -5,7 +5,13 @@ Suporte à Seleção de Personagens: Kenshi (Vermelho), Musashi (Azul) e Ninja H
 import sys
 import os
 
-# Ajuste automático de CWD para executáveis empacotados (PyInstaller)
+# Garantir que o diretório do jogo e o CWD estejam no topo do sys.path (iOS / empacotados / subpacotes)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+_cwd = os.getcwd()
+if _cwd not in sys.path:
+    sys.path.insert(0, _cwd)
 if getattr(sys, 'frozen', False):
     exe_dir = os.path.dirname(os.path.abspath(sys.executable))
     search_dirs = [
@@ -27,6 +33,22 @@ if getattr(sys, 'frozen', False):
                 break
             except Exception:
                 pass
+def _is_running_on_ios() -> bool:
+    if sys.platform == "ios":
+        return True
+    if os.environ.get("PYGAME_IOS") == "1" or os.environ.get("KIVY_BUILD") == "ios" or os.environ.get("OS_IOS") == "1":
+        return True
+    bundle_path = os.path.dirname(os.path.abspath(__file__))
+    if "/private/var/containers/Bundle/Application" in bundle_path or ".app" in bundle_path:
+        return True
+    return False
+
+# No macOS desktop, desativar MFi do SDL para permitir detecção direta de arcade sticks USB / DirectInput (ex: Hori Fighting Stick)
+# No iOS, NUNCA desativar MFi pois é o único subsistema de gamepads bluetooth/USB-C (GameSir, Backbone, etc.)
+if sys.platform == "darwin" and not _is_running_on_ios():
+    os.environ.setdefault("SDL_JOYSTICK_MFI", "0")
+elif _is_running_on_ios():
+    os.environ["SDL_JOYSTICK_MFI"] = "1"
 
 import math
 import random
@@ -37,11 +59,13 @@ from src.config import (
     KEY_RESTART, KEY_TOGGLE_AI, KEY_SETTINGS, DEFAULT_CONTROLS,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
     CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
-    CHAR_REN, CHAR_CHIYO, CHAR_BENKEI, CHAR_ORIN, CHAR_GORO, CHAR_ICHI, CHAR_BOSS,
+    CHAR_REN, CHAR_CHIYO, CHAR_BENKEI, CHAR_ORIN, CHAR_GORO, CHAR_ICHI,
+    CHAR_VALERIUS, CHAR_SEIMEI, CHAR_DAIKI, CHAR_AOI, CHAR_BOSS,
     COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA, COLOR_SAITOU_AURA,
     COLOR_RIFLE_AURA, COLOR_KABUKI_AURA, COLOR_ARCHER_AURA,
     COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA, COLOR_REN_AURA, COLOR_CHIYO_AURA,
     COLOR_BENKEI_AURA, COLOR_ORIN_AURA, COLOR_GORO_AURA, COLOR_ICHI_AURA,
+    COLOR_VALERIUS_AURA, COLOR_SEIMEI_AURA, COLOR_DAIKI_AURA, COLOR_AOI_AURA,
     ARENA_BAMBOO, ARENA_KYOTO, ARENA_RANDOM
 )
 from src.isometric.iso_math import input_to_world_direction
@@ -65,6 +89,10 @@ from src.entities.benkei import BenkeiSamurai
 from src.entities.orin import OrinMinstrel
 from src.entities.goro import GoroFarmer
 from src.entities.ichi import IchiBlade
+from src.entities.valerius import ValeriusNecromancer
+from src.entities.seimei import SeimeiOnmyoji
+from src.entities.daiki import DaikiPilgrim
+from src.entities.aoi import AoiHuntress
 from src.entities.boss_oni import BossOni
 from src.entities.ai_controller import SamuraiAI
 from src.entities.pickups import PowderPouch
@@ -175,6 +203,14 @@ def create_fighter(char_id: str, wx: float, wy: float):
         return GoroFarmer(wx, wy)
     elif char_id == CHAR_ICHI:
         return IchiBlade(wx, wy)
+    elif char_id == CHAR_VALERIUS:
+        return ValeriusNecromancer(wx, wy)
+    elif char_id == CHAR_SEIMEI:
+        return SeimeiOnmyoji(wx, wy)
+    elif char_id == CHAR_DAIKI:
+        return DaikiPilgrim(wx, wy)
+    elif char_id == CHAR_AOI:
+        return AoiHuntress(wx, wy)
     elif char_id == CHAR_BOSS:
         return BossOni(wx, wy)
     return RedSamurai(wx, wy)
@@ -220,6 +256,14 @@ def get_fighter_color(fighter):
         return COLOR_GORO_AURA
     elif isinstance(fighter, IchiBlade):
         return COLOR_ICHI_AURA
+    elif isinstance(fighter, ValeriusNecromancer):
+        return COLOR_VALERIUS_AURA
+    elif isinstance(fighter, SeimeiOnmyoji):
+        return COLOR_SEIMEI_AURA
+    elif isinstance(fighter, DaikiPilgrim):
+        return COLOR_DAIKI_AURA
+    elif isinstance(fighter, AoiHuntress):
+        return COLOR_AOI_AURA
     return COLOR_WHITE
 
 def get_fighter_action_labels(fighter):
@@ -264,6 +308,14 @@ def get_fighter_action_labels(fighter):
         return "Corte da Kuwa", "Pisotão Sísmico"
     elif isinstance(fighter, IchiBlade):
         return "Gyaku-Iai", "Postura Escuta"
+    elif isinstance(fighter, ValeriusNecromancer):
+        return "Foice Fúnebre", "Evocar Mortos"
+    elif isinstance(fighter, SeimeiOnmyoji):
+        return "Ofuda Cortante", "Selo Sagrado"
+    elif isinstance(fighter, DaikiPilgrim):
+        return "Bastão Bō", "Salto com Vara"
+    elif isinstance(fighter, AoiHuntress):
+        return "Lança Ainu", "Armadilha Urso"
     return "Ataque", "Especial"
 
 def get_fighter_cooldown_data(fighter) -> dict | None:
@@ -308,6 +360,10 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
 
     elif isinstance(fighter, Rifleman):
         if not getattr(fighter, "has_ammo", True):
+            if getattr(fighter, "is_reloading", False) or getattr(fighter, "reload_timer", 0.0) > 0.0:
+                timer = max(0.0, getattr(fighter, "reload_timer", 0.0))
+                cd = getattr(fighter, "reload_cooldown", 2.0)
+                return {"name": f"Recarga {timer:.1f}s", "timer": timer, "max_cd": cd, "color": (230, 160, 40)}
             return {"name": "Sem Pólvora", "timer": 1.0, "max_cd": 1.0, "color": (230, 80, 80), "warning": True}
         timer = max(0.0, getattr(fighter, "trap_timer", 0.0))
         cd = getattr(fighter, "trap_cooldown", 5.0)
@@ -402,6 +458,30 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
             return {"name": "Postura Escuta", "timer": timer, "max_cd": getattr(fighter, "listen_cooldown", 4.2), "color": (215, 140, 230)}
         return None
 
+    elif isinstance(fighter, ValeriusNecromancer):
+        timer = max(0.0, getattr(fighter, "summon_timer", 0.0))
+        if timer > 0:
+            return {"name": "Evocar Mortos", "timer": timer, "max_cd": getattr(fighter, "summon_cooldown", 4.5), "color": (140, 70, 180)}
+        return None
+
+    elif isinstance(fighter, SeimeiOnmyoji):
+        timer = max(0.0, getattr(fighter, "ward_timer", 0.0))
+        if timer > 0:
+            return {"name": "Selo Sagrado", "timer": timer, "max_cd": getattr(fighter, "ward_cooldown", 4.0), "color": (80, 190, 255)}
+        return None
+
+    elif isinstance(fighter, DaikiPilgrim):
+        timer = max(0.0, getattr(fighter, "vault_timer", 0.0))
+        if timer > 0:
+            return {"name": "Salto com Vara", "timer": timer, "max_cd": getattr(fighter, "vault_cooldown", 3.6), "color": (235, 175, 70)}
+        return None
+
+    elif isinstance(fighter, AoiHuntress):
+        timer = max(0.0, getattr(fighter, "trap_timer", 0.0))
+        if timer > 0:
+            return {"name": "Armadilha Urso", "timer": timer, "max_cd": getattr(fighter, "trap_cooldown", 3.8), "color": (130, 195, 240)}
+        return None
+
     return None
 
 # Azimute atual da câmera, lido pelas conversões de entrada (W continua sendo "para cima na tela")
@@ -412,14 +492,19 @@ def get_player_aim_target(fighter, controls, prefix: str, distance: float = 4.0,
     """Calcula as coordenadas de mira para o ataque com base na entrada direcional ativa ou na orientação do lutador."""
     if move_dir and (move_dir[0] != 0 or move_dir[1] != 0):
         dwx, dwy = input_to_world_direction(move_dir[0], move_dir[1], _view_azimuth)
-        return fighter.wx + dwx * distance, fighter.wy + dwy * distance
-    keys = pygame.key.get_pressed()
-    dx = keys[controls[f"{prefix}_RIGHT"]] - keys[controls[f"{prefix}_LEFT"]]
-    dy = keys[controls[f"{prefix}_DOWN"]] - keys[controls[f"{prefix}_UP"]]
-    if dx != 0 or dy != 0:
-        dwx, dwy = input_to_world_direction(dx, dy, _view_azimuth)
-        return fighter.wx + dwx * distance, fighter.wy + dwy * distance
-    return fighter.wx + fighter.facing_x * distance, fighter.wy + fighter.facing_y * distance
+        tx, ty = fighter.wx + dwx * distance, fighter.wy + dwy * distance
+    else:
+        keys = pygame.key.get_pressed()
+        dx = keys[controls[f"{prefix}_RIGHT"]] - keys[controls[f"{prefix}_LEFT"]]
+        dy = keys[controls[f"{prefix}_DOWN"]] - keys[controls[f"{prefix}_UP"]]
+        if dx != 0 or dy != 0:
+            dwx, dwy = input_to_world_direction(dx, dy, _view_azimuth)
+            tx, ty = fighter.wx + dwx * distance, fighter.wy + dwy * distance
+        else:
+            tx, ty = fighter.wx + fighter.facing_x * distance, fighter.wy + fighter.facing_y * distance
+    if getattr(fighter, "confused_timer", 0.0) > 0:
+        return fighter.wx - (tx - fighter.wx), fighter.wy - (ty - fighter.wy)
+    return tx, ty
 
 def play_sfx(event: SoundEvent):
     """Dispara um efeito sonoro feudal através do SoundManager global."""
@@ -499,6 +584,18 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
     elif isinstance(fighter, IchiBlade):
         fighter.trigger_gyaku_iai(aim_x, aim_y)
         play_sfx(SoundEvent.SLASH_KATANA)
+    elif isinstance(fighter, ValeriusNecromancer):
+        fighter.trigger_scythe_reap(aim_x, aim_y)
+        play_sfx(SoundEvent.SLASH_HEAVY)
+    elif isinstance(fighter, SeimeiOnmyoji):
+        fighter.trigger_ofuda_toss(aim_x, aim_y, projectiles, particles)
+        play_sfx(SoundEvent.SHURIKEN_THROW)
+    elif isinstance(fighter, DaikiPilgrim):
+        fighter.trigger_bo_strike(aim_x, aim_y, particles=particles)
+        play_sfx(SoundEvent.SWING_BLUNT)
+    elif isinstance(fighter, AoiHuntress):
+        fighter.trigger_spear_thrust(aim_x, aim_y, particles=particles)
+        play_sfx(SoundEvent.SLASH_KATANA)
 
 def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, poison_clouds: list, powder_traps: list, opponent=None, game_map=None, banners: list = None):
     """Executa a Ação Secundária (Técnica Especial / Defesa / Contra-ataque) do combatente."""
@@ -576,6 +673,22 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
         # Ichi: Postura de Escuta
         fighter.trigger_listen_stance(aim_x, aim_y, banners=banners, particles=particles)
         play_sfx(SoundEvent.DODGE_WHOOSH)
+    elif isinstance(fighter, ValeriusNecromancer):
+        # Valerius: Invocação de Esqueletos
+        fighter.trigger_summon_undead(aim_x, aim_y, particles=particles, opponent=opponent, banners=banners)
+        play_sfx(SoundEvent.DODGE_WHOOSH)
+    elif isinstance(fighter, SeimeiOnmyoji):
+        # Seimei: Selo Sagrado de Proteção e Fogo
+        fighter.trigger_sacred_ward(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners, game_map=game_map)
+        play_sfx(SoundEvent.PARRY)
+    elif isinstance(fighter, DaikiPilgrim):
+        # Daiki: Salto com Vara (Pole Vault) e Queda Meteórica
+        fighter.trigger_pole_vault(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent, game_map=game_map)
+        play_sfx(SoundEvent.DASH_ROLL)
+    elif isinstance(fighter, AoiHuntress):
+        # Aoi: Armadilha de Urso de Ferro + Recuo Tático
+        fighter.trigger_bear_trap(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners, game_map=game_map)
+        play_sfx(SoundEvent.PARRY)
 
 def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None, opponent=None, banners=None):
     """Executa a Terceira Ação (Roll / Dash dedicado) com invulnerabilidade temporária (i-frames)."""
@@ -591,6 +704,12 @@ def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: f
     elif isinstance(fighter, KyudoArcher):
         # Tomoe: Flecha de corda para movimentação rápida
         fighter.start_rope_arrow_charge(aim_x, aim_y, game_map)
+    elif isinstance(fighter, ValeriusNecromancer):
+        fighter.trigger_mist_dash(dwx, dwy, particles=particles)
+    elif isinstance(fighter, SeimeiOnmyoji):
+        fighter.trigger_shikigami_glide(dwx, dwy, particles=particles)
+    elif isinstance(fighter, AoiHuntress):
+        fighter.trigger_snow_slide(dwx, dwy, particles=particles)
     else:
         # Demais personagens (BlueSamurai, YellowNinja, AmericanNinja, GrayNinja, PurpleNinja, SaitouSamurai)
         if hasattr(fighter, "trigger_roll"):
@@ -626,7 +745,8 @@ def build_static_render_queue(current_map):
             queue.append((tg.wx + tg.wy, 'torii', tg))
     if hasattr(current_map, 'buildings'):
         for b in current_map.buildings:
-            queue.append((b.wx + b.wy + b.depth * 0.5, 'building', b))
+            b_depth = getattr(b, 'depth', 0.5)
+            queue.append((b.wx + b.wy + b_depth * 0.5, 'building', b))
     if hasattr(current_map, 'lanterns'):
         for l in current_map.lanterns:
             queue.append((l.wx + l.wy, 'lantern', l))
@@ -636,7 +756,9 @@ def build_static_render_queue(current_map):
 def static_item_center(item_type: str, obj) -> tuple[float, float]:
     """Ponto de referência para ordenar um item estático quando a câmera está girada."""
     if item_type == 'building':
-        return obj.wx + obj.width * 0.5, obj.wy + obj.depth * 0.5
+        b_w = getattr(obj, 'width', 0.5)
+        b_d = getattr(obj, 'depth', 0.5)
+        return obj.wx + b_w * 0.5, obj.wy + b_d * 0.5
     return obj.wx, obj.wy
 
 
@@ -644,10 +766,45 @@ def run_game():
     global _view_azimuth
     pygame.init()
     pygame.font.init()
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    real_screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption(f"{TITLE} (Demo)" if is_demo() else TITLE)
     clock = pygame.time.Clock()
     quality.load_effects_quality(quality.SETTINGS_PATH)
+
+    actual_w, actual_h = real_screen.get_size()
+    scaler = DisplayScaler(SCREEN_WIDTH, SCREEN_HEIGHT)
+    scaler.update_window_size(actual_w, actual_h)
+
+    # Virtual canvas responsivo para telas mobile / iOS / resoluções arbitrárias
+    if (actual_w, actual_h) != (SCREEN_WIDTH, SCREEN_HEIGHT):
+        screen = scaler.canvas
+        _orig_flip = pygame.display.flip
+        def smart_flip():
+            scaler.render_to_screen(real_screen)
+            _orig_flip()
+        pygame.display.flip = smart_flip
+
+        _orig_event_get = pygame.event.get
+        def smart_event_get(*args, **kwargs):
+            events = _orig_event_get(*args, **kwargs)
+            mapped = []
+            for ev in events:
+                if ev.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
+                    vx, vy = scaler.screen_to_virtual(ev.pos[0], ev.pos[1])
+                    d = dict(ev.__dict__)
+                    d["pos"] = (int(vx), int(vy))
+                    if "rel" in d:
+                        d["rel"] = (int(d["rel"][0] / scaler.scale), int(d["rel"][1] / scaler.scale))
+                    mapped.append(pygame.event.Event(ev.type, d))
+                elif ev.type == pygame.VIDEORESIZE:
+                    scaler.update_window_size(ev.w, ev.h)
+                    mapped.append(ev)
+                else:
+                    mapped.append(ev)
+            return mapped
+        pygame.event.get = smart_event_get
+    else:
+        screen = real_screen
 
     # Tela de Carregamento Estilizada com feedback imediato ao usuário
     loading_screen = LoadingScreen(screen)
@@ -660,7 +817,6 @@ def run_game():
     # Dispositivos de Entrada e Viewport Responsivo
     ctrl_mgr = get_controller_manager()
     touch_controls = TouchControls()
-    scaler = DisplayScaler(SCREEN_WIDTH, SCREEN_HEIGHT)
 
     loading_screen.update(0.30, "Carregando configurações de controles...", delay_ms=40)
 
@@ -719,6 +875,8 @@ def run_game():
     round_intro = RoundIntroScreen()
     round_result_screen = RoundResultScreen()
     ai = SamuraiAI(difficulty=ai_difficulty)
+    ai1 = SamuraiAI(difficulty=ai_difficulty)
+    watch_restart_timer = 0.0
 
     particles = []
     banners = []
@@ -756,8 +914,9 @@ def run_game():
 
     static_render_queue = []
 
-    def start_new_match(play_intro: bool = False):
-        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, lighting_fx, terrain_fx, fog, round_winner, round_start_timer, round_start_shaken, round_intro_timer, round_started, powder_pouches, decoys, poison_clouds, powder_traps, static_render_queue, arcade_round_reported, round_clock
+    def start_new_match(play_intro: bool = False, restart_music: bool = False):
+        nonlocal p1, p2, game_map, camera, particles, banners, projectiles, ambient_leaves, lighting_fx, terrain_fx, fog, round_winner, round_start_timer, round_start_shaken, round_intro_timer, round_started, powder_pouches, decoys, poison_clouds, powder_traps, static_render_queue, arcade_round_reported, round_clock, watch_restart_timer
+        watch_restart_timer = 0.0
         game_map = create_arena(selected_arena_id)
         (p1_wx, p1_wy), (p2_wx, p2_wy) = game_map.pick_spawns(min_distance=7.0)
         if p2_char_id == CHAR_BOSS:
@@ -817,7 +976,7 @@ def run_game():
                 (p1.name, p2.name), (p1_char_id, p2_char_id),
                 (get_fighter_color(p1), get_fighter_color(p2)), vs_ai_mode
             )
-        sound_mgr.play_music(game_map.music)
+        sound_mgr.play_music(game_map.music, fade_ms=800, force_restart=(play_intro or restart_music))
 
     def request_rematch():
         """Entregável 5.3: reinicia a partida inteira (placar e rounds zerados) após o fim de uma partida Melhor-de-3."""
@@ -827,13 +986,14 @@ def run_game():
         match_winner = None
         round_number = 1
         round_result_screen.hide()
-        start_new_match()
+        start_new_match(restart_music=True)
 
     def request_next_round():
         """Entregável 5.3: avança para o próximo round da mesma partida (placar preservado)."""
         nonlocal round_number
         round_number += 1
-        start_new_match()
+        start_new_match(restart_music=False)
+
 
     def save_arcade_run():
         data = arcade_save.load()
@@ -1012,6 +1172,8 @@ def run_game():
             f.update(0.0, game_map, particles)
         elif isinstance(f, (BlueSamurai, KyudoArcher)):
             f.update(0.0, game_map, particles, projectiles)
+        elif isinstance(f, (GoroFarmer, IchiBlade, ValeriusNecromancer, SeimeiOnmyoji)):
+            f.update(0.0, game_map, particles, opponent=opp, projectiles=projectiles, banners=banners)
         else:
             f.update(0.0, game_map)
     sound_mgr = SoundManager.get_instance()
@@ -1256,6 +1418,7 @@ def run_game():
                 play_sfx(SoundEvent.MENU_SELECT)
                 p1_char_id, p2_char_id, vs_ai_mode = char_select_screen.get_selected_characters()
                 ai.set_difficulty(char_select_screen.ai_difficulty)
+                ai1.set_difficulty(char_select_screen.ai_difficulty)
                 settings_menu.ai_difficulty = char_select_screen.ai_difficulty
                 demo_start_pending = is_demo()
                 game_state = STATE_ARENA_SELECT
@@ -1386,7 +1549,7 @@ def run_game():
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     match_intro.skip()
                 elif event.type == pygame.JOYBUTTONDOWN:
-                    if ctrl_mgr.is_event_menu_pause(event, 0) or getattr(event, "button", None) == 6:
+                    if ctrl_mgr.is_event_menu_pause(event, 0):
                         pause_menu.open(screen, arcade=arcade_run is not None, demo=is_demo())
                         break
                     if ctrl_mgr.is_event_menu_confirm(event) or getattr(event, "button", None) == 0:
@@ -1511,6 +1674,11 @@ def run_game():
         p1_dwx, p1_dwy = input_to_world_direction(p1_active_dir[0], p1_active_dir[1], _view_azimuth)
         p2_dwx, p2_dwy = input_to_world_direction(p2_active_dir[0], p2_active_dir[1], _view_azimuth)
 
+        if getattr(p1, "confused_timer", 0.0) > 0:
+            p1_dwx, p1_dwy = -p1_dwx, -p1_dwy
+        if getattr(p2, "confused_timer", 0.0) > 0:
+            p2_dwx, p2_dwy = -p2_dwx, -p2_dwy
+
         # Atualização da Cinemática de Abertura de Round (Entregável 5.2) e do
         # Temporizador de Abertura de Round com Tremor de Tela (Item 10)
         if round_intro_timer > 0:
@@ -1554,7 +1722,12 @@ def run_game():
                     if round_winner is not None and not (cinematic_director.is_active or cinematic_director.is_frozen()):
                         request_restart()
                 elif event.key == KEY_TOGGLE_AI and arcade_run is None:
-                    vs_ai_mode = not vs_ai_mode
+                    if vs_ai_mode is True or vs_ai_mode == 1:
+                        vs_ai_mode = "watch"
+                    elif vs_ai_mode == "watch":
+                        vs_ai_mode = False
+                    else:
+                        vs_ai_mode = True
                 elif event.key == pygame.K_F3:
                     hitbox_inspector.toggle()
 
@@ -1571,7 +1744,7 @@ def run_game():
                         clash_system.register_press(1)
 
                 # Comandos Jogador 1 (Teclado)
-                if p1.is_alive and round_winner is None and round_in_progress:
+                if vs_ai_mode != "watch" and p1.is_alive and round_winner is None and round_in_progress:
                     if event.key == controls["P1_ATTACK"]:
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                         execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles, game_map=game_map)
@@ -1595,7 +1768,7 @@ def run_game():
                         execute_fighter_roll(p2, p2_dwx, p2_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p1, banners=banners)
 
             elif event.type == pygame.JOYBUTTONDOWN:
-                if ctrl_mgr.is_event_menu_pause(event, 0) or ctrl_mgr.is_event_menu_pause(event, 1) or (getattr(event, "button", None) == 6):
+                if ctrl_mgr.is_event_menu_pause(event, 0) or ctrl_mgr.is_event_menu_pause(event, 1):
                     pause_menu.open(screen, arcade=arcade_run is not None, demo=is_demo())
                     break
                 elif round_winner is not None and not (cinematic_director.is_active or cinematic_director.is_frozen()):
@@ -1611,7 +1784,7 @@ def run_game():
                         clash_system.register_press(0)
                     if ctrl_mgr.is_event_action(event, 1, "attack"):
                         clash_system.register_press(1)
-                elif p1.is_alive and round_winner is None and round_in_progress:
+                elif vs_ai_mode != "watch" and p1.is_alive and round_winner is None and round_in_progress:
                     if ctrl_mgr.is_event_action(event, 0, "attack"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                         execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles, game_map=game_map)
@@ -1624,7 +1797,7 @@ def run_game():
 
                 # Gamepad Jogador 2
                 if not vs_ai_mode and p2.is_alive and round_winner is None and round_in_progress:
-                    if ctrl_mgr.is_event_menu_pause(event, 1) or (getattr(event, "button", None) == 6):
+                    if ctrl_mgr.is_event_menu_pause(event, 1):
                         pause_menu.open(screen, arcade=arcade_run is not None, demo=is_demo())
                         break
                     elif ctrl_mgr.is_event_action(event, 1, "attack"):
@@ -1652,13 +1825,16 @@ def run_game():
         if pause_menu.is_open:
             continue
 
-        if p1.is_alive and round_winner is None and round_in_progress:
+        if vs_ai_mode != "watch" and p1.is_alive and round_winner is None and round_in_progress:
             if touch_controls.is_attack_just_pressed():
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                 execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles, game_map=game_map)
+            elif touch_controls.is_secondary_just_pressed():
+                aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
             elif touch_controls.is_dash_just_pressed():
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
+                execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p2, banners=banners)
 
         # Hitstop congelado
         if combat_system.hitstop_timer > 0:
@@ -1669,7 +1845,7 @@ def run_game():
         game_time += dt
 
         # Suporte ao Hold and Release do Bombardeio de Canhão Celestial da Pirata Anne Bonny
-        p1_sec_held = keys[controls.get("P1_SECONDARY", pygame.K_r)] or ctrl_mgr.is_action_down(0, "secondary")
+        p1_sec_held = (vs_ai_mode != "watch") and (keys[controls.get("P1_SECONDARY", pygame.K_r)] or ctrl_mgr.is_action_down(0, "secondary") or touch_controls.is_secondary_held())
         if isinstance(p1, PirateSwordswoman) and p1.is_alive and round_in_progress:
             if p1_sec_held:
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
@@ -1719,7 +1895,7 @@ def run_game():
                 p2.is_reloading = False
 
         # Suporte ao Hold and Release da Flecha de Corda de Tomoe (KyudoArcher) na Terceira Ação (Roll / Dash dedicado)
-        p1_dash_held = keys[controls.get("P1_DASH", pygame.K_t)] or ctrl_mgr.is_action_down(0, "dash") or touch_controls.is_dash_held()
+        p1_dash_held = (vs_ai_mode != "watch") and (keys[controls.get("P1_DASH", pygame.K_t)] or ctrl_mgr.is_action_down(0, "dash") or touch_controls.is_dash_held())
         if isinstance(p1, KyudoArcher) and p1.is_alive and round_in_progress:
             if p1_dash_held:
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
@@ -1778,11 +1954,15 @@ def run_game():
         is_clash_freeze = clash_system.is_frozen()
 
         if not is_cinematic_freeze and not is_clash_freeze:
-            # Movimento Jogador 1
-            if hasattr(p1, "apply_gatotsu_steering") and p1.state == "GATOTSU_CHARGE":
-                p1.apply_gatotsu_steering(p1_dwx, p1_dwy, dt)
+            # Movimento Jogador 1 (IA em modo Assistir ou Humano)
+            if vs_ai_mode == "watch":
+                if round_in_progress:
+                    ai1.update(p1, p2, dt, game_map, projectiles, powder_pouches, decoys, poison_clouds)
             else:
-                p1.apply_movement(p1_dwx, p1_dwy, dt, game_map)
+                if hasattr(p1, "apply_gatotsu_steering") and p1.state == "GATOTSU_CHARGE":
+                    p1.apply_gatotsu_steering(p1_dwx, p1_dwy, dt)
+                else:
+                    p1.apply_movement(p1_dwx, p1_dwy, dt, game_map)
 
             # Movimento Jogador 2 (IA ou Humano)
             if isinstance(p2, BossOni):
@@ -1859,8 +2039,8 @@ def run_game():
                     f.update(f_dt, game_map, particles, opponent=opp, banners=banners)
                 elif isinstance(f, OrinMinstrel):
                     f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles)
-                elif isinstance(f, (GoroFarmer, IchiBlade)):
-                    f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles)
+                elif isinstance(f, (GoroFarmer, IchiBlade, ValeriusNecromancer, SeimeiOnmyoji, DaikiPilgrim, AoiHuntress)):
+                    f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles, banners=banners)
                 else:
                     f.update(f_dt, game_map)
 
@@ -1952,9 +2132,6 @@ def run_game():
                 round_winner = "DRAW"
                 play_sfx(SoundEvent.ROUND_WIN)
 
-        if round_winner is not None:
-            sound_mgr.play_death_music(fadeout_ms=350)
-
         # Arcade (8.1): informa o round à jornada uma única vez; as regras decidem se a luta, o oponente ou o round continua
         if arcade_run is not None and round_winner is not None and not arcade_round_reported:
             arcade_round_reported = True
@@ -1963,17 +2140,24 @@ def run_game():
             arcade_fight_over = {FIGHT_WON: "won", FIGHT_LOST: "lost"}.get(arcade_round_status)
 
         # Entregável 5.3: Contador Best of 3 (BO3) — verifica se a partida terminou
-        if round_winner in ("P1_WINS", "P2_WINS"):
-            loser = p2 if round_winner == "P1_WINS" else p1
-            victor = p1 if round_winner == "P1_WINS" else p2
+        if round_winner is not None:
             if arcade_run is not None:
-                ends_match = arcade_fight_over == "won"
+                ends_match = arcade_fight_over in ("won", "lost")
             else:
                 ends_match = check_match_winner(score_p1, score_p2) is not None
-            outcome_seq.arm((loser.wx, loser.wy), winner_idx=0 if victor is p1 else 1,
-                            winner_pos=(victor.wx, victor.wy), match_end=ends_match)
+
+            # A música da arena continua em loop entre rounds; só encerra quando a luta inteira for resolvida
+            if ends_match:
+                sound_mgr.play_death_music(fadeout_ms=450)
+
+            if round_winner in ("P1_WINS", "P2_WINS"):
+                loser = p2 if round_winner == "P1_WINS" else p1
+                victor = p1 if round_winner == "P1_WINS" else p2
+                outcome_seq.arm((loser.wx, loser.wy), winner_idx=0 if victor is p1 else 1,
+                                winner_pos=(victor.wx, victor.wy), match_end=(arcade_fight_over == "won" if arcade_run is not None else ends_match))
         if outcome_seq.pending and not cinematic_director.is_frozen():
             outcome_seq.begin()
+
 
         if arcade_run is None and round_winner is not None and match_winner is None:
             mw = check_match_winner(score_p1, score_p2)
@@ -1988,6 +2172,14 @@ def run_game():
             outcome_seq.deferred_result = None
 
         round_result_screen.update(dt)
+
+        if vs_ai_mode == "watch" and round_winner is not None and not (cinematic_director.is_active or cinematic_director.is_frozen()):
+            watch_restart_timer += dt
+            if watch_restart_timer >= 3.2:
+                watch_restart_timer = 0.0
+                request_restart()
+        else:
+            watch_restart_timer = 0.0
 
         # Câmera segue o ponto médio (contra o chefe, 35% jogador / 65% chefe)
         boss_fight = isinstance(p2, BossOni)
@@ -2082,6 +2274,12 @@ def run_game():
                 if d.is_active:
                     render_queue.append((camera.depth(d.target_x, d.target_y), 'debris', d))
 
+        # Adicionar elementos dinâmicos de perigos e detalhes de arena (Zumbis, Talismãs, Animais Espirituais)
+        for h in getattr(game_map, 'hazards', []):
+            if hasattr(h, 'get_render_items'):
+                for r_depth, r_type, r_obj in h.get_render_items(camera):
+                    render_queue.append((r_depth, r_type, r_obj))
+
 
         render_queue.append((camera.depth(p1.wx, p1.wy), 'fighter', p1))
         render_queue.append((camera.depth(p2.wx, p2.wy), 'fighter', p2))
@@ -2096,6 +2294,12 @@ def run_game():
             render_queue.append((camera.depth(p1.dog.wx, p1.dog.wy), 'dog', p1.dog))
         if hasattr(p2, "dog") and p2.dog:
             render_queue.append((camera.depth(p2.dog.wx, p2.dog.wy), 'dog', p2.dog))
+
+        # Adicionar esqueletos invocados de Valerius ao Y-sorting
+        if getattr(p1, "summon", None) and p1.summon.is_alive:
+            render_queue.append((camera.depth(p1.summon.wx, p1.summon.wy), 'summon', p1.summon))
+        if getattr(p2, "summon", None) and p2.summon.is_alive:
+            render_queue.append((camera.depth(p2.summon.wx, p2.summon.wy), 'summon', p2.summon))
 
         # Adicionar corpos voxel fatiados ao Y-sorting
         for corpse in cinematic_director.corpses:
@@ -2187,6 +2391,20 @@ def run_game():
                 if random.random() < 0.28:
                     particles.append(SparkParticle(fighter.wx, fighter.wy, 0.45, color=(80, 235, 110)))
 
+        # Indicador de Confusão / Controles Invertidos (Pavilhão Astral Heian)
+        for fighter in (p1, p2):
+            if fighter and fighter.is_alive and getattr(fighter, "confused_timer", 0.0) > 0:
+                csx, csy = camera.apply(fighter.wx, fighter.wy, 2.12)
+                orbit_r = 16.0
+                for s_i in range(3):
+                    ang = game_time * 6.5 + s_i * (2.0 * math.pi / 3.0)
+                    sx_o = int(csx + math.cos(ang) * orbit_r)
+                    sy_o = int(csy + math.sin(ang) * (orbit_r * 0.45))
+                    pygame.draw.circle(screen, (220, 110, 255), (sx_o, sy_o), 4)
+                    pygame.draw.circle(screen, (255, 235, 150), (sx_o, sy_o), 2)
+                if random.random() < 0.18:
+                    particles.append(SparkParticle(fighter.wx, fighter.wy, 1.95, color=(220, 120, 255)))
+
         # Barra de Cooldown flutuante sobre a cabeça dos combatentes na arena (Item 6)
         if round_winner is None:
             from src.ui.combat_callouts import draw_status_gauge
@@ -2220,7 +2438,10 @@ def run_game():
 
         p1_name = p1.name.split()[0].upper()
         p2_name = p2.name.split()[0].upper()
-        if getattr(p2, "mirror_alt", False):
+        if vs_ai_mode == "watch":
+            p1_name = f"[IA 1] {p1_name}"
+            p2_name = f"{p2_name} [IA 2]"
+        elif getattr(p2, "mirror_alt", False):
             p2_name = t("arcade_mirror_tag")
 
         # Desafios: após vencer a luta, a jornada já avançou; o HUD continua mostrando a luta que acabou
@@ -2248,7 +2469,10 @@ def run_game():
             render_round_pips(screen, p1_round_score, score_p2, p1_color, p2_color, panel_rect=panel_rect, p1_total=challenge_total or None)
             render_damage_bars(screen, p1, p2, p1_color, p2_color, panel_rect)
 
-        mode_text = t("mode_hud_1p") if vs_ai_mode else t("mode_hud_2p")
+        if vs_ai_mode == "watch":
+            mode_text = "MODO: IA vs IA (ASSISTIR)" if get_lang() == LANG_PT else "MODE: AI vs AI (SPECTATE)"
+        else:
+            mode_text = t("mode_hud_1p") if vs_ai_mode else t("mode_hud_2p")
         if arcade_run is not None:
             fight_no = arcade_run.index if arcade_fight_over == "won" else arcade_run.index + 1
             mode_text = t("arcade_fight_n_of_m", n=fight_no, m=len(arcade_run.ladder))
@@ -2472,8 +2696,15 @@ def run_game():
 
         pygame.display.flip()
 
-    pygame.quit()
-    sys.exit()
+    try:
+        pygame.joystick.quit()
+    except Exception:
+        pass
+    try:
+        pygame.quit()
+    except Exception:
+        pass
+    os._exit(0)
 
 if __name__ == "__main__":
     run_game()

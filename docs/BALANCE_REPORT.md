@@ -1,126 +1,134 @@
-# Relatório Detalhado de Balanceamento & Merge Sort de Duelos Simulados
+# Relatório Detalhado de Balanceamento & Merge Sort de Duelos (NORMAL)
 
 > **Métricas Globais da Simulação**:
 > - Dificuldade da IA (ambos os lutadores): **NORMAL**
-> - Total de Guerreiros Avaliados: 18
-> - Combinações Únicas de Duelos: 153 confrontos $\binom{18}{2}$
-> - Volume de Lutas por Combinação: 24 batalhas simétricas (12 com P1/P2 alternados)
-> - **Volume Total de Batalhas Simuladas**: **3672 batalhas**
-> - Tempo Total de Simulação Física: 16.67 segundos (220.3 lutas/segundo)
+> - Total de Guerreiros Avaliados: **20**
+> - Total de Arenas Avaliadas: **20** (Cobertura Integral do Jogo)
+> - Combinações Únicas de Duelos: **190 confrontos** $\binom{20}{2}$
+> - Lutas por Combinação: **40 batalhas** (2 por arena, paridade simétrica P1/P2)
+> - **Volume Total de Batalhas Simuladas**: **7600 batalhas**
+> - Tempo Total de Simulação Física: **78.08 segundos** (97.3 lutas/s)
 
 ## 1. Tabela Geral de Desempenho & Tier List
 
 | Rank | Lutador | Arquétipo / Estilo | Vitórias | Derrotas | Empates | Winrate | Tier |
 |:---:|:---|:---|:---:|:---:|:---:|:---:|:---|
-| 1 | **Murasaki** | Kunoichi Foice (Kusarigama) | 232 | 159 | 17 | **56.9%** | A (Forte / Vantajoso) |
-| 2 | **Tomoe** | Arqueira Miko (Arco Yumi) | 232 | 152 | 24 | **56.9%** | A (Forte / Vantajoso) |
-| 3 | **Joe** | American Ninja (Shuriken/Cão) | 220 | 171 | 17 | **53.9%** | B (Balanceado / Saudável) |
-| 4 | **Julie** | Mosqueteira (Florete/Riposte) | 219 | 166 | 23 | **53.7%** | B (Balanceado / Saudável) |
-| 5 | **Anne** | Espadachim (Alfanje 180°) | 217 | 169 | 22 | **53.2%** | B (Balanceado / Saudável) |
-| 6 | **Musashi** | Duas Lâminas (Combo/Parry) | 216 | 172 | 20 | **52.9%** | B (Balanceado / Saudável) |
-| 7 | **Kasumi** | Kunoichi Névoa (Bombas/Fumaça) | 208 | 175 | 25 | **51.0%** | B (Balanceado / Saudável) |
-| 8 | **Hanzo** | Ninja Mestre (Kunai) | 203 | 184 | 21 | **49.8%** | B (Balanceado / Saudável) |
-| 9 | **Saitou** | Lobo de Mibu (Gatotsu) | 184 | 196 | 28 | **45.1%** | B (Balanceado / Saudável) |
-| 10 | **O-Rin** | Menestrel Acústica (Shamisen/Kamaitachi) | 183 | 200 | 25 | **44.9%** | C (Desfavorecido / Técnico) |
-| 11 | **Benkei** | Sōhei Monge Guerreiro (Naginata Colossal) | 182 | 195 | 31 | **44.6%** | C (Desfavorecido / Técnico) |
-| 12 | **Okuni** | Mestra dos Leques (Tessen/Kawarimi) | 179 | 201 | 28 | **43.9%** | C (Desfavorecido / Técnico) |
-| 13 | **Ichi** | Lâmina Cega (Shikomizue/Gyaku-Iai) | 178 | 202 | 28 | **43.6%** | C (Desfavorecido / Técnico) |
-| 14 | **Ren** | Monge Shaolin (Kiai/Flurry) | 171 | 211 | 26 | **41.9%** | C (Desfavorecido / Técnico) |
-| 15 | **Teppo** | Marksman (Tanegashima/Pólvora) | 165 | 221 | 22 | **40.4%** | C (Desfavorecido / Técnico) |
-| 16 | **Kenshin** | Retalhador (Iai/Shukuchi) | 161 | 201 | 46 | **39.5%** | C (Desfavorecido / Técnico) |
-| 17 | **Goro** | Fazendeiro da Kuwa (Kuwa Cleave/Pisotão) | 156 | 239 | 13 | **38.2%** | C (Desfavorecido / Técnico) |
-| 18 | **Chiyo** | Lâminas Gêmeas (Dual Nodachi) | 145 | 237 | 26 | **35.5%** | C (Desfavorecido / Técnico) |
+| 1 | **Valerius** | Necromante Prussiano (Foice/Invocações) | 542 | 217 | 1 | **71.3%** | S (Dominante / Alta Vantagem) |
+| 2 | **Seimei** | Onmyoji dos Talismãs (Ofuda/Selo Sagrado) | 536 | 196 | 28 | **70.5%** | S (Dominante / Alta Vantagem) |
+| 3 | **Joe** | American Ninja (Shuriken/Cão) | 440 | 319 | 1 | **57.9%** | A (Forte / Vantajoso) |
+| 4 | **Kasumi** | Kunoichi Névoa (Bombas/Fumaça) | 430 | 327 | 3 | **56.6%** | A (Forte / Vantajoso) |
+| 5 | **Murasaki** | Kunoichi Foice (Kusarigama) | 427 | 332 | 1 | **56.2%** | A (Forte / Vantajoso) |
+| 6 | **Tomoe** | Arqueira Miko (Arco Yumi) | 418 | 342 | 0 | **55.0%** | A (Forte / Vantajoso) |
+| 7 | **Julie** | Mosqueteira (Florete/Riposte) | 417 | 342 | 1 | **54.9%** | A (Forte / Vantajoso) |
+| 8 | **Musashi** | Duas Lâminas (Combo/Parry) | 407 | 351 | 2 | **53.5%** | A (Forte / Vantajoso) |
+| 9 | **Anne** | Espadachim (Alfanje 180°) | 389 | 370 | 1 | **51.2%** | B (Balanceado / Saudável) |
+| 10 | **Ichi** | Lâmina Cega (Shikomizue/Gyaku-Iai) | 382 | 374 | 4 | **50.3%** | B (Balanceado / Saudável) |
+| 11 | **O-Rin** | Menestrel Acústica (Shamisen/Kamaitachi) | 374 | 358 | 28 | **49.2%** | B (Balanceado / Saudável) |
+| 12 | **Hanzo** | Ninja Mestre (Kunai) | 360 | 400 | 0 | **47.4%** | B (Balanceado / Saudável) |
+| 13 | **Benkei** | Sōhei Monge Guerreiro (Naginata Colossal) | 343 | 405 | 12 | **45.1%** | C (Desfavorecido / Técnico) |
+| 14 | **Okuni** | Mestra dos Leques (Tessen/Kawarimi) | 342 | 417 | 1 | **45.0%** | C (Desfavorecido / Técnico) |
+| 15 | **Goro** | Fazendeiro da Kuwa (Kuwa Cleave/Pisotão) | 302 | 458 | 0 | **39.7%** | D (Crítico / Sob Investigação) |
+| 16 | **Kenshin** | Retalhador (Iai/Shukuchi) | 292 | 461 | 7 | **38.4%** | D (Crítico / Sob Investigação) |
+| 17 | **Ren** | Monge Shaolin (Kiai/Flurry) | 292 | 465 | 3 | **38.4%** | D (Crítico / Sob Investigação) |
+| 18 | **Saitou** | Lobo de Mibu (Gatotsu) | 289 | 470 | 1 | **38.0%** | D (Crítico / Sob Investigação) |
+| 19 | **Chiyo** | Lâminas Gêmeas (Dual Nodachi) | 287 | 468 | 5 | **37.8%** | D (Crítico / Sob Investigação) |
+| 20 | **Teppo** | Marksman (Tanegashima/Pólvora) | 281 | 478 | 1 | **37.0%** | D (Crítico / Sob Investigação) |
 
-## 2. Comparativo de Desempenho por Cenário (Bambu vs Kyoto)
-Impacto do layout (área aberta e reflexiva do lago vs via estreita de Kyoto com perigo ativo de carruagens e escombros):
+## 2. Desempenho por Arena & Variância Geográfica
+Identificação das arenas de maior e menor eficácia para cada combatente (impacto de fossos, obstáculos, projéteis e perigos de fase):
 
-| Rank | Lutador | Winrate Geral | Winrate Bambu | Winrate Kyoto | Impacto Kyoto vs Bambu |
-|:---:|:---|:---:|:---:|:---:|:---:|
-| 1 | **Murasaki** | **56.9%** | 57.4% | 56.4% | -1.0% |
-| 2 | **Tomoe** | **56.9%** | 57.8% | 55.9% | -2.0% |
-| 3 | **Joe** | **53.9%** | 58.8% | 49.0% | -9.8% |
-| 4 | **Julie** | **53.7%** | 58.8% | 48.5% | -10.3% |
-| 5 | **Anne** | **53.2%** | 57.8% | 48.5% | -9.3% |
-| 6 | **Musashi** | **52.9%** | 52.0% | 53.9% | +2.0% |
-| 7 | **Kasumi** | **51.0%** | 52.9% | 49.0% | -3.9% |
-| 8 | **Hanzo** | **49.8%** | 49.0% | 50.5% | +1.5% |
-| 9 | **Saitou** | **45.1%** | 45.6% | 44.6% | -1.0% |
-| 10 | **O-Rin** | **44.9%** | 48.0% | 41.7% | -6.4% |
-| 11 | **Benkei** | **44.6%** | 46.6% | 42.6% | -3.9% |
-| 12 | **Okuni** | **43.9%** | 49.5% | 38.2% | -11.3% |
-| 13 | **Ichi** | **43.6%** | 46.1% | 41.2% | -4.9% |
-| 14 | **Ren** | **41.9%** | 44.1% | 39.7% | -4.4% |
-| 15 | **Teppo** | **40.4%** | 46.6% | 34.3% | -12.3% |
-| 16 | **Kenshin** | **39.5%** | 43.6% | 35.3% | -8.3% |
-| 17 | **Goro** | **38.2%** | 42.6% | 33.8% | -8.8% |
-| 18 | **Chiyo** | **35.5%** | 40.7% | 30.4% | -10.3% |
+| Rank | Lutador | Winrate Geral | Melhor Arena | WR Max | Pior Arena | WR Min | Dispersão |
+|:---:|:---|:---:|:---|:---:|:---|:---:|:---:|
+| 1 | **Valerius** | **71.3%** | Kyoto: Bakumatsu em Chamas | 81.6% | Floresta de Bambu | 60.5% | 21.0% |
+| 2 | **Seimei** | **70.5%** | Cemitério Gótico | 86.8% | Telhados de Iga | 52.6% | 34.2% |
+| 3 | **Joe** | **57.9%** | Kyoto: Bakumatsu em Chamas | 68.4% | Jardim dos Lírios Carmim | 44.7% | 23.7% |
+| 4 | **Kasumi** | **56.6%** | Cemitério Gótico | 68.4% | Convés na Tempestade | 42.1% | 26.3% |
+| 5 | **Murasaki** | **56.2%** | Telhados de Iga | 63.2% | Jardim dos Lírios Carmim | 44.7% | 18.4% |
+| 6 | **Tomoe** | **55.0%** | Convés na Tempestade | 68.4% | Kyoto: Bakumatsu em Chamas | 42.1% | 26.3% |
+| 7 | **Julie** | **54.9%** | Gruta das Sombras | 71.0% | Pavilhão Astral Heian | 39.5% | 31.6% |
+| 8 | **Musashi** | **53.5%** | Pavilhão Astral Heian | 65.8% | Templo na Névoa | 39.5% | 26.3% |
+| 9 | **Anne** | **51.2%** | Beco Yoshiwara | 60.5% | Cemitério Gótico | 34.2% | 26.3% |
+| 10 | **Ichi** | **50.3%** | Convés na Tempestade | 63.2% | Kyoto: Bakumatsu em Chamas | 42.1% | 21.0% |
+| 11 | **O-Rin** | **49.2%** | Moinho na Chuva | 71.0% | Kyoto: Bakumatsu em Chamas | 36.8% | 34.2% |
+| 12 | **Hanzo** | **47.4%** | Acampamento na Floresta | 60.5% | Campo de Nagashino | 28.9% | 31.6% |
+| 13 | **Benkei** | **45.1%** | Cemitério Gótico | 63.2% | Pátio Barroco | 21.1% | 42.1% |
+| 14 | **Okuni** | **45.0%** | Convés na Tempestade | 57.9% | Floresta de Bambu | 28.9% | 28.9% |
+| 15 | **Goro** | **39.7%** | Jardim dos Lírios Carmim | 52.6% | Palco Kabuki | 23.7% | 29.0% |
+| 16 | **Kenshin** | **38.4%** | Floresta de Bambu | 55.3% | Arrozais Terraciados | 23.7% | 31.6% |
+| 17 | **Ren** | **38.4%** | Cemitério Gótico | 50.0% | Pátio dos Sinos Shaolin | 26.3% | 23.7% |
+| 18 | **Saitou** | **38.0%** | Gruta das Sombras | 50.0% | Pátio dos Sinos Shaolin | 23.7% | 26.3% |
+| 19 | **Chiyo** | **37.8%** | Palco Kabuki | 50.0% | Ponte Gojo | 26.3% | 23.7% |
+| 20 | **Teppo** | **37.0%** | Gruta das Sombras | 55.3% | Ilha de Ganryū | 26.3% | 28.9% |
 
-## 3. Matriz de Confrontos Head-to-Head (H2H 18x18)
-A tabela exibe a taxa percentual de vitórias da linha contra a coluna nas 24 lutas disputadas (12 em cada arena):
+## 3. Matriz de Confrontos Diretos Head-to-Head (20x20)
+Percentual de vitórias da linha contra a coluna através de todas as 20 arenas:
 
-| Lutador | Kenshi | Musash | Hanzo | Joe | Saitou | Teppo | Murasa | Kasumi | Okuni | Tomoe | Anne | Julie | Ren | Chiyo | Benkei | O-Rin | Goro | Ichi |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Kenshin** | — | 21% | 33% | 29% | 42% | 67% | 17% | 46% | 46% | 25% | 62% | 29% | 29% | 46% | 17% | 50% | 79% | 33% |
-| **Musashi** | 71% | — | 38% | 42% | 79% | 67% | 12% | 67% | 38% | 46% | 46% | 46% | 92% | 58% | 71% | 17% | 67% | 46% |
-| **Hanzo** | 50% | 58% | — | 33% | 38% | 54% | 42% | 29% | 62% | 38% | 62% | 33% | 50% | 62% | 54% | 71% | 38% | 71% |
-| **Joe** | 67% | 58% | 67% | — | 33% | 62% | 46% | 54% | 67% | 21% | 42% | 38% | 50% | 62% | 42% | 71% | 79% | 58% |
-| **Saitou** | 46% | 8% | 62% | 62% | — | 62% | 21% | 58% | 38% | 62% | 42% | 21% | 58% | 67% | 50% | 38% | 50% | 21% |
-| **Teppo** | 25% | 33% | 33% | 25% | 38% | — | 46% | 38% | 62% | 38% | 42% | 33% | 29% | 62% | 50% | 62% | 29% | 42% |
-| **Murasaki** | 79% | 88% | 50% | 50% | 75% | 50% | — | 33% | 62% | 46% | 0% | 67% | 50% | 50% | 54% | 54% | 83% | 75% |
-| **Kasumi** | 54% | 29% | 71% | 42% | 42% | 54% | 58% | — | 58% | 54% | 54% | 38% | 58% | 71% | 33% | 58% | 50% | 42% |
-| **Okuni** | 33% | 54% | 33% | 33% | 50% | 33% | 38% | 38% | — | 46% | 50% | 33% | 50% | 54% | 54% | 54% | 54% | 38% |
-| **Tomoe** | 62% | 50% | 50% | 75% | 25% | 62% | 54% | 33% | 46% | — | 54% | 58% | 46% | 79% | 62% | 67% | 58% | 83% |
-| **Anne** | 25% | 50% | 38% | 50% | 54% | 58% | 96% | 38% | 38% | 38% | — | 50% | 83% | 42% | 54% | 54% | 88% | 50% |
-| **Julie** | 54% | 46% | 62% | 54% | 67% | 58% | 33% | 54% | 62% | 42% | 50% | — | 42% | 62% | 50% | 54% | 62% | 58% |
-| **Ren** | 58% | 4% | 50% | 42% | 29% | 58% | 38% | 33% | 46% | 54% | 8% | 54% | — | 71% | 42% | 29% | 50% | 46% |
-| **Chiyo** | 42% | 42% | 25% | 33% | 29% | 33% | 50% | 25% | 42% | 12% | 54% | 29% | 25% | — | 42% | 33% | 42% | 46% |
-| **Benkei** | 62% | 21% | 38% | 50% | 46% | 50% | 38% | 62% | 38% | 33% | 42% | 42% | 50% | 50% | — | 54% | 38% | 46% |
-| **O-Rin** | 38% | 71% | 25% | 29% | 58% | 29% | 46% | 38% | 38% | 21% | 42% | 42% | 71% | 58% | 33% | — | 54% | 71% |
-| **Goro** | 17% | 29% | 62% | 21% | 50% | 71% | 8% | 46% | 42% | 42% | 12% | 38% | 50% | 46% | 58% | 42% | — | 17% |
-| **Ichi** | 54% | 54% | 29% | 42% | 62% | 50% | 21% | 38% | 54% | 17% | 42% | 42% | 46% | 46% | 46% | 25% | 75% | — |
+| Lutador | Kensh | Musas | Hanzo | Joe | Saito | Teppo | Muras | Kasum | Okuni | Tomoe | Anne | Julie | Ren | Chiyo | Benke | O-Rin | Goro | Ichi | Valer | Seime |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Kenshin** | — | 22% | 40% | 32% | 40% | 60% | 15% | 55% | 35% | 50% | 38% | 32% | 52% | 42% | 38% | 45% | 52% | 32% | 18% | 30% |
+| **Musashi** | 78% | — | 22% | 30% | 90% | 80% | 12% | 72% | 50% | 50% | 52% | 40% | 95% | 62% | 80% | 32% | 65% | 48% | 15% | 42% |
+| **Hanzo** | 60% | 78% | — | 35% | 50% | 57% | 52% | 28% | 57% | 50% | 68% | 38% | 42% | 45% | 38% | 50% | 42% | 60% | 15% | 35% |
+| **Joe** | 68% | 70% | 65% | — | 60% | 82% | 72% | 38% | 60% | 45% | 65% | 55% | 55% | 85% | 60% | 60% | 60% | 55% | 20% | 25% |
+| **Saitou** | 60% | 10% | 50% | 40% | — | 65% | 22% | 45% | 30% | 48% | 28% | 22% | 60% | 40% | 60% | 18% | 45% | 30% | 35% | 15% |
+| **Teppo** | 40% | 20% | 42% | 18% | 35% | — | 50% | 32% | 52% | 32% | 50% | 35% | 42% | 45% | 32% | 52% | 38% | 32% | 15% | 38% |
+| **Murasaki** | 85% | 88% | 48% | 28% | 78% | 50% | — | 42% | 62% | 40% | 5% | 52% | 80% | 82% | 45% | 62% | 90% | 72% | 30% | 28% |
+| **Kasumi** | 45% | 28% | 72% | 62% | 55% | 68% | 57% | — | 78% | 48% | 62% | 28% | 70% | 72% | 32% | 68% | 80% | 52% | 72% | 25% |
+| **Okuni** | 65% | 50% | 42% | 40% | 68% | 48% | 38% | 22% | — | 38% | 62% | 38% | 50% | 60% | 52% | 40% | 60% | 57% | 15% | 10% |
+| **Tomoe** | 50% | 50% | 50% | 55% | 52% | 68% | 60% | 52% | 62% | — | 62% | 55% | 65% | 68% | 40% | 57% | 65% | 68% | 28% | 38% |
+| **Anne** | 60% | 48% | 32% | 35% | 72% | 50% | 95% | 38% | 38% | 38% | — | 38% | 98% | 60% | 52% | 42% | 78% | 48% | 38% | 15% |
+| **Julie** | 68% | 60% | 62% | 45% | 78% | 65% | 48% | 72% | 62% | 45% | 62% | — | 40% | 60% | 62% | 65% | 52% | 48% | 20% | 28% |
+| **Ren** | 45% | 5% | 57% | 45% | 40% | 57% | 20% | 30% | 50% | 35% | 2% | 60% | — | 57% | 50% | 28% | 68% | 35% | 28% | 18% |
+| **Chiyo** | 55% | 38% | 55% | 15% | 60% | 55% | 18% | 28% | 40% | 32% | 40% | 40% | 40% | — | 55% | 25% | 50% | 50% | 8% | 15% |
+| **Benkei** | 57% | 20% | 62% | 40% | 40% | 65% | 55% | 68% | 48% | 60% | 48% | 35% | 48% | 38% | — | 52% | 42% | 42% | 20% | 18% |
+| **O-Rin** | 52% | 65% | 50% | 40% | 82% | 48% | 38% | 32% | 60% | 42% | 57% | 35% | 72% | 75% | 42% | — | 45% | 57% | 35% | 5% |
+| **Goro** | 48% | 35% | 57% | 40% | 55% | 62% | 10% | 20% | 40% | 35% | 22% | 48% | 32% | 50% | 57% | 55% | — | 22% | 38% | 28% |
+| **Ichi** | 68% | 52% | 40% | 45% | 70% | 68% | 28% | 40% | 42% | 32% | 52% | 52% | 65% | 50% | 55% | 42% | 78% | — | 35% | 40% |
+| **Valerius** | 82% | 82% | 85% | 80% | 65% | 85% | 70% | 28% | 85% | 72% | 62% | 80% | 72% | 92% | 80% | 65% | 62% | 65% | — | 40% |
+| **Seimei** | 68% | 57% | 65% | 72% | 85% | 62% | 70% | 75% | 90% | 62% | 85% | 72% | 82% | 85% | 80% | 35% | 72% | 60% | 60% | — |
 
-## 4. Resultado do Algoritmo Merge Sort de Duelos
-O Merge Sort executou uma ordenação por divisão e conquista onde cada decisão de precedência foi arbitrada pelo retrospecto direto de combates:
+## 4. Classificação Oficial via Algoritmo Merge Sort
+A ordenação por divisão e conquista arbitrou cada emparelhamento utilizando estritamente o retrospecto direto (Head-to-Head):
 
-1. **Saitou** — Winrate Geral: 45.1% (184V / 196D / 28E)
-2. **Benkei** — Winrate Geral: 44.6% (182V / 195D / 31E)
-3. **Joe** — Winrate Geral: 53.9% (220V / 171D / 17E)
-4. **Kasumi** — Winrate Geral: 51.0% (208V / 175D / 25E)
-5. **Murasaki** — Winrate Geral: 56.9% (232V / 159D / 17E)
-6. **Hanzo** — Winrate Geral: 49.8% (203V / 184D / 21E)
-7. **O-Rin** — Winrate Geral: 44.9% (183V / 200D / 25E)
-8. **Ichi** — Winrate Geral: 43.6% (178V / 202D / 28E)
-9. **Musashi** — Winrate Geral: 52.9% (216V / 172D / 20E)
-10. **Ren** — Winrate Geral: 41.9% (171V / 211D / 26E)
-11. **Tomoe** — Winrate Geral: 56.9% (232V / 152D / 24E)
-12. **Julie** — Winrate Geral: 53.7% (219V / 166D / 23E)
-13. **Kenshin** — Winrate Geral: 39.5% (161V / 201D / 46E)
-14. **Anne** — Winrate Geral: 53.2% (217V / 169D / 22E)
-15. **Goro** — Winrate Geral: 38.2% (156V / 239D / 13E)
-16. **Teppo** — Winrate Geral: 40.4% (165V / 221D / 22E)
-17. **Okuni** — Winrate Geral: 43.9% (179V / 201D / 28E)
-18. **Chiyo** — Winrate Geral: 35.5% (145V / 237D / 26E)
+1. **Seimei** — Winrate Geral: 70.5% (536V / 196D / 28E)
+2. **Valerius** — Winrate Geral: 71.3% (542V / 217D / 1E)
+3. **Tomoe** — Winrate Geral: 55.0% (418V / 342D / 0E)
+4. **Kasumi** — Winrate Geral: 56.6% (430V / 327D / 3E)
+5. **Joe** — Winrate Geral: 57.9% (440V / 319D / 1E)
+6. **Hanzo** — Winrate Geral: 47.4% (360V / 400D / 0E)
+7. **Murasaki** — Winrate Geral: 56.2% (427V / 332D / 1E)
+8. **Ichi** — Winrate Geral: 50.3% (382V / 374D / 4E)
+9. **Musashi** — Winrate Geral: 53.5% (407V / 351D / 2E)
+10. **Saitou** — Winrate Geral: 38.0% (289V / 470D / 1E)
+11. **Kenshin** — Winrate Geral: 38.4% (292V / 461D / 7E)
+12. **Ren** — Winrate Geral: 38.4% (292V / 465D / 3E)
+13. **Julie** — Winrate Geral: 54.9% (417V / 342D / 1E)
+14. **Anne** — Winrate Geral: 51.2% (389V / 370D / 1E)
+15. **Goro** — Winrate Geral: 39.7% (302V / 458D / 0E)
+16. **Teppo** — Winrate Geral: 37.0% (281V / 478D / 1E)
+17. **O-Rin** — Winrate Geral: 49.2% (374V / 358D / 28E)
+18. **Okuni** — Winrate Geral: 45.0% (342V / 417D / 1E)
+19. **Chiyo** — Winrate Geral: 37.8% (287V / 468D / 5E)
+20. **Benkei** — Winrate Geral: 45.1% (343V / 405D / 12E)
 
-## 5. Avaliação Técnica Aprofundada do Balanceamento
+## 5. Análise Técnica dos Resultados
 
-### 5.1 Opressão e Dominância (Top Tiers)
-- **Murasaki (56.9%) & Tomoe (56.9%)**:
-  - As mecânicas de ataque com prioridade/precedência absoluta, alcance de projéteis instantâneos (snipers) ou frames defensivos de Parry/Riposte garantem uma taxa de vitória esmagadora contra lutadores de aproximação pura.
+### 5.1 Domínio dos Top Tiers: **Valerius (71.3%)** e **Seimei (70.5%)**
+- Combatentes com excelente alcance, precedência de ataque imediata ou cobertura por projéteis mantêm controle consistente do espaço mesmo em arenas com perigos complexos.
 
-### 5.2 Vulnerabilidades Críticas (Bottom Tiers)
-- **Chiyo (35.5%) & Goro (38.2%)**:
-  - Lutadores que dependem de tempos longos de recarga parada (ex: recarga do arcabuz sem cobertura móvel), auto-dano/suicídio por fogo amigo de explosivos, ou windup de retesamento de arco sofrem punições instantâneas contra oponentes rápidos.
+### 5.2 Desafios dos Bottom Tiers: **Teppo (37.0%)** e **Chiyo (37.8%)**
+- Personagens que dependem de recarga estacionária, tiros com windup ou que possuem desvantagens contra assédio a longa distância sofrem mais em arenas abertas e com perigos móveis.
 
-### 5.3 Dinâmica de Pedra-Papel-Tesoura e Polarização Extrema
-Foram detectados confrontos com polarização extrema (>= 87% de vitória para um lado):
-- **Murasaki vs Musashi**: Placar esmagador de 21 a 3 (87.5% de dominância)
-- **Musashi vs Ren**: Placar esmagador de 22 a 1 (91.7% de dominância)
-- **Anne vs Murasaki**: Placar esmagador de 23 a 0 (95.8% de dominância)
-- **Anne vs Goro**: Placar esmagador de 21 a 3 (87.5% de dominância)
+### 5.3 Confrontos com Polarização Extrema (>= 85% de dominância)
+- **Murasaki vs Kenshin**: 34 a 6 (85.0% de dominância)
+- **Musashi vs Saitou**: 36 a 4 (90.0% de dominância)
+- **Murasaki vs Musashi**: 35 a 5 (87.5% de dominância)
+- **Musashi vs Ren**: 38 a 2 (95.0% de dominância)
+- **Valerius vs Hanzo**: 34 a 6 (85.0% de dominância)
+- **Joe vs Chiyo**: 34 a 6 (85.0% de dominância)
+- **Seimei vs Saitou**: 34 a 6 (85.0% de dominância)
+- **Valerius vs Teppo**: 34 a 6 (85.0% de dominância)
 
-## 6. Propostas Concretas de Balance Patch (Recomendações de Design)
-Para equalizar o elenco e aproximar todos os combatentes da faixa saudável de 45% a 55% de winrate:
-1. **Ajuste de Precedência e Cooldowns de Projéteis**: Aumentar ligeiramente o recovery de golpes com prioridade e projéteis rápidos.
-2. **Mobilidade durante a Recarga**: Permitir que classes que recarregam mantenham movimentação a 50% da velocidade, evitando vulnerabilidade estática total.
-3. **Redução de Fogo Amigo**: Diminuir o raio de explosão auto-infligido para armas de área (como bombas).
-4. **Janela de Defesa (Parry/Riposte)**: Ajustar a janela de parry para exigir timing mais preciso contra sequências rápidas.
+## 6. Diretrizes e Recomendações de Balanceamento
+1. **Normalização de Recovery**: Ajustar janelas de whiff para punição balanceada de ataques rápidos.
+2. **Mobilidade Tática**: Preservar movimentação tática durante recargas para reduzir vulnerabilidade em arenas estreitas.
+3. **Interação com Perigos**: Manter zonas neutras acessíveis em arenas com hazards telegrafados ativos.

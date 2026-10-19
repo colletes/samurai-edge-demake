@@ -10,6 +10,8 @@ import math
 import random
 from dataclasses import dataclass
 
+import pygame
+
 from src.entities import boss_head
 from src.isometric.fast_voxels import draw_cubes
 
@@ -377,7 +379,33 @@ class BossModel:
         draw_cubes(surface, camera, cubes, alpha)
         if alpha >= 255:
             boss_head.draw_eye_glow(surface, camera, skull_up, self.head_yaw, self.glow_t)
+            if self.collapse is None and getattr(self, "show_miasma", True):
+                self._draw_spectral_miasma(surface, camera, poses, self.glow_t)
             self.glow_t += 1.0 / 60.0
+
+    def _draw_spectral_miasma(self, surface, camera, poses: dict, t: float):
+        """Miasma espectral e fagulhas de almas sombrias ao redor do torso e coluna vertebral."""
+        zoom = getattr(camera, "zoom", 1.0)
+        for idx, bone_key in enumerate(("spine1", "spine3", "rib_l1", "rib_r1", "pelvis")):
+            if bone_key not in poses:
+                continue
+            pair = poses[bone_key]
+            cx = (pair[0][0] + pair[1][0]) * 0.5
+            cy = (pair[0][1] + pair[1][1]) * 0.5
+            cz = (pair[0][2] + pair[1][2]) * 0.5
+            ang = t * 2.8 + idx * 1.25
+            drift_z = math.sin(t * 3.5 + idx) * 0.12
+            rad = 0.22 + 0.08 * math.sin(t * 4.0 + idx * 2.0)
+            mx = cx + math.cos(ang) * rad
+            my = cy + math.sin(ang) * rad
+            mz = cz + 0.15 + drift_z
+            m_px, m_py = camera.apply(mx, my, mz)
+            m_r = max(2, int((3.8 + 1.2 * math.sin(ang * 2.0)) * zoom))
+            m_surf = pygame.Surface((m_r * 2, m_r * 2))
+            col = (165, 45, 230) if idx % 2 == 0 else (90, 20, 150)
+            pygame.draw.circle(m_surf, col, (m_r, m_r), m_r)
+            pygame.draw.circle(m_surf, (220, 180, 255), (m_r, m_r), max(1, m_r // 2))
+            surface.blit(m_surf, (m_px - m_r, m_py - m_r), special_flags=pygame.BLEND_RGB_ADD)
 
 
 def _tones(color):

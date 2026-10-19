@@ -52,6 +52,14 @@ class RedSamurai(Samurai):
         self.parry_hop_speed = 7.5
         self.parry_hop_duration = 0.28
 
+    def take_hit(self, slash_dir: tuple[float, float], damage: int = 2) -> tuple[bool, bool]:
+        """Aplica dano e limpa rastros e pós-imagens de Kenshi ao ser atingida ou morta."""
+        hit, killed = super().take_hit(slash_dir, damage)
+        if hit:
+            self.slash_trail_points.clear()
+            self.zanzou_ghosts.clear()
+        return hit, killed
+
     def can_act(self) -> bool:
         """Kenshi só pode agir se estiver viva, em IDLE/WALK e sem recovery de dash/golpes."""
         return (
@@ -313,6 +321,8 @@ class RedSamurai(Samurai):
             self.wx = max(1.0, min(game_map.cols - 1.0, new_wx))
             self.wy = max(1.0, min(game_map.rows - 1.0, new_wy))
             self.slash_trail_points.append((self.wx, self.wy))
+            if len(self.slash_trail_points) > 12:
+                self.slash_trail_points.pop(0)
             self.hitbox_center = (self.wx + self.facing_x * 0.8, self.wy + self.facing_y * 0.8)
 
             if self.state_timer <= 0:
@@ -320,14 +330,15 @@ class RedSamurai(Samurai):
                 self.state = STATE_RECOVERY
                 self.state_timer = self.recovery_duration
                 self.hitbox_active = False
+                self.slash_trail_points.clear()
 
         elif self.state == STATE_RECOVERY:
             # Samurai fica travado no cooldown vulnerável
             self.state_timer -= dt
             self.hitbox_active = False
+            self.slash_trail_points.clear()
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
-                self.slash_trail_points.clear()
 
         elif self.state == "SHUKUCHI":
             self.state_timer -= dt
@@ -479,8 +490,8 @@ class RedSamurai(Samurai):
 
     def render(self, surface: pygame.Surface, camera):
         """Renderiza o Samurai Vermelho e suas pós-imagens Shukuchi no estilo Voxel 3D."""
-        # Renderizar rastro brilhante do corte do Iai no chão
-        if len(self.slash_trail_points) >= 2:
+        # Renderizar rastro brilhante do corte do Iai no chão apenas durante o golpe e se estiver viva
+        if self.is_alive and self.state in (STATE_ATTACK, "RYUU_TSUI_SEN") and len(self.slash_trail_points) >= 2:
             pts = [camera.apply(px, py, 0.05) for px, py in self.slash_trail_points]
             if len(pts) >= 2:
                 pygame.draw.lines(surface, COLOR_RED_AURA, False, pts, 4)

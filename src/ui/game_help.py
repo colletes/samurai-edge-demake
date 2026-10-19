@@ -11,12 +11,14 @@ from src.config import (
     COLOR_RED_AURA, COLOR_BLUE_AURA, COLOR_YELLOW_AURA, COLOR_STEEL,
     COLOR_SAITOU_LIGHT_BLUE, COLOR_PURPLE_AURA, COLOR_PIRATE_AURA,
     COLOR_MUSKETEER_AURA, COLOR_REN_AURA, COLOR_CHIYO_AURA, COLOR_BENKEI_AURA, COLOR_ORIN_AURA,
-    COLOR_GORO_AURA, COLOR_ICHI_AURA,
+    COLOR_GORO_AURA, COLOR_ICHI_AURA, COLOR_VALERIUS_AURA, COLOR_SEIMEI_AURA, COLOR_BOSS_AURA,
+    COLOR_DAIKI_AURA, COLOR_AOI_AURA,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA,
     CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE, CHAR_SAITOU, CHAR_RIFLE,
     CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
     CHAR_REN, CHAR_CHIYO, CHAR_BENKEI, CHAR_ORIN,
-    CHAR_GORO, CHAR_ICHI
+    CHAR_GORO, CHAR_ICHI, CHAR_VALERIUS, CHAR_SEIMEI,
+    CHAR_DAIKI, CHAR_AOI, CHAR_BOSS
 )
 from src.isometric.iso_math import world_to_iso
 from src.entities.voxel_models import render_voxel_humanoid, render_voxel_doberman
@@ -1080,6 +1082,284 @@ FIGHTERS_GUIDE_DATA = [
                 "• How to defeat Ichi: Do not swing blindly into her Listen Stance. Bait the stance with feints or zone her with projectiles."
             )
         }
+    },
+    {
+        "id": CHAR_VALERIUS,
+        "color": COLOR_VALERIUS_AURA,
+        "char_type": "valerius",
+        "pt": {
+            "name": "VALERIUS",
+            "title": "O Necromante Prussiano",
+            "style": "Ceifada Fúnebre & Summons Mortos",
+            "vel": "[3/5] Passo Cerimonial",
+            "dano": "Ceifada Ampla Soul Reap (2 HP)",
+            "especial": "Invocação de Esqueleto (Agarrão & Lentidão)",
+            "keys_p1": "[E] Ceifada | [R] Invocação",
+            "keys_p2": "[U] Ceifada | [I] Invocação",
+            "conceito": (
+                "Aristocrata e ocultista prussiano em missão obscura no Bakumatsu. Empunha uma foice fúnebre de ferro forjado "
+                "e invoca mortos-vivos das profundezas da terra para imobilizar seus oponentes."
+            ),
+            "habilidades": (
+                "• Ceifada Fúnebre [E]: Golpe horizontal amplo com alcance devastador de duas mãos (2 HP).\n"
+                "• Invocação de Esqueleto [R]: Invoca um esqueleto guerreiro autônomo que avança até o rival, causa 1 HP de dano e o segura aplicando lentidão (slow) por tempo limitado."
+            ),
+            "estrategia_ofensiva": (
+                "• Utilize o esqueleto para colocar pressão e forçar o rival a recuar ou ficar preso.\n"
+                "• Aproveite o momento em que o rival é agarrado pelo lacaio para aplicar a Ceifada Fúnebre com segurança máxima."
+            ),
+            "estrategia_defensiva": (
+                "• Como vencer Valerius: Destrua o esqueleto com um golpe rápido ou mantenha distância diagonal para desviar do arco largo da foice."
+            )
+        },
+        "en": {
+            "name": "VALERIUS",
+            "title": "The Prussian Necromancer",
+            "style": "Funeral Scythe & Undead Summons",
+            "vel": "[3/5] Ceremonial Stride",
+            "dano": "Soul Reap Scythe Slash (2 HP)",
+            "especial": "Skeleton Minion (Grab & Slow)",
+            "keys_p1": "[E] Scythe Slash | [R] Summon",
+            "keys_p2": "[U] Scythe Slash | [I] Summon",
+            "conceito": (
+                "Prussian aristocrat and dark occultist navigating Bakumatsu Japan. Wields a colossal forged-iron funeral scythe "
+                "and summons undead minions from cemetery soil to pin foes."
+            ),
+            "habilidades": (
+                "• Funeral Scythe [E]: Wide horizontal sweeping reap with great reach and priority (2 HP).\n"
+                "• Undead Summon [R]: Spawns an autonomous skeleton minion that marches towards the foe, dealing 1 HP damage and grabbing them with a lingering slow."
+            ),
+            "estrategia_ofensiva": (
+                "• Send the skeleton forward to control neutral space and force defensive errors.\n"
+                "• Punish pinned or slowed opponents with a clean Soul Reap execution."
+            ),
+            "estrategia_defensiva": (
+                "• How to defeat Valerius: Intercept or dash past the skeleton minion. Punish the heavy recovery frames of his funeral scythe."
+            )
+        }
+    },
+    {
+        "id": CHAR_SEIMEI,
+        "color": COLOR_SEIMEI_AURA,
+        "char_type": "seimei",
+        "pt": {
+            "name": "SEIMEI",
+            "title": "A Onmyoji dos Talismãs",
+            "style": "Onmyōdō Heian & Ofuda Cortante",
+            "vel": "[4/5] Movimento Fluido",
+            "dano": "Ofuda Cortante (1 HP / Projétil Rápido)",
+            "especial": "Selo Sagrado de Purificação (Pilar Espiritual)",
+            "keys_p1": "[E] Ofuda | [R] Selo Sagrado",
+            "keys_p2": "[U] Ofuda | [I] Selo Sagrado",
+            "conceito": (
+                "Mestra espiritual descendente da corte Heian. Manipula os fluxos de yin e yang com encantamentos sagrados, "
+                "lançando talismãs cortantes e erguendo pilares místicos de luz repelente."
+            ),
+            "habilidades": (
+                "• Ofuda Cortante [E]: Disparo rápido de talismãs encantados em linha reta com rastro espiritual dourado.\n"
+                "• Selo Sagrado [R]: Posiciona um talismã no solo que detona em pilar de fogo espiritual ao contato ou reativação, repelindo o rival."
+            ),
+            "estrategia_ofensiva": (
+                "• Controle as linhas retas da arena com rajadas precisas de Ofuda.\n"
+                "• Posicione o Selo Sagrado para limitar a movimentação do rival e bloquear rotas de fuga."
+            ),
+            "estrategia_defensiva": (
+                "• Como vencer Seimei: Não permaneça em linha reta contra os disparos de Ofuda. Use aproximações diagonais e evite pisar no selo sagrado plantado."
+            )
+        },
+        "en": {
+            "name": "SEIMEI",
+            "title": "The Talisman Onmyoji",
+            "style": "Heian Onmyōdō & Slashing Ofuda",
+            "vel": "[4/5] Fluid Motion",
+            "dano": "Slashing Ofuda (1 HP / Rapid Projectile)",
+            "especial": "Purification Seal Pillar (Spiritual Repel)",
+            "keys_p1": "[E] Ofuda | [R] Sacred Seal",
+            "keys_p2": "[U] Ofuda | [I] Sacred Seal",
+            "conceito": (
+                "Master onmyoji spiritualist preserving ancient Heian traditions in the Bakumatsu era. Directs spiritual energy "
+                "through enchanted ofuda paper charms and celestial boundary seals."
+            ),
+            "habilidades": (
+                "• Slashing Ofuda [E]: Rapid paper charm blade thrown forward along a gleaming spiritual line.\n"
+                "• Sacred Seal [R]: Places a ground talisman that erupts into a columnar pillar of spiritual flame, pushing foes back."
+            ),
+            "estrategia_ofensiva": (
+                "• Dominate mid-range spacing with relentless talisman pressure.\n"
+                "• Plant purification seals to deny opponent approach lanes and set up corner traps."
+            ),
+            "estrategia_defensiva": (
+                "• How to defeat Seimei: Close the gap with evasive rolls to bypass paper projectiles; avoid stepping onto active ground seals."
+            )
+        }
+    },
+    {
+        "id": CHAR_DAIKI,
+        "color": COLOR_DAIKI_AURA,
+        "char_type": "daiki",
+        "pt": {
+            "name": "DAIKI",
+            "title": "O Peregrino do Bastão Bō",
+            "style": "Bōjutsu Monástico & Queda Meteórica",
+            "vel": "[4/5] Dinâmico e Ágil",
+            "dano": "Golpes de Bastão de Carvalho (1 a 2 HP)",
+            "especial": "Salto de Alavanca & Queda Meteórica (Quebra-Guarda)",
+            "keys_p1": "[E] Bastão Bō | [R] Salto com Vara",
+            "keys_p2": "[U] Bastão Bō | [I] Salto com Vara",
+            "conceito": (
+                "Monge guerreiro peregrino que percorre as montanhas de pinheiros no Bakumatsu. "
+                "Empunha um pesado bastão Bō de carvalho com ponteiras de ferro, combinando amplitude defensiva, "
+                "deflexão de projéteis e acrobacias aéreas fulminantes."
+            ),
+            "habilidades": (
+                "• Golpe de Bastão Bō [E]: Varreduras horizontais e estocadas em longo alcance com o bastão de duas mãos.\n"
+                "• Salto com Vara [R]: Crava o bastão no solo e se projeta alto no ar, refletindo projéteis na subida e desferindo uma Queda Meteórica que esmaga guardas na aterrissagem."
+            ),
+            "estrategia_ofensiva": (
+                "• Use a amplitude do bastão para golpear fora do alcance de katanas convencionais.\n"
+                "• Surpreenda oponentes defensivos com o Salto com Vara para esmagar bloqueios e abrir brechas letais."
+            ),
+            "estrategia_defensiva": (
+                "• Como vencer Daiki: Cuidado ao atirar projéteis quando ele estiver prestes a saltar. Espere o momento de aterrissagem do Salto com Vara para punir sua breve recuperação."
+            )
+        },
+        "en": {
+            "name": "DAIKI",
+            "title": "The Bō Staff Pilgrim",
+            "style": "Monastic Bōjutsu & Meteor Drop",
+            "vel": "[4/5] Dynamic & Agile",
+            "dano": "Oak Bō Staff Strikes (1-2 HP)",
+            "especial": "Vault Leap & Meteor Drop (Guard Crush)",
+            "keys_p1": "[E] Bō Staff | [R] Vault Leap",
+            "keys_p2": "[U] Bō Staff | [I] Vault Leap",
+            "conceito": (
+                "Wandering pilgrim monk traversing pine forest trails in Bakumatsu Japan. Wields a heavy 6-foot oak Bō "
+                "staff reinforced with forged iron rings, combining wide spacing, projectile deflection, and aerial acrobatics."
+            ),
+            "habilidades": (
+                "• Bō Staff Strike [E]: Sweeping arcs and thrusts with long reach, controlling mid-range space.\n"
+                "• Vault Leap [R]: Plants staff into earth to launch airborne, deflecting projectiles on ascent and crashing down with a Meteor Drop that crushes guards on landing."
+            ),
+            "estrategia_ofensiva": (
+                "• Dominate neutral distance using superior staff maai against shorter blades.\n"
+                "• Use Vault Leap against blocking opponents to trigger guard crush and open lethal finishers."
+            ),
+            "estrategia_defensiva": (
+                "• How to defeat Daiki: Avoid shooting projectiles when he is ready to vault. Evade the downward Meteor Drop and punish his landing frames."
+            )
+        }
+    },
+    {
+        "id": CHAR_AOI,
+        "color": COLOR_AOI_AURA,
+        "char_type": "aoi",
+        "pt": {
+            "name": "AOI",
+            "title": "A Caçadora Ainu de Hokkaido",
+            "style": "Lança Op & Armadilha de Urso",
+            "vel": "[4/5] Ágil e Furtiva",
+            "dano": "Estocadas de Lança Op (1 HP)",
+            "especial": "Armadilha de Urso (Dano Letal por Contato)",
+            "keys_p1": "[E] Lança Op | [R] Armadilha",
+            "keys_p2": "[U] Lança Op | [I] Armadilha",
+            "conceito": (
+                "Jovem caçadora das florestas boreais de Ezo (Hokkaido). Especialista em sobrevivência no rigor do inverno, "
+                "combina perfurações rápidas com sua lança cerimonial Op e armadilhas de urso serrilhadas de ferro pesado."
+            ),
+            "habilidades": (
+                "• Estocada de Lança Op [E]: Ataque penetrante rápido de longo alcance com ponta de aço e borla de pele.\n"
+                "• Armadilha de Urso [R]: Posiciona uma armadilha mecânica de mandíbulas afiadas no chão. Mata instantaneamente qualquer rival que pisar nela."
+            ),
+            "estrategia_ofensiva": (
+                "• Plante armadilhas em rotas estreitas e induza o rival a recuar em direção às mandíbulas de aço.\n"
+                "• Mantenha pressão à distância com a ponta da lança Op sem se expor a contra-ataques."
+            ),
+            "estrategia_defensiva": (
+                "• Como vencer Aoi: Observe atentamente o piso para não pisar nas armadilhas de urso metálicas. Pule ou esquive para fechar distância e puna suas estocadas lineares."
+            )
+        },
+        "en": {
+            "name": "AOI",
+            "title": "The Ainu Huntress of Hokkaido",
+            "style": "Op Spear & Steel Bear Trap",
+            "vel": "[4/5] Agile & Elusive",
+            "dano": "Op Spear Piercing (1 HP)",
+            "especial": "Bear Trap (Instant Contact Kill)",
+            "keys_p1": "[E] Op Spear | [R] Bear Trap",
+            "keys_p2": "[U] Op Spear | [I] Bear Trap",
+            "conceito": (
+                "Fierce young huntress from the snowy wilderness of Ezo (Hokkaido). An expert arctic tracker "
+                "combining quick reach with her traditional Op hunting spear and heavy serrated steel bear traps."
+            ),
+            "habilidades": (
+                "• Op Spear Thrust [E]: Swift piercing spear thrust with sharp steel blade and fur tassel.\n"
+                "• Bear Trap [R]: Places a heavy spring-loaded iron jaw trap on the ground. Instantly executes anyone who steps on it."
+            ),
+            "estrategia_ofensiva": (
+                "• Plant bear traps in high-traffic combat lanes to restrict movement.\n"
+                "• Use spear thrusts to keep distance and herd the rival into planted traps."
+            ),
+            "estrategia_defensiva": (
+                "• How to defeat Aoi: Keep your eyes on the ground to avoid iron bear traps. Use diagonal dashes to bypass linear thrusts and engage at close quarters."
+            )
+        }
+    },
+    {
+        "id": CHAR_BOSS,
+        "color": COLOR_BOSS_AURA,
+        "char_type": "gashadokuro",
+        "pt": {
+            "name": "GASHADOKURO",
+            "title": "Oni Colossal da Fome Insaciável (Final Boss)",
+            "style": "Transmorfo de Ossos Ancestrais & Fogo Espectral",
+            "vel": "[2/5] Colossal & Ponderoso",
+            "dano": "Impactos Devastadores (1 a 2 HP / Área de Choque)",
+            "especial": "Metamorfose em 5 Fases de Batalha (Bípede, Serpente, Torso, Clava, Crânio)",
+            "keys_p1": "[Chefe Final do Modo Arcade]",
+            "keys_p2": "[Invulnerável Fora das Janelas de Vulnerabilidade]",
+            "conceito": (
+                "Entidade titânica formada pelas almas de guerreiros caídos e não sepultados no Bakumatsu. "
+                "Assume 5 formas anatômicas distintas à medida que seus ossos se fragmentam sob os golpes de seu adversário."
+            ),
+            "habilidades": (
+                "• Golpe Colossal: Cortes com lâmina gigante de ferro negro e pisões sísmicos.\n"
+                "• Metamorfose das 5 Fases: Alterna entre Bípede, Serpente Rastejante, Torso Saltador, Clava Viva e Crânio Voador.\n"
+                "• Fogo Espectral: Bolas de fogo roxas e fissuras no solo que ardem com almas vingativas."
+            ),
+            "estrategia_ofensiva": (
+                "• Observe a telegrafia vermelha no solo e desvie dos círculos e linhas de impacto antes que a investida ocorra.\n"
+                "• Ataque o ponto fraco revelado exclusivamente quando o chefe ficar atordoado ou cravado no chão."
+            ),
+            "estrategia_defensiva": (
+                "• Como vencer Gashadokuro: Nunca tente atacar durante suas investidas, pois seus ossos bloqueiam 100% do dano. Espere pacientemente a janela de fadiga (após colidir com uma rocha ou cravar a clava) para desferir o golpe certeiro!"
+            )
+        },
+        "en": {
+            "name": "GASHADOKURO",
+            "title": "Colossal Starvation Oni (Final Boss)",
+            "style": "Ancient Bone Transmutation & Spectral Fire",
+            "vel": "[2/5] Colossal & Weighty",
+            "dano": "Devastating Impacts (1-2 HP / Area of Effect)",
+            "especial": "5-Phase Battle Metamorphosis (Biped, Serpent, Torso, Club, Skull)",
+            "keys_p1": "[Arcade Mode Final Boss]",
+            "keys_p2": "[Invulnerable Outside Vulnerability Windows]",
+            "conceito": (
+                "Colossal skeletal demon gathered from the vengeful spirits of unburied warriors during the Bakumatsu era. "
+                "Shifts through 5 distinct anatomical configurations as its bones fracture under mortal steel."
+            ),
+            "habilidades": (
+                "• Colossal Strike: Cleaving arc with dark iron blade and ground-shaking foot stomps.\n"
+                "• 5-Phase Metamorphosis: Transmutes between Bipedal Titan, Crawling Spine Serpent, Bounding Torso, Living Club, and Flying Skull.\n"
+                "• Spectral Miasma: Purple soul fireballs and burning ground fissures erupting across the arena."
+            ),
+            "estrategia_ofensiva": (
+                "• Respect ground telegraphs and roll out of circle markers before tectonic impacts land.\n"
+                "• Strike the exposed vulnerable weak point only when the boss stuns itself or lodges into the ground."
+            ),
+            "estrategia_defensiva": (
+                "• How to defeat Gashadokuro: Never attack while the boss is charging or leaping; its bones deflect all incoming blades. Wait for fatigue windows when it crashes into tombstones or embeds its club, then strike swiftly!"
+            )
+        }
     }
 ]
 
@@ -1119,11 +1399,48 @@ class GameHelpModal:
         self._axis_x_held = False
         self._axis_y_held = False
 
-    def open(self, tab: int = TAB_RULES, fighter_idx: int = 0):
+    @staticmethod
+    def _fit_text(font: pygame.font.Font, text: str, color, max_w: int) -> pygame.Surface:
+        """Renderiza o texto ajustando se exceder a largura máxima com elipse '...'."""
+        surf = font.render(text, True, color)
+        if surf.get_width() <= max_w:
+            return surf
+        while len(text) > 1 and font.size(text + "...")[0] > max_w:
+            text = text[:-1]
+        return font.render(text.rstrip() + "...", True, color)
+
+    @staticmethod
+    def _wrap_text(font: pygame.font.Font, text: str, max_w: int, indent: str = "") -> list[str]:
+        """Quebra um texto em várias linhas respeitando max_w."""
+        lines = []
+        for raw_line in text.split("\n"):
+            if not raw_line:
+                lines.append("")
+                continue
+            words = raw_line.split(" ")
+            cur_line = ""
+            for w in words:
+                test_line = (cur_line + " " + w) if cur_line else w
+                if font.size(test_line)[0] <= max_w:
+                    cur_line = test_line
+                else:
+                    if cur_line:
+                        lines.append(cur_line)
+                    cur_line = indent + w
+            if cur_line:
+                lines.append(cur_line)
+        return lines
+
+    def open(self, tab: int = TAB_RULES, fighter_idx: int = 0, char_id: str | None = None):
         self.is_open = True
         self.current_tab = tab
         self.scroll_y = 0.0
         self.fighter_sub_section = self.SEC_ALL
+        if char_id:
+            for idx, fdata in enumerate(FIGHTERS_GUIDE_DATA):
+                if fdata["id"] == char_id:
+                    self.selected_fighter_idx = idx
+                    return
         if 0 <= fighter_idx < len(FIGHTERS_GUIDE_DATA):
             self.selected_fighter_idx = fighter_idx
 
@@ -1204,9 +1521,12 @@ class GameHelpModal:
 
         elif event.type == pygame.JOYAXISMOTION:
             if event.axis == 1:
-                if event.value > 0.65:
+                from src.input.controller_manager import get_controller_manager
+                ctrl_mgr = get_controller_manager()
+                val = -event.value if getattr(ctrl_mgr, "invert_y", False) else event.value
+                if val > 0.65:
                     self.scroll_y = min(self.max_scroll, self.scroll_y + 36.0)
-                elif event.value < -0.65:
+                elif val < -0.65:
                     self.scroll_y = max(0.0, self.scroll_y - 36.0)
             elif event.axis == 0 and self.current_tab == self.TAB_FIGHTERS:
                 if event.value > 0.65 and not self._axis_x_held:
@@ -1397,8 +1717,9 @@ class GameHelpModal:
             self._render_tab_fighters(surface, content_rect, font_mid, font_small)
 
     def _render_tab_rules(self, surface: pygame.Surface, rect: pygame.Rect, font_mid: pygame.font.Font, font_small: pygame.font.Font):
-        # 3 Painéis temáticos anti-overflow
+        # 3 Painéis temáticos anti-overflow com quebra automática de linha
         col_w = (rect.width - 24) // 3
+        max_line_w = col_w - 24
 
         boxes = [
             (t("rules_box1_title"), COLOR_GOLD, t("rules_box1_lines")),
@@ -1416,25 +1737,34 @@ class GameHelpModal:
 
             head_h = 36
             pygame.draw.rect(surface, (32, 42, 37), (bx, rect.y, col_w, head_h), border_top_left_radius=8, border_top_right_radius=8)
-            t_surf = font_mid.render(btitle, True, bcol)
+            t_surf = self._fit_text(font_mid, btitle, bcol, max_line_w)
             surface.blit(t_surf, (bx + 12, rect.y + 8))
 
-            cur_y = rect.y + 46
-            for line in lines:
-                l_surf = font_small.render(line, True, (220, 230, 225) if line.startswith("•") else (170, 185, 180))
-                surface.blit(l_surf, (bx + 12, cur_y))
-                cur_y += 18
+            cur_y = rect.y + 44
+            for raw_line in lines:
+                if not raw_line:
+                    cur_y += 7
+                    continue
+                is_bullet = raw_line.lstrip().startswith("•")
+                col = (220, 230, 225) if is_bullet else (170, 185, 180)
+                indent = "   " if is_bullet else "  "
+                wrapped = self._wrap_text(font_small, raw_line, max_line_w, indent=indent)
+                for wline in wrapped:
+                    l_surf = font_small.render(wline, True, col)
+                    surface.blit(l_surf, (bx + 12, cur_y))
+                    cur_y += 17
 
     def _render_tab_controls(self, surface: pygame.Surface, rect: pygame.Rect, font_mid: pygame.font.Font, font_small: pygame.font.Font):
         half_w = (rect.width - 16) // 2
+        max_line_w = half_w - 28
 
         # Painel Esquerdo: Controles P1 e P2
         p_left = pygame.Rect(rect.x, rect.y, half_w, rect.height)
         pygame.draw.rect(surface, (25, 33, 29), p_left, border_radius=8)
         pygame.draw.rect(surface, (48, 62, 54), p_left, 1, border_radius=8)
 
-        t1 = font_mid.render(t("ctrl_p1_title"), True, COLOR_GOLD)
-        surface.blit(t1, (p_left.x + 16, p_left.y + 12))
+        t1 = self._fit_text(font_mid, t("ctrl_p1_title"), COLOR_GOLD, max_line_w)
+        surface.blit(t1, (p_left.x + 14, p_left.y + 12))
 
         cy = p_left.y + 44
         color_map = {
@@ -1448,18 +1778,23 @@ class GameHelpModal:
             "sep": (0, 0, 0),
         }
         for text, style in t("ctrl_p1_lines"):
-            if text:
-                s = font_small.render(text, True, color_map.get(style, (220, 225, 220)))
+            if not text:
+                cy += 8
+                continue
+            col = color_map.get(style, (220, 225, 220))
+            wrapped = self._wrap_text(font_small, text, max_line_w, indent="    ")
+            for wline in wrapped:
+                s = font_small.render(wline, True, col)
                 surface.blit(s, (p_left.x + 14, cy))
-            cy += 19
+                cy += 18
 
         # Painel Direito: Atalhos do Sistema
         p_right = pygame.Rect(rect.x + half_w + 16, rect.y, half_w, rect.height)
         pygame.draw.rect(surface, (25, 33, 29), p_right, border_radius=8)
         pygame.draw.rect(surface, (48, 62, 54), p_right, 1, border_radius=8)
 
-        t2 = font_mid.render(t("ctrl_p2_title"), True, (110, 205, 150))
-        surface.blit(t2, (p_right.x + 16, p_right.y + 12))
+        t2 = self._fit_text(font_mid, t("ctrl_p2_title"), (110, 205, 150), max_line_w)
+        surface.blit(t2, (p_right.x + 14, p_right.y + 12))
 
         color_map2 = {
             "key": COLOR_GOLD,
@@ -1470,23 +1805,41 @@ class GameHelpModal:
         }
         cy = p_right.y + 44
         for text, style in t("ctrl_p2_lines"):
-            if text:
-                s = font_small.render(text, True, color_map2.get(style, (220, 225, 220)))
+            if not text:
+                cy += 8
+                continue
+            col = color_map2.get(style, (220, 225, 220))
+            wrapped = self._wrap_text(font_small, text, max_line_w, indent="    ")
+            for wline in wrapped:
+                s = font_small.render(wline, True, col)
                 surface.blit(s, (p_right.x + 14, cy))
-            cy += 19
+                cy += 18
 
     def _render_tab_fighters(self, surface: pygame.Surface, rect: pygame.Rect, font_mid: pygame.font.Font, font_small: pygame.font.Font):
         lang = get_lang()
 
-        # 1. Carrossel de 12 Botões no topo
-        btn_h = 28
-        btn_w = (rect.width - 11 * 6) // 12
-        btn_y = rect.y
+        # 1. Carrossel em 2 Linhas de Botões de Guerreiros no topo (evita overflow em elencos grandes)
+        num_f = len(FIGHTERS_GUIDE_DATA)
+        row0_count = (num_f + 1) // 2
+        row1_count = num_f - row0_count
+        gap = 5
+        btn_h = 22
+        btn_w0 = (rect.width - (row0_count - 1) * gap) // row0_count
+        btn_w1 = (rect.width - (row1_count - 1) * gap) // row1_count
 
         self.fighter_tab_rects.clear()
         for i, fdata in enumerate(FIGHTERS_GUIDE_DATA):
-            bx = rect.x + i * (btn_w + 6)
-            b_rect = pygame.Rect(bx, btn_y, btn_w, btn_h)
+            if i < row0_count:
+                bx = rect.x + i * (btn_w0 + gap)
+                by = rect.y
+                bw = btn_w0
+            else:
+                col_idx = i - row0_count
+                bx = rect.x + col_idx * (btn_w1 + gap)
+                by = rect.y + btn_h + 3
+                bw = btn_w1
+
+            b_rect = pygame.Rect(bx, by, bw, btn_h)
             self.fighter_tab_rects.append(b_rect)
 
             is_cur = (self.selected_fighter_idx == i)
@@ -1496,15 +1849,16 @@ class GameHelpModal:
             pygame.draw.rect(surface, bg_col, b_rect, border_radius=4)
             pygame.draw.rect(surface, border_col, b_rect, 2 if is_cur else 1, border_radius=4)
 
-            short_name = fdata[lang]["name"][:7]
-            n_surf = font_small.render(short_name, True, fdata["color"] if is_cur else (160, 175, 170))
+            short_name = fdata[lang]["name"]
+            txt_col = fdata["color"] if is_cur else (160, 175, 170)
+            n_surf = self._fit_text(font_small, short_name, txt_col, bw - 6)
             surface.blit(n_surf, (b_rect.centerx - n_surf.get_width() // 2, b_rect.centery - n_surf.get_height() // 2))
 
         # 2. Painel Central da Ficha do Combatente Escolhido
         cur_fighter = FIGHTERS_GUIDE_DATA[self.selected_fighter_idx]
         cur_data = cur_fighter[lang]
-        detail_y = rect.y + 36
-        detail_h = rect.height - 36
+        detail_y = rect.y + (btn_h * 2 + 8)
+        detail_h = rect.height - (btn_h * 2 + 8)
         detail_rect = pygame.Rect(rect.x, detail_y, rect.width, detail_h)
 
         pygame.draw.rect(surface, (23, 30, 26), detail_rect, border_radius=8)
@@ -1512,102 +1866,110 @@ class GameHelpModal:
 
         # Coluna Esquerda: Retrato Voxel 3D e Dados Básicos (largura 310px)
         left_col_w = 310
-        portrait_cx = detail_rect.x + 56
-        portrait_cy = detail_y + 66
+        portrait_cx = detail_rect.x + 48
+        portrait_cy = detail_y + 44
 
         # Moldura circular e Retrato de Busto HD-2D do guerreiro
-        pygame.draw.circle(surface, (16, 22, 19), (portrait_cx, portrait_cy), 44)
-        pygame.draw.circle(surface, cur_fighter["color"], (portrait_cx, portrait_cy), 44, 3)
+        pygame.draw.circle(surface, (16, 22, 19), (portrait_cx, portrait_cy), 36)
+        pygame.draw.circle(surface, cur_fighter["color"], (portrait_cx, portrait_cy), 36, 2)
 
-        p_size = (84, 84)
+        p_size = (68, 68)
         p_surf = get_portrait(cur_fighter["id"], size=p_size, circular=True)
         if p_surf is not None:
             surface.blit(p_surf, (portrait_cx - p_size[0] // 2, portrait_cy - p_size[1] // 2))
         else:
             # Fallback para o render Voxel do guerreiro
-            cam = HelpPreviewCam(portrait_cx, portrait_cy + 20)
+            cam = HelpPreviewCam(portrait_cx, portrait_cy + 16)
             c_type = cur_fighter["char_type"]
             if c_type == "american_ninja":
-                render_voxel_humanoid(surface, cam, -0.20, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type=c_type)
-                render_voxel_doberman(surface, cam, 0.35, -0.10, 0, 1.0, 0.0, "IDLE", 0.0, True)
+                render_voxel_humanoid(surface, cam, -0.20, 0, 0, 0.9, 0.0, "IDLE", 0.0, True, char_type=c_type)
+                render_voxel_doberman(surface, cam, 0.35, -0.10, 0, 0.9, 0.0, "IDLE", 0.0, True)
             elif c_type == "yellow_ninja":
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type=c_type, extra_props={"has_kunai": True})
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 0.9, 0.0, "IDLE", 0.0, True, char_type=c_type, extra_props={"has_kunai": True})
             else:
-                render_voxel_humanoid(surface, cam, 0, 0, 0, 1.0, 0.0, "IDLE", 0.0, True, char_type=c_type)
+                render_voxel_humanoid(surface, cam, 0, 0, 0, 0.9, 0.0, "IDLE", 0.0, True, char_type=c_type)
 
-        # Nome, Título e Estilo
-        n_surf = font_mid.render(cur_data["name"], True, cur_fighter["color"])
-        t_surf = font_small.render(cur_data["title"], True, COLOR_WHITE)
-        s_surf = font_small.render(cur_data["style"], True, COLOR_GOLD)
+        # Nome, Título e Estilo com proteção contra overflow
+        text_x = detail_rect.x + 92
+        max_title_w = left_col_w - 92 - 10
+        n_surf = self._fit_text(font_mid, cur_data["name"], cur_fighter["color"], max_title_w)
+        t_surf = self._fit_text(font_small, cur_data["title"], COLOR_WHITE, max_title_w)
+        s_surf = self._fit_text(font_small, cur_data["style"], COLOR_GOLD, max_title_w)
 
-        surface.blit(n_surf, (detail_rect.x + 112, detail_y + 24))
-        surface.blit(t_surf, (detail_rect.x + 112, detail_y + 50))
-        surface.blit(s_surf, (detail_rect.x + 112, detail_y + 70))
+        surface.blit(n_surf, (text_x, detail_y + 12))
+        surface.blit(t_surf, (text_x, detail_y + 36))
+        surface.blit(s_surf, (text_x, detail_y + 56))
 
-        # Atributos e Teclas
-        stat_y = detail_y + 122
-        pygame.draw.line(surface, (45, 58, 52), (detail_rect.x + 16, stat_y), (detail_rect.x + left_col_w, stat_y), 1)
+        # Atributos e Teclas com quebra automática de linha
+        stat_y = detail_y + 88
+        pygame.draw.line(surface, (45, 58, 52), (detail_rect.x + 14, stat_y), (detail_rect.x + left_col_w, stat_y), 1)
 
-        stat_lines = [
-            f"{t('stat_speed')} {cur_data['vel']}",
-            f"{t('stat_damage')} {cur_data['dano']}",
-            f"{t('stat_special')} {cur_data['especial']}",
-            "",
-            cur_data["keys_p1"],
-            cur_data["keys_p2"]
+        stat_max_w = left_col_w - 28
+        stat_items = [
+            (f"{t('stat_speed')} {cur_data['vel']}", (230, 220, 180)),
+            (f"{t('stat_damage')} {cur_data['dano']}", (205, 215, 210)),
+            (f"{t('stat_special')} {cur_data['especial']}", (205, 215, 210)),
+            ("", None),
+            (cur_data["keys_p1"], (255, 210, 180)),
+            (cur_data["keys_p2"], (255, 210, 180)),
         ]
-        sy = stat_y + 8
-        for sl in stat_lines:
-            if sl:
-                is_speed = sl.startswith(t('stat_speed'))
-                is_key = sl.startswith("[")
-                col = (230, 220, 180) if is_speed else ((255, 210, 180) if is_key else (205, 215, 210))
-                s_s = font_small.render(sl, True, col)
-                surface.blit(s_s, (detail_rect.x + 16, sy))
-            sy += 19
+        sy = stat_y + 6
+        for sl, col in stat_items:
+            if not sl:
+                sy += 6
+                continue
+            is_key = sl.startswith("[")
+            indent = "  " if not is_key else ""
+            wrapped = self._wrap_text(font_small, sl, stat_max_w, indent=indent)
+            for wline in wrapped:
+                s_s = font_small.render(wline, True, col)
+                surface.blit(s_s, (detail_rect.x + 14, sy))
+                sy += 16
 
         # Botões Anterior / Próximo na base da coluna esquerda
-        btn_nav_y = detail_rect.bottom - 44
-        self.prev_fighter_btn = pygame.Rect(detail_rect.x + 16, btn_nav_y, 130, 32)
-        self.next_fighter_btn = pygame.Rect(detail_rect.x + 160, btn_nav_y, 130, 32)
+        btn_nav_y = detail_rect.bottom - 40
+        self.prev_fighter_btn = pygame.Rect(detail_rect.x + 14, btn_nav_y, 134, 30)
+        self.next_fighter_btn = pygame.Rect(detail_rect.x + 158, btn_nav_y, 134, 30)
 
         pygame.draw.rect(surface, (35, 45, 40), self.prev_fighter_btn, border_radius=6)
         pygame.draw.rect(surface, (60, 75, 68), self.prev_fighter_btn, 1, border_radius=6)
-        prev_lbl = font_small.render(t("btn_prev"), True, COLOR_GOLD)
+        prev_lbl = self._fit_text(font_small, t("btn_prev"), COLOR_GOLD, 124)
         surface.blit(prev_lbl, (self.prev_fighter_btn.centerx - prev_lbl.get_width() // 2, self.prev_fighter_btn.centery - prev_lbl.get_height() // 2))
 
         pygame.draw.rect(surface, (35, 45, 40), self.next_fighter_btn, border_radius=6)
         pygame.draw.rect(surface, (60, 75, 68), self.next_fighter_btn, 1, border_radius=6)
-        next_lbl = font_small.render(t("btn_next"), True, COLOR_GOLD)
+        next_lbl = self._fit_text(font_small, t("btn_next"), COLOR_GOLD, 124)
         surface.blit(next_lbl, (self.next_fighter_btn.centerx - next_lbl.get_width() // 2, self.next_fighter_btn.centery - next_lbl.get_height() // 2))
 
         # Divisória vertical
-        sep_x = detail_rect.x + left_col_w + 14
-        pygame.draw.line(surface, (45, 58, 52), (sep_x, detail_y + 14), (sep_x, detail_rect.bottom - 14), 1)
+        sep_x = detail_rect.x + left_col_w + 12
+        pygame.draw.line(surface, (45, 58, 52), (sep_x, detail_y + 12), (sep_x, detail_rect.bottom - 12), 1)
 
         # Coluna Direita: Sub-filtros e Conteúdo Estratégico com Rolagem Anti-Overflow
-        right_x = sep_x + 16
-        right_w = detail_rect.right - right_x - 18
+        right_x = sep_x + 14
+        right_w = detail_rect.right - right_x - 16
 
-        # 3. Pílulas de Sub-seção no topo da coluna direita (Padrão Boardbots)
+        # 3. Pílulas de Sub-seção no topo da coluna direita (dimensões proporcionais para não vazar)
         if lang == LANG_PT:
             sub_labels = ["TODOS", "CONCEITO", "ARSENAL", "COMO JOGAR", "COMO VENCER"]
         else:
             sub_labels = ["ALL", "CONCEPT", "ARSENAL", "HOW TO PLAY", "HOW TO COUNTER"]
-        sub_w = 145
+        num_subs = len(sub_labels)
+        sub_gap = 8
+        sub_w = (right_w - (num_subs - 1) * sub_gap) // num_subs
         sub_h = 24
         sub_y = detail_y + 10
 
         self.sub_sec_btn_rects.clear()
         for s_idx, s_lbl in enumerate(sub_labels):
-            sb_rect = pygame.Rect(right_x + s_idx * (sub_w + 10), sub_y, sub_w, sub_h)
+            sb_rect = pygame.Rect(right_x + s_idx * (sub_w + sub_gap), sub_y, sub_w, sub_h)
             self.sub_sec_btn_rects.append(sb_rect)
             is_active_sub = (self.fighter_sub_section == s_idx)
             s_bg = (48, 62, 54) if is_active_sub else (26, 33, 29)
             s_bcol = COLOR_GOLD if is_active_sub else (50, 62, 55)
             pygame.draw.rect(surface, s_bg, sb_rect, border_radius=4)
             pygame.draw.rect(surface, s_bcol, sb_rect, 1, border_radius=4)
-            s_txt = font_small.render(s_lbl, True, COLOR_GOLD if is_active_sub else (160, 175, 168))
+            s_txt = self._fit_text(font_small, s_lbl, COLOR_GOLD if is_active_sub else (160, 175, 168), sub_w - 6)
             surface.blit(s_txt, (sb_rect.centerx - s_txt.get_width() // 2, sb_rect.centery - s_txt.get_height() // 2))
 
         # Seções de Conteúdo a serem exibidas
@@ -1628,25 +1990,18 @@ class GameHelpModal:
         clip_h = detail_rect.bottom - clip_top - 12
         clip_rect = pygame.Rect(right_x, clip_top, right_w, clip_h)
 
-        # Cálculo do total de altura necessário
-        text_w = right_w - 18  # Reserva espaço para a barra de rolagem
+        # Cálculo do total de altura necessário com quebra de linha precisa
+        text_w = right_w - 20  # Reserva espaço para a barra de rolagem
         total_content_height = 0
         layout_blocks = []
 
         for sec_title, sec_color, sec_text, _ in active_sections:
             block_lines = [("title", sec_title, sec_color)]
             for rline in sec_text.split("\n"):
-                words = rline.split(" ")
-                cur_line = ""
-                for w in words:
-                    test_line = cur_line + (" " if cur_line else "") + w
-                    if font_small.size(test_line)[0] > text_w:
-                        block_lines.append(("line", cur_line, (215, 225, 220)))
-                        cur_line = w
-                    else:
-                        cur_line = test_line
-                if cur_line:
-                    block_lines.append(("line", cur_line, (215, 225, 220)))
+                indent = "  " if rline.lstrip().startswith("•") else ""
+                wrapped = self._wrap_text(font_small, rline, text_w, indent=indent)
+                for wline in wrapped:
+                    block_lines.append(("line", wline, (215, 225, 220)))
             layout_blocks.append(block_lines)
 
         for blk in layout_blocks:
@@ -1666,7 +2021,7 @@ class GameHelpModal:
         for blk in layout_blocks:
             for item_type, itext, icol in blk:
                 if item_type == "title":
-                    t_s = font_mid.render(itext, True, icol)
+                    t_s = self._fit_text(font_mid, itext, icol, text_w)
                     surface.blit(t_s, (right_x, draw_y))
                     draw_y += 24
                 else:

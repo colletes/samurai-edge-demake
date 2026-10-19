@@ -32,7 +32,7 @@ All tests reside in `tests/`:
 ### 3. Developer & Capture Tools (`tools/`)
 Utility, generation, and inspection scripts:
 - Visual captures: `tools/capture_american_preview.py`, `tools/capture_bakumatsu_preview.py`, `tools/capture_char_select.py`, `tools/capture_ninja_gameplay.py`, `tools/capture_saitou_preview.py`, etc.
-- Model & Asset utilities: `tools/model_inspector.py`, `tools/build_hd2d_pilot_sprites.py`, `tools/build_parchment_assets.py`.
+- Model & Asset utilities: `tools/studio_inspector.py` (Unified 3D Studio: Models F1, Arenas F2, Staging F3), `tools/model_inspector.py`, `tools/arena_inspector.py`, `tools/build_hd2d_pilot_sprites.py`, `tools/build_parchment_assets.py`.
 - Simulation: `tools/simulate_tournament.py`, `tools/simulate_boss.py`.
 
 ### 4. Documentation & Roadmaps (`docs/`)
@@ -96,6 +96,62 @@ Utility, generation, and inspection scripts:
   - **Headwear, Cavalier Brims & Tricorne Flaps**: Hat brims must maintain a strictly horizontal orientation (`dir_z = 0.0`) sitting safely at or above the forehead/crown line (`crown_z >= hz + 0.145`). If a brim is given downward slope (`dir_z < 0`) towards the camera, the isometric projection compounds the vertical drop with forward screen translation, projecting the brim directly over the eyes like a visor. Upturned brims (e.g. Tricorne front flap, Cavalier cocked brim) along direction `dir ≈ (..., ..., 0.95)` must specify `up = (fx, fy, 0.0)` for front-facing flaps so width expands laterally along `(px, py)` instead of collapsing into a vertical dividing strip.
   - **Oriented Chest Blouses vs Axis-Aligned Boxes**: Front torso garments, open shirts, and collars must use oriented geometry (`mk.obox` along `(0, 0, 1.0)` with `up = (fx, fy, 0.0)`) rather than axis-aligned `cbox` boxes, ensuring lapels and décolletage remain flush against the torso in all 360° camera angles instead of protruding as sharp diagonal corners.
   - **Continuous 3D Ribbon Legs to Boot Cuffs**: When connecting breeches/trousers into bucket-top or cavalier boots, the upper ribbon mesh must extend continuously to the cuff anchor (`spine_points=[top, knee, cuff_pos]`), eliminating blank gaps/shelves before the boot shaft.
+  - **Model Viewer & Inspector Synchronization**: Whenever a new character model is created or updated, ALWAYS immediately register and synchronize the new combatants in the 3D Model Inspector (`tools/model_inspector.py`) and the in-game help manual (`src/ui/game_help.py`), ensuring they appear in the roster catalog, HUD cards, pedestals, and interactive orbital 3D viewer.
 
 
+
+
+## 10. iOS & Cross-Platform Directives (Mobile & Apple Silicon)
+Whenever implementing new features, UI screens, combat systems, or asset additions, ALWAYS consider iOS compatibility:
+- **Strict Case-Sensitivity on APFS**: The physical iOS filesystem is strictly case-sensitive. All asset paths, filenames, and extensions must match the exact disk casing (e.g. `.png` vs `.PNG`, `assets/sounds/` vs `assets/Sounds/`).
+- **Path Resolution**: Never use hardcoded desktop machine paths (`/Users/...`, `C:\...`). Always use relative paths from the project root or resolve dynamically via `os.path.join(os.path.dirname(__file__), ...)`.
+- **Touch & Controller Support**:
+  - The game supports MFi / Bluetooth controllers (ExtendedGamepad) and touch events (`FINGERDOWN`, `FINGERUP`, `FINGERMOTION` / virtual controls).
+  - Desktop-specific SDL flags (like disabling `SDL_JOYSTICK_MFI`) must NEVER execute on iOS. Always guard with `if sys.platform == "darwin" and os.environ.get("KIVY_BUILD") != "ios":`.
+- **Orientation & Safe Area (Notch / Dynamic Island)**:
+  - The game is fixed to Landscape (`UIInterfaceOrientationLandscapeLeft` / `UIInterfaceOrientationLandscapeRight`).
+  - HUD elements, lifebars, and pause buttons must respect screen margins and safe area insets so they are not obscured by the Dynamic Island or Home indicator.
+- **Graceful Dependency Fallbacks**:
+  - Any desktop-only or optional libraries (e.g. `pyvidplayer2`, `opencv`, debug profilers) MUST be wrapped in `try/except ImportError` with seamless gameplay fallbacks so the game runs smoothly even if a module is absent.
+- **Mobile Memory & Rendering Efficiency**:
+  - Avoid allocating new `pygame.Surface` instances every frame inside the main game loop; cache and reuse surfaces to maintain a rock-solid 60 FPS on mobile chips.
+- **Xcode Project Synchronization**:
+  - Any changes to `assets/`, `src/`, or root configs must be synced to the iOS Xcode project using `deploy/ios/sync_game_to_xcode.sh`.
+
+## 11. Release Packaging & Lightweight Asset Hygiene Directives (All Platforms)
+Whenever preparing, building, or packaging production release archives (`.zip`, `.tar.gz`, `.apk`, `.ipa`, installer) for ANY platform (macOS, Windows, Linux, Android, iOS):
+- **Strict Runtime-Only Asset Packaging**:
+  Never blindly copy or bundle the entire `assets/` directory. All builds must strictly exclude non-runtime development, draft, and marketing assets:
+  - `assets/sound_drafts/`: Reference audio drafts, discarded song suggestions, animatic stems (save >110 MB).
+  - `assets/Opening Videos/Take *`: Intermediate raw AI video takes. Only `Samurai_Edge_Opening_Final.mp4` belongs in production builds (save >55 MB).
+  - `assets/concepts/HD2D_Concept_Art.pdf` & `*_gameplay_mockup.jpg`: Art pitch documents and Photoshop design mockups. Only active in-game concepts (`sumie_title_logo_concept.jpg`, arena concept cards, duel end cards) are runtime assets.
+  - `assets/promotional/`: Storefront banners, itch covers, social media cards, web favicons.
+  - `.DS_Store`, `__pycache__`, tests, and development artifacts.
+- **No Redundant Asset Duplication**:
+  - In macOS `.app` bundles, assets must reside in `Contents/Resources/assets/`, NEVER duplicated simultaneously into `Contents/MacOS/assets/` or multiple subfolders.
+  - In Windows onedir builds, assets reside in `SamuraiEdge/assets/`, NEVER duplicated into `_internal/assets/`.
+- **Target Size Ceiling**:
+  A clean production release package must remain under ~250 MB compressed. If a release `.zip` approaches ~400 MB+, immediately inspect the archive for leaked drafts, raw video takes, or asset duplications.
+- **Spec & CI Synchronization**:
+  Always ensure `samurai_edge.spec`, `buildozer.spec`, and CI workflows (`.github/workflows/release.yml`, `.github/workflows/release-demo.yml`, `deploy/push_to_itch.sh`) use the `get_runtime_assets` filter and omit redundant copy steps.
+
+## 12. Mandatory Expansion Cycle Pipeline (Strict Execution Order)
+Whenever executing a new Roadmap Expansion Cycle (adding new fighters and arenas), ALWAYS strictly follow this 6-step sequential order without skipping or inverting steps:
+1. **Full-Body Portrait Concepts & 16:9 Arena Concepts First**:
+   - Generate the vertical **Portrait Full-Body Concept Art** (`assets/concepts/<fighter>_full_concept.jpg`) for each new fighter to establish proportions, attire, weapons, and silhouette.
+   - Generate the **16:9 Widescreen Arena Concept Art** (`assets/concepts/<arena>_concept.jpg`) for each new stage.
+2. **Square Bust Crop & Oval/Circular Framed Portrait**:
+   - Derive/generate the **Square Bust Portrait (`256x256`)** (`assets/portraits/<fighter>_bust.png`) and the **Oval/Circular Framed Portrait** (`assets/portraits/<fighter>_circle.png`) directly from the approved character concept.
+3. **3D Sculpted Models (Fighters & Arenas)**:
+   - Build the 3D faceted low-poly character models (`src/entities/head_<fighter>.py` & `src/entities/body_<fighter>.py`) and 3D arena props/layouts (`src/world/decor.py` & `src/world/arenas.py`) strictly matching the visual concepts.
+4. **Suno / Gemini BGM Music Prompts (`GEMINI.md` & `docs/GEMINI_MUSIC_PROMPTS.md`)**:
+   - Document the specialized Suno / Gemini music generation prompts (BPM, musical scale/mode, traditional & orchestral instrumentation, loop structure) in both `GEMINI.md` and `docs/GEMINI_MUSIC_PROMPTS.md`.
+5. **Gameplay, Fatalities, Hazards & Revamps Implementation**:
+   - Implement the fighter combat classes, paired 3D fatalities, stage hazards, classic arena visual revamps, Model/Arena/Studio Inspector synchronization, Game Help entries, Arcade Mode progression, and automated tests.
+
+### Active Suno / Gemini BGM Prompts Reference (Cycle 5):
+- **Floresta dos Pinheiros (`bgm_pine_forest.mp3` — Daiki)**:
+  - *Prompt (Suno / Gemini)*: `Traditional Japanese Bakumatsu fighting game stage soundtrack, 122 BPM, D Dorian / Yo-scale, virtuous shakuhachi bamboo flute lead echoing through a misty mountain red pine forest at dawn, driving taiko o-daiko and shime-daiko percussion, rhythmic wooden clappers (hyoshigi) and resonant oak bo-staff strikes, plucked shamisen and biwa accents, cinematic orchestral strings, seamless loopable combat track, no vocals.`
+- **Taiga de Ezo (`bgm_ezo_taiga.mp3` — Aoi)**:
+  - *Prompt (Suno / Gemini)*: `Northern Hokkaido Ezo wilderness fighting game soundtrack, 128 BPM, A Minor pentatonic with traditional Ainu folk motifs, resonant mukkuri (Ainu bamboo jaw harp) and tonkori (five-stringed zither) rhythms, deep tribal frame drums and taiko, icy wind atmosphere, intense staccato pizzicato strings and brass swells evoking a snowy taiga hunt, seamless loopable combat track, no vocals.`
 

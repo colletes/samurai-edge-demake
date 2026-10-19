@@ -422,7 +422,7 @@ def test_music_files_and_fall_sfx():
     assert os.path.exists(os.path.join(ROOT, "assets", "sounds", "sfx", "fall.wav"))
     with open(os.path.join(ROOT, "main.py"), encoding="utf-8") as fh:
         src = fh.read()
-    assert "play_music(game_map.music)" in src and "SoundEvent.FALL" in src
+    assert "play_music(game_map.music" in src and "SoundEvent.FALL" in src
     print("  [OK] Música por nome de arquivo (12 faixas) e SFX de queda.", flush=True)
 
 
