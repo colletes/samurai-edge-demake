@@ -47,3 +47,7 @@ BALANCE_REPORT*.md
 arcade_save.json
 settings.json
 controls_config.json
+
+# Scripts locais de trabalho de música
+assets/sounds/music/apply_cover.py
+assets/sounds/music/run swapper.command
