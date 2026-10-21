@@ -120,6 +120,7 @@ from src.ui.pause_menu import (
 from src.arcade import arcade_save
 from src.edition import is_demo, DEMO_ARENA, DEMO_ARENAS
 from src.arcade.arcade_mode import ArcadeRun, FIGHT_WON, FIGHT_LOST, NEXT_OPPONENT, FightKind
+NINJA_CHALLENGE_BGM = "bgm_ninja_challenge"
 from src.arcade.arcade_screens import ArcadeDifficultyScreen, ArcadeBracketScreen, ArcadeResultScreen
 from src.arcade.arcade_credits import ArcadeCreditsScreen
 from src.ui.settings_menu import SettingsMenu, format_key_name
@@ -131,7 +132,7 @@ from src.ui.portraits import preload_portraits
 from src.ui.svg_icon_renderer import render_text_with_icons
 from src.ui.loading_screen import LoadingScreen
 from src.ui.fonts import get_title_font, get_text_font
-from src.i18n import t
+from src.i18n import t, get_lang, LANG_PT
 from src.input import get_controller_manager, TouchControls, DisplayScaler
 from src.input.controls_storage import load_controls_config, save_controls_config
 from src.audio import SoundManager, SoundEvent, MusicTrack
@@ -591,10 +592,10 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
         fighter.trigger_ofuda_toss(aim_x, aim_y, projectiles, particles)
         play_sfx(SoundEvent.SHURIKEN_THROW)
     elif isinstance(fighter, DaikiPilgrim):
-        fighter.trigger_bo_strike(aim_x, aim_y, particles=particles)
+        fighter.trigger_bo_strike(aim_x, aim_y)
         play_sfx(SoundEvent.SWING_BLUNT)
     elif isinstance(fighter, AoiHuntress):
-        fighter.trigger_spear_thrust(aim_x, aim_y, particles=particles)
+        fighter.trigger_spear_thrust(aim_x, aim_y)
         play_sfx(SoundEvent.SLASH_KATANA)
 
 def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, poison_clouds: list, powder_traps: list, opponent=None, game_map=None, banners: list = None):
@@ -976,7 +977,15 @@ def run_game():
                 (p1.name, p2.name), (p1_char_id, p2_char_id),
                 (get_fighter_color(p1), get_fighter_color(p2)), vs_ai_mode
             )
-        sound_mgr.play_music(game_map.music, fade_ms=800, force_restart=(play_intro or restart_music))
+        # Desafio Ninja: faixa de fusão única (Kasumi x Murasaki x Hanzo) contínua entre os 3 oponentes;
+        # se o arquivo não existir, cai de volta na música da arena (Gruta das Sombras).
+        music_track = game_map.music
+        _cur_fight = arcade_run.current_fight() if arcade_run is not None else None
+        if _cur_fight is not None and _cur_fight.kind == FightKind.NINJA_CHALLENGE:
+            from src.audio.sound_manager import MUSIC_DIR as _MUSIC_DIR
+            if any(os.path.isfile(os.path.join(_MUSIC_DIR, f"{NINJA_CHALLENGE_BGM}{ext}")) for ext in (".ogg", ".wav", ".mp3")):
+                music_track = NINJA_CHALLENGE_BGM
+        sound_mgr.play_music(music_track, fade_ms=800, force_restart=(play_intro or restart_music))
 
     def request_rematch():
         """Entregável 5.3: reinicia a partida inteira (placar e rounds zerados) após o fim de uma partida Melhor-de-3."""
@@ -2470,7 +2479,7 @@ def run_game():
             render_damage_bars(screen, p1, p2, p1_color, p2_color, panel_rect)
 
         if vs_ai_mode == "watch":
-            mode_text = "MODO: IA vs IA (ASSISTIR)" if get_lang() == LANG_PT else "MODE: AI vs AI (SPECTATE)"
+            mode_text = t("mode_hud_watch")
         else:
             mode_text = t("mode_hud_1p") if vs_ai_mode else t("mode_hud_2p")
         if arcade_run is not None:

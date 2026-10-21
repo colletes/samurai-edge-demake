@@ -73,6 +73,7 @@ class ClashSystem:
             fighter.state = STATE_CLASH_QTE
             fighter.state_timer = QTE_WINDOW
             fighter.hitbox_active = False
+            fighter.wz = 0.0
 
         if particles is not None:
             for _ in range(15):
@@ -135,6 +136,7 @@ class ClashSystem:
 
         for fighter in (p1, p2):
             fighter.state_timer = 0.0
+            fighter.wz = 0.0
 
         if result == "DRAW":
             p1.state = "IDLE"

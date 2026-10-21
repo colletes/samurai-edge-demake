@@ -338,16 +338,18 @@ class CombatSystem:
         active_projectiles = []
         for proj in projectiles:
             if isinstance(proj, (TalismanWard, BearTrapProjectile)):
+                p1_alive_before = p1.is_alive
+                p2_alive_before = p2.is_alive
                 still_valid = proj.update(
                     dt, game_map, particles,
                     fighters=[p1, p2], projectiles=projectiles,
                     banners=banners, cinematic_director=cinematic_director
                 )
-                if not p1.is_alive and winner is None:
+                if p1_alive_before and not p1.is_alive and winner is None:
                     winner = "P2_WINS"
                     self.hitstop_timer = 0.14
                     self._play_sound("fatal_strike")
-                elif not p2.is_alive and winner is None:
+                elif p2_alive_before and not p2.is_alive and winner is None:
                     winner = "P1_WINS"
                     self.hitstop_timer = 0.14
                     self._play_sound("fatal_strike")
@@ -1365,6 +1367,8 @@ class CombatSystem:
                 else:
                     if p2.state == STATE_PARRY and p1.state == "POLE_VAULT":
                         banners.append(FloatingBanner("GUARD CRUSH!", p2.wx, p2.wy, wz=1.8, color=(255, 195, 70)))
+                        p2.state = STATE_STUNNED
+                        p2.state_timer = 0.65
                     is_ninja = (getattr(p1, "char_type", "") == "ninja" or hasattr(p1, "has_kunai"))
                     if is_ninja:
                         # 1-Hit Kill em Contra-Ataque (adversário em recovery/stunned) ou Costas (backstab)
@@ -1506,6 +1510,8 @@ class CombatSystem:
                 else:
                     if p1.state == STATE_PARRY and p2.state == "POLE_VAULT":
                         banners.append(FloatingBanner("GUARD CRUSH!", p1.wx, p1.wy, wz=1.8, color=(255, 195, 70)))
+                        p1.state = STATE_STUNNED
+                        p1.state_timer = 0.65
                     is_ninja = getattr(p2, "char_type", "") == "ninja"
                     if is_ninja:
                         dot_facing = p2.facing_x * p1.facing_x + p2.facing_y * p1.facing_y

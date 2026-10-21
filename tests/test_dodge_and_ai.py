@@ -191,6 +191,52 @@ def test_difficulty_ui_cycling():
     select.cycle_ai_difficulty()
     assert select.ai_difficulty == "normal"
 
+def test_ai_avoids_kasumi_bombs():
+    """Garante que a IA não salta (Ryuu Tsui Sen / Pole Vault) nem avança sobre as bombas da Kasumi, e rola para longe."""
+    from src.entities.gray_ninja import GrayNinja
+    from src.entities.projectile import TimedBombEntity
+    from src.entities.daiki import DaikiPilgrim
+
+    game_map = GameMap()
+    ai = SamuraiAI(difficulty=DIFFICULTY_NORMAL)
+
+    # 1. Kenshi contra Kasumi com bomba armada entre eles
+    kenshi = RedSamurai(5.0, 5.0)
+    kasumi = GrayNinja(8.0, 5.0)
+    bomb = TimedBombEntity(6.5, 5.0, wz=0.0, owner=kasumi)
+    bomb.is_airborne = False
+    bomb.fuse_timer = 1.0
+    projectiles = [bomb]
+
+    # IA do Kenshi deve avaliar que a investida e salto estão bloqueados pela bomba
+    assert SamuraiAI._lunge_safe(kenshi, kasumi.wx, kasumi.wy, game_map, projectiles, 4.0) is False
+
+    # 2. Daiki contra Kasumi com bomba armada no ponto de pouso
+    daiki = DaikiPilgrim(5.0, 5.0)
+    assert SamuraiAI._lunge_safe(daiki, kasumi.wx, kasumi.wy, game_map, projectiles, 4.0) is False
+
+    # 3. Kenshi perto da bomba (< 2.0m) deve rolar para longe ou desviar perpendicularmente, NUNCA em direção à bomba
+    kenshi_near = RedSamurai(6.0, 5.0)  # bomba está em 6.5, 5.0
+    ai.update(kenshi_near, kasumi, 0.016, game_map, projectiles)
+    assert kenshi_near.state == "ROLL" or kenshi_near.state == "DASH"
+    # Se rolou/desviou, não pode ter avançado em direção à bomba (dx > 0 aproximaria da bomba em 6.5)
+    assert getattr(kenshi_near, "roll_dir_x", 0.0) <= 0.0
+
+def test_ai_projectile_dodging_difficulties():
+    """Valida as janelas de reação e probabilidades de defesa calibradas para projéteis em todos os níveis."""
+    ai_easy = SamuraiAI(difficulty=DIFFICULTY_EASY)
+    ai_normal = SamuraiAI(difficulty=DIFFICULTY_NORMAL)
+    ai_hard = SamuraiAI(difficulty=DIFFICULTY_HARD)
+
+    # Delays humanos normais
+    assert 0.15 <= ai_easy._get_reaction_delay(is_explosive=False) <= 0.23
+    assert 0.07 <= ai_normal._get_reaction_delay(is_explosive=False) <= 0.15
+    assert 0.01 <= ai_hard._get_reaction_delay(is_explosive=False) <= 0.06
+
+    # Delays de emergência para explosivos
+    assert ai_easy._get_reaction_delay(is_explosive=True) <= 0.11
+    assert ai_normal._get_reaction_delay(is_explosive=True) <= 0.07
+    assert ai_hard._get_reaction_delay(is_explosive=True) <= 0.04
 
 if __name__ == "__main__":
     pygame.init()
@@ -208,4 +254,8 @@ if __name__ == "__main__":
     print("✓ test_ai_evades_kyoto_carriage passed!")
     test_difficulty_ui_cycling()
     print("✓ test_difficulty_ui_cycling passed!")
+    test_ai_avoids_kasumi_bombs()
+    print("✓ test_ai_avoids_kasumi_bombs passed!")
+    test_ai_projectile_dodging_difficulties()
+    print("✓ test_ai_projectile_dodging_difficulties passed!")
     print("\nALL DODGE & AI HUMANIZATION TESTS PASSED SUCCESSFULLY!")

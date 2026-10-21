@@ -220,6 +220,7 @@ I18N = {
         "powder_tracker": 'PÓLVORA {dist:.1f}m',
         "mode_hud_1p": '[1P vs IA]',
         "mode_hud_2p": '[2 JOGADORES]',
+        "mode_hud_watch": '[MODO: IA vs IA (ASSISTIR)]',
         
         "rules_box1_title": 'A FILOSOFIA DO DUELO',
         "rules_box1_lines": [
@@ -898,6 +899,7 @@ I18N = {
         "powder_tracker": 'POWDER {dist:.1f}m',
         "mode_hud_1p": '[1P vs AI]',
         "mode_hud_2p": '[2 PLAYERS]',
+        "mode_hud_watch": '[MODE: AI vs AI (SPECTATE)]',
         
         "rules_box1_title": 'PHILOSOPHY OF THE DUEL',
         "rules_box1_lines": [

@@ -62,6 +62,17 @@ class DaikiPilgrim(Samurai):
         self.state_timer = 0.38
         return True
 
+    def on_parried(self, opponent=None, game_map=None, banners: list = None, particles: list = None):
+        """Mitigação e aterrissagem física imediata ao ser aparado em salto ou golpe corpo a corpo."""
+        self.hitbox_active = False
+        self.wz = 0.0
+        self.state = STATE_RECOVERY
+        self.state_timer = self.bo_recovery * 1.25
+        if particles is not None:
+            from src.effects.particles import SparkParticle
+            for _ in range(8):
+                particles.append(SparkParticle(self.wx, self.wy, 0.35, color=(235, 195, 95)))
+
     def can_act(self) -> bool:
         return (
             self.is_alive
@@ -70,7 +81,7 @@ class DaikiPilgrim(Samurai):
             and self.dash_recovery_timer <= 0
         )
 
-    def trigger_bo_strike(self, aim_x: float, aim_y: float) -> bool:
+    def trigger_bo_strike(self, aim_x: float, aim_y: float, particles: list = None) -> bool:
         """Ataque Primário: Estocada e giro longo com o Bastão Bō de 1.82m."""
         if not self.can_act():
             return False
@@ -120,6 +131,9 @@ class DaikiPilgrim(Samurai):
 
     def update(self, dt: float, game_map=None, particles: list = None, opponent=None, projectiles: list = None, banners: list = None, **kwargs):
         self.update_dodge_timers(dt)
+
+        if self.state not in (STATE_POLE_VAULT, "JUMP") and self.wz > 0.0:
+            self.wz = max(0.0, self.wz - 16.0 * dt)
 
         if self.vault_timer > 0:
             self.vault_timer = max(0.0, self.vault_timer - dt)

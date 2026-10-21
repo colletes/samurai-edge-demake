@@ -59,6 +59,8 @@ PORTRAIT_MAP = {
     "gashadokuro": "gashadokuro",
     "boss": "gashadokuro",
     "oni": "gashadokuro",
+    # Desafio Ninja do Arcade: arte de grupo (Joe, Kasumi, Murasaki, Hanzo)
+    "ninja_challenge": "ninja_challenge",
 }
 
 # Cache de superfícies carregadas: (char_key, size, circular) -> pygame.Surface

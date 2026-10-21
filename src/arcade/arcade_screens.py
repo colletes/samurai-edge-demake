@@ -76,6 +76,15 @@ def _centered(surface, font, text, color, cx, y, max_w=None):
     return img.get_height()
 
 
+def _draw_ninja_challenge_marker(surface, rect: pygame.Rect) -> bool:
+    """Desenha a arte de grupo do Desafio Ninja como retrato único do rival; False se o asset faltar."""
+    img = get_portrait("ninja_challenge", size=(rect.w - 8, rect.w - 8), circular=True)
+    if img is None:
+        return False
+    surface.blit(img, (rect.centerx - img.get_width() // 2, rect.centery - img.get_height() // 2))
+    return True
+
+
 def _draw_skull(surface, cx, cy, r, color=(235, 228, 210)):
     pygame.draw.circle(surface, color, (cx, cy - r // 6), r)
     pygame.draw.rect(surface, color, (cx - r // 2, cy + r // 3, r, r // 2), border_radius=3)
@@ -220,6 +229,8 @@ class ArcadeBracketScreen:
         pygame.draw.circle(surface, (236, 226, 200), rect.center, rect.w // 2)
         if fight.kind == FightKind.BOSS:
             _draw_skull(surface, rect.centerx, rect.centery, rect.w // 3, (60, 54, 50))
+        elif fight.kind == FightKind.NINJA_CHALLENGE and _draw_ninja_challenge_marker(surface, rect):
+            pass
         else:
             opponents = fight.opponents if len(fight.opponents) > 1 else ((fight.opponents[0],) * (2 if fight.kind == FightKind.MIRROR else 1))
             count = len(opponents)

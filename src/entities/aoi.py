@@ -66,7 +66,7 @@ class AoiHuntress(Samurai):
             and self.dash_recovery_timer <= 0
         )
 
-    def trigger_spear_thrust(self, aim_x: float, aim_y: float) -> bool:
+    def trigger_spear_thrust(self, aim_x: float, aim_y: float, particles: list = None) -> bool:
         """Ataque Primário: Estocada rápida e letal com a lança de caça Op."""
         if not self.can_act():
             return False

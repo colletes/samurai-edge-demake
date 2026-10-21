@@ -1325,6 +1325,113 @@ Kim-un Kamuy yo — TSURANUKE!
 
 ---
 
+### 24b. Desafio Ninja — Fusão Joe × Kasumi × Murasaki × Hanzo (`ninja_challenge`)
+* **Personagens**: Joe → Kasumi → Murasaki → Hanzo (ordem do `NINJA_ORDER` do Arcade), na Gruta das Sombras
+* **Arquivo BGM Previsto**: `bgm_ninja_challenge.mp3` (~2:00, loop)
+* **Clima Emocional**: Uma maratona de quatro ninjas. A comédia de ação americana de Joe abre o desafio, e a travessura enevoada de Kasumi, o ritual hipnótico de Murasaki e a velocidade assassina de Hanzo vêm em seguida. A faixa fica mais sombria e veloz a cada oponente, e termina com os quatro temas empilhados.
+* **Fusão Temática**:
+  * **Joe** (`forest_camp`, A Mixolydian, 132 BPM): banjo bluegrass, violão, gaita blues, palmas, latido do Doberman Yamato e gritos de palavras japonesas fora de contexto.
+  * **Kasumi** (`mist_temple`, A Kumoi, 128 BPM): suzu bells, shinobue travesso, pizzicato de koto/shamisen, fogos de artifício.
+  * **Murasaki** (`shadow_cave`, C# Phrygian/Hirajōshi, 6/8): correntes de ferro, kusarigama, koto sombrio, kokyū, sinos rin, contralto ritualístico.
+  * **Hanzo** (`iga_rooftops`, F# In-sen, 138 BPM): tsuzumi veloz, shamisen staccato, hyoshigi, kunai/shuriken, kiai.
+  * **Tom unificador**: tudo em **F# menor / In-sen**. O trecho de Joe usa A Mixolydian/blues, que compartilha as mesmas notas da pentatônica de F# menor, então o banjo e o shamisen encaixam sem modulação. O pulso base é 128 BPM; Joe sobe para 132, a seção de Murasaki vai para 6/8 (mesmo pulso de colcheia) e Hanzo acelera para 138 BPM.
+
+#### 🎙️ Prompt Gemini (English - High Fidelity MusicLM / Lyria):
+```text
+Title: Four Shadows, One Night (Banzai Shinobi Gauntlet)
+Genre: Epic Shinobi Gauntlet Battle Theme / Fusion of Americana Action-Comedy, Trickster, Occult and Assassin Ninja Themes
+Tempo: 128 BPM (132 BPM for the opening), then 6/8 compound-meter middle section, rising to 138 BPM, Key of F# Minor (In-sen / Hirajōshi / Kumoi scales; blues-pentatonic banjo sections share the same notes)
+Instrumentation: Lightning-fast 5-string bluegrass banjo, flatpicking acoustic guitar, swaggering blues harmonica, handclaps and a canine bark (Joe and his Doberman); sparkling kagura suzu bells and agile shinobue flute (Kasumi); swinging iron chains, kusarigama sickle strikes, dissonant bent-note koto, weeping kokyu and bronze rin bells (Murasaki); blistering staccato Tsugaru shamisen, rapid tsuzumi, hyoshigi clackers and metallic kunai clinks (Hanzo); deep taiko, dark sub-bass, firework fuse risers. Vocals: cocky American male lead with gang shouts, playful female soprano, hypnotic female alto, and a low male shinobi whisper with kiai.
+Structure & Dynamics:
+- Intro (0:00 - 0:10): Campfire crackle fading into dripping cave water; a cocky cowboy-ninja whistle, a single iron chain scrape and a sizzling firework fuse.
+- Joe - Banzai Bluegrass (0:10 - 0:35): 132 BPM foot-stomping groove; banjo and shamisen trade cocky licks over handclaps and taiko; harmonica bends; Doberman bark on the downbeat; shouted gang chorus.
+- Kasumi - Mirage Dance (0:35 - 0:58): Banjo dissolves into mist; playful syncopated 128 BPM tsuzumi and pizzicato shamisen groove, teasing shinobue melody, airy female soprano hook and giggles, firework pops on the offbeats.
+- Murasaki - Chain Ritual (0:58 - 1:20): Groove slips into driving 6/8; heavy ritual drums, swinging chain percussion, dark koto arpeggios and weeping kokyu; hypnotic female alto incantation over a low monk drone; sharp sickle cleave and rin bell on the bar line.
+- Hanzo - Rooftop Assassination (1:20 - 1:40): Tempo surges to 138 BPM; blistering staccato shamisen, double-time tsuzumi, hyoshigi clacks, kunai chimes; low male whisper and kiai over the top.
+- Four Shadows Finale (1:40 - 1:55): All four themes stacked: banjo and harmonica licks (Joe) over shinobue (Kasumi) over koto and chain pulse (Murasaki) over shamisen staccato (Hanzo); alto and soprano in harmony with the male lead shouting; then a sudden metallic kunai strike, a firework burst and a Doberman bark.
+- Seamless Loop Tail (1:55 - 2:00): Bronze rin bell and chain decay dissolving into the campfire crackle, the whistle and the cave water drops.
+Mix & Texture: Wide stereo (American banjo left, Japanese shamisen right), cavernous reverb with razor-sharp metallic transients, mist and rooftop-leap panning, tight punchy combat percussion.
+```
+
+#### 🎹 Prompt Suno v6 (Rich 2-Minute Fusion Cut):
+* **Style Prompt (Suno v6)**:
+```text
+Epic Bakumatsu shinobi gauntlet battle theme with vocals, 128 BPM (132 BPM opening) accelerating to 138 BPM, F# minor In-sen scale with a 6/8 middle section, cinematic Suno v6 production. Fusion of four ninja themes: comedic Americana action-hero bluegrass banjo, flatpicking guitar, blues harmonica and a Doberman bark; playful glassy suzu bells, shinobue flute and firework pops; dark occult koto, weeping kokyu, swinging iron chain and kusarigama percussion with bronze bells; blistering Tsugaru shamisen staccato, rapid tsuzumi, hyoshigi clacks and kunai clinks. Alternating cocky American male lead shouting random Japanese words, teasing female soprano, hypnotic female alto, and low male shinobi whispers with sharp kiai, ending in a stacked harmony finale. About 2 minutes, seamless loop.
+```
+* **Custom Lyrics / Metatag Script (Colar no Suno)**:
+```text
+[Intro: Campfire crackle, cocky hero whistle, cave water drops, single iron chain scrape, sizzling firework fuse]
+[Fierce Doberman Bark]
+Woof! Rrr-ruff!
+
+[Part 1 - Joe: Stomping 132 BPM Bluegrass Banjo, Shamisen duel, handclaps and Taiko]
+[Verse: Charismatic, overconfident American male vocal, action-hero swagger]
+Fastest American shinobi in the land!
+Read a scroll in Texas, now I'm master of the blade!
+[Chorus: High-energy gang shouts]
+TEMPURA! BONSAI!
+Slice 'em with the steel!
+SUDOKU! TERIYAKI!
+That's the ninja deal!
+[Doberman Bark]
+Ruff!
+
+[Part 2 - Kasumi: Banjo fades into mist, playful 128 BPM Tsuzumi and pizzicato Shamisen groove, teasing Shinobue]
+[Playful Female Whisper]
+Kochira yo...
+[Verse: Playful, airy Female Soprano]
+Kiri no naka de kakurenbo,
+Maboroshi ka na? Honmono ka na?
+[Playful Female Giggle]
+Ahaha!
+[Pop! Firework mortar hit]
+
+[Part 3 - Murasaki: Shift to driving 6/8 ritual beat, swinging iron chains, dark Koto and weeping Kokyu]
+[Verse: Hypnotic, mysterious Female Alto over low monk drone]
+Yami no kusari ga odoru toki,
+Murasaki no kage ni nemure...
+[Dark Female Whisper & Laugh]
+Tsukamaeta... fufufu...
+[Razor-sharp kusarigama cleave and resonant bronze rin bell]
+
+[Part 4 - Hanzo: Tempo surges to 138 BPM, blistering staccato Shamisen, double-time Tsuzumi, Hyoshigi clacks]
+[Low Male Shinobi Whisper]
+Kage...
+[Sharp Percussive Kiai]
+Fu! Ha!
+
+[Climax: Four Shadows Finale - Banjo, Harmonica, Shinobue, Koto and Shamisen in counterpoint, Soprano and Alto in harmony, thunderous Taiko]
+[Stacked Harmony with Gang Shouts]
+Kiri to kusari to kage no yaiba,
+Yottsu no kage ga yoru wo kiru!
+[Fierce Male Ninja Shout]
+Shinobi no yaiba — METSU!
+[Cocky Male Ad-lib]
+Oh yeah! Sayonara, baby!
+[Female Vocal Hook]
+Hanabi ga saku yo — DŌN!
+[Sudden metallic kunai impact, firework burst, smoke-bomb whoosh and Doberman bark]
+
+[Outro: Seamless Loop Tail, bronze bell and chain decay fading into campfire crackle, whistle and cave water drops]
+Arigato, amigos! Banzai!
+[End]
+```
+* **Tradução da Letra (Referência — fora do bloco Suno)**:
+  * *"TEMPURA! BONSAI! SUDOKU! TERIYAKI!"*: Joe grita palavras de cultura japonesa fora de contexto, como no tema original da Floresta.
+  * *"Kochira yo..."* (Estou aqui...)
+  * *"Kiri no naka de kakurenbo / Maboroshi ka na? Honmono ka na?"* (Esconde-esconde na névoa / Miragem? Ou real?)
+  * *"Yami no kusari ga odoru toki / Murasaki no kage ni nemure..."* (Quando as correntes da escuridão dançam / Durma na sombra púrpura...)
+  * *"Tsukamaeta..."* (Peguei você...) / *"Kage..."* (Sombra...)
+  * *"Kiri to kusari to kage no yaiba, Yottsu no kage ga yoru wo kiru!"* (Névoa, corrente e lâmina da sombra, quatro sombras cortam a noite!)
+  * *"Shinobi no yaiba — METSU!"* (Lâmina Shinobi — Aniquilar!) / *"Hanabi ga saku yo — DŌN!"* (Os fogos vão florescer — BUM!) / *"Arigato, amigos! Banzai!"* (Obrigado, amigos! Banzai!).
+
+#### 📜 Descrição Conceitual (Português):
+* **Foco Rítmico**: Pulso contínuo que atravessa as quatro identidades: 132 BPM de bota country (Joe), 128 BPM saltitante (Kasumi), 6/8 pendular das correntes (Murasaki) e 138 BPM de assassinato veloz (Hanzo), com um finale que empilha as quatro camadas.
+* **Arranjo Melódico**: Escala In-sen/Hirajōshi/Kumoi unificada em F# menor, com banjo e gaita blues na mesma pentatônica. O vocal masculino fanboy, a soprano, a contralto e os sussurros de shinobi se revezam e se encontram no clímax.
+* **Duração**: ~2:00 (mais longa que as ~1:15–1:45 das arenas, por ser a faixa do desafio ninja).
+
+---
+
 ## 🎤 Temas Vocais (Suno AI — Abertura & Encerramento)
 
 ---

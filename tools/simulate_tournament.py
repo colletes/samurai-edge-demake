@@ -27,7 +27,7 @@ from src.config import (
     CHAR_RIFLE, CHAR_PURPLE, CHAR_GRAY, CHAR_KABUKI, CHAR_ARCHER,
     CHAR_PIRATE, CHAR_MUSKETEER, CHAR_REN, CHAR_CHIYO,
     CHAR_BENKEI, CHAR_ORIN, CHAR_GORO, CHAR_ICHI,
-    CHAR_VALERIUS, CHAR_SEIMEI
+    CHAR_VALERIUS, CHAR_SEIMEI, CHAR_DAIKI, CHAR_AOI
 )
 from src.world.map_data import GameMap
 from src.world.kyoto_map import KyotoMap
@@ -51,6 +51,8 @@ from src.entities.goro import GoroFarmer
 from src.entities.ichi import IchiBlade
 from src.entities.valerius import ValeriusNecromancer
 from src.entities.seimei import SeimeiOnmyoji
+from src.entities.daiki import DaikiPilgrim
+from src.entities.aoi import AoiHuntress
 from src.entities.pickups import PowderPouch
 from main import get_random_arena_spawns, get_kyoto_arena_spawns, create_fighter
 
@@ -75,6 +77,8 @@ ROSTER = [
     {"id": CHAR_ICHI, "name": "Ichi", "title": "Lâmina Cega (Shikomizue/Gyaku-Iai)"},
     {"id": CHAR_VALERIUS, "name": "Valerius", "title": "Necromante Prussiano (Foice/Invocações)"},
     {"id": CHAR_SEIMEI, "name": "Seimei", "title": "Onmyoji dos Talismãs (Ofuda/Selo Sagrado)"},
+    {"id": CHAR_DAIKI, "name": "Daiki", "title": "Peregrino do Bastão Bō (Pole Vault/Varredura)"},
+    {"id": CHAR_AOI, "name": "Aoi", "title": "Caçadora Ainu (Lança Op/Armadilha de Urso)"},
 ]
 
 CHAR_IDS = [char["id"] for char in ROSTER]
@@ -96,7 +100,7 @@ def update_fighter(f, dt, game_map, particles, projectiles, powder_pouches=None,
         f.update(dt, game_map, particles, opponent=opponent, banners=banners)
     elif isinstance(f, OrinMinstrel):
         f.update(dt, game_map, particles, opponent=opponent, projectiles=projectiles)
-    elif isinstance(f, (GoroFarmer, IchiBlade, ValeriusNecromancer, SeimeiOnmyoji)):
+    elif isinstance(f, (GoroFarmer, IchiBlade, ValeriusNecromancer, SeimeiOnmyoji, DaikiPilgrim, AoiHuntress)):
         f.update(dt, game_map, particles, opponent=opponent, projectiles=projectiles, banners=banners)
     elif isinstance(f, (RedSamurai, SaitouSamurai, Rifleman, Kabuki, Musketeer)):
         f.update(dt, game_map, particles)

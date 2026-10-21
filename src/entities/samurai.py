@@ -226,17 +226,23 @@ class Samurai:
             self.slow_timer = max(0.0, self.slow_timer - dt)
         if self.confused_timer > 0:
             self.confused_timer = max(0.0, self.confused_timer - dt)
+        # Gravidade universal de segurança: impede que combatentes fiquem flutuando fora de estados aéreos legítimos
+        if getattr(self, "wz", 0.0) > 0.0 and self.state not in ("RYUU_TSUI_SEN", "POLE_VAULT", "JUMP", "PARRY_BACKHOP", STATE_FALL):
+            self.wz = max(0.0, self.wz - 16.0 * dt)
 
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
         """Terceira Ação Universal: Rolamento / Esquiva com frames de invulnerabilidade (i-frames)."""
         if (
             not self.is_alive
-            or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK, STATE_RECOVERY)
+            or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK, STATE_RECOVERY, "RYUU_TSUI_SEN", "POLE_VAULT", "PARRY_BACKHOP")
+            or getattr(self, "wz", 0.0) > 0.45
             or self.roll_recovery_timer > 0
             or self.roll_cooldown_timer > 0
             or self.dash_recovery_timer > 0
         ):
             return
+
+        self.wz = 0.0
 
         if dir_x == 0 and dir_y == 0:
             dir_x, dir_y = -self.facing_x, -self.facing_y

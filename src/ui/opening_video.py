@@ -25,7 +25,16 @@ class OpeningVideoScreen:
         self.hold_pos = (SCREEN_WIDTH - 140, SCREEN_HEIGHT - 60)
 
         if not video_path:
-            video_path = get_asset_path("assets/Opening Videos/Samurai_Edge_Opening_Final.mp4")
+            candidates = [
+                get_asset_path("assets/Opening Videos/Samurai_Edge_Opening_Final.mp4"),
+                get_asset_path("assets/Opening Videos/Samurai_Edge_Opening.mp4"),
+            ]
+            for c_path in candidates:
+                if os.path.exists(c_path):
+                    video_path = c_path
+                    break
+            if not video_path:
+                video_path = candidates[0]
         self.video_path = video_path
 
         # Em ambiente headless ou se arquivo não existir, encerrar de imediato

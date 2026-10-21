@@ -27,18 +27,18 @@ OUT = os.path.join(ROOT, "docs", "screenshots", "sprites")
 
 # nome do lutador -> (char_type do renderizador, arquivo do conceito, retrato, ataque em s, especiais)
 FIGHTERS = {
-    "kenshi": ("kenshin", "kenshi_concept.jpg", "kenshi_bust.png", 0.16, ()),
-    "musashi": ("musashi", "musashi_concept.jpg", "musashi_bust.png", 0.18, ()),
-    "hanzo": ("ninja", "hanzo_concept.jpg", "hanzo_bust.png", 0.18, ()),
-    "joe": ("american", "joe_concept.jpg", "joe_bust.png", 0.20, ()),
-    "saitou": ("saitou", "saitou_concept.jpg", "saitou_bust.png", 0.25, ("GATOTSU_CHARGE", "ZEROSHIKI")),
-    "teppo": ("rifleman", "teppo_concept.jpg", "teppo_bust.png", 0.20, ()),
-    "murasaki": ("purple", "murasaki_concept.jpg", "murasaki_bust.png", 0.16, ()),
-    "kasumi": ("kasumi", "kasumi_concept.jpg", "kasumi_bust.png", 0.20, ()),
-    "okuni": ("okuni", "okuni_concept.jpg", "okuni_bust.png", 0.20, ()),
-    "tomoe": ("tomoe", "tomoe_concept.jpg", "tomoe_bust.png", 0.20, ()),
-    "anne": ("pirate", "anne_concept.jpg", "anne_bust.png", 0.22, ("CUTLASS_CLEAVE",)),
-    "julie": ("musketeer", "julie_concept.jpg", "julie_bust.png", 0.24, ("FLECHE", "CAPE_FLOURISH")),
+    "kenshi": ("kenshin", "kenshi_full_concept.jpg", "kenshi_bust.png", 0.16, ()),
+    "musashi": ("musashi", "musashi_full_concept.jpg", "musashi_bust.png", 0.18, ()),
+    "hanzo": ("ninja", "hanzo_full_concept.jpg", "hanzo_bust.png", 0.18, ()),
+    "joe": ("american", "joe_full_concept.jpg", "joe_bust.png", 0.20, ()),
+    "saitou": ("saitou", "saitou_full_concept.jpg", "saitou_bust.png", 0.25, ("GATOTSU_CHARGE", "ZEROSHIKI")),
+    "teppo": ("rifleman", "teppo_full_concept.jpg", "teppo_bust.png", 0.20, ()),
+    "murasaki": ("purple", "murasaki_full_concept.jpg", "murasaki_bust.png", 0.16, ()),
+    "kasumi": ("kasumi", "kasumi_full_concept.jpg", "kasumi_bust.png", 0.20, ()),
+    "okuni": ("okuni", "okuni_full_concept.jpg", "okuni_bust.png", 0.20, ()),
+    "tomoe": ("tomoe", "tomoe_full_concept.jpg", "tomoe_bust.png", 0.20, ()),
+    "anne": ("pirate", "anne_full_concept.jpg", "anne_bust.png", 0.22, ("CUTLASS_CLEAVE",)),
+    "julie": ("musketeer", "julie_full_concept.jpg", "julie_bust.png", 0.24, ("FLECHE", "CAPE_FLOURISH")),
 }
 HD2D_SPRITES = {"kenshi": "kenshi", "murasaki": "murasaki"}
 

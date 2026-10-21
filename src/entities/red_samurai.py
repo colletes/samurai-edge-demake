@@ -293,6 +293,8 @@ class RedSamurai(Samurai):
             if self.post_shukuchi_iframe_timer <= 0 and self.state not in (STATE_ROLL, "SHUKUCHI", "RYUU_TSUI_SEN"):
                 self.is_invulnerable_dodge = False
         self.update_dodge_timers(dt)
+        if self.state not in ("RYUU_TSUI_SEN", "PARRY_BACKHOP", "JUMP") and self.wz > 0.0:
+            self.wz = max(0.0, self.wz - 16.0 * dt)
 
         if self.state == STATE_ATTACK:
             # Avanço relâmpago Iai

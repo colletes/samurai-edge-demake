@@ -10,7 +10,7 @@ from PIL import Image
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "../.."))
-CONCEPT_PATH = os.path.join(PROJECT_ROOT, "assets/concepts/kenshi_concept.jpg")
+CONCEPT_PATH = os.path.join(PROJECT_ROOT, "assets/concepts/kenshi_full_concept.jpg")
 IOS_PROJECT_DIR = os.path.join(PROJECT_ROOT, "build/samuraiedge-ios")
 APPICONSET_DIR = os.path.join(IOS_PROJECT_DIR, "samuraiedge/Images.xcassets/AppIcon.appiconset")
 
