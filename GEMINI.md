@@ -20,7 +20,7 @@ Contains all production gameplay systems and rendering logic:
 ### 2. Automated Tests (`tests/`)
 All tests reside in `tests/`:
 - `tests/test_game.py`: Primary 21-system end-to-end integration test suite.
-- Individual feature tests: `test_arcade_mode.py`, `test_arena_engine.py`, `test_clash_qte.py`, `test_demo_edition.py`, etc.
+- Active feature suites: `test_arcade_mode.py` (12 fights ladder), `test_boss_oni.py`, `test_cycle6_full_integration.py`, `test_cycle6_combat.py`, `test_cycle6_arenas.py`, `test_demo_edition.py`, `test_translation_and_ui.py`, `test_language_setting.py`, `test_parchment_screens.py`, `test_opening_video.py`, `test_seimei_rondel.py`, `test_audio_system.py`, `test_controllers_and_touch.py`.
 - **Convention**: Test scripts must resolve root with:
   ```python
   ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -31,20 +31,14 @@ All tests reside in `tests/`:
 
 ### 3. Developer & Capture Tools (`tools/`)
 Utility, generation, and inspection scripts:
-- Visual captures: `tools/capture_american_preview.py`, `tools/capture_bakumatsu_preview.py`, `tools/capture_char_select.py`, `tools/capture_ninja_gameplay.py`, `tools/capture_saitou_preview.py`, etc.
 - Model & Asset utilities: `tools/studio_inspector.py` (Unified 3D Studio: Models F1, Arenas F2, Staging F3), `tools/model_inspector.py`, `tools/arena_inspector.py`, `tools/build_hd2d_pilot_sprites.py`, `tools/build_parchment_assets.py`.
-- Simulation: `tools/simulate_tournament.py`, `tools/simulate_boss.py`.
+- Simulation & Generators: `tools/generate_arcade_tables.py`, `tools/simulate_tournament.py`, `tools/simulate_boss.py`, `tools/generate_itch_promotional_assets.py`.
 
 ### 4. Documentation & Roadmaps (`docs/`)
-- **Active Planning & Balance**:
-  - `docs/ROADMAP.md` & `docs/ROADMAP_VS_CURRENT_SCOPE.md`: Active project roadmap.
-  - `docs/EXPANSION_ROADMAP_AND_DESIGN.md`: Future game expansion specs.
-  - `docs/FEEDBACK_FIXES_ROADMAP.md`: Backlog of playtest feedback and fixes.
-  - `docs/BALANCE_REPORT*.md`: Character balance analysis (`BALANCE_REPORT.md`, `_easy.md`, `_hard.md`).
+- **Active Planning & Specs**:
+  - `docs/ROADMAP.md`: Active project roadmap.
+  - `docs/EXPANSION_ROADMAP_AND_DESIGN.md`: Canonical master roadmap and expansion specs for the 24 fighters.
   - `docs/GEMINI_MUSIC_PROMPTS.md`: Prompts and reference notes for arena BGM generation.
-  - `docs/HANDOFF.md` & `docs/HANDOFF_SDD_EPIC_REFACTOR.md`: Developer handoff instructions.
-- **Historical Archive (`docs/archive/`)**:
-  - Contains completed sprint summaries (`SPRINT_0_1_COMPLETION_SUMMARY.md`, `SPRINT_2_FINAL_SUMMARY.md`, etc.), phase checklists (`CHECKLIST_FINAL.md`, `PHASE_6_VISUAL_REVAMP.md`), and validation guides (`GUIA_VALIDACAO.md`).
 - **Screenshots & Visuals (`docs/screenshots/`)**:
   - Official screenshots and UI previews (`01_title_screen.png`, `char_select_12p_preview.png`, `cinematic_violence_preview.png`, `gameplay_voxel.png`, etc.).
 
