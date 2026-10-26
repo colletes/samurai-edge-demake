@@ -2149,7 +2149,7 @@ def run_game():
                 elif isinstance(f, OrinMinstrel):
                     f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles)
                 elif isinstance(f, (GoroFarmer, IchiBlade, ValeriusNecromancer, SeimeiOnmyoji, DaikiPilgrim, AoiHuntress, RaidenSumo, HendrikaAlchemist)):
-                    f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles, banners=banners)
+                    f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles, banners=banners, cinematic_director=cinematic_director)
                 else:
                     f.update(f_dt, game_map)
 
@@ -2429,6 +2429,12 @@ def run_game():
         for pc in poison_clouds:
             if pc.is_active:
                 render_queue.append((camera.depth(pc.wx, pc.wy), 'poison_cloud', pc))
+
+        # Adicionar poças químicas de Hendrika ao Y-sorting
+        for f in (p1, p2):
+            for pool in getattr(f, "active_pools", []):
+                if getattr(pool, "is_active", False):
+                    render_queue.append((camera.depth(pool.wx, pool.wy) - 25.0, 'chemical_pool', pool))
 
         for proj in projectiles:
             render_queue.append((camera.depth(proj.wx, proj.wy), 'projectile', proj))

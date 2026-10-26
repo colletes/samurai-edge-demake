@@ -40,16 +40,16 @@ def test_raiden_combat_mechanics():
     print("  [OK] Atributos base de Raiden: 3 HP, 3.85 velocidade")
 
     # 1. Tsuppari Combo (Golpe 1: Harite -> Golpe 2: Morote-Tsuppari)
-    opponent = RedSamurai(11.2, 10.0)
+    opponent = RedSamurai(10.8, 10.0)
     particles = []
     success = raiden.trigger_tsuppari_rush(12.0, 10.0, particles=particles)
     assert success, "Golpe 1 do combo deve ativar"
     assert raiden.state in ("TSUPPARI_STRIKE_1", "TSUPPARI_RUSH"), f"Estado deve ser TSUPPARI_STRIKE_1, é {raiden.state}"
-    assert raiden.hitbox_active, "Hitbox deve estar ativa"
 
-    # Simular avanço e pushback contínuo
+    # Simular avanço e pushback contínuo no impacto
     initial_opp_x = opponent.wx
     raiden.update(0.10, opponent=opponent, particles=particles)
+    assert raiden.hitbox_active, "Hitbox deve ativar na fase de impacto"
     assert opponent.wx > initial_opp_x, "Oponente deve sofrer pushback para longe"
     print("  [OK] Tsuppari Golpe 1 (Harite) avança com pushback no rival")
 

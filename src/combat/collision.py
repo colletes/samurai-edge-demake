@@ -15,7 +15,8 @@ from src.entities.projectile import (
     KyudoArrowProjectile, RopeArrowProjectile, CannonballProjectile,
     RemoteMineEntity, HamayaArrowProjectile, MusashiWaveProjectile,
     SacredArrowVolleyProjectile, NaginataProjectile, KamaitachiProjectile,
-    SpiralResonanceProjectile, OfudaProjectile, TalismanWard, BearTrapProjectile
+    SpiralResonanceProjectile, OfudaProjectile, TalismanWard, BearTrapProjectile,
+    AlchemicFlaskProjectile, ChemicalPoolHazard
 )
 from src.entities.doberman import STATE_DOG_CHARGE, STATE_DOG_KNOCKED_OUT, STATE_DOG_BARK
 
@@ -361,6 +362,24 @@ class CombatSystem:
                     dt, game_map, particles,
                     fighters=[p1, p2], projectiles=projectiles,
                     banners=banners, cinematic_director=cinematic_director
+                )
+                if p1_alive_before and not p1.is_alive and winner is None:
+                    winner = "P2_WINS"
+                    self.hitstop_timer = 0.14
+                    self._play_sound("fatal_strike")
+                elif p2_alive_before and not p2.is_alive and winner is None:
+                    winner = "P1_WINS"
+                    self.hitstop_timer = 0.14
+                    self._play_sound("fatal_strike")
+            elif isinstance(proj, AlchemicFlaskProjectile):
+                p1_alive_before = p1.is_alive
+                p2_alive_before = p2.is_alive
+                target_pools = getattr(proj.owner, "active_pools", None)
+                still_valid = proj.update(
+                    dt, game_map, particles,
+                    fighters=[p1, p2], projectiles=projectiles,
+                    banners=banners, cinematic_director=cinematic_director,
+                    chemical_pools=target_pools
                 )
                 if p1_alive_before and not p1.is_alive and winner is None:
                     winner = "P2_WINS"

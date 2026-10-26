@@ -2760,56 +2760,78 @@ class ChemicalPoolHazard:
 
         return True
 
-    def _apply_effect_to_target(self, target, particles: list = None, banners: list = None, cinematic_director=None):
+    def _apply_effect_to_target(self, target, particles: list = None, banners: list = None, cinematic_director=None, is_direct: bool = False):
         if not target or not getattr(target, "is_alive", True):
             return
 
+        from src.effects.particles import FloatingBanner, SparkParticle, SmokeParticle
+
         if self.reagent == "acid":
-            # Quebra guarda e drena 1 de dano
+            # Ácido Corrosivo: Quebra guarda de parry com stun prolongado + 1 de dano
             if getattr(target, "state", "") == "PARRY":
-                target.stun(0.65)
+                target.stun(0.80)
                 if banners is not None:
-                    from src.effects.particles import FloatingBanner
-                    banners.append(FloatingBanner("ARMOR ERODED!", target.wx, target.wy, wz=1.7, color=self.col_core))
+                    banners.append(FloatingBanner("ARMOR ERODED!", target.wx, target.wy, wz=1.75, color=self.col_core, duration=1.0))
             hit, dead = target.take_hit((0.0, 0.0), damage=1)
+            if banners is not None and getattr(target, "state", "") != "PARRY":
+                banners.append(FloatingBanner("ACID MELT!", target.wx, target.wy, wz=1.75, color=self.col_core, duration=0.85))
+            if particles is not None:
+                for _ in range(12):
+                    particles.append(SparkParticle(target.wx, target.wy, 0.40, color=self.col_core))
             if dead and cinematic_director:
                 cinematic_director.trigger_fatal_strike(self.owner, target, "ALCHEMIC_ACID_DISSOLVE", (1.0, 0.0))
 
         elif self.reagent == "fire":
-            # Dano imediato e repulsão
+            # Fogo Grego: Dano imediato e repulsão térmica violenta
             dx = target.wx - self.wx
             dy = target.wy - self.wy
             mag = math.hypot(dx, dy) or 1.0
             hit, dead = target.take_hit((dx / mag, dy / mag), damage=1)
-            target.wx += (dx / mag) * 0.85
-            target.wy += (dy / mag) * 0.85
+            push_force = 1.35 if self.tier == 1 else 1.95
+            target.wx += (dx / mag) * push_force
+            target.wy += (dy / mag) * push_force
+            if banners is not None:
+                banners.append(FloatingBanner("GREEK FIRE!", target.wx, target.wy, wz=1.75, color=(255, 105, 40), duration=0.85))
+            if particles is not None:
+                for _ in range(16):
+                    particles.append(SparkParticle(target.wx, target.wy, 0.45, color=(255, 90, 40)))
             if dead and cinematic_director:
                 cinematic_director.trigger_fatal_strike(self.owner, target, "ALCHEMIC_FIRE_ASH", (dx / mag, dy / mag))
 
         elif self.reagent == "ether":
-            # Nuvem soporífera: atordoa e cega
-            target.stun(0.85 if self.tier == 1 else 1.25)
+            # Éter Soporífero: Névoa narcótica densa que atordoa o rival
+            target.stun(1.10 if self.tier == 1 else 1.65)
             if banners is not None:
-                from src.effects.particles import FloatingBanner
-                banners.append(FloatingBanner("SOPORIFIC ETHER!", target.wx, target.wy, wz=1.7, color=self.col_core))
+                banners.append(FloatingBanner("SOPORIFIC ETHER!", target.wx, target.wy, wz=1.75, color=self.col_core, duration=1.0))
+            if particles is not None:
+                for _ in range(14):
+                    particles.append(SmokeParticle(target.wx, target.wy, wz=0.5, color=self.col_core, radius=0.35, lifetime=0.9))
 
         elif self.reagent == "frost":
-            # Salitre congelante: lentidão profunda
+            # Salitre Congelante: Dano de geada no impacto direto/T2 e lentidão severa (-65% vel)
+            if is_direct or self.tier == 2:
+                hit, dead = target.take_hit((0.0, 0.0), damage=1)
+                if dead and cinematic_director:
+                    cinematic_director.trigger_fatal_strike(self.owner, target, "ALCHEMIC_FROST_SHATTER", (1.0, 0.0))
             if hasattr(target, "apply_slow"):
-                target.apply_slow(3.0 if self.tier == 1 else 4.5)
+                target.apply_slow(3.5 if self.tier == 1 else 5.5)
             else:
-                target.slow_timer = 3.0 if self.tier == 1 else 4.5
+                target.slow_timer = 3.5 if self.tier == 1 else 5.5
             if banners is not None:
-                from src.effects.particles import FloatingBanner
-                banners.append(FloatingBanner("FROSTBITE!", target.wx, target.wy, wz=1.7, color=self.col_core))
+                banners.append(FloatingBanner("FROSTBITE!", target.wx, target.wy, wz=1.75, color=self.col_core, duration=0.85))
+            if particles is not None:
+                for _ in range(16):
+                    particles.append(SparkParticle(target.wx, target.wy, 0.40, color=(160, 230, 255)))
 
         elif self.reagent == "miasma":
-            # Miasma neurotóxico: inverte controles / confusão
-            target.confused_timer = 2.5 if self.tier == 1 else 4.0
+            # Miasma Neurotóxico: Inverte controles do rival e causa 1 de dano
+            target.confused_timer = 3.0 if self.tier == 1 else 5.0
             hit, dead = target.take_hit((0.0, 0.0), damage=1)
             if banners is not None:
-                from src.effects.particles import FloatingBanner
-                banners.append(FloatingBanner("NEUROTOXIN!", target.wx, target.wy, wz=1.7, color=self.col_core))
+                banners.append(FloatingBanner("NEUROTOXIN!", target.wx, target.wy, wz=1.75, color=self.col_core, duration=0.85))
+            if particles is not None:
+                for _ in range(14):
+                    particles.append(SmokeParticle(target.wx, target.wy, wz=0.4, color=self.col_core, radius=0.30, lifetime=1.0))
             if dead and cinematic_director:
                 cinematic_director.trigger_fatal_strike(self.owner, target, "ALCHEMIC_MIASMA_MELT", (1.0, 0.0))
 
@@ -2817,15 +2839,16 @@ class ChemicalPoolHazard:
         if not self.is_active:
             return
         from src.isometric.mesh_primitives import draw_voxel_box
-        t = pygame.time.get_ticks() * 0.003
-        pulse = 0.08 * math.sin(t + self.wx)
+        t = pygame.time.get_ticks() * 0.0035
+        pulse = 0.09 * math.sin(t + self.wx * 2.0)
         r = self.radius + pulse
 
-        # Poça translúcida fluida no chão (z=0.01)
-        draw_voxel_box(surface, camera, self.wx - r * 0.85, self.wy - r * 0.85, 0.005, r * 1.7, r * 1.7, 0.02, self.col_edge, outline=False, alpha=110)
-        draw_voxel_box(surface, camera, self.wx - r * 0.55, self.wy - r * 0.55, 0.012, r * 1.1, r * 1.1, 0.025, self.col_core, outline=False, alpha=150)
-        # Núcleo efervescente
-        draw_voxel_box(surface, camera, self.wx - 0.22, self.wy - 0.22, 0.02, 0.44, 0.44, 0.03, (255, 255, 255), outline=False, alpha=120)
+        # 1. Poça translúcida ampla no chão
+        draw_voxel_box(surface, camera, self.wx - r * 0.88, self.wy - r * 0.88, 0.004, r * 1.76, r * 1.76, 0.02, self.col_edge, outline=False, alpha=110)
+        # 2. Anel intermediário saturado
+        draw_voxel_box(surface, camera, self.wx - r * 0.58, self.wy - r * 0.58, 0.010, r * 1.16, r * 1.16, 0.025, self.col_core, outline=False, alpha=160)
+        # 3. Núcleo efervescente com bolhas
+        draw_voxel_box(surface, camera, self.wx - 0.24, self.wy - 0.24, 0.018, 0.48, 0.48, 0.03, (255, 255, 255), outline=False, alpha=140)
 
 
 class AlchemicFlaskProjectile:
@@ -2899,22 +2922,31 @@ class AlchemicFlaskProjectile:
     def detonate(self, game_map=None, particles: list = None, fighters: list = None, banners: list = None, cinematic_director=None, chemical_pools: list = None, direct_hit=None):
         self.is_active = False
 
-        # Efeito de estilhaço de vidro e respingos
+        # Fallback para as poças ativas do proprietário (Hendrika)
+        if chemical_pools is None and self.owner and hasattr(self.owner, "active_pools"):
+            chemical_pools = self.owner.active_pools
+
+        # Efeito de estilhaço de vidro e respingos químicos
         if particles is not None:
             from src.effects.particles import SparkParticle, SmokeParticle
-            # Estilhaços de vidro verde/translúcido
-            for _ in range(12):
-                particles.append(SparkParticle(self.wx, self.wy, 0.15, color=(205, 240, 245)))
-            # Nuvem de impacto químico
+            # Estilhaços de vidro translúcido
             for _ in range(16):
-                particles.append(SmokeParticle(self.wx, self.wy, wz=0.20, color=self.col_core, radius=0.28, lifetime=0.85))
+                particles.append(SparkParticle(self.wx, self.wy, 0.20, color=(210, 245, 255)))
+            # Nuvem de impacto químico volumétrica
+            for _ in range(20):
+                particles.append(SmokeParticle(self.wx, self.wy, wz=random.uniform(0.15, 0.40), color=self.col_core, radius=random.uniform(0.24, 0.42), lifetime=1.0))
 
         # Som de vidro quebrando / splash
         from src.audio.sound_manager import get_sound_manager
         from src.audio.sound_events import SoundEvent
-        get_sound_manager().play(SoundEvent.OBSTACLE_HIT, volume_scale=0.9)
+        get_sound_manager().play(SoundEvent.OBSTACLE_HIT, volume_scale=1.0)
 
-        # Se acertou em cheio um alvo
+        # Criar a poça persistente no solo
+        pool = ChemicalPoolHazard(self.wx, self.wy, self.reagent, self.tier, self.owner)
+        if chemical_pools is not None:
+            chemical_pools.append(pool)
+
+        # 1. Se acertou em cheio um alvo no ar
         if direct_hit and getattr(direct_hit, "is_alive", True):
             dx = direct_hit.wx - self.wx
             dy = direct_hit.wy - self.wy
@@ -2932,13 +2964,15 @@ class AlchemicFlaskProjectile:
                 elif self.reagent == "miasma":
                     death_style = "ALCHEMIC_MIASMA_MELT"
                 cinematic_director.trigger_fatal_strike(self.owner, direct_hit, death_style, (dx / mag, dy / mag))
+            pool._apply_effect_to_target(direct_hit, particles, banners, cinematic_director, is_direct=True)
 
-        # Criar a poça persistente no solo
-        if chemical_pools is not None:
-            pool = ChemicalPoolHazard(self.wx, self.wy, self.reagent, self.tier, self.owner)
-            chemical_pools.append(pool)
-            if direct_hit:
-                pool._apply_effect_to_target(direct_hit, particles, banners, cinematic_director)
+        # 2. Splash de impacto imediato no solo para qualquer combatente rival dentro do raio
+        elif fighters:
+            for f in fighters:
+                if f is not self.owner and getattr(f, "is_alive", True):
+                    dist = math.hypot(f.wx - self.wx, f.wy - self.wy)
+                    if dist <= pool.radius + getattr(f, "radius", 0.35):
+                        pool._apply_effect_to_target(f, particles, banners, cinematic_director, is_direct=False)
 
     def render(self, surface: pygame.Surface, camera):
         if not self.is_active:

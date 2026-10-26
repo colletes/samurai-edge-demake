@@ -275,7 +275,11 @@ def _render_voxel_humanoid(
     back_to_camera = (back_rx + back_ry) > 0.0
 
     # Animação de ataque melee
-    is_melee = state in ("ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE", "KIAI", "NODACHI_DANCE", "NAGINATA_THROW", "TACKLE_CHARGE", "RESONANCE", "POLE_VAULT", "PLANT_TRAP")
+    is_melee = state in (
+        "ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE",
+        "KIAI", "NODACHI_DANCE", "NAGINATA_THROW", "TACKLE_CHARGE", "RESONANCE",
+        "POLE_VAULT", "PLANT_TRAP", "TSUPPARI_RUSH", "TSUPPARI_STRIKE_1", "TSUPPARI_STRIKE_2", "FLASK_THROW"
+    )
     atk_progress = 0.0
     if is_melee:
         atk_dur = 0.20
@@ -309,6 +313,12 @@ def _render_voxel_humanoid(
         elif char_type == "aoi":
             if state == "PLANT_TRAP": atk_dur = 0.20
             else: atk_dur = 0.17
+        elif char_type == "raiden":
+            if state == "TSUPPARI_STRIKE_2": atk_dur = 0.28
+            else: atk_dur = 0.22
+        elif char_type == "hendrika":
+            if state == "FLASK_THROW": atk_dur = 0.14
+            else: atk_dur = 0.20
 
         if state_timer > 0:
             atk_progress = max(0.0, min(1.0, 1.0 - (state_timer / atk_dur)))

@@ -117,21 +117,28 @@ class TestGameplayAdjustmentsCycle6(unittest.TestCase):
             self.assertEqual(len(corpse.pieces), 0, f"Estilo {st} não deve deixar pedaços de corpo no solo")
 
     def test_item5_raiden_two_hit_combo(self):
-        """Item 5: Raiden combo de 2 golpes com Harite -> Morote-Tsuppari e anti-spam."""
+        """Item 5: Raiden combo de 2 golpes com Harite -> Morote-Tsuppari, alcance físico e anti-spam."""
         raiden = RaidenSumo(10.0, 10.0)
-        opp = RedSamurai(11.2, 10.0)
+        opp = RedSamurai(10.75, 10.0)
 
         # 1. Primeiro ataque -> Golpe 1 (Harite)
         raiden.trigger_tsuppari_rush(12.0, 10.0)
         self.assertEqual(raiden.state, "TSUPPARI_STRIKE_1")
         self.assertEqual(raiden.hitbox_damage, 1)
+        # Wind-up: no frame 0 a hitbox inicia desligada preparando o golpe
+        self.assertFalse(raiden.hitbox_active, "Frame 0 deve ser wind-up (braço se armando)")
+        self.assertLessEqual(raiden.hitbox_radius, 0.60, "Raio da palma deve ser físico (<= 0.60m)")
 
         # Não permite teclar spam instantâneo durante a animação do Golpe 1
         spam_denied = raiden.trigger_tsuppari_rush(12.0, 10.0)
         self.assertFalse(spam_denied, "Não deve permitir spam durante a execução do Golpe 1")
 
+        # Fase de impacto ativo do Golpe 1
+        raiden.update(0.10, opponent=opp)
+        self.assertTrue(raiden.hitbox_active, "Hitbox deve ativar na fase de impacto (0.05s a 0.18s)")
+
         # Atualizar até o fim do Golpe 1 (entra em RECOVERY com janela aberta)
-        raiden.update(0.24, opponent=opp)
+        raiden.update(0.14, opponent=opp)
         self.assertEqual(raiden.state, "RECOVERY")
         self.assertEqual(raiden.combo_step, 1)
         self.assertGreater(raiden.combo_window_timer, 0.0)
@@ -141,9 +148,12 @@ class TestGameplayAdjustmentsCycle6(unittest.TestCase):
         self.assertTrue(combo_encadeado, "Deve encadear Golpe 2 dentro da janela")
         self.assertEqual(raiden.state, "TSUPPARI_STRIKE_2")
         self.assertEqual(raiden.hitbox_damage, 2)
+        self.assertFalse(raiden.hitbox_active, "Frame 0 do Golpe 2 deve ser wind-up (braços abrindo)")
+        self.assertLessEqual(raiden.hitbox_radius, 0.65, "Raio do Morote-Tsuppari deve ser calibrado (<= 0.65m)")
 
-        # Impacto do Golpe 2 atordoa o rival
+        # Impacto do Golpe 2 ativa e atordoa o rival
         raiden.update(0.10, opponent=opp)
+        self.assertTrue(raiden.hitbox_active)
         self.assertEqual(opp.state, "STUNNED")
 
         # Ao terminar Golpe 2 -> recuperação pesada (0.44s)
@@ -151,6 +161,42 @@ class TestGameplayAdjustmentsCycle6(unittest.TestCase):
         self.assertEqual(raiden.state, "RECOVERY")
         self.assertGreater(raiden.state_timer, 0.35, "Deve aplicar recuperação pesada anti-spam pós-combo")
         self.assertEqual(raiden.combo_step, 0, "Combo deve resetar para neutro")
+
+    def test_item6_hendrika_potions_effective_in_combat(self):
+        """Item 6: Frascos de Hendrika detonam, criam poças e aplicam efeitos reais em combate."""
+        from src.combat.collision import CombatSystem
+        from src.isometric.camera import Camera
+        from main import create_arena
+        from src.config import ARENA_KYOTO
+        game_map = create_arena(ARENA_KYOTO)
+        camera = Camera()
+        combat_system = CombatSystem()
+
+        hendrika = HendrikaAlchemist(5.0, 5.0)
+        opp = RedSamurai(6.0, 5.0)
+        opp.hp = 2
+
+        projectiles = []
+        particles = []
+        banners = []
+
+        # Hendrika arremessa frasco de ácido na direção do rival
+        hendrika.active_reagent_idx = 0  # acid
+        success = hendrika.trigger_flask_throw(6.0, 5.0, projectiles=projectiles, particles=particles, banners=banners)
+        self.assertTrue(success)
+        self.assertEqual(len(projectiles), 1)
+
+        # Processar combate até o frasco aterrissar e detonar
+        for _ in range(40):
+            combat_system.process_combat(hendrika, opp, game_map, particles, banners, camera, projectiles, dt=0.02)
+
+        # A poça deve ter sido criada no solo em hendrika.active_pools
+        self.assertTrue(len(hendrika.active_pools) >= 1, "Poça química deve ser criada em active_pools de Hendrika")
+        pool = hendrika.active_pools[0]
+        self.assertEqual(pool.reagent, "acid")
+
+        # O oponente na área da explosão deve ter sofrido dano da poça
+        self.assertLess(opp.hp, 2, "Oponente deve sofrer dano real com a poção de ácido de Hendrika")
 
 
 if __name__ == "__main__":

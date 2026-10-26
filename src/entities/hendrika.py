@@ -366,10 +366,6 @@ class HendrikaAlchemist(Samurai):
         elif self.state in ("DEFEND", "PARRY") or getattr(self, "is_parrying", False):
             extra["pose"] = "stiletto_parry"
 
-        # Renderizar poças químicas geradas no solo por Hendrika
-        for pool in self.active_pools:
-            pool.render(surface, camera)
-
         render_voxel_humanoid(
             surface=surface,
             camera=camera,

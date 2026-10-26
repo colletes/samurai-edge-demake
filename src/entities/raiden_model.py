@@ -109,31 +109,52 @@ def idle_arms(c):
 def attack_arms(c):
     """
     Golpe de Palma Tsuppari Devastador:
-    - Golpe 1 (Harite): Palma direita estendida com peso corporal completo e mão esquerda junto à costela.
-    - Golpe 2 (Morote-Tsuppari): Bofetada dupla sincronizada com ambos os braços convergindo nas têmporas.
+    - Golpe 1 (Harite): Wind-up com recuo da mão direita e explosão frontal com extensão corporal total.
+    - Golpe 2 (Morote-Tsuppari): Os dois braços abrem em arco lateral e convergem com impacto sônico nas têmporas.
     """
     p = c.atk_progress if c.atk_progress is not None else 0.0
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
-    thrust = math.sin(p * math.pi) * 0.42
     pose = c.extra_props.get("pose") if c.extra_props else None
 
     if pose == "tsuppari_2":
         # Morote-Tsuppari: Bofetada Dupla convergente nas têmporas do rival
-        right = (bx + fx * (0.24 + thrust) - px * 0.12,
-                 by + fy * (0.24 + thrust) - py * 0.12,
+        if p < 0.25:
+            # Wind-up: Abre os braços para os lados preparando o impacto duplo
+            prep = math.sin((p / 0.25) * math.pi * 0.5)
+            spread = 0.26 + 0.12 * prep
+            thrust = -0.06 * prep
+        else:
+            strike_p = (p - 0.25) / 0.75
+            thrust = math.sin(strike_p * math.pi) * 0.52
+            # Braços convergem nas têmporas no ápice do golpe
+            spread = 0.26 - math.sin(strike_p * math.pi) * 0.14
+
+        right = (bx + fx * (0.24 + thrust) - px * spread,
+                 by + fy * (0.24 + thrust) - py * spread,
                  tz + 0.16)
-        left = (bx + fx * (0.24 + thrust) + px * 0.12,
-                by + fy * (0.24 + thrust) + py * 0.12,
+        left = (bx + fx * (0.24 + thrust) + px * spread,
+                by + fy * (0.24 + thrust) + py * spread,
                 tz + 0.16)
         return left, right
 
-    # Palma direita em investida frontal com impacto de massa
-    right = (bx + fx * (0.26 + thrust) - px * 0.04,
-             by + fy * (0.26 + thrust) - py * 0.04,
+    # Golpe 1: Harite (Palma Direita Explosiva)
+    if p < 0.22:
+        # Wind-up: Recuo tático da mão direita puxando a massa do corpo
+        prep = math.sin((p / 0.22) * math.pi * 0.5)
+        thrust = -0.08 * prep
+        left_guard = 0.14
+    else:
+        strike_p = (p - 0.22) / 0.78
+        thrust = math.sin(strike_p * math.pi) * 0.54
+        left_guard = 0.12 - math.sin(strike_p * math.pi) * 0.04
+
+    # Palma direita em investida frontal com impacto de massa e extensão visível
+    right = (bx + fx * (0.25 + thrust) - px * 0.05,
+             by + fy * (0.25 + thrust) - py * 0.05,
              tz + 0.14)
     # Mão esquerda de apoio protegendo o peito
-    left = (bx + fx * 0.14 + px * 0.16,
-            by + fy * 0.14 + py * 0.16,
+    left = (bx + fx * left_guard + px * 0.16,
+            by + fy * left_guard + py * 0.16,
             tz + 0.10)
     return left, right
 
@@ -471,13 +492,21 @@ def draw_head(c):
         c._face_drawn = True
 
 
-def _render_palm_effects(c, hand_r):
+def _render_palm_effects(c, hand_l, hand_r):
     """Desenha a aura e o impacto de choque da investida Tsuppari."""
     P = pal()
-    if c.is_melee and c.atk_progress is not None and 0.20 <= c.atk_progress <= 0.70:
+    if c.is_melee and c.atk_progress is not None and 0.22 <= c.atk_progress <= 0.78:
+        pose = c.extra_props.get("pose") if c.extra_props else None
+        # Mão direita (Palma primária)
         rx, ry, rz = hand_r
         mk.cbox(c, rx, ry, rz, 0.16, 0.16, 0.16, P["palm_aura"], outline=False)
         mk.cbox(c, rx, ry, rz, 0.08, 0.08, 0.08, P["palm_core"], outline=False)
+
+        # No Golpe 2 (Morote-Tsuppari), ambas as mãos geram onda de choque nas têmporas
+        if pose == "tsuppari_2":
+            lx, ly, lz = hand_l
+            mk.cbox(c, lx, ly, lz, 0.16, 0.16, 0.16, P["palm_aura"], outline=False)
+            mk.cbox(c, lx, ly, lz, 0.08, 0.08, 0.08, P["palm_core"], outline=False)
 
 
 def draw_front(c, hand_l, hand_r):
@@ -488,4 +517,4 @@ def draw_front(c, hand_l, hand_r):
     d_torso = mk.depth(c, c.base_x, c.base_y)
     w_mid = ((hand_l[0] + hand_r[0]) * 0.5, (hand_l[1] + hand_r[1]) * 0.5)
     if mk.depth(c, w_mid[0], w_mid[1]) >= d_torso:
-        _render_palm_effects(c, hand_r)
+        _render_palm_effects(c, hand_l, hand_r)

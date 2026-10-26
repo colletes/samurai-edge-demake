@@ -47,8 +47,8 @@ class RaidenSumo(Samurai):
 
         self.tsuppari_duration = self.tsuppari_strike1_duration
         self.tsuppari_recovery = self.tsuppari_strike1_recovery
-        self.tsuppari_reach = 1.65
-        self.tsuppari_radius = 1.15
+        self.tsuppari_reach = 0.85
+        self.tsuppari_radius = 0.55
         self.tsuppari_pulses = 3
         self.tsuppari_pulse_timer = 0.0
 
@@ -104,12 +104,13 @@ class RaidenSumo(Samurai):
             self.state_timer = self.tsuppari_strike2_duration
             self.tsuppari_pulse_timer = 0.0
             self.strike2_hit_applied = False
-            self.hitbox_active = True
+            # Hitbox inicia desligada durante o wind-up (0.07s) e ativa na fase de impacto
+            self.hitbox_active = False
             self.hitbox_damage = 2
-            self.hitbox_radius = 1.35
+            self.hitbox_radius = 0.60
             self.hitbox_center = (
-                self.wx + self.facing_x * 1.25,
-                self.wy + self.facing_y * 1.25
+                self.wx + self.facing_x * 0.70,
+                self.wy + self.facing_y * 0.70
             )
             self.slash_dir = (self.facing_x, self.facing_y)
 
@@ -118,28 +119,29 @@ class RaidenSumo(Samurai):
 
             if particles is not None:
                 for _ in range(12):
-                    particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.40, color=(255, 205, 110)))
+                    particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.35, color=(255, 205, 110)))
 
             return True
 
-        # Golpe 1: Harite (Palma Simples com Avanço Moderado)
+        # Golpe 1: Harite (Palma Simples com Avanço Físico)
         self.combo_step = 1
         self.combo_window_timer = 0.0
         self.state = "TSUPPARI_STRIKE_1"
         self.state_timer = self.tsuppari_strike1_duration
         self.tsuppari_pulse_timer = 0.0
-        self.hitbox_active = True
+        # Hitbox inicia desligada durante o wind-up (0.05s) e ativa na fase de impacto
+        self.hitbox_active = False
         self.hitbox_damage = 1
         self.hitbox_center = (
-            self.wx + self.facing_x * 1.20,
-            self.wy + self.facing_y * 1.20
+            self.wx + self.facing_x * 0.65,
+            self.wy + self.facing_y * 0.65
         )
-        self.hitbox_radius = self.tsuppari_radius
+        self.hitbox_radius = 0.55
         self.slash_dir = (self.facing_x, self.facing_y)
 
         if particles is not None:
             for _ in range(6):
-                particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.30, color=(240, 210, 160)))
+                particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.25, color=(240, 210, 160)))
 
         return True
 
@@ -241,8 +243,15 @@ class RaidenSumo(Samurai):
         if self.state in ("TSUPPARI_STRIKE_1", "TSUPPARI_RUSH"):
             self.state_timer -= dt
             self.tsuppari_pulse_timer += dt
+            elapsed = self.tsuppari_strike1_duration - self.state_timer
 
-            step_speed = 2.4
+            # Wind-up de 0.05s (preparação) -> Fase ativa (0.05s a 0.18s) -> Follow-through
+            if 0.05 <= elapsed <= 0.18:
+                self.hitbox_active = True
+            else:
+                self.hitbox_active = False
+
+            step_speed = 2.2
             new_wx = self.wx + self.facing_x * step_speed * dt
             new_wy = self.wy + self.facing_y * step_speed * dt
             if game_map is not None:
@@ -252,21 +261,23 @@ class RaidenSumo(Samurai):
             else:
                 self.wx, self.wy = new_wx, new_wy
 
+            # Alcance físico fiel ao modelo 3D (0.65m à frente, raio 0.55m)
             self.hitbox_center = (
-                self.wx + self.facing_x * 1.20,
-                self.wy + self.facing_y * 1.20
+                self.wx + self.facing_x * 0.65,
+                self.wy + self.facing_y * 0.65
             )
+            self.hitbox_radius = 0.55
 
-            # Empurrão moderado (1.8 metros)
-            if opponent and getattr(opponent, "is_alive", False):
+            # Empurrão físico progressivo de sumô no impacto
+            if self.hitbox_active and opponent and getattr(opponent, "is_alive", False):
                 dist_opp = math.hypot(opponent.wx - self.hitbox_center[0], opponent.wy - self.hitbox_center[1])
                 if dist_opp <= self.hitbox_radius + getattr(opponent, "radius", 0.35):
-                    push_x = self.facing_x * 3.5 * dt
-                    push_y = self.facing_y * 3.5 * dt
+                    push_x = self.facing_x * 3.2 * dt
+                    push_y = self.facing_y * 3.2 * dt
                     opponent.wx += push_x
                     opponent.wy += push_y
                     if particles is not None and random.random() < 0.35:
-                        particles.append(SparkParticle(opponent.wx, opponent.wy, 0.30, color=(240, 215, 175)))
+                        particles.append(SparkParticle(opponent.wx, opponent.wy, 0.25, color=(240, 215, 175)))
 
             if self.state_timer <= 0:
                 self.state = STATE_RECOVERY
@@ -278,6 +289,13 @@ class RaidenSumo(Samurai):
         if self.state == "TSUPPARI_STRIKE_2":
             self.state_timer -= dt
             self.tsuppari_pulse_timer += dt
+            elapsed = self.tsuppari_strike2_duration - self.state_timer
+
+            # Wind-up de 0.07s (braços abrem) -> Fase ativa (0.07s a 0.23s) -> Follow-through
+            if 0.07 <= elapsed <= 0.23:
+                self.hitbox_active = True
+            else:
+                self.hitbox_active = False
 
             # Avanço de impacto curto e bofetada dupla estonteante nas têmporas
             step_speed = 1.2
@@ -290,12 +308,14 @@ class RaidenSumo(Samurai):
             else:
                 self.wx, self.wy = new_wx, new_wy
 
+            # Alcance físico convergente (0.70m à frente, raio 0.60m)
             self.hitbox_center = (
-                self.wx + self.facing_x * 1.25,
-                self.wy + self.facing_y * 1.25
+                self.wx + self.facing_x * 0.70,
+                self.wy + self.facing_y * 0.70
             )
+            self.hitbox_radius = 0.60
 
-            if opponent and getattr(opponent, "is_alive", False):
+            if self.hitbox_active and opponent and getattr(opponent, "is_alive", False):
                 dist_opp = math.hypot(opponent.wx - self.hitbox_center[0], opponent.wy - self.hitbox_center[1])
                 if dist_opp <= self.hitbox_radius + getattr(opponent, "radius", 0.35):
                     # Pushback maciço e congelamento de guarda / stun
