@@ -109,12 +109,23 @@ def idle_arms(c):
 def attack_arms(c):
     """
     Golpe de Palma Tsuppari Devastador:
-    - O braço de ataque estende a palma espalmada em linha reta com peso corporal completo.
-    - O outro braço recolhe junto à costela para gerar o contragolpe rítmico.
+    - Golpe 1 (Harite): Palma direita estendida com peso corporal completo e mão esquerda junto à costela.
+    - Golpe 2 (Morote-Tsuppari): Bofetada dupla sincronizada com ambos os braços convergindo nas têmporas.
     """
     p = c.atk_progress if c.atk_progress is not None else 0.0
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
     thrust = math.sin(p * math.pi) * 0.42
+    pose = c.extra_props.get("pose") if c.extra_props else None
+
+    if pose == "tsuppari_2":
+        # Morote-Tsuppari: Bofetada Dupla convergente nas têmporas do rival
+        right = (bx + fx * (0.24 + thrust) - px * 0.12,
+                 by + fy * (0.24 + thrust) - py * 0.12,
+                 tz + 0.16)
+        left = (bx + fx * (0.24 + thrust) + px * 0.12,
+                by + fy * (0.24 + thrust) + py * 0.12,
+                tz + 0.16)
+        return left, right
 
     # Palma direita em investida frontal com impacto de massa
     right = (bx + fx * (0.26 + thrust) - px * 0.04,

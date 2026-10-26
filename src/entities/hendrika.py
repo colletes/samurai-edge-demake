@@ -59,6 +59,9 @@ class HendrikaAlchemist(Samurai):
         self.reagents = ["acid", "fire", "ether", "frost", "miasma"]
         self.active_reagent_idx = 0
         self.reagent_tier = 1
+        self.reagent_surface_timer = 0.0
+        self.surface_sample_reagent = "acid"
+        self.last_harvested_reagent = "acid"
         self.flask_cooldown = 2.8
         self.flask_timer = 0.0
         self.active_flasks: list[AlchemicFlaskProjectile] = []
@@ -101,22 +104,92 @@ class HendrikaAlchemist(Samurai):
 
         return r
 
-    def check_reagent_pickup(self, game_map=None, banners: list = None, particles: list = None) -> bool:
-        """Coleta reagentes em bancadas alquímicas ou barris para potencializar ao Tier 2."""
-        if not game_map:
+    def check_reagent_pickup(self, game_map=None, banners: list = None, particles: list = None, dt: float = 0.016) -> bool:
+        """
+        Síntese Alquímica pelo Ambiente e Piso em Qualquer Arena:
+        1. Proximidade com fogo/tochas/lanternas (< 2.2m) -> Fogo Grego ('fire')
+        2. Pisos gélidos/água ('water', 'ice', 'snow') -> Salitre Congelante ('frost')
+        3. Pisos rochosos/alvenaria ('stone', 'gravel', 'marble', 'roof') -> Éter Soporífero ('ether')
+        4. Pisos orgânicos/vegetais/madeira ('wood', 'tatami', 'thatch') -> Miasma Neurotóxico ('miasma')
+        5. Pisos de solo natural/lama/terra ('grass', 'dirt', 'mud', 'sand', 'earth') -> Ácido Corrosivo ('acid')
+        - Permanecer sobre o solo/elemento por >= 0.85s sintetiza a fórmula daquele piso.
+        - Permanecer por >= 2.0s potencializa a fórmula para Tier 2 (ou instantâneo junto a bancadas/barris).
+        """
+        if not game_map or not self.is_alive:
             return False
 
-        # Procura barris ou bancadas a menos de 1.8m
-        nearby = False
-        for obj in getattr(game_map, "rocks", []) + getattr(game_map, "buildings", []):
+        # 1. Checar bancadas ou barris alquímicos para Tier 2 instantâneo
+        nearby_lab = False
+        all_props = getattr(game_map, "rocks", []) + getattr(game_map, "buildings", []) + getattr(game_map, "props", [])
+        for obj in all_props:
             kind = getattr(obj, "__class__", None).__name__.lower()
             if "alchemy" in kind or "barrel" in kind or "reagent" in kind:
                 dist = math.hypot(getattr(obj, "wx", -999.0) - self.wx, getattr(obj, "wy", -999.0) - self.wy)
                 if dist <= 1.85:
-                    nearby = True
+                    nearby_lab = True
                     break
 
-        if nearby and self.reagent_tier < 2:
+        if nearby_lab and self.reagent_tier < 2:
+            self.reagent_tier = 2
+            col_core, _ = REAGENT_COLORS.get(self.active_reagent, ((45, 225, 120), (20, 140, 65)))
+            if banners is not None:
+                banners.append(FloatingBanner("TIER 2 POTENCIALIZADO!", self.wx, self.wy, wz=1.85, color=col_core, duration=1.0))
+            if particles is not None:
+                for _ in range(16):
+                    particles.append(SparkParticle(self.wx, self.wy, 0.50, color=col_core))
+            return True
+
+        # 2. Identificar reagente do ambiente imediato
+        detected_reagent = None
+
+        # A. Proximidade com fontes de chamas (tochas, lanternas, braseiros)
+        for obj in all_props:
+            kind = getattr(obj, "__class__", None).__name__.lower()
+            if any(term in kind for term in ("torch", "lantern", "fire", "brazier", "lamp", "fissure")):
+                dist = math.hypot(getattr(obj, "wx", -999.0) - self.wx, getattr(obj, "wy", -999.0) - self.wy)
+                if dist <= 2.2:
+                    detected_reagent = "fire"
+                    break
+
+        # B. Superfície do piso sob as botas de Hendrika
+        if detected_reagent is None and hasattr(game_map, "surface_at"):
+            surf = game_map.surface_at(self.wx, self.wy)
+            if surf in ("water", "ice", "snow"):
+                detected_reagent = "frost"
+            elif surf in ("stone", "gravel", "marble", "roof"):
+                detected_reagent = "ether"
+            elif surf in ("wood", "tatami", "thatch"):
+                detected_reagent = "miasma"
+            elif surf in ("grass", "dirt", "mud", "sand", "wet_sand", "earth"):
+                detected_reagent = "acid"
+            else:
+                detected_reagent = "acid"
+        elif detected_reagent is None:
+            detected_reagent = "acid"
+
+        # 3. Temporizador de extração/síntese de solo
+        if detected_reagent == self.surface_sample_reagent:
+            self.reagent_surface_timer += dt
+        else:
+            self.surface_sample_reagent = detected_reagent
+            self.reagent_surface_timer = 0.0
+
+        # Transição de reagente ativo após permanecer no material por >= 0.85s
+        if self.reagent_surface_timer >= 0.85 and self.active_reagent != self.surface_sample_reagent:
+            if self.surface_sample_reagent in self.reagents:
+                self.active_reagent_idx = self.reagents.index(self.surface_sample_reagent)
+                self.reagent_tier = 1
+                r_name = REAGENT_NAMES.get(self.active_reagent, self.active_reagent.upper())
+                col_core, _ = REAGENT_COLORS.get(self.active_reagent, ((45, 225, 120), (20, 140, 65)))
+                if banners is not None:
+                    banners.append(FloatingBanner(f"SÍNTESE: {r_name}!", self.wx, self.wy, wz=1.75, color=col_core, duration=0.85))
+                if particles is not None:
+                    for _ in range(12):
+                        particles.append(SparkParticle(self.wx, self.wy, 0.40, color=col_core))
+                return True
+
+        # Potencialização para Tier 2 ao permanecer por >= 2.0s
+        if self.reagent_surface_timer >= 2.0 and self.reagent_tier < 2:
             self.reagent_tier = 2
             col_core, _ = REAGENT_COLORS.get(self.active_reagent, ((45, 225, 120), (20, 140, 65)))
             if banners is not None:
@@ -215,15 +288,16 @@ class HendrikaAlchemist(Samurai):
         if self.flask_timer > 0:
             self.flask_timer = max(0.0, self.flask_timer - dt)
 
-        # Checagem contínua de proximidade com barris e bancadas para potencializar reagentes
-        self.check_reagent_pickup(game_map, banners, particles)
+        # Síntese e extração de reagentes baseada no material do piso e ambiente
+        self.check_reagent_pickup(game_map, banners, particles, dt=dt)
 
         # Atualizar poças químicas ativas geradas por Hendrika
         fighters = [self]
         if opponent:
             fighters.append(opponent)
+        cd = kwargs.get("cinematic_director")
         for pool in list(self.active_pools):
-            if not pool.update(dt, fighters=fighters, particles=particles, banners=banners):
+            if not pool.update(dt, fighters=fighters, particles=particles, banners=banners, cinematic_director=cd):
                 self.active_pools.remove(pool)
 
         if self.state == STATE_ROLL:

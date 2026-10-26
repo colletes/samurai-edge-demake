@@ -87,7 +87,7 @@ ANGLE_PER_ELEMENT = 360.0 / NUM_ELEMENTS  # 60.0 graus
 
 class RondelHUD:
     """Gerencia a renderização em laca, rotação e partículas do mostrador de Seimei."""
-    _instance = None
+    _instances: dict[str, "RondelHUD"] = {}
 
     def __init__(self):
         self.current_angle = 0.0
@@ -98,10 +98,10 @@ class RondelHUD:
         self._disc_size = 136
 
     @classmethod
-    def get(cls) -> "RondelHUD":
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+    def get(cls, side: str = "p1") -> "RondelHUD":
+        if side not in cls._instances:
+            cls._instances[side] = cls()
+        return cls._instances[side]
 
     def _build_procedural_textured_disc(self) -> pygame.Surface:
         """Cria o disco texturizado com camadas de bronze, laca urushi e anéis em folha de ouro."""

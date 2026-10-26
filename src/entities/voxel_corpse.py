@@ -278,6 +278,13 @@ class VoxelCorpse:
         self.timer = 0.0
         self.delayed_action_done = False
         self.geyser_timer = 0.0
+        self.is_ash_mound = False
+        self.ash_mound_time = 0.0
+        self.is_acid_pool = False
+        self.is_frozen_statue = False
+        self.has_impact_crater = False
+        self.grave_pit = False
+        self.acid_radius = 0.0
         self._key = None
         self._left = self._up = 0
         self._sprite_failed = False
@@ -662,8 +669,13 @@ class VoxelCorpse:
             for _ in range(16):
                 self._add_blood_drop(spread=0.55)
 
-        elif style in ("SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR"):
-            # Seimei Primário & Secundário: O amuleto atinge o alvo, que é consumido em chamas verdes até restarem cinzas
+        elif style in (
+            "SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR",
+            "SEIMEI_FATAL_WOOD", "SEIMEI_FATAL_FIRE", "SEIMEI_FATAL_EARTH",
+            "SEIMEI_FATAL_METAL", "SEIMEI_FATAL_WATER", "SEIMEI_FATAL_YINYANG",
+            "ALCHEMIC_FIRE_ASH"
+        ):
+            # Seimei (todos os 6 elementos) & Hendrika Fogo Grego: O alvo é consumido até restarem apenas cinzas fumegantes
             self.is_ash_mound = True
             self.ash_mound_time = 0.0
             self.pieces = []  # O corpo foi totalmente desintegrado em cinzas
@@ -686,15 +698,16 @@ class VoxelCorpse:
             for _ in range(38):
                 self._add_blood_drop(spread=0.85)
 
-        elif style == "DOKUKIRI_MELT":
-            # Okuni Secundário: Sopro ácido Dokukiri dissolve a carne em poça esmeralda fumegante com ossos expostos
-            self.acid_radius = 0.25
-            self.acid_max_radius = 0.92
-            self.pieces.append(P(x, y, 0.0, 0.40, 0.30, 0.70, (60, 180, 90), piece_type="melting_body",
+        elif style in ("DOKUKIRI_MELT", "ALCHEMIC_ACID_DISSOLVE"):
+            # Okuni Secundário & Hendrika Ácido Corrosivo: Sopro/Frasco ácido dissolve a carne em poça esmeralda fumegante com ossos
+            self.is_acid_pool = True
+            self.acid_radius = 0.30
+            self.acid_max_radius = 0.95
+            self.pieces.append(P(x, y, 0.0, 0.40, 0.30, 0.70, (60, 210, 110), piece_type="melting_body",
                                  region=lambda c: c.band(None, None), squash="melt"))
-            for _ in range(10):
+            for _ in range(12):
                 angle = random.uniform(0, math.pi * 2)
-                sp = random.uniform(0.6, 1.8)
+                sp = random.uniform(0.6, 2.0)
                 self.pieces.append(P(x, y, 0.25, 0.08, 0.08, 0.08, (225, 220, 205),
                                      vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(0.8, 2.0),
                                      rot_speed=random.uniform(-180, 180), piece_type="bone_gib"))
@@ -771,6 +784,75 @@ class VoxelCorpse:
             self.pieces.extend([self.severed_head, self.headless_body])
             for _ in range(42):
                 self._add_blood_drop(spread=0.90)
+
+        # ---------------------------------------------------------------
+        # Ciclo 6 Fatalities: Raiden & Hendrika
+        # ---------------------------------------------------------------
+        elif style == "TSUPPARI_SONIC_DECAP":
+            # Raiden Primário: Bofetada sônica dupla nas têmporas decepa a cabeça em arco alto
+            self.severed_head = P(x, y, NECK_Z + 0.12, 0.16, 0.16, 0.16, self.col_hair,
+                                  vx=dx * 2.4 - dy * 1.2, vy=dy * 2.4 + dx * 1.2, vz=3.6,
+                                  rot_speed=320.0, piece_type="head", region=lambda c: c.band(None, NECK_Z),
+                                  pivot="center", floor_z=0.15)
+            self.headless_body = P(x, y, 0.0, 0.32, 0.24, 0.82, self.col_torso,
+                                   vx=dx * 0.5, vy=dy * 0.5, vz=0.0,
+                                   piece_type="headless_body", region=lambda c: c.band(NECK_Z, None),
+                                   rot_target=FALL_DEG, rot_speed=140.0, rot_delay=0.20)
+            self.pieces.extend([self.severed_head, self.headless_body])
+            for _ in range(40):
+                self._add_blood_drop(spread=0.90)
+
+        elif style == "TACHIAI_SHATTER_SLAM":
+            # Raiden Secundário: Ergue e esmaga o corpo de costas no solo com impacto sísmico e cratera
+            self.has_impact_crater = True
+            self.pieces.append(P(x, y, 0.0, 0.54, 0.38, 0.52, self.col_torso, piece_type="crushed_body",
+                                 region=lambda c: c.band(None, None), squash="crush"))
+            for _ in range(42):
+                self._add_blood_drop(spread=0.95)
+            for _ in range(14):
+                angle = random.uniform(0, math.pi * 2)
+                sp = random.uniform(1.8, 4.4)
+                self.pieces.append(P(x, y, 0.12, 0.08, 0.08, 0.08, (140, 100, 60),
+                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(1.4, 3.4),
+                                     rot_speed=random.uniform(-280, 280), piece_type="earth_shard"))
+
+        elif style == "STILETTO_CAROTID_VITRIOL":
+            # Hendrika Primário: Corte cirúrgico na carótida com ampola de vitríolo dissolvente
+            self.cleaved_body = P(x, y, 0.0, 0.44, 0.32, 0.76, self.col_torso,
+                                  vx=dx * 1.5, vy=dy * 1.5, vz=0.5,
+                                  piece_type="cleaved_body", region=lambda c: c.band(None, None),
+                                  rot_target=FALL_DEG, rot_speed=180.0)
+            self.pieces.append(self.cleaved_body)
+            for _ in range(32):
+                self._add_blood_drop(spread=0.75)
+            for _ in range(14):
+                angle = random.uniform(0, math.pi * 2)
+                sp = random.uniform(0.8, 2.2)
+                self.pieces.append(P(x, y, 0.70, 0.05, 0.05, 0.05, (65, 230, 140),
+                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(0.8, 2.0),
+                                     rot_speed=random.uniform(-150, 150), piece_type="acid_droplet"))
+
+        elif style == "ALCHEMIC_FROST_SHATTER":
+            # Hendrika Frasco de Salitre: Congelamento criogênico e estilhaço total do corpo em cristais de gelo
+            self.is_frozen_statue = True
+            self.pieces = []
+            self.blood_droplets = []
+            for _ in range(32):
+                angle = random.uniform(0, math.pi * 2)
+                sp = random.uniform(1.5, 4.2)
+                c_ice = random.choice([(180, 240, 255), (210, 250, 255), (120, 205, 245), (255, 255, 255)])
+                self.pieces.append(P(x, y, random.uniform(0.1, 0.8), random.uniform(0.06, 0.12), random.uniform(0.06, 0.12), random.uniform(0.06, 0.12), c_ice,
+                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(1.2, 3.6),
+                                     rot_speed=random.uniform(-320, 320), piece_type="ice_shard"))
+
+        elif style in ("ALCHEMIC_ETHER_SUFFOCATION", "ALCHEMIC_MIASMA_MELT"):
+            # Hendrika Éter / Miasma: Asfixia química, colapso convulsivo e derretimento parcial
+            self.pieces.append(P(x, y, 0.0, 0.42, 0.30, 0.68, self.col_torso,
+                                 vx=dx * 0.8, vy=dy * 0.8, vz=0.3,
+                                 piece_type="fallen_body", region=lambda c: c.band(None, None),
+                                 rot_target=FALL_DEG, rot_speed=130.0))
+            for _ in range(24):
+                self._add_blood_drop(spread=0.60)
 
         else:
             # Padrão e BLUNT_FALL: tombo cinematográfico para trás

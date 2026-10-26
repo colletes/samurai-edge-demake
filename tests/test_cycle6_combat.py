@@ -39,26 +39,43 @@ def test_raiden_combat_mechanics():
     assert abs(raiden.speed - 3.85) < 0.01, f"Velocidade deve ser 3.85, é {raiden.speed}"
     print("  [OK] Atributos base de Raiden: 3 HP, 3.85 velocidade")
 
-    # 1. Tsuppari Rush
+    # 1. Tsuppari Combo (Golpe 1: Harite -> Golpe 2: Morote-Tsuppari)
     opponent = RedSamurai(11.2, 10.0)
     particles = []
     success = raiden.trigger_tsuppari_rush(12.0, 10.0, particles=particles)
-    assert success, "Tsuppari Rush deve ativar"
-    assert raiden.state == "TSUPPARI_RUSH", "Estado deve ser TSUPPARI_RUSH"
+    assert success, "Golpe 1 do combo deve ativar"
+    assert raiden.state in ("TSUPPARI_STRIKE_1", "TSUPPARI_RUSH"), f"Estado deve ser TSUPPARI_STRIKE_1, é {raiden.state}"
     assert raiden.hitbox_active, "Hitbox deve estar ativa"
 
     # Simular avanço e pushback contínuo
     initial_opp_x = opponent.wx
     raiden.update(0.10, opponent=opponent, particles=particles)
     assert opponent.wx > initial_opp_x, "Oponente deve sofrer pushback para longe"
-    print("  [OK] Tsuppari Rush avança com pushback massivo no rival")
+    print("  [OK] Tsuppari Golpe 1 (Harite) avança com pushback no rival")
+
+    # Finalizar Golpe 1 para abrir janela de combo
+    raiden.update(0.20, opponent=opponent, particles=particles)
+    assert raiden.state == "RECOVERY", f"Deve entrar em RECOVERY, está em {raiden.state}"
+    assert raiden.combo_step == 1, f"Combo step deve ser 1, é {raiden.combo_step}"
+    assert raiden.combo_window_timer > 0, "Janela de combo deve estar aberta"
+
+    # Disparar Golpe 2: Morote-Tsuppari dentro da janela
+    success_combo2 = raiden.trigger_tsuppari_rush(12.0, 10.0, particles=particles)
+    assert success_combo2, "Golpe 2 do combo deve encadear dentro da janela"
+    assert raiden.state == "TSUPPARI_STRIKE_2", f"Estado deve ser TSUPPARI_STRIKE_2, é {raiden.state}"
+    assert raiden.hitbox_damage == 2, f"Golpe 2 deve ter dano 2, tem {raiden.hitbox_damage}"
+
+    # Simular impacto do Golpe 2 (stun + pushback massivo)
+    raiden.update(0.10, opponent=opponent, particles=particles)
+    assert opponent.state == "STUNNED", "Golpe 2 deve aplicar congelamento/stun de guarda no rival"
+    print("  [OK] Combo encadeado: Golpe 2 (Morote-Tsuppari) aplica Dano 2, Stun e alto recuo")
 
     # 2. Poise / Hiperarmadura (não sofre stun durante ataque)
     hit, dead = raiden.take_hit((1.0, 0.0), damage=1)
     assert hit, "Deve receber o golpe"
     assert not dead, "Não deve morrer com 1 de dano (tem 3 HP)"
     assert raiden.hp == 2, f"HP deve ser 2, é {raiden.hp}"
-    assert raiden.state == "TSUPPARI_RUSH", "Raiden não deve entrar em STUNNED durante ataque (Super Armor)"
+    assert raiden.state in ("TSUPPARI_STRIKE_1", "TSUPPARI_STRIKE_2", "TSUPPARI_RUSH"), "Raiden não deve entrar em STUNNED durante ataque (Super Armor)"
     print("  [OK] Hiperarmadura / Poise absorve golpe sem interromper o ataque")
 
     # 3. Tachiai Tackle
@@ -156,6 +173,48 @@ def test_hendrika_combat_mechanics():
         style_flask = _get_death_style_for_attacker(hendrika, weapon="flask", victim=opponent)
         assert r in style_flask.lower() or ("acid" in r and "dissolve" in style_flask.lower()) or ("fire" in r and "ash" in style_flask.lower()) or ("frost" in r and "shatter" in style_flask.lower()), f"Fatalidade incorreta para {r}: {style_flask}"
     print("  [OK] Fatalidades de Hendrika (Estilete Vitriol e variantes dinâmicas por elemento do frasco)")
+
+
+    # 6. Síntese Ambiental em Qualquer Arena
+    class MockGameMap:
+        def __init__(self, surf="water"):
+            self.surf = surf
+            self.rocks = []
+            self.buildings = []
+            self.props = []
+        def surface_at(self, x, y):
+            return self.surf
+
+    # Teste 6A: Solo de Água -> Síntese de Frost
+    mock_water_map = MockGameMap(surf="water")
+    hendrika.active_reagent_idx = 0  # acid
+    hendrika.surface_sample_reagent = "acid"
+    hendrika.reagent_surface_timer = 0.0
+    for _ in range(60):
+        hendrika.check_reagent_pickup(mock_water_map, dt=0.02)
+    assert hendrika.active_reagent == "frost", f"Piso de água deve sintetizar frost, obteve {hendrika.active_reagent}"
+    print("  [OK] Síntese de Campo: Piso de Água/Gelo sintetiza Salitre Congelante ('frost')")
+
+    # Teste 6B: Solo de Madeira -> Síntese de Miasma
+    mock_wood_map = MockGameMap(surf="wood")
+    for _ in range(60):
+        hendrika.check_reagent_pickup(mock_wood_map, dt=0.02)
+    assert hendrika.active_reagent == "miasma", f"Piso de madeira deve sintetizar miasma, obteve {hendrika.active_reagent}"
+    print("  [OK] Síntese de Campo: Piso de Madeira/Tatami sintetiza Miasma Neurotóxico ('miasma')")
+
+    # Teste 6C: Solo de Pedra -> Síntese de Éter
+    mock_stone_map = MockGameMap(surf="stone")
+    for _ in range(60):
+        hendrika.check_reagent_pickup(mock_stone_map, dt=0.02)
+    assert hendrika.active_reagent == "ether", f"Piso de pedra deve sintetizar éter, obteve {hendrika.active_reagent}"
+    print("  [OK] Síntese de Campo: Piso de Rocha/Pavimento sintetiza Éter Soporífero ('ether')")
+
+    # Teste 6D: Permanecer por >= 2.0s potencializa para Tier 2
+    hendrika.reagent_tier = 1
+    for _ in range(120):
+        hendrika.check_reagent_pickup(mock_stone_map, dt=0.02)
+    assert hendrika.reagent_tier == 2, f"Permanecer no solo deve potencializar para Tier 2, nível é {hendrika.reagent_tier}"
+    print("  [OK] Potencialização de Solo: Permanência contínua eleva fórmula para Tier 2")
 
 
 if __name__ == "__main__":

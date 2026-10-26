@@ -2711,12 +2711,12 @@ def run_game():
                         pygame.draw.rect(screen, (255, 210, 50), d_bg, 1, border_radius=4)
                         screen.blit(dist_lbl, (d_bg.x + 4, d_bg.y + 1))
 
-        # Rondel Onmyōdō de Seimei (Mostrador dos 6 Elementos no Rodapé Central)
-        for f in (p1, p2):
-            if getattr(f, "char_type", "") == "seimei" and f.is_alive:
-                from src.ui.hud_rondel import RondelHUD
-                RondelHUD.get().render(screen, f, SCREEN_WIDTH // 2, SCREEN_HEIGHT - 65, dt)
-                break
+        # Rondel Onmyōdō de Seimei (Mostrador dos 6 Elementos no Rodapé Lateral de Cada Jogador)
+        from src.ui.hud_rondel import RondelHUD
+        if getattr(p1, "char_type", "") == "seimei" and p1.is_alive:
+            RondelHUD.get("p1").render(screen, p1, 220, SCREEN_HEIGHT - 65, dt)
+        if getattr(p2, "char_type", "") == "seimei" and p2.is_alive:
+            RondelHUD.get("p2").render(screen, p2, SCREEN_WIDTH - 220, SCREEN_HEIGHT - 65, dt)
 
 
 
