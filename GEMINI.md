@@ -59,17 +59,14 @@ Utility, generation, and inspection scripts:
 - `deploy/cors.json`: Cloud storage CORS configuration.
 - `dist/releases/`: Standalone packaged binaries (`.zip`, `.tar.gz`).
 
-### 7. Knowledge Base & Specifications (`kb/`)
-- `kb/specs/`: Architectural epic specifications (e.g. `vaults-epic.md`, `onboarding-epic.md`, `reconciliation-epic.md`).
-
-### 8. Root Files
+### 7. Root Files
 - `main.py`: Game entrypoint.
 - `README.md`, `CHANGELOG.md`, `LICENSE`: Core project documentation.
 - `requirements.txt`: Python package dependencies.
 - `samurai_edge.spec` & `buildozer.spec`: PyInstaller and mobile build specs.
 - `arcade_save.json`, `settings.json`, `controls_config.json`: Local player saves and configurations (git-ignored).
 
-## 9. 3D Character Aesthetics & Voxel Rendering Directives
+## 8. 3D Character Aesthetics & Voxel Rendering Directives
 - **3D Low-Poly Faceted Anime Architecture (PS1 Era / Tekken 2-3 Inspired)**:
   - **No 2D Decals or Stickers**: Never project flat 2D portraits or decals onto 3D voxel heads.
   - **No Childish Vector Circles**: Never use `pygame.draw.circle` for facial features.
