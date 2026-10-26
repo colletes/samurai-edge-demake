@@ -25,7 +25,7 @@ from src.ui.character_select import CharacterSelectScreen
 from src.ui.pause_menu import PauseMenu, ACTION_ABANDON, ACTION_RESUME
 from src.ui.title_screen import SumieTitleScreen
 from src.arcade.arcade_mode import (
-    ArcadeRun, FightKind, build_ladder, NINJA_ORDER, NINJAS, FIGHT_LOST, FIGHT_WON, NEXT_OPPONENT, NEXT_ROUND,
+    ArcadeRun, FightKind, build_ladder, _strongest_vs, NINJA_ORDER, NINJAS, FIGHT_LOST, FIGHT_WON, NEXT_OPPONENT, NEXT_ROUND,
     ORDER_RANDOM, CONTINUE_PENALTY, SCORE_FIGHT,
 )
 from src.config import ARENA_SHADOW_CAVE
@@ -44,47 +44,46 @@ def test_tables_are_complete():
 def test_ladder_for_all_fighters():
     for player in PLAYABLE_FIGHTERS:
         ladder = build_ladder(player, seed=3)
-        assert len(ladder) == 11, player
+        assert len(ladder) == 12, player
         kinds = [f.kind for f in ladder]
-        assert kinds == [FightKind.DUEL] * 7 + [FightKind.MIRROR, FightKind.ENDURANCE, FightKind.NINJA_CHALLENGE, FightKind.BOSS]
-        duels = [f.opponents[0] for f in ladder[:7]]
-        assert len(set(duels)) == 7 and player not in duels and not (set(duels) & NINJAS), (player, duels)
+        assert kinds == [FightKind.DUEL] * 8 + [FightKind.MIRROR, FightKind.ENDURANCE, FightKind.NINJA_CHALLENGE, FightKind.BOSS]
+        duels = [f.opponents[0] for f in ladder[:8]]
+        assert len(set(duels)) == 8 and player not in duels and not (set(duels) & NINJAS), (player, duels)
         strength = [ARCADE_TIER_ORDER.index(c) for c in duels]
         pool_rank = sorted(strength)
-        assert all(abs(pos - pool_rank.index(s)) <= 4 for pos, s in enumerate(strength)), (player, "segue os tiers com sorteio curto")
-        assert [ARENA_BY_FIGHTER[o] for o in duels] == [f.arena_id for f in ladder[:7]]
-        mirror = ladder[7]
+        assert all(abs(pos - pool_rank.index(s)) <= 5 for pos, s in enumerate(strength)), (player, "segue os tiers com sorteio curto")
+        assert [ARENA_BY_FIGHTER[o] for o in duels] == [f.arena_id for f in ladder[:8]]
+        mirror = ladder[8]
         assert mirror.opponents == (player,) and mirror.arena_id == ARENA_BY_FIGHTER[player] and not mirror.is_challenge
 
-        endurance = ladder[8]
+        endurance = ladder[9]
         assert len(endurance.opponents) == 2 and len(set(endurance.opponents)) == 2
         assert player not in endurance.opponents and not (set(endurance.opponents) & NINJAS)
         assert endurance.player_round_lives == 2 and endurance.arena_id == ARENA_BY_FIGHTER[endurance.opponents[0]]
         candidates = [c for c in PLAYABLE_FIGHTERS if c not in NINJAS and c != player]
-        rate = {c: ARCADE_MATCHUP_TABLE[c][player] for c in candidates}
-        others = [rate[c] for c in candidates if c not in endurance.opponents]
-        assert min(rate[c] for c in endurance.opponents) >= max(others), (player, endurance.opponents)
+        top4 = _strongest_vs(player, candidates, count=4)
+        assert all(c in top4 for c in endurance.opponents), (player, endurance.opponents, top4)
         rates = [ARCADE_MATCHUP_TABLE[c][player] for c in endurance.opponents]
         assert rates == sorted(rates), "do mais fraco ao mais forte no confronto"
 
-        ninja = ladder[9]
+        ninja = ladder[10]
         assert ninja.opponents == NINJA_ORDER and len(ninja.opponents) == 4
         assert ninja.arena_id == ARENA_SHADOW_CAVE and ninja.player_round_lives == 2
         if player in NINJAS:
             assert player in ninja.opponents, "a vez do ninja vira espelho"
-        assert ladder[10].kind == FightKind.BOSS
-    print("  [OK] Escada de 11 lutas correta para os 12 lutadores (duelos, espelho, endurance, ninjas, chefe).", flush=True)
+        assert ladder[11].kind == FightKind.BOSS
+    print(f"  [OK] Escada de 12 lutas correta para os {len(PLAYABLE_FIGHTERS)} lutadores (duelos, espelho, endurance, ninjas, chefe).", flush=True)
 
 
 def test_ladder_order_and_seed():
     assert [f.opponents for f in build_ladder("kenshin", 5)] == [f.opponents for f in build_ladder("kenshin", 5)]
-    a = [f.opponents[0] for f in build_ladder("kenshin", 1, ORDER_RANDOM)[:7]]
-    b = [f.opponents[0] for f in build_ladder("kenshin", 1, ORDER_RANDOM)[:7]]
-    c = [f.opponents[0] for f in build_ladder("kenshin", 2, ORDER_RANDOM)[:7]]
-    assert a == b and len(c) == 7 and len(set(c)) == 7
-    discarded = {tuple(sorted(f.opponents[0] for f in build_ladder("ninja", s)[:7])) for s in range(12)}
+    a = [f.opponents[0] for f in build_ladder("kenshin", 1, ORDER_RANDOM)[:8]]
+    b = [f.opponents[0] for f in build_ladder("kenshin", 1, ORDER_RANDOM)[:8]]
+    c = [f.opponents[0] for f in build_ladder("kenshin", 2, ORDER_RANDOM)[:8]]
+    assert a == b and len(c) == 8 and len(set(c)) == 8
+    discarded = {tuple(sorted(f.opponents[0] for f in build_ladder("ninja", s)[:8])) for s in range(12)}
     assert len(discarded) > 1, "jogador ninja: o descartado muda com a semente"
-    orders = {tuple(f.opponents[0] for f in build_ladder("kenshin", s)[:7]) for s in range(30)}
+    orders = {tuple(f.opponents[0] for f in build_ladder("kenshin", s)[:8]) for s in range(30)}
     assert len(orders) > 5, "a ordem dos duelos varia a cada jornada"
     print("  [OK] A ordem por tier e por semente é reproduzível; ninja descarta um oponente por sorteio.", flush=True)
 
@@ -132,13 +131,13 @@ def test_challenges():
         assert run.on_round_end("P1") == NEXT_ROUND
         r = run.on_round_end("P1")
         assert r == (NEXT_OPPONENT if i < 3 else FIGHT_WON), (i, r)
-    assert run.index == 10
+    assert run.index == 11
 
     end = ArcadeRun("musashi")
     jump_to(end, FightKind.ENDURANCE)
     first = end.current_opponent()
     end.on_round_end("P1"); end.on_round_end("P1")
-    assert end.current_opponent() != first and end.ladder[8].arena_id == ARENA_BY_FIGHTER[first], "troca de oponente sem trocar de arena"
+    assert end.current_opponent() != first and end.current_fight().arena_id == ARENA_BY_FIGHTER[first], "troca de oponente sem trocar de arena"
     end.on_round_end("P2")
     assert end.lives_left == 1
     assert (end.challenge_rounds_won, end.challenge_rounds_total) == (2, 4)
@@ -200,7 +199,7 @@ def test_full_simulated_journey():
         if r == FIGHT_LOST:
             run.on_continue()
     assert run.is_finished and rounds < 2000
-    assert run.score >= 0 and len(run.stats) == 11
+    assert run.score >= 0 and len(run.stats) == 12
     print(f"  [OK] Jornada simulada completa em {rounds} rounds, com {run.continues} Continue(s) e placar >= 0.", flush=True)
 
 

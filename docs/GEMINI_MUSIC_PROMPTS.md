@@ -1307,21 +1307,112 @@ Kim-un Kamuy yo — TSURANUKE!
 
 ---
 
-## 📅 Ciclo 6: Arenas Futuras (Stubs de Referência)
+## 🥋 Ciclo 6: Duelos de Massa & Alquimia Portuária
 
-> [!NOTE]
-> As arenas abaixo pertencem ao **Ciclo 6** do Roadmap de Expansão e serão detalhadas com seus prompts completos de Gemini e Suno v6 assim que os respectivos cenários forem construídos.
+---
 
+### 24. Dohyō Sagrado (`sacred_dohyo`)
+* **Personagem Principal**: Raiden Tameemon (O Yokozuna dos Trovões — Grande Campeão do Sumô)
+* **Ambiente**: Santuário Shinto imponente e solene sob teto de templo de Hinoki, plataforma elevada de argila sagrada Arakida circundada pelo anel de fardos de palha (*shōbu-tawara*), quatro pilares cerimoniais (*shihobashira*) com borlas direcionais (*fusa*) coloridas e braseiros de bronze ardendo na penumbra cerimonial.
+* **Clima Emocional**: Gravidade marcial esmagadora e reverência ritualística. O silêncio tenso antes do *tachiai* (investida inicial) seguido pela força sísmica imparável de dois titãs colidindo no centro sagrado.
 
-### 24. Dohyō Sagrado (`sacred_dohyo`) — *Ciclo 6 (Em Breve)*
-* **Personagem Principal**: Raiden (Rikishi Colossal do Sumô)
-* **Arquivo BGM Previsto**: `bgm_sacred_dohyo.mp3`
-* **Stub de Identidade Sonora**: Tambores cerimoniais *Yagura-daiko* de Sumô, pisadas sísmicas *Shiko* no barro sagrado, estalos de palmas e gritos graves de Rikishi. *(Prompt completo a definir após criação da arena).*
+#### 🎙️ Prompt Gemini (English - High Fidelity MusicLM / Lyria):
+```text
+Title: Thunder on the Sacred Ring (Tachiai of the Yokozuna)
+Genre: Ancient Shinto Sumo Tournament Battle Theme / Booming Taiko & Gagaku Brass
+Tempo: 126 BPM, 4/4 Time Signature, Key of D Dorian / Yo-scale
+Instrumentation: Thunderous Ōdaiko and Nagado-daiko battle drums with deep sub-bass resonance, piercing hardwood clappers (Hyōshigi), authentic gravelly Gyōji referee kakegoe shouts ("Nokotta! Hakkeyoi!"), solemn Gagaku Imperial Court Ryūteki bamboo flute and buzzing Hichiriki reeds, heavy brass swells, resonant bronze Shinto temple gong.
+Structure & Dynamics:
+- Ritual Opening (0:00 - 0:12): A sharp, resonant wooden hyōshigi strike reverberates off high wooden temple beams; deep ritual shiko foot-stomp bass shake; single ancient bronze gong toll.
+- The Tachiai Charge (0:12 - 0:48): Massive rhythmic 126 BPM groove unleashes with galloping taiko rolls; soaring Ryūteki flute melody intertwines with majestic brass horn calls; hyōshigi claps accent heavy palm thrust impacts (tsuppari).
+- Yokozuna Domination (0:48 - 1:16): High-intensity polyrhythmic taiko duel, dramatic bar-line stabs, roaring hichiriki harmonies, and a guttural referee cry ("Hakkeyoi! Nokotta!") over booming sub-bass drive.
+- Seamless Loop Tail: Resonant bronze gong decay and dry temple incense reverb fading smoothly back to the opening hyōshigi strike.
+Mix & Texture: Enormous temple interior acoustic reverb, hyper-punchy drum transients with chest-thumping sub-bass weight, pristine ritual authenticity, zero modern synthesis.
+```
 
-### 25. Armazém de Dejima (`dejima_warehouse`) — *Ciclo 6 (Em Breve)*
-* **Personagem Principal**: Hendrika (Alquimista Holandesa)
-* **Arquivo BGM Previsto**: `bgm_dejima_warehouse.mp3`
-* **Stub de Identidade Sonora**: Música de câmara barroca-industrial holandesa com cravo mecânico, percussão de vidrarias alquímicas/engrenagens e sussurros de fórmulas em holandês/latim. *(Prompt completo a definir após criação da arena).*
+#### 🎹 Prompt Suno v6 (Rich Short Combat Cut):
+* **Style Prompt (Suno v6)**:
+```text
+Ancient Japanese Shinto sumo tournament battle theme with deep male referee chants, 126 BPM, D Dorian Yo-scale, ultra-realistic Suno v6 production. Thunderous odaiko and nagado taiko drums rolling with massive acoustic sub-bass weight, piercing hardwood hyoshigi clappers, solemn Gagaku ryuteki flute, buzzing hichiriki, and roaring brass swells. Guttural martial sumo shouts punctuate decisive palm-thrust rhythms. Short 85-second arena combat loop, temple acoustics, seamless loop.
+```
+* **Custom Lyrics / Metatag Script (Colar no Suno)**:
+```text
+[Intro: Single sharp Hyoshigi wood clack echoing in a sacred Shinto shrine hall]
+[Deep resonant bronze temple gong and heavy sub-bass Shiko stomp]
+[Guttural Sumo Referee Call]
+Hakkeyoi!
+
+[Battle Groove: Massive galloping Odaiko drums erupt at 126 BPM with rhythmic Hyoshigi wood strikes]
+[Solemn Gagaku Ryuteki flute and buzzing Hichiriki lead soaring over heavy brass swells]
+[Deep Rikishi Battle Roar]
+Oryaa!
+[Thunderous rhythmic Taiko accents simulating devastating Tsuppari palm strikes]
+
+[Bridge: Tension builds at the ring boundary, heavy drum rolls and soaring ceremonial flute]
+[Referee Chant]
+Nokotta! Nokotta!
+
+[Climax: Maximum physical mass collision, roaring horns, triple-meter Taiko barrage and triumphant Shinto melody]
+[Resonant Bronze Gong Impact]
+
+[Outro: Seamless Loop Tail, wooden clapper reverb and deep temple silence]
+[End]
+```
+
+#### 📜 Descrição Conceitual (Português):
+* **Foco Rítmico**: Pulso marcial solene (126 BPM) ancorado no peso esmagador de tambores Ōdaiko e clappers Hyōshigi, capturando a tensão de colisão entre dois lutadores de sumô.
+* **Arranjo Melódico**: Fusão entre a nobreza cortesã do Gagaku (flauta Ryūteki e palheta Hichiriki) com trompas de metal pesadas e gritos tradicionais de juiz Gyōji (*Hakkeyoi! Nokotta!*).
+
+---
+
+### 25. Armazém de Dejima com Doca Chuvosa (`dejima_warehouse`)
+* **Personagem Principal**: Hendrika van der Bilt (A Cirurgiã Alquimista de Dejima)
+* **Ambiente**: Armazém mercantil holandês na ilha artificial de Dejima em Nagasaki durante uma tempestade noturna. Metade interna com laboratório de carvalho, balões de vidro esmeralda e livros alquímicos; metade externa com doca de tábuas de madeira molhada sob chuva torrencial e águas revoltas do canal.
+* **Clima Emocional**: Mistério científico excêntrico, perigo químico volátil e a elegância tempestuosa do encontro entre o barroco europeu da VOC e o mistério japonês sob chuva fria.
+
+#### 🎙️ Prompt Gemini (English - High Fidelity MusicLM / Lyria):
+```text
+Title: Mercury and Rain (The Dejima Laboratory)
+Genre: Baroque-Gothic Alchemical Chamber Battle Theme / European Classical & Japanese Nagasaki Fusion
+Tempo: 124 BPM, 4/4 Time Signature, Key of G Minor (Harmonic Minor with chromatic alchemy inflections)
+Instrumentation: Virtuosic staccato Harpsichord (cembalo) arpeggios, driving classical solo Violin and agile Cello pizzicato, bubbling glass water percussion and ticking brass clockwork mechanism, weeping Japanese Kokyū and wooden Shakuhachi accents, driving orchestral staccato strings, distant harbor thunder rolls and steady coastal rainstorm texture.
+Structure & Dynamics:
+- Intro (0:00 - 0:10): Raining patter on wooden wharf planks and distant harbor thunder; an intricate ticking clockwork escapement and delicate glass beaker chimes ignite into a blistering harpsichord arpeggio.
+- Alchemical Pursuit (0:10 - 0:46): Fast-paced 124 BPM chamber combat groove; virtuosic violin leads in frenetic baroque counterpoint against deep driving cello basslines; splashy snare transients and woodblock clacks simulate footwork across wet slippery dock planks.
+- Reaction Climax (0:46 - 1:14): Dramatic modulation; intense 16th-note violin tremolos, bubbling glass percussion flourishes, theatrical harpsichord flourishes, and a razor-sharp lightning-crack crash on the downbeat.
+- Seamless Loop Tail: Rainstorm patter on harbor water and lingering harpsichord harmonic decaying smoothly back into the opening clockwork tick.
+Mix & Texture: Intricate European chamber room intimacy panned against wide wet coastal rainfield ambience, pristine baroque transient bite, crisp alchemical mystery.
+```
+
+#### 🎹 Prompt Suno v6 (Rich Short Combat Cut):
+* **Style Prompt (Suno v6)**:
+```text
+19th-century Bakumatsu Nagasaki harbor alchemy duel, 124 BPM, G Harmonic Minor, high-fidelity Suno v6 acoustic production. Virtuosic classical solo violin dueling with ornate harpsichord arpeggios over driving chamber strings, ticking brass clockwork, bubbling glass flask percussion, and rainstorm thunder ambience. Eccentric, playful mad-science urgency meets wet nighttime harbor intrigue. Short 85-second combat loop, crisp transients, seamless loop.
+```
+* **Custom Lyrics / Metatag Script (Colar no Suno)**:
+```text
+[Intro: Steady rain pattering on wooden dock planks, distant harbor thunder roll]
+[Ticking brass clockwork gears and delicate glass beaker chime]
+[Blistering Harpsichord arpeggio sweep erupts at 124 BPM]
+
+[Battle Groove: Virtuosic Solo Violin and ornate Harpsichord lead over driving staccato Cello and wet wood percussion]
+[Playful Eccentric Female Whisper]
+Solve et coagula!
+[Furious classical string counterpoint capturing agile footwork across wet slippery planks]
+
+[Bridge: Glass retort bubbling, dripping rain, rapid harpsichord ostinato building volatile pressure]
+[Sudden sharp violin snap and ticking gear acceleration]
+
+[Climax: Explosive baroque frenzy, lightning crash, soaring high-register violin flourishes and dramatic minor cadenza]
+[Distant thunder swell over rainy harbor canal]
+
+[Outro: Seamless Loop Tail, ticking clockwork and rain on harbor water]
+[End]
+```
+
+#### 📜 Descrição Conceitual (Português):
+* **Foco Rítmico**: Pulso barroco de alta energia (124 BPM) impulsionado por violoncelos em staccato, engrenagens mecânicas e percussão de madeira molhada sob tempestade.
+* **Arranjo Melódico**: Cravo holandês ágil duelando com violino clássico e sutis acentos de flauta Shakuhachi, transmitindo o entusiasmo inquieto da ciência alquímica de Hendrika em Nagasaki.
 
 ---
 

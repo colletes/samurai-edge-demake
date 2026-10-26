@@ -60,6 +60,32 @@ class SoundManager:
             # Fallback seguro para ambientes sem hardware de som
             self.is_audio_available = False
 
+    def ensure_mixer_ready(self) -> bool:
+        """
+        Garante que o pygame.mixer está ativo e funcional.
+        Recupera-se automaticamente de desconexões, trocas de dispositivo CoreAudio
+        ou hotplugging de controles (ex: PS5 DualSense com saída de áudio).
+        """
+        try:
+            if not pygame.mixer.get_init():
+                self._init_mixer()
+            return pygame.mixer.get_init() is not None
+        except Exception:
+            self.is_audio_available = False
+            return False
+
+    def is_music_busy(self) -> bool:
+        """
+        Verifica com segurança se há música tocando sem lançar exceções se o mixer
+        tiver sido reinicializado ou desconectado.
+        """
+        if not self.ensure_mixer_ready():
+            return False
+        try:
+            return bool(pygame.mixer.music.get_busy())
+        except Exception:
+            return False
+
     def _build_pitch_variants(self, sound: pygame.mixer.Sound) -> list[pygame.mixer.Sound]:
         """Gera 3 variações de afinação (0.94x grave, 1.00x original, 1.06x agudo) para prevenir monotonia robótica."""
         variants = [sound]
@@ -217,12 +243,12 @@ class SoundManager:
         Se `force_restart=False` e a mesma faixa já estiver tocando, mantém o loop contínuo sem reiniciar entre rounds.
         Quando `force_restart=True` (ex.: início de nova luta ou revanche), aplica leve fade-out e reinicia a faixa com fade-in.
         """
-        if not self.is_audio_available:
+        if not self.ensure_mixer_ready():
             return
 
         track_key = track.value if isinstance(track, MusicTrack) else str(track)
         if not force_restart:
-            if self.current_music_track == track_key and pygame.mixer.music.get_busy():
+            if self.current_music_track == track_key and self.is_music_busy():
                 return
             if self._pending_music and self._pending_music[0] == track_key:
                 return
@@ -231,7 +257,7 @@ class SoundManager:
         self._pending_music_timer = 0.0
         self._pending_music_deadline = 0
 
-        if pygame.mixer.music.get_busy() and fade_ms > 0:
+        if self.is_music_busy() and fade_ms > 0:
             fadeout_dur = min(350, fade_ms // 2)
             try:
                 pygame.mixer.music.fadeout(fadeout_dur)
@@ -252,7 +278,7 @@ class SoundManager:
         Aplica um fadeout rápido na música atual do cenário e inicia a música de morte
         (bgm_death) logo em seguida, sem fade-in.
         """
-        if not self.is_audio_available:
+        if not self.ensure_mixer_ready():
             return
 
         # Se já estiver tocando a música de morte ou pendente, não reiniciar
@@ -260,7 +286,7 @@ class SoundManager:
             return
 
         # Fadeout rápido na música atual se estiver tocando
-        if pygame.mixer.music.get_busy():
+        if self.is_music_busy():
             try:
                 pygame.mixer.music.fadeout(fadeout_ms)
             except Exception:
@@ -279,7 +305,7 @@ class SoundManager:
 
     def update(self, dt: float = 0.0):
         """Atualiza temporizadores de transição suave/agendada de música."""
-        if not self.is_audio_available or not self._pending_music:
+        if not self.ensure_mixer_ready() or not self._pending_music:
             return
 
         should_trigger = False
@@ -296,14 +322,17 @@ class SoundManager:
             self._pending_music = None
             self._pending_music_timer = 0.0
             self._pending_music_deadline = 0
-            self._play_music_file(track_key, loops=loops, fade_in_ms=fade_in_ms)
+            try:
+                self._play_music_file(track_key, loops=loops, fade_in_ms=fade_in_ms)
+            except Exception:
+                pass
 
     def stop_music(self, fade_ms: int = 500):
         """Para a música com fadeout suave."""
         self._pending_music = None
         self._pending_music_timer = 0.0
         self._pending_music_deadline = 0
-        if not self.is_audio_available:
+        if not self.ensure_mixer_ready():
             return
         try:
             pygame.mixer.music.fadeout(fade_ms)

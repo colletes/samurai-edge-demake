@@ -12,13 +12,13 @@ from src.config import (
     COLOR_SAITOU_LIGHT_BLUE, COLOR_PURPLE_AURA, COLOR_PIRATE_AURA,
     COLOR_MUSKETEER_AURA, COLOR_REN_AURA, COLOR_CHIYO_AURA, COLOR_BENKEI_AURA, COLOR_ORIN_AURA,
     COLOR_GORO_AURA, COLOR_ICHI_AURA, COLOR_VALERIUS_AURA, COLOR_SEIMEI_AURA, COLOR_BOSS_AURA,
-    COLOR_DAIKI_AURA, COLOR_AOI_AURA,
+    COLOR_DAIKI_AURA, COLOR_AOI_AURA, COLOR_RAIDEN_AURA, COLOR_HENDRIKA_AURA,
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA,
     CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE, CHAR_SAITOU, CHAR_RIFLE,
     CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
     CHAR_REN, CHAR_CHIYO, CHAR_BENKEI, CHAR_ORIN,
     CHAR_GORO, CHAR_ICHI, CHAR_VALERIUS, CHAR_SEIMEI,
-    CHAR_DAIKI, CHAR_AOI, CHAR_BOSS
+    CHAR_DAIKI, CHAR_AOI, CHAR_RAIDEN, CHAR_HENDRIKA, CHAR_BOSS
 )
 from src.isometric.iso_math import world_to_iso
 from src.entities.voxel_models import render_voxel_humanoid, render_voxel_doberman
@@ -1144,52 +1144,64 @@ FIGHTERS_GUIDE_DATA = [
         "char_type": "seimei",
         "pt": {
             "name": "SEIMEI",
-            "title": "A Onmyoji dos Talismãs",
-            "style": "Onmyōdō Heian & Ofuda Cortante",
+            "title": "A Onmyoji dos 6 Elementos",
+            "style": "Rondel Onmyōdō Gogyō & Oráculo Sagrado",
             "vel": "[4/5] Movimento Fluido",
-            "dano": "Ofuda Cortante (1 HP / Projétil Rápido)",
-            "especial": "Selo Sagrado de Purificação (Pilar Espiritual)",
-            "keys_p1": "[E] Ofuda | [R] Selo Sagrado",
-            "keys_p2": "[U] Ofuda | [I] Selo Sagrado",
+            "dano": "12 Feitiços Elementais (1 a 2 HP / Efeitos Únicos)",
+            "especial": "Rondel dos 6 Elementos (Madeira, Fogo, Terra, Metal, Água, Yin-Yang)",
+            "keys_p1": "[E] Feitiço Primário | [R] Rito Secundário",
+            "keys_p2": "[U] Feitiço Primário | [I] Rito Secundário",
             "conceito": (
-                "Mestra espiritual descendente da corte Heian. Manipula os fluxos de yin e yang com encantamentos sagrados, "
-                "lançando talismãs cortantes e erguendo pilares místicos de luz repelente."
+                "Suprema mestra Onmyōji descendente da corte imperial Heian. Manipula o Rondel Gogyō de adivinhação oracular, "
+                "que avança continuamente entre os 5 elementos ancestrais e o estado supremo de Yin-Yang a cada feitiço desferido."
             ),
             "habilidades": (
-                "• Ofuda Cortante [E]: Disparo rápido de talismãs encantados em linha reta com rastro espiritual dourado.\n"
-                "• Selo Sagrado [R]: Posiciona um talismã no solo que detona em pilar de fogo espiritual ao contato ou reativação, repelindo o rival."
+                "• Rondel Onmyōdō: Mostrador texturizado no rodapé que avança no ciclo horário a cada ação (Madeira -> Fogo -> Terra -> Metal -> Água -> Yin-Yang).\n"
+                "• 12 Feitiços Elementais:\n"
+                "  - Madeira (木): Primário Kusabi-Bari (enraizamento 0.8s) | Secundário Shinju no Ibuki (muralha de raízes e espinhos).\n"
+                "  - Fogo (火): Primário Guren no Ofuda (lótus incandescente explosiva) | Secundário Hi-bashira (pilar de fogo eruptivo).\n"
+                "  - Terra (土): Primário Ganseki-dan (rocha sísmica com knockback) | Secundário Doryū-heki (megalito com 2 HP de cobertura).\n"
+                "  - Metal (金): Primário Hagane no Yaiba (lâmina de prata a 26 m/s que quebra guarda) | Secundário Kongō-jin (escudo com sino Kagura de contra-stun).\n"
+                "  - Água (水): Primário Suiryū no Ya (torrente ricocheteante com lentidão) | Secundário Kagami-Mizu (espelho d'água que reflete projéteis).\n"
+                "  - Yin-Yang (☯): Primário Senkō / Kurayami (orbes espirais duplas teleguiadas) | Secundário Tenmei no Senkoku (oráculo de estase cósmica)."
             ),
             "estrategia_ofensiva": (
-                "• Controle as linhas retas da arena com rajadas precisas de Ofuda.\n"
-                "• Posicione o Selo Sagrado para limitar a movimentação do rival e bloquear rotas de fuga."
+                "• Domine a sequência generativa do Rondel para encadear controle (Madeira/Terra) e dano explosivo (Fogo/Metal/Yin-Yang).\n"
+                "• Use o indicador do rodapé para antecipar o próximo elemento e ditar o ritmo da luta."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Seimei: Não permaneça em linha reta contra os disparos de Ofuda. Use aproximações diagonais e evite pisar no selo sagrado plantado."
+                "• Como vencer Seimei: Observe a cor da aura e o Rondel no rodapé para saber qual feitiço ela possui. Esquive de lado nas agulhas de Madeira e não ataque de frente durante o elemento Metal."
             )
         },
         "en": {
             "name": "SEIMEI",
-            "title": "The Talisman Onmyoji",
-            "style": "Heian Onmyōdō & Slashing Ofuda",
+            "title": "The Onmyoji of the Six Elements",
+            "style": "Onmyōdō Gogyō Rondel & Celestial Oracle",
             "vel": "[4/5] Fluid Motion",
-            "dano": "Slashing Ofuda (1 HP / Rapid Projectile)",
-            "especial": "Purification Seal Pillar (Spiritual Repel)",
-            "keys_p1": "[E] Ofuda | [R] Sacred Seal",
-            "keys_p2": "[U] Ofuda | [I] Sacred Seal",
+            "dano": "12 Elemental Spells (1 to 2 HP / Unique Spellcraft)",
+            "especial": "Six-Element Rondel (Wood, Fire, Earth, Metal, Water, Yin-Yang)",
+            "keys_p1": "[E] Primary Spell | [R] Secondary Rite",
+            "keys_p2": "[U] Primary Spell | [I] Secondary Rite",
             "conceito": (
-                "Master onmyoji spiritualist preserving ancient Heian traditions in the Bakumatsu era. Directs spiritual energy "
-                "through enchanted ofuda paper charms and celestial boundary seals."
+                "Supreme onmyoji spiritualist preserving ancient Heian cosmology. Wields the Gogyō divination Rondel at the bottom of the screen, "
+                "which continuously rotates through the 5 elemental phases plus divine Yin-Yang with every spell cast."
             ),
             "habilidades": (
-                "• Slashing Ofuda [E]: Rapid paper charm blade thrown forward along a gleaming spiritual line.\n"
-                "• Sacred Seal [R]: Places a ground talisman that erupts into a columnar pillar of spiritual flame, pushing foes back."
+                "• Onmyōdō Rondel: Rotating dial on the bottom HUD advancing clockwise on every action (Wood -> Fire -> Earth -> Metal -> Water -> Yin-Yang).\n"
+                "• 12 Unique Spells:\n"
+                "  - Wood (木): Primary Kusabi-Bari (0.8s root) | Secondary Shinju no Ibuki (sprouting briar root barrier).\n"
+                "  - Fire (火): Primary Guren no Ofuda (lotus explosion) | Secondary Hi-bashira (erupting pillar of flame).\n"
+                "  - Earth (土): Primary Ganseki-dan (heavy seismic rock with knockback) | Secondary Doryū-heki (2-hit solid megalith cover).\n"
+                "  - Metal (金): Primary Hagane no Yaiba (26 m/s silver blade piercing parry) | Secondary Kongō-jin (adamantine Kagura counter-stun shield).\n"
+                "  - Water (水): Primary Suiryū no Ya (bouncing spiral torrent with slow) | Secondary Kagami-Mizu (reflective water mirror dome).\n"
+                "  - Yin-Yang (☯): Primary Senkō / Kurayami (twin homing light/void spiral) | Secondary Tenmei no Senkoku (celestial stasis oracle diagram)."
             ),
             "estrategia_ofensiva": (
-                "• Dominate mid-range spacing with relentless talisman pressure.\n"
-                "• Plant purification seals to deny opponent approach lanes and set up corner traps."
+                "• Master the predictable generative cycle to plan combo chains and space denial.\n"
+                "• Track the dial indicator to adapt instantly between ranged bolts and protective boundaries."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Seimei: Close the gap with evasive rolls to bypass paper projectiles; avoid stepping onto active ground seals."
+                "• How to defeat Seimei: Watch her foot aura and bottom Rondel to read her active element. Dodge laterally against Wood needles and avoid striking into Metal's adamantine counter-guard."
             )
         }
     },
@@ -1301,6 +1313,119 @@ FIGHTERS_GUIDE_DATA = [
             ),
             "estrategia_defensiva": (
                 "• How to defeat Aoi: Keep your eyes on the ground to avoid iron bear traps. Use diagonal dashes to bypass linear thrusts and engage at close quarters."
+            )
+        }
+    },
+    {
+        "id": CHAR_RAIDEN,
+        "color": COLOR_RAIDEN_AURA,
+        "char_type": "raiden",
+        "pt": {
+            "name": "RAIDEN",
+            "title": "O Yokozuna dos Trovões",
+            "style": "Sumô Imperial, Tsuppari Rush & Tachiai Tackle",
+            "vel": "[2/5] Colossal e Inabalável (3 HP)",
+            "dano": "Palmas Pesadas e Tackle Devastador (1 a 2 HP)",
+            "especial": "Hiperarmadura no Avanço & Pushback Massivo",
+            "keys_p1": "[E] Tsuppari Rush | [R] Tachiai Tackle",
+            "keys_p2": "[U] Tsuppari Rush | [I] Tachiai Tackle",
+            "conceito": (
+                "Grande campeão Yokozuna do Bakumatsu. Um colosso de força pura e disciplina ritual inabalável, "
+                "que usa seus 3 HP e hiperarmadura para avançar sem recuar contra projéteis leves, "
+                "empurrando e arremessando adversários para fora do ringue e contra os abismos da arena."
+            ),
+            "habilidades": (
+                "• Tsuppari Rush [E]: Rajada rítmica de palmas pesadas com avanço contínuo, hiperarmadura e pushback progressivo massivo.\n"
+                "• Tachiai Tackle [R]: Investida de ombro semiteleguiada em alta velocidade causando 1 de dano e arremessando o oponente longe com impacto esmagador."
+            ),
+            "estrategia_ofensiva": (
+                "• Use a hiperarmadura do Tsuppari para avançar através de shurikens e kunais, empurrando o rival até os limites da arena.\n"
+                "• Empregue o Tachiai Tackle para fechar distância rapidamente e jogar o adversário em fossos e abismos."
+            ),
+            "estrategia_defensiva": (
+                "• Como vencer Raiden: Não tente disputar trocas de golpes frontais diretas contra seu Tsuppari. Mantenha distância e use esquivas laterais para contra-atacar seus flancos após a investida."
+            )
+        },
+        "en": {
+            "name": "RAIDEN",
+            "title": "The Thunder Yokozuna",
+            "style": "Imperial Sumo, Tsuppari Rush & Tachiai Tackle",
+            "vel": "[2/5] Colossal & Unyielding (3 HP)",
+            "dano": "Heavy Palms & Devastating Tackle (1-2 HP)",
+            "especial": "Super Armor Advance & Massive Pushback",
+            "keys_p1": "[E] Tsuppari Rush | [R] Tachiai Tackle",
+            "keys_p2": "[U] Tsuppari Rush | [I] Tachiai Tackle",
+            "conceito": (
+                "Legendary Yokozuna champion of the Bakumatsu era. A colossal titan of raw power and ritual discipline, "
+                "utilizing 3 HP and advance super armor to ignore light projectiles while shoving rivals into pits and ring borders."
+            ),
+            "habilidades": (
+                "• Tsuppari Rush [E]: Rhythmic open-palm thrust barrage with forward momentum, super armor, and massive progressive pushback.\n"
+                "• Tachiai Tackle [R]: Semi-homing high-speed shoulder tackle dealing 1 damage and blasting the rival far away on impact."
+            ),
+            "estrategia_ofensiva": (
+                "• Exploit advance poise against light kunai and shuriken to push opponents toward stage hazards.\n"
+                "• Use Tachiai Tackle to quickly punish whiffed recoveries and send foes flying into open water pits."
+            ),
+            "estrategia_defensiva": (
+                "• How to defeat Raiden: Never trade blows head-on against his armored palm charges. Circle around with agile dashes and strike his flanks during tackle recovery."
+            )
+        }
+    },
+    {
+        "id": CHAR_HENDRIKA,
+        "color": COLOR_HENDRIKA_AURA,
+        "char_type": "hendrika",
+        "pt": {
+            "name": "HENDRIKA",
+            "title": "A Alquimista de Dejima",
+            "style": "Alquimia Holandesa, Estilete Corrosivo & 5 Reagentes",
+            "vel": "[4/5] Rápida e Imprevisível (2 HP)",
+            "dano": "Estocadas Ácidas & Poças Químicas (1 a 2 HP)",
+            "especial": "5 Frascos Reagentes c/ Potencialização de Cenário (Tier 1 & Tier 2)",
+            "keys_p1": "[E] Estilete Ácido | [R] Frasco Alquímico",
+            "keys_p2": "[U] Estilete Ácido | [I] Frasco Alquímico",
+            "conceito": (
+                "Cientista holandesa excêntrica e genial da feitoria de Dejima em Nagasaki. "
+                "Combina a rapidez cirúrgica de um estilete cáustico com o arremesso de frascos químicos "
+                "de 5 compostos distintos, potencializados ao coletar reagentes de bancadas e barris do cenário."
+            ),
+            "habilidades": (
+                "• Estilete Corrosivo [E]: Estocada rápida perfurante banhada em ácido que erode e quebra posturas de defesa.\n"
+                "• Frasco Alquímico [R]: Arremessa em arco 3D frascos de Ácido (Verde), Fogo Grego (Laranja), Éter (Roxo), Salitre (Ciano) e Miasma (Amarelo), criando poças e nuvens persistentes."
+            ),
+            "estrategia_ofensiva": (
+                "• Intercale estocadas de estilete com o arremesso de frascos para controlar rotas e negar espaço ao rival.\n"
+                "• Aproxime-se de bancadas e barris do cenário para potencializar seus compostos ao Tier 2 com raio e dano ampliados."
+            ),
+            "estrategia_defensiva": (
+                "• Como vencer Hendrika: Evite permanecer dentro das poças ácidas e névoas congelantes no solo. Use armas pesadas de longo alcance para golpeá-la antes que ela estabeleça controle de área."
+            )
+        },
+        "en": {
+            "name": "HENDRIKA",
+            "title": "The Dejima Alchemist",
+            "style": "Dutch Alchemy, Corrosive Stiletto & 5 Reagents",
+            "vel": "[4/5] Fast & Unpredictable (2 HP)",
+            "dano": "Acid Punctures & Chemical Pools (1-2 HP)",
+            "especial": "5 Reagent Flasks w/ Arena Upgrades (Tier 1 & Tier 2)",
+            "keys_p1": "[E] Acid Stiletto | [R] Alchemical Flask",
+            "keys_p2": "[U] Acid Stiletto | [I] Alchemical Flask",
+            "conceito": (
+                "Brilliant and eccentric Dutch scholar at the VOC Dejima factory in Nagasaki. "
+                "Blends swift corrosive stiletto strikes with arcing chemical flasks across 5 distinct compounds, "
+                "upgraded to Tier 2 by scavenging nearby laboratory workbenches and reagent barrels."
+            ),
+            "habilidades": (
+                "• Corrosive Stiletto [E]: Quick piercing dagger thrust coated in acid that erodes guards and counters.\n"
+                "• Alchemical Flask [R]: Hurls an arcing vial of Acid (Green), Greek Fire (Orange), Ether (Purple), Frost (Cyan), or Miasma (Yellow), generating lingering area-denial hazard pools."
+            ),
+            "estrategia_ofensiva": (
+                "• Mix stiletto thrusts with area flasks to trap foes between corrosive pools and water pits.\n"
+                "• Move near chemical barrels or workbenches to boost concoctions to Tier 2 with enhanced radius and potency."
+            ),
+            "estrategia_defensiva": (
+                "• How to defeat Hendrika: Steer clear of glowing ground pools and freezing vapor mists. Utilize extended-reach weapons to strike outside her short stiletto range."
             )
         }
     },

@@ -22,6 +22,27 @@ from src.entities.projectile import OfudaProjectile, TalismanWard
 from src.effects.particles import SparkParticle, SmokeParticle, FloatingBanner
 
 
+ELEMENTS = ["wood", "fire", "earth", "metal", "water", "yinyang"]
+
+ELEMENT_SPELL_NAMES = {
+    "wood": ("Kusabi-Bari", "Shinju no Ibuki"),
+    "fire": ("Guren no Ofuda", "Hi-bashira"),
+    "earth": ("Ganseki-dan", "Doryū-heki"),
+    "metal": ("Hagane no Yaiba", "Kongō-jin"),
+    "water": ("Suiryū no Ya", "Kagami-Mizu"),
+    "yinyang": ("Senkō / Kurayami", "Tenmei no Senkoku"),
+}
+
+ELEMENT_COLORS = {
+    "wood": (45, 215, 120),
+    "fire": (255, 75, 45),
+    "earth": (235, 185, 65),
+    "metal": (245, 248, 255),
+    "water": (65, 175, 255),
+    "yinyang": (225, 160, 255),
+}
+
+
 class SeimeiOnmyoji(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Seimei")
@@ -31,12 +52,13 @@ class SeimeiOnmyoji(Samurai):
         self.hp = 2
         self.can_parry = True
 
-        # Ataque Primário: Ofuda Cortante
-        self.ofuda_cooldown = 0.45
+        # Rondel Onmyōdō de 6 Elementos
+        self.rondel_index = 0
+        self.ofuda_cooldown = 0.65  # Ritmo universal balanceado
         self.ofuda_timer = 0.0
 
-        # Ação Secundária: Selo Sagrado (Talisman Ward)
-        self.ward_cooldown = 4.0
+        # Ação Secundária: Ritos e Barreiras Kekkai
+        self.ward_cooldown = 0.95  # Ritmo universal fluido
         self.ward_timer = 0.0
         self.active_wards: list[TalismanWard] = []
 
@@ -47,6 +69,19 @@ class SeimeiOnmyoji(Samurai):
         self.roll_recovery_duration = 0.16
         self.roll_cooldown_duration = 0.36
         self.recovery_duration = 0.18
+
+    @property
+    def current_element(self) -> str:
+        return ELEMENTS[self.rondel_index % len(ELEMENTS)]
+
+    def advance_rondel(self, banners: list = None):
+        """Avança o Rondel 60° no sentido horário pelo Ciclo Generativo Onmyodo."""
+        self.rondel_index = (self.rondel_index + 1) % len(ELEMENTS)
+        el = self.current_element
+        p_name, s_name = ELEMENT_SPELL_NAMES[el]
+        col = ELEMENT_COLORS[el]
+        if banners is not None:
+            banners.append(FloatingBanner(f"[{el.upper()}] {p_name} / {s_name}", self.wx, self.wy, wz=1.9, color=col, duration=0.85))
 
     def trigger_parry(self) -> bool:
         """Apara golpes canalizando a barreira Onmyodo com as mangas largas de seda sagrada."""
@@ -59,20 +94,20 @@ class SeimeiOnmyoji(Samurai):
     def can_act(self) -> bool:
         return (
             self.is_alive
-            and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY)
+            and self.state in (STATE_IDLE, STATE_WALK)
             and self.roll_recovery_timer <= 0
             and self.dash_recovery_timer <= 0
         )
 
-    def trigger_ofuda_toss(self, aim_x: float, aim_y: float, projectiles: list, particles: list = None) -> bool:
-        """Ataque Primário: Dispara um talismã cortante veloz com kanji sagrado."""
+    def trigger_ofuda_toss(self, aim_x: float, aim_y: float, projectiles: list, particles: list = None, banners: list = None) -> bool:
+        """Ataque Primário: Dispara o feitiço elemental do elemento ativo no Rondel e avança o ciclo."""
         if not self.can_act() or self.ofuda_timer > 0 or projectiles is None:
             return False
 
         self.set_facing(aim_x, aim_y)
         self.ofuda_timer = self.ofuda_cooldown
         self.state = STATE_ATTACK
-        self.state_timer = 0.14
+        self.state_timer = 0.24  # Tempo de conjuração para permitir reação defensiva da IA
 
         dx = aim_x - self.wx
         dy = aim_y - self.wy
@@ -86,33 +121,48 @@ class SeimeiOnmyoji(Samurai):
         spawn_x = self.wx + dir_x * 0.45
         spawn_y = self.wy + dir_y * 0.45
 
+        el = self.current_element
+        p_name = ELEMENT_SPELL_NAMES[el][0]
+        col = ELEMENT_COLORS[el]
+
         ofuda = OfudaProjectile(
             spawn_x, spawn_y,
             wz=0.45,
             dir_x=dir_x,
             dir_y=dir_y,
             owner=self,
-            max_range=6.2
+            max_range=6.2,
+            element=el
         )
         projectiles.append(ofuda)
 
+        if banners is not None:
+            banners.append(FloatingBanner(f"{p_name}!", self.wx, self.wy, wz=1.75, color=col, duration=0.75))
+
         if particles is not None:
-            for _ in range(8):
+            for _ in range(10):
                 particles.append(SparkParticle(
                     spawn_x, spawn_y, 0.45,
-                    color=random.choice([(140, 205, 255), (255, 245, 160)])
+                    color=col
                 ))
+
+        # Avança o Rondel para o próximo elemento!
+        self.advance_rondel()
         return True
 
     def trigger_sacred_ward(self, aim_x: float = None, aim_y: float = None, projectiles: list = None, particles: list = None, banners: list = None, game_map = None) -> bool:
-        """Ação Secundária: Posiciona no chão um Selo Sagrado de purificação à frente de Seimei."""
+        """Ação Secundária: Conjura o Rito / Barreira Kekkai do elemento ativo no Rondel e avança o ciclo."""
         if not self.can_act() or self.ward_timer > 0 or projectiles is None:
             return False
 
         if aim_x is not None and aim_y is not None:
             self.set_facing(aim_x, aim_y)
 
-        # A barreira é posicionada de forma consistente exatamente à frente de Seimei (1.35m)
+        el = self.current_element
+        s_name = ELEMENT_SPELL_NAMES[el][1]
+        col = ELEMENT_COLORS[el]
+
+        # Posicionamento da barreira à frente de Seimei (1.35m)
         ward_x = self.wx + self.facing_x * 1.35
         ward_y = self.wy + self.facing_y * 1.35
 
@@ -128,27 +178,30 @@ class SeimeiOnmyoji(Samurai):
             oldest = self.active_wards.pop(0)
             oldest.detonate()
 
-        ward = TalismanWard(ward_x, ward_y, owner=self, duration=5.5)
+        ward = TalismanWard(ward_x, ward_y, owner=self, duration=5.5, element=el)
         self.active_wards.append(ward)
         projectiles.append(ward)
 
         self.ward_timer = self.ward_cooldown
         self.state = STATE_RECOVERY
-        self.state_timer = 0.15
+        self.state_timer = 0.22
 
         if banners is not None:
-            banners.append(FloatingBanner("SACRED WARD!", ward_x, ward_y, wz=1.6, color=(80, 190, 255)))
+            banners.append(FloatingBanner(f"{s_name}!", ward_x, ward_y, wz=1.65, color=col, duration=0.80))
 
         if particles is not None:
-            for _ in range(12):
+            for _ in range(14):
                 ang = random.uniform(0, math.pi * 2)
                 r = random.uniform(0.1, 1.2)
                 particles.append(SparkParticle(
                     ward_x + math.cos(ang) * r,
                     ward_y + math.sin(ang) * r,
                     0.10,
-                    color=(160, 220, 255)
+                    color=col
                 ))
+
+        # Avança o Rondel para o próximo elemento!
+        self.advance_rondel()
         return True
 
     def trigger_shikigami_glide(self, dwx: float, dwy: float, particles: list = None):
@@ -217,6 +270,21 @@ class SeimeiOnmyoji(Samurai):
         if self.state in ("DEFEND", "PARRY") or getattr(self, "is_parrying", False):
             extra = {"pose": "astral_guard"}
 
+        # Aura Elemental Dinâmica no Solo sob os pés de Seimei
+        if self.is_alive:
+            el = self.current_element
+            col = ELEMENT_COLORS.get(el, (225, 160, 255))
+            sx, sy = camera.apply(self.wx, self.wy, 0.0)
+            r_px = int(24 * camera.zoom)
+            t = pygame.time.get_ticks() * 0.005
+            p_pulse = int(90 + math.sin(t * 3.0) * 35)
+
+            # Anel místico pulsante no piso
+            aura_surf = pygame.Surface((r_px * 2 + 8, r_px + 8), pygame.SRCALPHA)
+            pygame.draw.ellipse(aura_surf, (*col, p_pulse), (4, 4, r_px * 2, r_px), 2)
+            pygame.draw.ellipse(aura_surf, (*col, p_pulse // 3), (4 + r_px // 2, 4 + r_px // 4, r_px, r_px // 2), 1)
+            surface.blit(aura_surf, (sx - r_px - 4, sy - r_px // 2 - 4))
+
         render_voxel_humanoid(
             surface=surface,
             camera=camera,
@@ -234,3 +302,11 @@ class SeimeiOnmyoji(Samurai):
             is_moving=getattr(self, "is_moving", False),
             extra_props=extra
         )
+
+        # Partículas elementais sutis flutuando na mão / leque
+        if self.is_alive and random.random() < 0.25:
+            from src.effects.particles import SparkParticle
+            hand_wx = self.wx + self.facing_x * 0.25
+            hand_wy = self.wy + self.facing_y * 0.25
+            hx, hy = camera.apply(hand_wx, hand_wy, 0.55)
+            pygame.draw.circle(surface, ELEMENT_COLORS.get(self.current_element, (255, 255, 255)), (int(hx), int(hy)), 2)

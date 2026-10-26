@@ -23,9 +23,11 @@ class YellowNinja(Samurai):
 
         # Atributos de Kunai
         self.has_kunai = True
-        self.thrust_duration = 0.14
-        self.recovery_duration = 0.15
-        self.thrust_step = 0.0
+        self.kunai_cooldown = 1.8
+        self.kunai_timer = 0.0
+        self.thrust_duration = 0.12
+        self.recovery_duration = 0.10
+        self.thrust_step = 4.5
 
         # Salto Parabólico Evasivo
         self.jump_duration = 0.48
@@ -40,12 +42,12 @@ class YellowNinja(Samurai):
         self._throw_target = (0.0, 0.0)
         self._throw_projectiles = None
 
-        # Terceira Ação: Esquiva Pesada / Padrão
-        self.is_agile_dodge = False
-        self.roll_speed = 8.5
+        # Terceira Ação: Esquiva Ágil Shinobi (i-frames limpos)
+        self.is_agile_dodge = True
+        self.roll_speed = 9.6
         self.roll_duration = 0.20
-        self.roll_recovery_duration = 0.18
-        self.roll_cooldown_duration = 0.38
+        self.roll_recovery_duration = 0.12
+        self.roll_cooldown_duration = 0.35
 
     def can_act(self) -> bool:
         return (
@@ -79,8 +81,9 @@ class YellowNinja(Samurai):
 
         self.set_facing(target_wx, target_wy)
         self.has_kunai = False
+        self.kunai_timer = self.kunai_cooldown
         self.state = STATE_RECOVERY
-        self.state_timer = 0.16
+        self.state_timer = 0.10
 
         kunai = KunaiProjectile(
             wx=self.wx + self.facing_x * 0.40,
@@ -135,12 +138,9 @@ class YellowNinja(Samurai):
 
     def trigger_thrust_attack(self, target_wx: float, target_wy: float):
         """
-        Ataque Melee: Estocada com a adaga Tanto.
-        Regra: Fica disponível EXCLUSIVAMENTE se Hanzo NÃO tiver mais a Kunai!
+        Ataque Melee: Estocada relâmpago com a adaga Tanto / ponta da Kunai.
+        Disponível como opção prioritária de curto alcance.
         """
-        if self.has_kunai:
-            return
-
         if not self.can_act():
             return
 
@@ -148,9 +148,10 @@ class YellowNinja(Samurai):
         self.state = STATE_ATTACK
         self.state_timer = self.thrust_duration
         self.hitbox_active = True
-        self.hitbox_radius = 1.05
+        self.hitbox_damage = 2
+        self.hitbox_radius = 1.25  # Raio calibrado para combate melee letal e responsivo
         self.slash_dir = (self.facing_x, self.facing_y)
-        self.hitbox_center = (self.wx + self.facing_x * 0.85, self.wy + self.facing_y * 0.85)
+        self.hitbox_center = (self.wx + self.facing_x * 1.05, self.wy + self.facing_y * 1.05)
 
     def trigger_throw_attack(self, target_wx: float, target_wy: float, projectiles: list):
         """Atalho: arremesso em pé ou midair."""
@@ -171,8 +172,13 @@ class YellowNinja(Samurai):
         ):
             return
         was_jumping = (self.state == "JUMP")
+        prev_wz = self.wz
+        if was_jumping:
+            self.wz = 0.0  # contorna checagem wz do samurai
         super().trigger_roll(dir_x, dir_y, particles)
-        self.is_midair_dash = was_jumping
+        if was_jumping:
+            self.wz = prev_wz
+            self.is_midair_dash = True
 
     def update(self, dt: float, game_map):
         """Atualiza a lógica e física do Ninja Amarelo."""
@@ -181,6 +187,11 @@ class YellowNinja(Samurai):
 
         self.update_stealth(game_map)
         self.update_dodge_timers(dt)
+
+        if not self.has_kunai:
+            self.kunai_timer -= dt
+            if self.kunai_timer <= 0:
+                self.has_kunai = True
 
         if self.jump_cooldown_timer > 0:
             self.jump_cooldown_timer -= dt

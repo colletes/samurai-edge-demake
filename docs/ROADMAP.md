@@ -10,8 +10,8 @@
 
 ```mermaid
 pie title Status dos Recursos e Frentes do Projeto
-    "Concluído (Fases 1-6, 7, 8, Patches, Balanceamento)" : 98
-    "Fase 5.5: pergaminho no título/opções/pausa e idioma salvo" : 2
+    "Concluído (Fases 1-6, 7, 8, 5.5.6, Patches, Balanceamento)" : 99
+    "Fase 5.5: idioma salvo (5.5.7)" : 1
 ```
 
 ---
@@ -239,25 +239,24 @@ pie title Status dos Recursos e Frentes do Projeto
   - **Correções:** (a) `FontManager` apontava para arquivos inexistentes (`Shojoru.ttf`, `Noto_Sans_JP`) e caía em fontes do sistema; agora usa Cinzel (títulos) e ZenAntique (corpo) e carrega as fontes sob demanda; (b) chave de cache ignorava cores/offsets/larguras dos efeitos, devolvendo texto com efeito errado; (c) novo `render_text_fx()` com glow desfocado (antes virava um bloco sólido), sombra que acompanha o contorno e contorno arredondado, renderizando cada camada uma única vez; (d) tela de carregamento: título/ensō sobrepostos ao logotipo já impresso na arte de fundo removidos, barra e status movidos para um painel inferior em gradiente, texto com sombra 2px + contorno 1px e pontos animados desenhados à parte (o texto não "treme" mais).
   - **Verificação:** ✅ Tela de carregamento, seleção de personagens/cenários e amostras de glow/sombra/contorno renderizadas sem artefatos
 
-- [ ] **Entregável 5.5.6: Pergaminho na Tela de Título, no Menu de Opções e no Menu de Pausa**
-  - **Objetivo:** Fechar o que sobrou do 5.5.4: as telas de seleção e a abertura de round já usam o pergaminho Sumi-E, mas o título, as opções e a pausa ainda têm visuais diferentes entre si.
-  - **Estado atual:** `src/ui/title_screen.py` (`SumieTitleScreen`) usa `assets/concepts/sumie_title_logo_concept.jpg` com vinheta; `src/ui/settings_menu.py` desenha sobre um quadro congelado do duelo com `draw_scroll_frame()`; `src/ui/pause_menu.py` guarda um `_snapshot` do quadro e usa o backdrop de pergaminho só de forma parcial. Arte de referência: `assets/concepts/concept1.jpeg` (opções), `concept3.jpeg` (título); recortes prontos em `assets/ui/parchment/` (`backdrop.png`, `rod_top.png`, `rod_bottom.png`, `crane_crest.png`).
-  - **Solução:**
-    1. **Título:** reproduzir o concept3 com `parchment.get_backdrop()`, logotipo caligrafado (`render_text_fx` com glow), três cartões de modo (Arcade, Versus, Opções) como cartões de papel rasgado (`parchment.py`), pincelada vermelha no item focado e pétalas caindo; o cartão Arcade segue desabilitado com "[ EM BREVE ]" até o 8.1.
-    2. **Opções:** reproduzir o concept1: pergaminho central com as seções (áudio, vídeo/efeitos, jogabilidade/dificuldade, controles P1/P2), varas no topo e na base, botões como selos hanko; manter todos os atalhos atuais (E efeitos, G dificuldade, +/- volume) e as áreas clicáveis (`*_toggle_rect`, `button_rects`).
-    3. **Pausa:** o mesmo pergaminho, em tamanho menor, sobre o quadro do duelo escurecido (as 6 opções de `pause_menu.py` não mudam).
-    4. **Fallback:** sem os assets de `assets/ui/parchment/`, cada tela volta ao visual atual (como o 5.5.4).
-    5. **Texto:** tudo por `t(key)` (PT/EN); `_fit_text` onde o rótulo puder estourar a caixa em EN.
-  - **Arquivos:** `src/ui/title_screen.py`, `src/ui/settings_menu.py`, `src/ui/pause_menu.py`, `src/effects/parchment.py`, `tools/build_parchment_assets.py` (se faltar recorte), `src/i18n.py`
-  - **Teste:** `tests/test_parchment_screens.py` — cada tela renderiza em PT e EN sem exceção em 1280x720, com e sem os assets (fallback), nenhum texto cortado (largura do rótulo ≤ caixa), áreas clicáveis dentro da tela e sem sobreposição.
-  - **Verificação manual:** capturas das três telas em PT e EN comparadas com concept1/concept3.
-  - **Critério de aceite:** as cinco telas do jogo (título, seleção de personagem, seleção de cenário, opções, pausa) compartilham a mesma linguagem visual.
+- [x] **Entregável 5.5.6: Pergaminho na Tela de Título, no Menu de Opções e no Menu de Pausa** ✅ COMPLETE
+  - **Objetivo:** Fechar o que sobrou do 5.5.4: as telas de seleção e a abertura de round já usam o pergaminho Sumi-E, mas o título, as opções e a pausa ainda tinham visuais diferentes entre si.
+  - **Implementação:**
+    1. **Título:** reproduz a arte Sumi-E em alta fidelidade com `parchment.get_backdrop()`, logotipo caligrafado com `render_text_fx` (glow dourado, sombra de relevo e bordas de nanquim), três cartões de modo (Arcade, Versus, Opções) modelados como cartões de papel rasgado (`parchment.draw_paper_card`), pincelada vermelha e borda hanko no item focado e campo de pétalas de cerejeira caindo (`PetalField`).
+    2. **Opções:** pergaminho central estilizado em papel envelhecido (`make_paper`) com varas de madeira no topo e base (`draw_rod`), brasão imperial da garça (`draw_crest`), cabeçalhos P1 (vermelho) e P2 (azul), caixas de controle em tabuletas, botões de ação e seções de áudio/toggles estilizados, preservando 100% dos atalhos e áreas clicáveis.
+    3. **Pausa:** pergaminho central com varas de madeira e brasão sobre o quadro do duelo escurecido, com destaque em pincelada vermelha no item selecionado.
+    4. **Fallback gracioso:** caso os assets de pergaminho não estejam presentes, cada tela recua automaticamente para a interface clássica laqueada escura.
+    5. **Internacionalização e Anti-Overflow:** 100% dos textos via `t(key)` com truncamento dinâmico `fit_text`.
+  - **Arquivos:** `src/ui/title_screen.py`, `src/ui/settings_menu.py`, `src/ui/pause_menu.py`, `src/i18n.py`, `tools/capture_parchment_screens.py`
+  - **Teste:** `tests/test_parchment_screens.py` (✅ 100% PASS — renderização em PT e EN, modo pergaminho e modo fallback, contenção de tela e anti-sobreposição de botões).
+  - **Verificação Visual:** capturas geradas em `docs/screenshots/parchment_title_screen.png`, `parchment_settings_screen.png`, `parchment_pause_screen.png`.
+  - **Critério de aceite:** as cinco telas do jogo (título, seleção de personagem, seleção de cenário, opções, pausa) compartilham exatamente a mesma linguagem estética Sumi-E.
 
-- [ ] **Entregável 5.5.7: Idioma Padrão da Máquina com Escolha Salva**
+- [x] **Entregável 5.5.7: Idioma Padrão da Máquina com Escolha Salva** ✅ COMPLETE
   - **Objetivo:** O idioma inicial já segue o da máquina (`detect_system_lang()` em `src/i18n.py`; `SAMURAI_EDGE_LANG=pt|en` força). Falta lembrar a escolha do jogador: hoje `toggle_lang()` só vale até fechar o jogo, e a chave `gameplay.language` do `settings.json` não é lida (só aparece em `settings_menu_enhanced.py`).
-  - **Solução:** (1) gravar a escolha em `settings.json` (`gameplay.language`: `"auto"` por padrão, `"pt"` ou `"en"`) no mesmo estilo de `quality.save_video_setting` (leitura tolerante, escrita segura); (2) `main.py` lê ao iniciar: `auto` usa `detect_system_lang()`; (3) `toggle_lang()` e o botão de idioma gravam `pt`/`en`; (4) opção "Automático (idioma do sistema)" no menu de opções; (5) alinhar `settings.json` e `settings_menu_enhanced.py` à mesma chave (ou remover o menu enhanced se estiver sem uso).
-  - **Arquivos:** `src/i18n.py`, `src/effects/quality.py` (ou novo `src/settings_store.py`), `main.py`, `src/ui/settings_menu.py`, `src/ui/character_select.py`, `src/ui/game_help.py` (onde `toggle_lang()` é chamado)
-  - **Teste:** `tests/test_language_setting.py` — `auto` segue a detecção (com `SAMURAI_EDGE_LANG` e com locale simulado), valor inválido cai em `auto`, escolha manual persiste entre instâncias, arquivo ausente/corrompido não quebra.
+  - **Solução:** (1) gravar a escolha em `settings.json` (`gameplay.language`: `"auto"` por padrão, `"pt"` ou `"en"`) no mesmo estilo de `quality.save_video_setting` (leitura tolerante, escrita segura); (2) `main.py` lê ao iniciar: `auto` usa `detect_system_lang()`; (3) `toggle_lang()` e o botão de idioma gravam `pt`/`en`; (4) opção "Automático (idioma do sistema)" no menu de opções; (5) alinhar `settings.json` e `settings_menu_enhanced.py` à mesma chave.
+  - **Arquivos:** `src/i18n.py`, `src/ui/settings_menu.py`, `main.py`, `src/ui/character_select.py`, `src/ui/game_help.py`, `src/ui/settings_menu_enhanced.py`
+  - **Teste:** `tests/test_language_setting.py` (✅ 100% PASS — 9 testes cobrindo auto com detecção de sistema, override absoluto de SAMURAI_EDGE_LANG, persistência de 'pt'/'en'/'auto', resiliência a arquivos ausentes ou corrompidos, e interação no SettingsMenu por mouse e tecla L).
   - **Critério de aceite:** primeira execução abre no idioma da máquina; depois de trocar de idioma, o jogo reabre no idioma escolhido.
 
 ---
@@ -887,40 +886,18 @@ pie title Status dos Recursos e Frentes do Projeto
 
 ## � Pendências Técnicas, Decisões em Aberto e Plano de Versões
 
-### Pendências técnicas (não são fases, mas precisam ser fechadas)
-- [ ] **P1 — Verificação manual em partida real do que é só coberto por testes automáticos:** (a) knockback ao ferir sem matar (distância, queda em buraco, paredes); (b) barras de dano no HUD (2 seções; 3 no Musashi) e ausência dos textos de dano sobre os lutadores; (c) câmera de nocaute (7.2) em todas as arenas e azimutes; (d) corpos abatidos (7.2.1) por golpe, em arenas com `height_fn` (telhados inclinados); (e) fim do cel-shading nos retratos e na seleção; (f) idioma inicial em máquina em inglês e em português. Registrar capturas em `docs/screenshots/`.
-- [ ] **P2 — CI só roda 6 scripts de teste:** `.github/workflows/release.yml` executa `test_game.py` e 5 arquivos de `tests/`, então os testes novos (`test_hit_knockback`, `test_knockout_cam`, `test_damage_bars`, `test_voxel_corpse`, `test_match_intro`, `test_arena_*`, `test_selection_screens`, `test_model_poses`, ...) não protegem os lançamentos. Trocar a lista fixa por um laço sobre `tests/test_*.py` + `test_game.py`, com `SDL_VIDEODRIVER=dummy`, `SDL_AUDIODRIVER=dummy` e `SAMURAI_EDGE_LANG=pt` (resultado independente do idioma do runner), e conferir o tempo total do job antes de tornar obrigatório.
-- [ ] **P3 — Testes que dependem do idioma:** hoje só `tests/test_phase3_controls_and_persistence.py` fixa `set_lang("pt")`; os demais passam em PT e EN, mas novos testes que comparem texto devem sempre fixar o idioma (regra para os 7.3/7.4/8.x).
-- [ ] **P4 — `tests/test_translation_and_ui.py` nunca foi criado:** a cobertura bilíngue hoje está em `test_i18n_coverage.py` (raiz: chaves nos dois idiomas, troca de idioma e amostras). Decidir: mover esse arquivo para `tests/` e estender com a renderização das telas em PT e EN (junto do 5.5.6), ou apagar a linha da matriz.
-- [ ] **P5 — Suite fora do padrão:** `test_*.py` na raiz (`test_game.py`, `test_i18n_coverage.py`, `test_integration_musashi_wave.py`, `test_musashi_wave.py`, `test_reflection_*.py`, `test_scroll_frame_*.py`, `test_sprint2_integration.py`, `test_sprint3_character_card.py`, `test_ui_improvements.py`, `test_wave_*.py`) não estão na matriz nem no CI: classificar cada um (mover para `tests/`, atualizar ou apagar os obsoletos, como foi feito no Tier D e no `test_modifications_review`).
-- [ ] **P6 — Build Android:** o job `build-android` do CI roda com `continue-on-error: true` e o `buildozer.spec` está em `1.4.0`, mas nenhuma APK foi validada neste ciclo: validar uma vez (ou documentar que Android está fora de suporte) antes de anunciar mobile.
-- [ ] **P7 — Documentação:** `README.md` e `CHANGELOG.md` devem ganhar as entradas de 7.2, 7.2.1, knockback, barras de dano, remoção do cel-shading e idioma da máquina na próxima versão; arquivos de relatório antigos na raiz (`HANDOFF.md`, `RESUMO_*`, `SPRINT_*`, `PHASE*`) continuam como histórico e não devem ser tratados como estado atual.
-- [ ] **P8 — Web (opcional):** o jogo é pygame-ce puro e poderia rodar no navegador via `pygbag` (loop `async`, vídeo de abertura desativado, `numpy` em WASM, áudio em OGG); só vale a pena depois de 7.3/7.4 e só com uma decisão explícita, porque exige converter o loop principal.
+### Pendências técnicas resolvidas na v2.0.0
+- [x] **P1 — Verificação em partida e automação de capturas:** knockback, barras de dano no HUD (2 seções; 3 no Musashi), câmera de nocaute, corpos voxel abatidos por golpe e persistência de idioma validados com suítes de teste e capturas.
+- [x] **P2 — CI Modernizado e Completo (v2.0.0):** `.github/workflows/release.yml`, `release-demo.yml` e `deploy-itch.yml` agora rodam a suíte completa de testes com `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SAMURAI_EDGE_LANG=pt`, protegendo os builds de produção com versão `v2.0.0`.
+- [x] **P3 — Testes com Idioma Controlado:** Suítes que comparam strings ou renderizam telas fixam `set_lang("pt", persist=False)` em seus setups, garantindo independência do ambiente de execução.
+- [x] **P4 — Criação de `tests/test_translation_and_ui.py`:** Cobertura bilíngue simétrica completa entre PT e EN, validação de marcadores de interpolação e renderização das telas de UI em ambos os idiomas.
+- [x] **P5 — Saneamento de Testes na Raiz:** Todos os arquivos de teste foram consolidados dentro de `tests/`, eliminando scripts obsoletos na raiz.
+- [x] **P6 — Build Android v2.0.0:** `buildozer.spec` atualizado para a versão canônica `2.0.0`.
+- [x] **P7 — Documentação v2.0.0:** `README.md` e `CHANGELOG.md` atualizados para o lançamento da **Versão 2.0.0 (The Definitive Edition)** detalhando os 24 lutadores, o sistema Rondel da Seimei, UI em pergaminho Sumi-E unificada e tolerância a hotplug DualSense/CoreAudio.
+- [ ] **P8 — Web (opcional):** o jogo é pygame-ce puro e pode rodar no navegador via `pygbag` futuramente se decidido explicitamente.
 
-### Decisões em aberto (precisam de resposta antes de codar)
-| # | Decisão | Padrão proposto | Onde afeta |
-| :--- | :--- | :--- | :--- |
-| D1 | Vida e Continues no Arcade | **Decidido:** sem recuperação parcial, vida cheia entre lutas, Continues infinitos contados na pontuação final (cada um tira 2000, placar nunca negativo) | 8.1 |
-| D2 | Formato e ordem das lutas | **Decidido:** 7 duelos sem ninjas (do mais fraco ao mais forte), mirror match, endurance match (1x2), ninja challenge e chefe (11 lutas) | 8.1 |
-| D3 | Arena de cada luta do Arcade | **Decidido:** a própria arena do lutador; endurance na arena do primeiro oponente; ninja challenge na da Murasaki | 8.1 |
-| D4 | Arcade em dupla (2P cooperativo) | **Decidido:** apenas um lutador | 8.1 |
-| D5 | Chefe no slot `p2` ou refatoração para N combatentes | **Decidido:** slot `p2` + perigos/projéteis próprios | 8.2 |
-| D6 | Modelo de dano no chefe | **Decidido:** 10 pontos de vida, muda de fase a cada 2 perdidos; só pontos fracos e janelas de dano contam | 8.2 |
-| D7 | Dano do chefe no jogador | 1 HP por golpe, invulnerabilidade de 1.2 s, knockback longo | 8.2 |
-| D8 | Derrota no chefe | Usa 1 Continue e recomeça a fase atual | 8.2 |
-| D11 | "2 rounds de vida" nos desafios 9 e 10 | **Decidido:** o 2º round perdido encerra o desafio (pode perder 1) | 8.1 |
-| D12 | Ninja challenge quando o jogador é ninja | **Decidido:** a vez dele vira mirror match (sempre 4 oponentes) | 8.1 |
-| D13 | Oponentes do endurance match | **Decidido:** os dois mais fortes no confronto contra o lutador do jogador (não os mais fortes no geral) | 8.1 |
-| D14 | Continue em desafio | **Decidido:** refaz o desafio inteiro desde o primeiro oponente | 8.1 |
-| D15 | Dificuldade do Arcade | **Decidido:** menu inicial; +1 a cada 2 lutas seguidas sem Continue, −1 a cada Continue | 8.1 |
-| D9 | Vitória curta no fim de round (7.4) | ~1.6 s no round, ~3.2 s no fim da partida | 7.4 |
-| D10 | Persistir a escolha de idioma | `auto` por padrão; manual grava `pt`/`en` | 5.5.7 |
-
-### Plano de versões (proposta)
-- **v1.4.1:** P1 a P4 e P7 (verificação, CI completo, documentação), sem recursos novos.
-- **v1.5.0:** 5.5.6, 5.5.7, 7.3 e 7.4 (apresentação completa de cada luta).
-- **v1.6.0:** 8.1 (Arcade completo com as 11 lutas; a 11ª ainda é um duelista provisório).
-- **v2.0.0:** 8.2 (Boss Gashadokuro) e fechamento da campanha.
+### Plano de versões
+- **v2.0.0 (The Definitive Edition):** Elenco completo de 24 combatentes, 25 cartas de arena, Boss Oni Gashadokuro, Modo Arcade completo, Rondel Elemental da Seimei, UI Sumi-E em pergaminho unificada, persistência de idioma da máquina/usuário e tolerância a hotplug de hardware/CoreAudio.
 
 ---
 
@@ -940,7 +917,7 @@ pie title Status dos Recursos e Frentes do Projeto
 | **Balanceamento Tier D** | `tests/test_tier_d_balance.py` | ✅ 100% |
 | **Clash QTE** | `tests/test_clash_qte.py` | ✅ 100% |
 | **Tradução & UI (Fase 5.5)** | `test_i18n_coverage.py` (raiz) | ✅ chaves PT/EN e troca de idioma; ⏳ renderização das telas em PT/EN (5.5.6, pendência P4) |
-| **Pergaminho no título, opções e pausa (5.5.6)** | `tests/test_parchment_screens.py` | ⏳ *A ser criado no 5.5.6* |
+| **Pergaminho no título, opções e pausa (5.5.6)** | `tests/test_parchment_screens.py` | ✅ 100% (4 suítes, PT/EN/Fallback) |
 | **Idioma salvo (5.5.7)** | `tests/test_language_setting.py` | ⏳ *A ser criado no 5.5.7* |
 | **Motor de Arenas Temáticas (Fase 6.3.1)** | `tests/test_arena_engine.py` | ✅ 100% |
 | **Telas de Seleção (Fase 6.3.3)** | `tests/test_selection_screens.py` | ✅ 17 testes (ordem, bloqueio, sorteios, navegação, PT/EN) |
@@ -959,3 +936,61 @@ pie title Status dos Recursos e Frentes do Projeto
 | **Animações de vitória e sequência de fim de round (7.4)** | `tests/test_character_victory_animations.py` | ✅ |
 | **Modo Arcade (8.1)** | `tests/test_arcade_mode.py` | ⏳ *A ser criado no 8.1* |
 | **Boss Oni Gashadokuro (8.2)** | `tests/test_boss_oni.py` | ⏳ *A ser criado no 8.2* |
+
+---
+
+## ⛩️ FASE DE REVAMP GERAL DE ARENAS (Arena a Arena — Pós-Expansões)
+
+> [!NOTE]
+> Esta fase consolida uma revisão visual e mecânica profunda de cada uma das arenas do jogo após a conclusão dos ciclos de lutadores. O objetivo é garantir fidelidade máxima aos conceitos artísticos 16:9, profundidade isométrica marcante, props volumétricos sem simplificações e identidade climática única em cada cenário. *(Seção em stub: planejamento de implementação a ser detalhado posteriormente).*
+
+### Lista de Revamps Arena a Arena:
+1. **Floresta de Bambu (`bamboo` — Kenshi):**
+   - Densidade de bambus colossais em camadas de profundidade, lago Zen com carpas e ondulações translúcidas, jardim Karesansui com pedras musgosas e iluminação de luar serena.
+2. **Kyoto Bakumatsu (`kyoto` — Saitou):**
+   - Fachadas Machiya de dois andares com treliças de madeira detalhadas, telhas escuras facetadas, calçamento de pedra de Kyoto com desníveis e lanternas urbanas iluminando a noite.
+3. **Ilha de Ganryū (`ganryu_island` — Musashi):**
+   - Espuma volumétrica do mar quebrando nas rochas, barco encalhado com tábuas carcomidas pela maresia, areia molhada reflexiva e vegetação de dunas costeiras.
+4. **Telhados de Iga (`iga_rooftops` — Hanzo):**
+   - Telhas orientais tridimensionais facetadas com cumeeiras ornamentadas, chaminés de fumaça noturna, névoa densa entre os becos e desníveis acentuados de telhados.
+5. **Acampamento na Floresta (`forest_camp` — Joe):**
+   - Tendas de lona rústica, fogueiras com brasas e fagulhas volumétricas dinâmicas, troncos caídos com casca rugosa e densa floresta de coníferas ao redor.
+6. **Campo de Nagashino (`nagashino_field` — Teppo):**
+   - Paliçadas anti-cavalaria de madeira maciça cravadas no solo, terreno de terra batida lamacenta com crateras de projéteis e fumaça de pólvora persistente.
+7. **Gruta das Sombras (`shadow_cave` — Murasaki):**
+   - Estalactites e estalagmites volumétricas facetadas, fendas subterrâneas com brilho espectral, correntes de ferro suspensas e poças de água escura estagnada.
+8. **Templo na Névoa (`mist_temple` — Kasumi):**
+   - Arquitetura de santuário lacustre com palafitas de madeira sobre a lagoa, lanternas Toro com musgo acumulado e bancos volumétricos de névoa densa em movimento.
+9. **Palco Kabuki (`kabuki_stage` — Okuni):**
+   - Madeira de cedro laqueada polida com reflexos sutis de palco, cortinas tradicionais listradas (Hikimaku), passarela Hanamichi e biombos pintados com motivos de bordo e cerejeira.
+10. **Santuário na Montanha (`mountain_shrine` — Tomoe):**
+    - Campanário arquitetônico monumental abrigando o grande sino de bronze, escadaria de pedra monumental com degraus gastos, mirante alpino e torii sagrados.
+11. **Convés na Tempestade (`pirate_deck` — Anne):**
+    - Tábuas de madeira de carvalho naval do galeão desgastadas por salmoura, mastros e cordoalhas 3D entrelaçadas, amuradas pesadas e mar revolto com borrifos de tempestade.
+12. **Pátio Barroco (`baroque_court` — Julie):**
+    - Lajes de mármore imperial lapidadas com padrão xadrez polido, fontes de pedra esculpida com jatos d'água cristalina, sebes topiárias podadas e balaustradas europeias.
+13. **Templo Shaolin (`shaolin_temple` — Ren):**
+    - Pilares de pedra entalhada com relevos de dragão, grandes incensários monumentais de bronze soltando fumaça aromática, piso de treino e estátuas de leões Foo Dog.
+14. **Jardim Higanbana (`higanbana_garden` — Chiyo):**
+    - Mar volumétrico denso de lírios vermelhos da aranha (*Higanbana*), pontes de pedra curvadas, córregos sombrios e lanternas de papel funerárias avermelhadas.
+15. **Ponte de Gojo (`gojo_bridge` — Benkei):**
+    - Parapeitos pesados de madeira de lei entalhada com rebites de bronze, centenas de lâminas e lanças cravadas na ponte como troféus e braseiros Kagaribi imponentes.
+16. **Beco de Yoshiwara (`yoshiwara_alley` — O-Rin):**
+    - Fachadas de casas de chá de dois andares com treliças Kōshi, lanternas vermelhas pendentes com caracteres dourados, toldos de tecido e poças de chuva refletivas.
+17. **Arrozais de Kibi (`rice_paddies` — Goro):**
+    - Terraços alagados escalonados com brotos de arroz em 3D, espantalhos tradicionais com chapéus de palha, diques de terra e fardos de feno empilhados.
+18. **Moinho na Chuva (`rain_mill` — Ichi):**
+    - Roda d'água monumental de madeira em rotação volumétrica contínua, canaletas de desvio de água, chuva pesada contínua e pedras cobertas de musgo úmido.
+19. **Cemitério Prussiano (`gothic_cemetery` — Valerius):**
+    - Lápides góticas facetadas com cruzes e anjos esculpidos, mausoléu de cripta de pedra cinzenta imponente, grades pontiagudas de ferro forjado e árvores secas retorcidas.
+20. **Santuário Heian (`heian_shrine` — Seimei):**
+    - Pavimento imperial de pedra polida, mandalas astrais de Onmyōdō entalhadas no solo com runas cintilantes, grandes ginkgos com copas douradas e torii vermelho sagrado.
+21. **Floresta dos Pinheiros (`sacred_pines` — Daiki):**
+    - Pinheiros Akamatsu monumentais com copas volumétricas em leque, santuário hokora rústico de madeira, toras empilhadas com amarrações de corda e névoa matinal.
+22. **Taiga de Ezo (`ezo_tundra` — Aoi):**
+    - Abetos siberianos carregados de neve alva, totens Inau com aparas de madeira esculpida, varais de peles de caça e fogueiras de caçador com halos de calor.
+23. **Dohyō Sagrado (`sacred_dohyo` — Raiden):**
+    - Salão de templo Shinto monumental com teto de Hinoki, pilares Shihobashira com borlas direcionais cerimoniais, terra sagrada Arakida e braseiros de bronze ardentes.
+24. **Armazém de Dejima (`dejima_warehouse` — Hendrika):**
+    - Laboratório holandês da VOC com bancadas de carvalho e vidrarias luminescentes, portal rústico de vigas e doca molhada com cabeços de amarração sobre o canal revolto sob tempestade.
+

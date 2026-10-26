@@ -76,7 +76,9 @@ class SettingsMenu:
         self.p2_controller_next_rect = pygame.Rect(0, 0, 0, 0)
         self.touch_toggle_rect = pygame.Rect(0, 0, 0, 0)
         self.difficulty_toggle_rect = pygame.Rect(0, 0, 0, 0)
+        self.language_toggle_rect = pygame.Rect(0, 0, 0, 0)
         self.quality_toggle_rect = pygame.Rect(0, 0, 0, 0)
+        self.game_boost_toggle_rect = pygame.Rect(0, 0, 0, 0)
         self.sfx_minus_rect = pygame.Rect(0, 0, 0, 0)
         self.sfx_plus_rect = pygame.Rect(0, 0, 0, 0)
         self.sfx_bar_rect = pygame.Rect(0, 0, 0, 0)
@@ -135,6 +137,26 @@ class SettingsMenu:
         SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
         self.save_settings()
 
+    def cycle_language(self):
+        """Alterna a preferência de idioma entre Auto (Sistema), Português e Inglês e salva em settings.json."""
+        from src.i18n import (
+            get_saved_language_preference, save_language_setting,
+            apply_saved_language, LANG_AUTO, LANG_PT, LANG_EN
+        )
+        from src.audio.sound_manager import SoundManager
+        from src.audio.sound_events import SoundEvent
+
+        cur = get_saved_language_preference()
+        order = [LANG_AUTO, LANG_PT, LANG_EN]
+        idx = order.index(cur) if cur in order else 0
+        next_pref = order[(idx + 1) % len(order)]
+        save_language_setting(next_pref)
+        apply_saved_language()
+        try:
+            SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+        except Exception:
+            pass
+
     def cycle_effects_quality(self):
         """Alterna a qualidade dos efeitos (alta/baixa) e grava em settings.json."""
         from src.audio.sound_manager import SoundManager
@@ -142,6 +164,16 @@ class SettingsMenu:
         from src.effects import quality
         quality.set_effects_quality(quality.LOW if quality.is_high() else quality.HIGH)
         quality.save_video_setting(quality.SETTINGS_PATH, "effects_quality", quality.get_effects_quality())
+        SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
+
+    def toggle_game_boost(self):
+        """Alterna o Modo Game Boost (alto desempenho e economia) e grava em settings.json."""
+        from src.audio.sound_manager import SoundManager
+        from src.audio.sound_events import SoundEvent
+        from src.effects import quality
+        new_state = not quality.is_game_boost_enabled()
+        quality.set_game_boost(new_state)
+        quality.save_video_setting(quality.SETTINGS_PATH, "game_boost", new_state)
         SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
 
     def toggle_invert_y(self):
@@ -425,8 +457,14 @@ class SettingsMenu:
             elif self.difficulty_toggle_rect.collidepoint(vx, vy):
                 self.cycle_ai_difficulty()
                 return True
+            elif self.language_toggle_rect.collidepoint(vx, vy):
+                self.cycle_language()
+                return True
             elif self.quality_toggle_rect.collidepoint(vx, vy):
                 self.cycle_effects_quality()
+                return True
+            elif self.game_boost_toggle_rect.collidepoint(vx, vy):
+                self.toggle_game_boost()
                 return True
             elif self.p1_controller_prev_rect.collidepoint(vx, vy):
                 self.cycle_p1_controller(-1)
@@ -472,6 +510,9 @@ class SettingsMenu:
                 return True
             elif event.key == pygame.K_g:
                 self.cycle_ai_difficulty()
+                return True
+            elif event.key == pygame.K_l:
+                self.cycle_language()
                 return True
             elif event.key == pygame.K_e:
                 self.cycle_effects_quality()
@@ -550,8 +591,14 @@ class SettingsMenu:
             elif self.difficulty_toggle_rect.collidepoint(mx, my):
                 self.cycle_ai_difficulty()
                 return True
+            elif self.language_toggle_rect.collidepoint(mx, my):
+                self.cycle_language()
+                return True
             elif self.quality_toggle_rect.collidepoint(mx, my):
                 self.cycle_effects_quality()
+                return True
+            elif self.game_boost_toggle_rect.collidepoint(mx, my):
+                self.toggle_game_boost()
                 return True
             for rect, idx in self.button_rects:
                 if rect.collidepoint(mx, my):
@@ -676,18 +723,30 @@ class SettingsMenu:
         draw_brush_divider(surface, panel_x + 40, cy, panel_x + panel_w - 40)
         cy += 18
 
-        # 3. Dificuldade da IA
+        # 3. Dificuldade da IA & Idioma
         diff_names = {"easy": t("difficulty_easy"), "normal": t("difficulty_normal"), "hard": t("difficulty_hard")}
         diff_colors = {"easy": (110, 225, 140), "normal": COLOR_GOLD, "hard": (245, 95, 85)}
         d_name = diff_names.get(self.ai_difficulty, t("difficulty_normal"))
         d_col = diff_colors.get(self.ai_difficulty, COLOR_GOLD)
 
         btn_w = 520
-        self.difficulty_toggle_rect = pygame.Rect(panel_rect.centerx - btn_w // 2, cy, btn_w, 42)
+        half_w = (btn_w - 10) // 2
+
+        self.difficulty_toggle_rect = pygame.Rect(panel_rect.centerx - btn_w // 2, cy, half_w, 42)
         pygame.draw.rect(surface, (28, 36, 32), self.difficulty_toggle_rect, border_radius=8)
         pygame.draw.rect(surface, d_col, self.difficulty_toggle_rect, 1, border_radius=8)
-        d_lbl = font_mid.render(t("ai_difficulty_label").format(d_name=d_name), True, d_col)
+        d_lbl = self._fit_text(font_small, t("ai_difficulty_label").format(d_name=d_name), d_col, half_w - 12)
         surface.blit(d_lbl, d_lbl.get_rect(center=self.difficulty_toggle_rect.center))
+
+        from src.i18n import get_saved_language_preference, LANG_AUTO, LANG_PT, LANG_EN
+        pref = get_saved_language_preference()
+        lang_str = t("lang_auto") if pref == LANG_AUTO else (t("lang_pt") if pref == LANG_PT else t("lang_en"))
+        l_col = (110, 225, 140) if pref != LANG_AUTO else COLOR_GOLD
+        self.language_toggle_rect = pygame.Rect(panel_rect.centerx - btn_w // 2 + half_w + 10, cy, half_w, 42)
+        pygame.draw.rect(surface, (28, 36, 32), self.language_toggle_rect, border_radius=8)
+        pygame.draw.rect(surface, l_col, self.language_toggle_rect, 1, border_radius=8)
+        l_lbl = self._fit_text(font_small, t("language_toggle_label").format(lang_name=lang_str), l_col, half_w - 12)
+        surface.blit(l_lbl, l_lbl.get_rect(center=self.language_toggle_rect.center))
 
         cy += 50
 
@@ -703,16 +762,27 @@ class SettingsMenu:
 
         cy += 50
 
-        # 5. Qualidade dos Efeitos
+        # 5. Qualidade dos Efeitos & Game Boost
         from src.effects import quality
         high = quality.is_high()
         q_col = (110, 225, 140) if high else (245, 190, 85)
         q_label = t("effects_quality_label").format(q_name=t("quality_high") if high else t("quality_low"))
-        self.quality_toggle_rect = pygame.Rect(panel_rect.centerx - btn_w // 2, cy, btn_w, 42)
+        half_w = (btn_w - 10) // 2
+
+        self.quality_toggle_rect = pygame.Rect(panel_rect.centerx - btn_w // 2, cy, half_w, 42)
         pygame.draw.rect(surface, (28, 36, 32), self.quality_toggle_rect, border_radius=8)
         pygame.draw.rect(surface, q_col, self.quality_toggle_rect, 1, border_radius=8)
-        q_lbl = font_mid.render(q_label, True, q_col)
+        q_lbl = self._fit_text(font_small, q_label, q_col, half_w - 12)
         surface.blit(q_lbl, q_lbl.get_rect(center=self.quality_toggle_rect.center))
+
+        boost_on = quality.is_game_boost_enabled()
+        b_col = (110, 225, 140) if boost_on else (160, 175, 168)
+        b_label = t("game_boost_label").format(status=t("status_on") if boost_on else t("status_off"))
+        self.game_boost_toggle_rect = pygame.Rect(panel_rect.centerx - btn_w // 2 + half_w + 10, cy, half_w, 42)
+        pygame.draw.rect(surface, (28, 36, 32), self.game_boost_toggle_rect, border_radius=8)
+        pygame.draw.rect(surface, b_col, self.game_boost_toggle_rect, 1, border_radius=8)
+        b_lbl = self._fit_text(font_small, b_label, b_col, half_w - 12)
+        surface.blit(b_lbl, b_lbl.get_rect(center=self.game_boost_toggle_rect.center))
 
         cy += 54
 
@@ -753,6 +823,311 @@ class SettingsMenu:
             self._render_mobile_settings(surface, font_large, font_mid, font_small)
             return
 
+        from src.effects import parchment as pm
+        parch = pm.get_backdrop() is not None
+        if parch:
+            self._render_parchment(surface, font_large, font_mid, font_small, ctrl_mgr)
+        else:
+            self._render_fallback(surface, font_large, font_mid, font_small, ctrl_mgr)
+
+    def _render_parchment(self, surface: pygame.Surface, font_large: pygame.font.Font, font_mid: pygame.font.Font, font_small: pygame.font.Font, ctrl_mgr):
+        from src.effects import parchment as pm
+        from src.ui.svg_icon_renderer import get_button_icon_surface
+        from src.audio.sound_manager import SoundManager
+        from src.effects import quality
+
+        # 1. Overlay escuro suave de fundo
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((10, 8, 6, 175))
+        surface.blit(overlay, (0, 0))
+
+        # 2. Pergaminho Central em Papel Envelhecido com Varas de Madeira
+        panel_w, panel_h = 960, 650
+        panel_x = (SCREEN_WIDTH - panel_w) // 2
+        panel_y = (SCREEN_HEIGHT - panel_h) // 2 - 10
+        panel_rect = pygame.Rect(panel_x, panel_y, panel_w, panel_h)
+
+        # Folha de papel Sumi-E
+        paper = pm.make_paper(panel_w, panel_h, seed=61, ragged=(False, False, True, True), burn=0.25)
+        surface.blit(pm._soft_shadow(paper, blur=8, opacity=130), (panel_x + 3, panel_y + 5))
+        surface.blit(paper, (panel_x, panel_y))
+
+        # Varas de madeira no topo e na base
+        pm.draw_rod(surface, "top", panel_rect.centerx, panel_rect.y - 14, panel_w + 32)
+        pm.draw_rod(surface, "bottom", panel_rect.centerx, panel_rect.bottom - 22, panel_w + 32)
+
+        # Brasão da garça no canto superior direito
+        pm.draw_crest(surface, panel_rect.right - 92, panel_rect.y + 14, scale=0.62)
+
+        # 3. Título do Menu em Nanquim
+        title_surf = pm.render_ink(font_large, t("settings_title"), pm.INK)
+        surface.blit(title_surf, (panel_rect.centerx - title_surf.get_width() // 2, panel_y + 14))
+
+        sub_surf = font_small.render(t("settings_subtitle"), True, pm.INK_SOFT)
+        surface.blit(sub_surf, (panel_rect.centerx - sub_surf.get_width() // 2, panel_y + 60))
+
+        # 4. Duas Colunas: Vermelho à Esquerda e Azul à Direita
+        col_w = 430
+        col_left_x = panel_x + 30
+        col_right_x = panel_x + panel_w - col_w - 30
+        start_y = panel_y + 118
+        row_h = 40
+
+        box_w = 210
+        box_h = 24
+        header_max_w = col_w - box_w - 14
+
+        pygame.draw.line(surface, pm.INK_SOFT, (col_left_x, start_y - 38), (col_right_x + col_w, start_y - 38), 1)
+
+        h1 = self._fit_text(font_mid, t("player_1_label"), pm.SEAL_RED, header_max_w)
+        h2 = self._fit_text(font_mid, t("player_2_label"), pm.SEAL_BLUE, header_max_w)
+        surface.blit(h1, (col_left_x + 6, start_y - 28))
+        surface.blit(h2, (col_right_x + 6, start_y - 28))
+
+        # Seletor interativo de Controle P1
+        p1_ctrl_name = ctrl_mgr.get_player_controller_name(0)
+        p1_box_x = col_left_x + col_w - box_w
+        p1_box_y = start_y - 28
+        self.p1_controller_box_rect = pygame.Rect(p1_box_x, p1_box_y, box_w, box_h)
+        self.p1_controller_prev_rect = pygame.Rect(p1_box_x, p1_box_y, 22, box_h)
+        self.p1_controller_next_rect = pygame.Rect(p1_box_x + box_w - 22, p1_box_y, 22, box_h)
+
+        pygame.draw.rect(surface, (226, 212, 185), self.p1_controller_box_rect, border_radius=4)
+        pygame.draw.rect(surface, pm.SEAL_RED, self.p1_controller_box_rect, 1, border_radius=4)
+        arrow_l = font_small.render("<", True, pm.SEAL_RED)
+        arrow_r = font_small.render(">", True, pm.SEAL_RED)
+        surface.blit(arrow_l, (p1_box_x + 6, p1_box_y + 3))
+        surface.blit(arrow_r, (p1_box_x + box_w - 14, p1_box_y + 3))
+        p1_lbl = self._fit_text(font_small, p1_ctrl_name, pm.INK, box_w - 38)
+        surface.blit(p1_lbl, (p1_box_x + (box_w - p1_lbl.get_width()) // 2, p1_box_y + 3))
+
+        # Seletor interativo de Controle P2
+        p2_ctrl_name = ctrl_mgr.get_player_controller_name(1)
+        p2_box_x = col_right_x + col_w - box_w
+        p2_box_y = start_y - 28
+        self.p2_controller_box_rect = pygame.Rect(p2_box_x, p2_box_y, box_w, box_h)
+        self.p2_controller_prev_rect = pygame.Rect(p2_box_x, p2_box_y, 22, box_h)
+        self.p2_controller_next_rect = pygame.Rect(p2_box_x + box_w - 22, p2_box_y, 22, box_h)
+
+        pygame.draw.rect(surface, (226, 212, 185), self.p2_controller_box_rect, border_radius=4)
+        pygame.draw.rect(surface, pm.SEAL_BLUE, self.p2_controller_box_rect, 1, border_radius=4)
+        arrow_l_b = font_small.render("<", True, pm.SEAL_BLUE)
+        arrow_r_b = font_small.render(">", True, pm.SEAL_BLUE)
+        surface.blit(arrow_l_b, (p2_box_x + 6, p2_box_y + 3))
+        surface.blit(arrow_r_b, (p2_box_x + box_w - 14, p2_box_y + 3))
+        p2_lbl = self._fit_text(font_small, p2_ctrl_name, pm.INK, box_w - 38)
+        surface.blit(p2_lbl, (p2_box_x + (box_w - p2_lbl.get_width()) // 2, p2_box_y + 3))
+
+        self.button_rects.clear()
+
+        for idx, (action_key, label, faction) in enumerate(self.items):
+            is_red = (faction == "red")
+
+            item_col_x = col_left_x if is_red else col_right_x
+            row_index = idx if is_red else (idx - 7)
+            cur_y = start_y + row_index * row_h
+
+            btn_rect = pygame.Rect(item_col_x, cur_y, col_w, 32)
+            self.button_rects.append((btn_rect, idx))
+
+            is_selected = (self.selected_index == idx)
+            is_waiting = (self.waiting_for_key_action == action_key)
+
+            if is_waiting:
+                stroke_c = pm.SEAL_RED if (int(self.blink_timer * 4) % 2 == 0) else (140, 40, 35)
+                pm.draw_brush_highlight(surface, btn_rect.inflate(4, 2), color=stroke_c, seed=idx + 3)
+                pm.draw_ink_border(surface, btn_rect, color=stroke_c, width=1, seed=idx + 1)
+                action_surf = self._fit_text(font_small, t("settings_action_" + action_key[3:].lower()), (252, 248, 235), 150)
+                surface.blit(action_surf, (btn_rect.x + 10, btn_rect.y + 8))
+                val_surf = self._fit_text(font_small, t("settings_press_key"), (245, 225, 170), col_w - 180)
+                surface.blit(val_surf, (btn_rect.right - val_surf.get_width() - 10, btn_rect.y + 7))
+            elif is_selected:
+                stroke_col = pm.SEAL_RED if is_red else pm.SEAL_BLUE
+                pm.draw_brush_highlight(surface, btn_rect.inflate(4, 2), color=stroke_col, seed=idx + 3, alpha=215)
+                pm.draw_ink_border(surface, btn_rect, color=stroke_col, width=1, seed=idx + 1)
+                action_surf = self._fit_text(font_small, t("settings_action_" + action_key[3:].lower()), (252, 248, 235), 150)
+                surface.blit(action_surf, (btn_rect.x + 10, btn_rect.y + 8))
+            else:
+                pygame.draw.rect(surface, (218, 202, 172), btn_rect, border_radius=4)
+                pygame.draw.rect(surface, (168, 150, 128), btn_rect, 1, border_radius=4)
+                action_surf = self._fit_text(font_small, t("settings_action_" + action_key[3:].lower()), pm.INK, 150)
+                surface.blit(action_surf, (btn_rect.x + 10, btn_rect.y + 8))
+
+            if not is_waiting:
+                key_code = self.controls.get(action_key, pygame.K_UNKNOWN)
+                key_str = format_key_name(key_code)
+
+                p_idx = 0 if is_red else 1
+                ctrl = ctrl_mgr.get_controller_for_player(p_idx)
+                act_suffix = "attack" if "ATTACK" in action_key else (
+                    "dash" if "DASH" in action_key else (
+                        "secondary" if ("SECONDARY" in action_key or "PARRY" in action_key) else None
+                    )
+                )
+
+                svg_icon_name = None
+                btn_label = ""
+
+                if ctrl:
+                    if action_key.endswith(("_UP", "_DOWN", "_LEFT", "_RIGHT")):
+                        svg_icon_name = "dpad"
+                        btn_label = t("settings_dpad_" + action_key.rsplit("_", 1)[1].lower())
+                    elif act_suffix:
+                        if ctrl.is_playstation:
+                            svg_icon_name = ctrl.get_button_svg_icon(act_suffix)
+                        btn_label = ctrl.get_mapped_button_name(act_suffix)
+
+                key_color = (245, 225, 170) if is_selected else pm.INK_SOFT
+
+                cur_right_x = btn_rect.right - 10
+                if svg_icon_name:
+                    icon_surf = get_button_icon_surface(svg_icon_name, 18, 18)
+                    cur_right_x -= 20
+                    surface.blit(icon_surf, (cur_right_x, btn_rect.y + 7))
+
+                key_surf = self._fit_text(font_small, f"[{key_str}]", key_color, 130)
+                if btn_label:
+                    room = col_w - 180 - key_surf.get_width() - (20 if svg_icon_name else 0)
+                    label_color = (230, 240, 220) if is_selected else (60, 95, 75)
+                    label_surf = self._fit_text(font_small, f"[{btn_label}]", label_color, max(room, 40))
+                    cur_right_x -= (label_surf.get_width() + 5)
+                    surface.blit(label_surf, (cur_right_x, btn_rect.y + 7))
+
+                cur_right_x -= (key_surf.get_width() + 5)
+                surface.blit(key_surf, (cur_right_x, btn_rect.y + 7))
+
+        # 5. Painel de Volumes (SFX e BGM)
+        sound_mgr = SoundManager.get_instance()
+        audio_y = start_y + 7 * row_h + 10
+
+        pygame.draw.line(surface, pm.INK_SOFT, (col_left_x, audio_y - 6), (col_right_x + col_w, audio_y - 6), 1)
+
+        # Coluna SFX
+        sfx_pct = int(sound_mgr.sfx_volume * 100)
+        sfx_lbl = self._fit_text(font_small, t("sfx_volume_label").format(sfx_pct=sfx_pct), pm.INK, 190)
+        surface.blit(sfx_lbl, (col_left_x + 5, audio_y))
+
+        self.sfx_minus_rect = pygame.Rect(col_left_x + 200, audio_y - 2, 28, 24)
+        self.sfx_bar_rect = pygame.Rect(col_left_x + 235, audio_y + 3, 140, 14)
+        self.sfx_plus_rect = pygame.Rect(col_left_x + 382, audio_y - 2, 28, 24)
+
+        for btn_r, symb in ((self.sfx_minus_rect, "-"), (self.sfx_plus_rect, "+")):
+            pygame.draw.rect(surface, (226, 212, 185), btn_r, border_radius=4)
+            pygame.draw.rect(surface, (140, 125, 105), btn_r, 1, border_radius=4)
+            t_s = font_small.render(symb, True, pm.INK)
+            surface.blit(t_s, (btn_r.centerx - t_s.get_width() // 2, btn_r.centery - t_s.get_height() // 2))
+
+        pygame.draw.rect(surface, (195, 180, 152), self.sfx_bar_rect, border_radius=3)
+        fill_w = int(self.sfx_bar_rect.width * sound_mgr.sfx_volume)
+        if fill_w > 0:
+            fill_r = pygame.Rect(self.sfx_bar_rect.x, self.sfx_bar_rect.y, fill_w, self.sfx_bar_rect.height)
+            pygame.draw.rect(surface, (170, 125, 45), fill_r, border_radius=3)
+        pygame.draw.rect(surface, (140, 125, 105), self.sfx_bar_rect, 1, border_radius=3)
+
+        # Coluna BGM
+        bgm_pct = int(sound_mgr.bgm_volume * 100)
+        bgm_lbl = self._fit_text(font_small, t("bgm_volume_label").format(bgm_pct=bgm_pct), pm.INK, 190)
+        surface.blit(bgm_lbl, (col_right_x + 5, audio_y))
+
+        self.bgm_minus_rect = pygame.Rect(col_right_x + 200, audio_y - 2, 28, 24)
+        self.bgm_bar_rect = pygame.Rect(col_right_x + 235, audio_y + 3, 140, 14)
+        self.bgm_plus_rect = pygame.Rect(col_right_x + 382, audio_y - 2, 28, 24)
+
+        for btn_r, symb in ((self.bgm_minus_rect, "-"), (self.bgm_plus_rect, "+")):
+            pygame.draw.rect(surface, (226, 212, 185), btn_r, border_radius=4)
+            pygame.draw.rect(surface, (140, 125, 105), btn_r, 1, border_radius=4)
+            t_s = font_small.render(symb, True, pm.INK)
+            surface.blit(t_s, (btn_r.centerx - t_s.get_width() // 2, btn_r.centery - t_s.get_height() // 2))
+
+        pygame.draw.rect(surface, (195, 180, 152), self.bgm_bar_rect, border_radius=3)
+        fill_w = int(self.bgm_bar_rect.width * sound_mgr.bgm_volume)
+        if fill_w > 0:
+            fill_r = pygame.Rect(self.bgm_bar_rect.x, self.bgm_bar_rect.y, fill_w, self.bgm_bar_rect.height)
+            pygame.draw.rect(surface, (70, 125, 95), fill_r, border_radius=3)
+        pygame.draw.rect(surface, (140, 125, 105), self.bgm_bar_rect, 1, border_radius=3)
+
+        # 6. Status de Gamepads e Controles Touch
+        badge_p1 = ctrl_mgr.get_badge_text(0) or t("gamepad_not_detected_p1")
+        badge_p2 = ctrl_mgr.get_badge_text(1) or t("gamepad_not_detected_p2")
+
+        status_text = f"P1: {badge_p1}   |   P2: {badge_p2}   [1 / L1: P1, 2 / R1: P2]"
+        status_surf = self._fit_text(font_small, status_text, pm.INK_SOFT, 860)
+        surface.blit(status_surf, (panel_rect.centerx - status_surf.get_width() // 2, audio_y + 36))
+
+        # Botão Alternador de Controles Touch
+        touch_mode_str = t("touch_mode_auto")
+        if self.touch_controls:
+            mode = getattr(self.touch_controls, "mode", "auto")
+            if mode == "always":
+                touch_mode_str = t("touch_mode_always_on")
+            elif mode == "off":
+                touch_mode_str = t("touch_mode_disabled")
+
+        self.touch_toggle_rect = pygame.Rect(panel_rect.centerx - 175, audio_y + 60, 350, 26)
+        pygame.draw.rect(surface, (226, 212, 185), self.touch_toggle_rect, border_radius=6)
+        pygame.draw.rect(surface, (150, 135, 115), self.touch_toggle_rect, 1, border_radius=6)
+        touch_lbl = self._fit_text(font_small, t("touch_controls_label").format(touch_mode_str=touch_mode_str), pm.INK, 336)
+        surface.blit(touch_lbl, (self.touch_toggle_rect.centerx - touch_lbl.get_width() // 2, self.touch_toggle_rect.y + 5))
+
+        # Botão Alternador de Dificuldade da IA e de Idioma
+        diff_names = {
+            "easy": t("difficulty_easy"),
+            "normal": t("difficulty_normal"),
+            "hard": t("difficulty_hard")
+        }
+        diff_colors = {"easy": (45, 140, 65), "normal": (170, 125, 45), "hard": pm.SEAL_RED}
+        d_name = diff_names.get(self.ai_difficulty, t("difficulty_normal"))
+        d_col = diff_colors.get(self.ai_difficulty, (170, 125, 45))
+
+        self.difficulty_toggle_rect = pygame.Rect(panel_rect.centerx - 195, audio_y + 90, 190, 26)
+        pygame.draw.rect(surface, (226, 212, 185), self.difficulty_toggle_rect, border_radius=6)
+        pygame.draw.rect(surface, d_col, self.difficulty_toggle_rect, 2, border_radius=6)
+        diff_lbl = self._fit_text(font_small, t("ai_difficulty_label").format(d_name=d_name), d_col, 180)
+        surface.blit(diff_lbl, (self.difficulty_toggle_rect.centerx - diff_lbl.get_width() // 2, self.difficulty_toggle_rect.y + 5))
+
+        from src.i18n import get_saved_language_preference, LANG_AUTO, LANG_PT, LANG_EN
+        pref = get_saved_language_preference()
+        lang_str = t("lang_auto") if pref == LANG_AUTO else (t("lang_pt") if pref == LANG_PT else t("lang_en"))
+        l_col = (70, 125, 95) if pref != LANG_AUTO else pm.INK
+        self.language_toggle_rect = pygame.Rect(panel_rect.centerx + 5, audio_y + 90, 190, 26)
+        pygame.draw.rect(surface, (226, 212, 185), self.language_toggle_rect, border_radius=6)
+        pygame.draw.rect(surface, l_col, self.language_toggle_rect, 1, border_radius=6)
+        l_lbl = self._fit_text(font_small, t("language_toggle_label").format(lang_name=lang_str), l_col, 180)
+        surface.blit(l_lbl, (self.language_toggle_rect.centerx - l_lbl.get_width() // 2, self.language_toggle_rect.y + 5))
+
+        # Botão de qualidade dos efeitos e Game Boost
+        high = quality.is_high()
+        q_color = (45, 140, 65) if high else (170, 125, 45)
+        q_label = t("effects_quality_label").format(q_name=t("quality_high") if high else t("quality_low"))
+        self.quality_toggle_rect = pygame.Rect(panel_rect.centerx - 195, audio_y + 120, 190, 26)
+        pygame.draw.rect(surface, (226, 212, 185), self.quality_toggle_rect, border_radius=6)
+        pygame.draw.rect(surface, q_color, self.quality_toggle_rect, 1, border_radius=6)
+        lbl = self._fit_text(font_small, q_label, q_color, 180)
+        surface.blit(lbl, (self.quality_toggle_rect.centerx - lbl.get_width() // 2, self.quality_toggle_rect.y + 5))
+
+        boost_on = quality.is_game_boost_enabled()
+        b_col = (45, 140, 65) if boost_on else pm.INK_SOFT
+        b_label = t("game_boost_label").format(status=t("status_on") if boost_on else t("status_off"))
+        self.game_boost_toggle_rect = pygame.Rect(panel_rect.centerx + 5, audio_y + 120, 190, 26)
+        pygame.draw.rect(surface, (226, 212, 185), self.game_boost_toggle_rect, border_radius=6)
+        pygame.draw.rect(surface, b_col, self.game_boost_toggle_rect, 1, border_radius=6)
+        b_lbl = self._fit_text(font_small, b_label, b_col, 180)
+        surface.blit(b_lbl, (self.game_boost_toggle_rect.centerx - b_lbl.get_width() // 2, self.game_boost_toggle_rect.y + 5))
+
+        # 7. Botões de Ação no Rodapé do Painel
+        self.reset_rect = pygame.Rect(panel_rect.centerx - 140, panel_y + panel_h - 96, 280, 36)
+        pygame.draw.rect(surface, (226, 212, 185), self.reset_rect, border_radius=6)
+        pygame.draw.rect(surface, (150, 135, 115), self.reset_rect, 1, border_radius=6)
+        rst_surf = self._fit_text(font_small, t("reset_defaults_hint"), pm.INK, 260)
+        surface.blit(rst_surf, rst_surf.get_rect(center=self.reset_rect.center))
+
+        self.close_rect = pygame.Rect(panel_rect.centerx - 160, SCREEN_HEIGHT - 68, 320, 48)
+        pygame.draw.rect(surface, pm.SEAL_RED, self.close_rect, border_radius=8)
+        pygame.draw.rect(surface, (212, 175, 55), self.close_rect, 2, border_radius=8)
+        cls_surf = self._fit_text(font_mid, t("settings_return_button"), (252, 248, 235), 300)
+        surface.blit(cls_surf, cls_surf.get_rect(center=self.close_rect.center))
+
+    def _render_fallback(self, surface: pygame.Surface, font_large: pygame.font.Font, font_mid: pygame.font.Font, font_small: pygame.font.Font, ctrl_mgr):
         # 1. Overlay escuro de fundo com desfoque/transparência (suave, tipo nanquim diluído)
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
         overlay.fill((15, 14, 12, 200))  # Softer dark tone
@@ -987,7 +1362,7 @@ class SettingsMenu:
         touch_lbl = self._fit_text(font_small, t("touch_controls_label").format(touch_mode_str=touch_mode_str), COLOR_GOLD, 336)
         surface.blit(touch_lbl, (self.touch_toggle_rect.centerx - touch_lbl.get_width() // 2, self.touch_toggle_rect.y + 5))
 
-        # Botão Alternador de Dificuldade da IA
+        # Botão Alternador de Dificuldade da IA e de Idioma
         diff_names = {
             "easy": t("difficulty_easy"),
             "normal": t("difficulty_normal"),
@@ -997,22 +1372,42 @@ class SettingsMenu:
         d_name = diff_names.get(self.ai_difficulty, t("difficulty_normal"))
         d_col = diff_colors.get(self.ai_difficulty, COLOR_GOLD)
 
-        self.difficulty_toggle_rect = pygame.Rect(panel_rect.centerx - 195, audio_y + 90, 390, 26)
+        self.difficulty_toggle_rect = pygame.Rect(panel_rect.centerx - 195, audio_y + 90, 190, 26)
         pygame.draw.rect(surface, (28, 36, 32), self.difficulty_toggle_rect, border_radius=6)
         pygame.draw.rect(surface, d_col, self.difficulty_toggle_rect, 1, border_radius=6)
-        diff_lbl = self._fit_text(font_small, t("ai_difficulty_label").format(d_name=d_name), d_col, 376)
+        diff_lbl = self._fit_text(font_small, t("ai_difficulty_label").format(d_name=d_name), d_col, 180)
         surface.blit(diff_lbl, (self.difficulty_toggle_rect.centerx - diff_lbl.get_width() // 2, self.difficulty_toggle_rect.y + 5))
 
-        # Botão de qualidade dos efeitos
+        from src.i18n import get_saved_language_preference, LANG_AUTO, LANG_PT, LANG_EN
+        pref = get_saved_language_preference()
+        lang_str = t("lang_auto") if pref == LANG_AUTO else (t("lang_pt") if pref == LANG_PT else t("lang_en"))
+        l_col = (110, 225, 140) if pref != LANG_AUTO else COLOR_GOLD
+        self.language_toggle_rect = pygame.Rect(panel_rect.centerx + 5, audio_y + 90, 190, 26)
+        pygame.draw.rect(surface, (28, 36, 32), self.language_toggle_rect, border_radius=6)
+        pygame.draw.rect(surface, l_col, self.language_toggle_rect, 1, border_radius=6)
+        l_label = t("language_toggle_label").format(lang_name=lang_str)
+        l_lbl = self._fit_text(font_small, l_label, l_col, 180)
+        surface.blit(l_lbl, (self.language_toggle_rect.centerx - l_lbl.get_width() // 2, self.language_toggle_rect.y + 5))
+
+        # Botão de qualidade dos efeitos e Game Boost
         from src.effects import quality
         high = quality.is_high()
         color = (110, 225, 140) if high else (245, 190, 85)
         label = t("effects_quality_label").format(q_name=t("quality_high") if high else t("quality_low"))
-        self.quality_toggle_rect = pygame.Rect(panel_rect.centerx - 165, audio_y + 120, 330, 26)
+        self.quality_toggle_rect = pygame.Rect(panel_rect.centerx - 195, audio_y + 120, 190, 26)
         pygame.draw.rect(surface, (28, 36, 32), self.quality_toggle_rect, border_radius=6)
         pygame.draw.rect(surface, color, self.quality_toggle_rect, 1, border_radius=6)
-        lbl = self._fit_text(font_small, label, color, 316)
+        lbl = self._fit_text(font_small, label, color, 180)
         surface.blit(lbl, (self.quality_toggle_rect.centerx - lbl.get_width() // 2, self.quality_toggle_rect.y + 5))
+
+        boost_on = quality.is_game_boost_enabled()
+        b_col = (110, 225, 140) if boost_on else (160, 175, 168)
+        b_label = t("game_boost_label").format(status=t("status_on") if boost_on else t("status_off"))
+        self.game_boost_toggle_rect = pygame.Rect(panel_rect.centerx + 5, audio_y + 120, 190, 26)
+        pygame.draw.rect(surface, (28, 36, 32), self.game_boost_toggle_rect, border_radius=6)
+        pygame.draw.rect(surface, b_col, self.game_boost_toggle_rect, 1, border_radius=6)
+        b_lbl = self._fit_text(font_small, b_label, b_col, 180)
+        surface.blit(b_lbl, (self.game_boost_toggle_rect.centerx - b_lbl.get_width() // 2, self.game_boost_toggle_rect.y + 5))
 
         # 7. Botões de Ação no Rodapé do Painel
         # Botão Restaurar Padrões

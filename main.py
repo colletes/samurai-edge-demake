@@ -60,7 +60,7 @@ from src.config import (
     CHAR_KENSHIN, CHAR_MUSASHI, CHAR_NINJA, CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE,
     CHAR_SAITOU, CHAR_RIFLE, CHAR_KABUKI, CHAR_ARCHER, CHAR_PIRATE, CHAR_MUSKETEER,
     CHAR_REN, CHAR_CHIYO, CHAR_BENKEI, CHAR_ORIN, CHAR_GORO, CHAR_ICHI,
-    CHAR_VALERIUS, CHAR_SEIMEI, CHAR_DAIKI, CHAR_AOI, CHAR_BOSS,
+    CHAR_VALERIUS, CHAR_SEIMEI, CHAR_DAIKI, CHAR_AOI, CHAR_RAIDEN, CHAR_HENDRIKA, CHAR_BOSS,
     COLOR_GRAY_NINJA, COLOR_PURPLE_NINJA, COLOR_SAITOU_AURA,
     COLOR_RIFLE_AURA, COLOR_KABUKI_AURA, COLOR_ARCHER_AURA,
     COLOR_PIRATE_AURA, COLOR_MUSKETEER_AURA, COLOR_REN_AURA, COLOR_CHIYO_AURA,
@@ -93,6 +93,8 @@ from src.entities.valerius import ValeriusNecromancer
 from src.entities.seimei import SeimeiOnmyoji
 from src.entities.daiki import DaikiPilgrim
 from src.entities.aoi import AoiHuntress
+from src.entities.raiden import RaidenSumo, COLOR_RAIDEN_AURA
+from src.entities.hendrika import HendrikaAlchemist, COLOR_HENDRIKA_AURA
 from src.entities.boss_oni import BossOni
 from src.entities.ai_controller import SamuraiAI
 from src.entities.pickups import PowderPouch
@@ -132,7 +134,7 @@ from src.ui.portraits import preload_portraits
 from src.ui.svg_icon_renderer import render_text_with_icons
 from src.ui.loading_screen import LoadingScreen
 from src.ui.fonts import get_title_font, get_text_font
-from src.i18n import t, get_lang, LANG_PT
+from src.i18n import t, get_lang, LANG_PT, apply_saved_language
 from src.input import get_controller_manager, TouchControls, DisplayScaler
 from src.input.controls_storage import load_controls_config, save_controls_config
 from src.audio import SoundManager, SoundEvent, MusicTrack
@@ -212,6 +214,10 @@ def create_fighter(char_id: str, wx: float, wy: float):
         return DaikiPilgrim(wx, wy)
     elif char_id == CHAR_AOI:
         return AoiHuntress(wx, wy)
+    elif char_id == CHAR_RAIDEN:
+        return RaidenSumo(wx, wy)
+    elif char_id == CHAR_HENDRIKA:
+        return HendrikaAlchemist(wx, wy)
     elif char_id == CHAR_BOSS:
         return BossOni(wx, wy)
     return RedSamurai(wx, wy)
@@ -265,6 +271,10 @@ def get_fighter_color(fighter):
         return COLOR_DAIKI_AURA
     elif isinstance(fighter, AoiHuntress):
         return COLOR_AOI_AURA
+    elif isinstance(fighter, RaidenSumo):
+        return COLOR_RAIDEN_AURA
+    elif isinstance(fighter, HendrikaAlchemist):
+        return COLOR_HENDRIKA_AURA
     return COLOR_WHITE
 
 def get_fighter_action_labels(fighter):
@@ -312,11 +322,19 @@ def get_fighter_action_labels(fighter):
     elif isinstance(fighter, ValeriusNecromancer):
         return "Foice Fúnebre", "Evocar Mortos"
     elif isinstance(fighter, SeimeiOnmyoji):
-        return "Ofuda Cortante", "Selo Sagrado"
+        el = getattr(fighter, "current_element", "wood")
+        from src.ui.hud_rondel import ELEMENT_SPELL_NAMES
+        sp = ELEMENT_SPELL_NAMES.get(el, ("Ofuda", "Selo"))
+        return sp[0], sp[1]
     elif isinstance(fighter, DaikiPilgrim):
         return "Bastão Bō", "Salto com Vara"
     elif isinstance(fighter, AoiHuntress):
         return "Lança Ainu", "Armadilha Urso"
+    elif isinstance(fighter, RaidenSumo):
+        return "Tsuppari Rush", "Tachiai Tackle"
+    elif isinstance(fighter, HendrikaAlchemist):
+        reag = getattr(fighter, "active_reagent", "acid")[:4].title()
+        return "Stiletto Ácido", f"Frasco ({reag})"
     return "Ataque", "Especial"
 
 def get_fighter_cooldown_data(fighter) -> dict | None:
@@ -466,10 +484,14 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
         return None
 
     elif isinstance(fighter, SeimeiOnmyoji):
+        el = getattr(fighter, "current_element", "wood")
+        from src.ui.hud_rondel import ELEMENT_SPELL_NAMES, ELEMENT_COLORS
+        s_name = ELEMENT_SPELL_NAMES.get(el, ("Ofuda", "Selo"))[1]
+        col = ELEMENT_COLORS.get(el, (80, 190, 255))
         timer = max(0.0, getattr(fighter, "ward_timer", 0.0))
         if timer > 0:
-            return {"name": "Selo Sagrado", "timer": timer, "max_cd": getattr(fighter, "ward_cooldown", 4.0), "color": (80, 190, 255)}
-        return None
+            return {"name": s_name, "timer": timer, "max_cd": getattr(fighter, "ward_cooldown", 0.75), "color": col}
+        return {"name": f"[{el[:3].upper()}] {s_name}", "timer": 0.0, "max_cd": getattr(fighter, "ward_cooldown", 0.75), "color": col}
 
     elif isinstance(fighter, DaikiPilgrim):
         timer = max(0.0, getattr(fighter, "vault_timer", 0.0))
@@ -481,6 +503,18 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
         timer = max(0.0, getattr(fighter, "trap_timer", 0.0))
         if timer > 0:
             return {"name": "Armadilha Urso", "timer": timer, "max_cd": getattr(fighter, "trap_cooldown", 3.8), "color": (130, 195, 240)}
+        return None
+
+    elif isinstance(fighter, RaidenSumo):
+        timer = max(0.0, getattr(fighter, "tackle_timer", 0.0))
+        if timer > 0:
+            return {"name": "Tachiai Tackle", "timer": timer, "max_cd": getattr(fighter, "tackle_cooldown", 3.5), "color": (195, 45, 55)}
+        return None
+
+    elif isinstance(fighter, HendrikaAlchemist):
+        timer = max(0.0, getattr(fighter, "flask_timer", 0.0))
+        if timer > 0:
+            return {"name": "Frasco Químico", "timer": timer, "max_cd": getattr(fighter, "flask_cooldown", 2.8), "color": (65, 215, 165)}
         return None
 
     return None
@@ -597,6 +631,12 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
     elif isinstance(fighter, AoiHuntress):
         fighter.trigger_spear_thrust(aim_x, aim_y)
         play_sfx(SoundEvent.SLASH_KATANA)
+    elif isinstance(fighter, RaidenSumo):
+        fighter.trigger_tsuppari_rush(aim_x, aim_y, particles=particles)
+        play_sfx(SoundEvent.SWING_BLUNT)
+    elif isinstance(fighter, HendrikaAlchemist):
+        fighter.trigger_stiletto_thrust(aim_x, aim_y, particles=particles)
+        play_sfx(SoundEvent.SLASH_KATANA)
 
 def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, poison_clouds: list, powder_traps: list, opponent=None, game_map=None, banners: list = None):
     """Executa a Ação Secundária (Técnica Especial / Defesa / Contra-ataque) do combatente."""
@@ -690,6 +730,14 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
         # Aoi: Armadilha de Urso de Ferro + Recuo Tático
         fighter.trigger_bear_trap(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners, game_map=game_map)
         play_sfx(SoundEvent.PARRY)
+    elif isinstance(fighter, RaidenSumo):
+        # Raiden: Tachiai Tackle semiteleguiado
+        fighter.trigger_tachiai_tackle(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent, game_map=game_map)
+        play_sfx(SoundEvent.DASH_ROLL)
+    elif isinstance(fighter, HendrikaAlchemist):
+        # Hendrika: Arremesso de Frasco Químico em arco 3D
+        fighter.trigger_flask_throw(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners)
+        play_sfx(SoundEvent.OBSTACLE_HIT)
 
 def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None, opponent=None, banners=None):
     """Executa a Terceira Ação (Roll / Dash dedicado) com invulnerabilidade temporária (i-frames)."""
@@ -767,45 +815,72 @@ def run_game():
     global _view_azimuth
     pygame.init()
     pygame.font.init()
-    real_screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    is_headless = os.environ.get("SDL_VIDEODRIVER") == "dummy"
+    base_flags = pygame.RESIZABLE if not is_headless else 0
+    real_screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), base_flags)
     pygame.display.set_caption(f"{TITLE} (Demo)" if is_demo() else TITLE)
     clock = pygame.time.Clock()
     quality.load_effects_quality(quality.SETTINGS_PATH)
+    apply_saved_language(quality.SETTINGS_PATH)
 
     actual_w, actual_h = real_screen.get_size()
     scaler = DisplayScaler(SCREEN_WIDTH, SCREEN_HEIGHT)
     scaler.update_window_size(actual_w, actual_h)
 
-    # Virtual canvas responsivo para telas mobile / iOS / resoluções arbitrárias
-    if (actual_w, actual_h) != (SCREEN_WIDTH, SCREEN_HEIGHT):
-        screen = scaler.canvas
-        _orig_flip = pygame.display.flip
-        def smart_flip():
-            scaler.render_to_screen(real_screen)
-            _orig_flip()
-        pygame.display.flip = smart_flip
+    # Virtual canvas responsivo com preservação estrita de proporção 16:9 (Letterbox / Pillarbox)
+    screen = scaler.canvas
+    _orig_flip = pygame.display.flip
 
-        _orig_event_get = pygame.event.get
-        def smart_event_get(*args, **kwargs):
-            events = _orig_event_get(*args, **kwargs)
-            mapped = []
-            for ev in events:
-                if ev.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
-                    vx, vy = scaler.screen_to_virtual(ev.pos[0], ev.pos[1])
-                    d = dict(ev.__dict__)
-                    d["pos"] = (int(vx), int(vy))
-                    if "rel" in d:
-                        d["rel"] = (int(d["rel"][0] / scaler.scale), int(d["rel"][1] / scaler.scale))
-                    mapped.append(pygame.event.Event(ev.type, d))
-                elif ev.type == pygame.VIDEORESIZE:
-                    scaler.update_window_size(ev.w, ev.h)
-                    mapped.append(ev)
-                else:
-                    mapped.append(ev)
-            return mapped
-        pygame.event.get = smart_event_get
-    else:
-        screen = real_screen
+    def smart_flip():
+        cur_screen = pygame.display.get_surface()
+        if cur_screen is not None:
+            scaler.render_to_screen(cur_screen)
+        _orig_flip()
+
+    pygame.display.flip = smart_flip
+
+    _orig_event_get = pygame.event.get
+
+    def smart_event_get(*args, **kwargs):
+        events = _orig_event_get(*args, **kwargs)
+        mapped = []
+        for ev in events:
+            if ev.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
+                vx, vy = scaler.screen_to_virtual(ev.pos[0], ev.pos[1])
+                d = dict(ev.__dict__)
+                d["pos"] = (int(vx), int(vy))
+                if "rel" in d:
+                    scale_val = max(0.001, scaler.scale)
+                    d["rel"] = (int(d["rel"][0] / scale_val), int(d["rel"][1] / scale_val))
+                mapped.append(pygame.event.Event(ev.type, d))
+            elif ev.type == pygame.VIDEORESIZE:
+                scaler.update_window_size(ev.w, ev.h)
+                if not is_headless:
+                    pygame.display.set_mode((ev.w, ev.h), pygame.RESIZABLE)
+                mapped.append(ev)
+            elif ev.type in (pygame.FINGERDOWN, pygame.FINGERUP, pygame.FINGERMOTION):
+                vx, vy = scaler.normalized_finger_to_virtual(ev.x, ev.y)
+                d = dict(ev.__dict__)
+                d["x"] = max(0.0, min(1.0, vx / scaler.virtual_width))
+                d["y"] = max(0.0, min(1.0, vy / scaler.virtual_height))
+                d["pos"] = (int(vx), int(vy))
+                mapped.append(pygame.event.Event(ev.type, d))
+            elif ev.type == pygame.KEYDOWN and (ev.key == pygame.K_F11 or (ev.key == pygame.K_f and (ev.mod & (pygame.KMOD_META | pygame.KMOD_CTRL)))):
+                # Alternância de Tela Cheia (F11 ou Cmd+F / Ctrl+F)
+                if not is_headless:
+                    try:
+                        pygame.display.toggle_fullscreen()
+                        cur_disp = pygame.display.get_surface()
+                        if cur_disp:
+                            scaler.update_window_size(*cur_disp.get_size())
+                    except Exception as e:
+                        print(f"[Display] Erro ao alternar tela cheia: {e}")
+                mapped.append(ev)
+            else:
+                mapped.append(ev)
+        return mapped
+
+    pygame.event.get = smart_event_get
 
     # Tela de Carregamento Estilizada com feedback imediato ao usuário
     loading_screen = LoadingScreen(screen)
@@ -977,15 +1052,18 @@ def run_game():
                 (p1.name, p2.name), (p1_char_id, p2_char_id),
                 (get_fighter_color(p1), get_fighter_color(p2)), vs_ai_mode
             )
-        # Desafio Ninja: faixa de fusão única (Kasumi x Murasaki x Hanzo) contínua entre os 3 oponentes;
+        # Desafio Ninja: faixa de fusão única (Joe x Kasumi x Murasaki x Hanzo) contínua entre os 4 oponentes;
         # se o arquivo não existir, cai de volta na música da arena (Gruta das Sombras).
-        music_track = game_map.music
+        music_track = None
         _cur_fight = arcade_run.current_fight() if arcade_run is not None else None
         if _cur_fight is not None and _cur_fight.kind == FightKind.NINJA_CHALLENGE:
             from src.audio.sound_manager import MUSIC_DIR as _MUSIC_DIR
             if any(os.path.isfile(os.path.join(_MUSIC_DIR, f"{NINJA_CHALLENGE_BGM}{ext}")) for ext in (".ogg", ".wav", ".mp3")):
                 music_track = NINJA_CHALLENGE_BGM
-        sound_mgr.play_music(music_track, fade_ms=800, force_restart=(play_intro or restart_music))
+        if music_track is not None:
+            sound_mgr.play_music(music_track, fade_ms=800, force_restart=(play_intro or restart_music))
+        else:
+            sound_mgr.play_music(game_map.music, fade_ms=800, force_restart=(play_intro or restart_music))
 
     def request_rematch():
         """Entregável 5.3: reinicia a partida inteira (placar e rounds zerados) após o fim de uma partida Melhor-de-3."""
@@ -1206,23 +1284,45 @@ def run_game():
         # -------------------------------------------------------------
         if game_state == STATE_OPENING_VIDEO:
             for event in pygame.event.get():
-                ctrl_mgr.handle_event(event)
+                try:
+                    ctrl_mgr.handle_event(event)
+                except Exception as e:
+                    print(f"[MainLoop] Aviso: falha no tratamento de evento de controle ({event}): {e}")
+
                 if event.type == pygame.QUIT:
                     running = False
                     opening_screen.stop()
                 else:
-                    if opening_screen.handle_event(event):
+                    try:
+                        if opening_screen.handle_event(event):
+                            game_state = STATE_TITLE
+                            sound_mgr.ensure_mixer_ready()
+                            sound_mgr.play_music(MusicTrack.TITLE_THEME)
+                            break
+                    except Exception as e:
+                        print(f"[MainLoop] Aviso: falha no handle_event da abertura: {e}")
                         game_state = STATE_TITLE
+                        sound_mgr.ensure_mixer_ready()
                         sound_mgr.play_music(MusicTrack.TITLE_THEME)
                         break
 
             if game_state == STATE_OPENING_VIDEO:
-                opening_screen.update(dt)
+                try:
+                    opening_screen.update(dt)
+                except Exception as e:
+                    print(f"[MainLoop] Aviso: falha no update da abertura: {e}")
+                    opening_screen.stop()
+
                 if opening_screen.is_finished:
                     game_state = STATE_TITLE
+                    sound_mgr.ensure_mixer_ready()
                     sound_mgr.play_music(MusicTrack.TITLE_THEME)
                 else:
-                    opening_screen.render(screen)
+                    try:
+                        opening_screen.render(screen)
+                    except Exception as e:
+                        print(f"[MainLoop] Aviso: falha no render da abertura: {e}")
+                        opening_screen.stop()
                     pygame.display.flip()
                     continue
 
@@ -2048,7 +2148,7 @@ def run_game():
                     f.update(f_dt, game_map, particles, opponent=opp, banners=banners)
                 elif isinstance(f, OrinMinstrel):
                     f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles)
-                elif isinstance(f, (GoroFarmer, IchiBlade, ValeriusNecromancer, SeimeiOnmyoji, DaikiPilgrim, AoiHuntress)):
+                elif isinstance(f, (GoroFarmer, IchiBlade, ValeriusNecromancer, SeimeiOnmyoji, DaikiPilgrim, AoiHuntress, RaidenSumo, HendrikaAlchemist)):
                     f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles, banners=banners)
                 else:
                     f.update(f_dt, game_map)
@@ -2610,6 +2710,13 @@ def run_game():
                         pygame.draw.rect(screen, (18, 24, 21), d_bg, border_radius=4)
                         pygame.draw.rect(screen, (255, 210, 50), d_bg, 1, border_radius=4)
                         screen.blit(dist_lbl, (d_bg.x + 4, d_bg.y + 1))
+
+        # Rondel Onmyōdō de Seimei (Mostrador dos 6 Elementos no Rodapé Central)
+        for f in (p1, p2):
+            if getattr(f, "char_type", "") == "seimei" and f.is_alive:
+                from src.ui.hud_rondel import RondelHUD
+                RondelHUD.get().render(screen, f, SCREEN_WIDTH // 2, SCREEN_HEIGHT - 65, dt)
+                break
 
 
 

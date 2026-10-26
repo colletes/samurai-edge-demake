@@ -27,7 +27,9 @@ from src.config import (
     CHAR_RIFLE, CHAR_PURPLE, CHAR_GRAY, CHAR_KABUKI, CHAR_ARCHER,
     CHAR_PIRATE, CHAR_MUSKETEER, CHAR_REN, CHAR_CHIYO,
     CHAR_BENKEI, CHAR_ORIN, CHAR_GORO, CHAR_ICHI,
-    CHAR_VALERIUS, CHAR_SEIMEI, CHAR_DAIKI, CHAR_AOI
+    CHAR_VALERIUS, CHAR_SEIMEI, CHAR_DAIKI, CHAR_AOI,
+    CHAR_RAIDEN, CHAR_HENDRIKA,
+    ARENA_DOHYO, ARENA_FOREST_CAMP, ARENA_GOTHIC_CEMETERY, ARENA_KYOTO
 )
 from src.world.map_data import GameMap
 from src.world.kyoto_map import KyotoMap
@@ -53,8 +55,18 @@ from src.entities.valerius import ValeriusNecromancer
 from src.entities.seimei import SeimeiOnmyoji
 from src.entities.daiki import DaikiPilgrim
 from src.entities.aoi import AoiHuntress
+from src.entities.raiden import RaidenSumo
+from src.entities.hendrika import HendrikaAlchemist
 from src.entities.pickups import PowderPouch
 from main import get_random_arena_spawns, get_kyoto_arena_spawns, create_fighter
+
+# 4 Arenas Padrão de Balanceamento (Raiden: Dohyo, Joe: Forest Camp, Valerius: Cemitério Prussiano, Saitou: Kyoto)
+STANDARD_ARENAS = [
+    ("Dohyo Sagrado", ARENA_DOHYO),
+    ("Acampamento na Floresta", ARENA_FOREST_CAMP),
+    ("Cemitério Prussiano", ARENA_GOTHIC_CEMETERY),
+    ("Kyoto: Bakumatsu em Chamas", ARENA_KYOTO),
+]
 
 ROSTER = [
     {"id": CHAR_KENSHIN, "name": "Kenshin", "title": "Retalhador (Iai/Shukuchi)"},
@@ -79,6 +91,8 @@ ROSTER = [
     {"id": CHAR_SEIMEI, "name": "Seimei", "title": "Onmyoji dos Talismãs (Ofuda/Selo Sagrado)"},
     {"id": CHAR_DAIKI, "name": "Daiki", "title": "Peregrino do Bastão Bō (Pole Vault/Varredura)"},
     {"id": CHAR_AOI, "name": "Aoi", "title": "Caçadora Ainu (Lança Op/Armadilha de Urso)"},
+    {"id": CHAR_RAIDEN, "name": "Raiden", "title": "Yokozuna Invicto (Tsuppari/Tachiai)"},
+    {"id": CHAR_HENDRIKA, "name": "Hendrika", "title": "Alquimista de Dejima (Estilete/5 Reagentes)"},
 ]
 
 CHAR_IDS = [char["id"] for char in ROSTER]
@@ -100,7 +114,7 @@ def update_fighter(f, dt, game_map, particles, projectiles, powder_pouches=None,
         f.update(dt, game_map, particles, opponent=opponent, banners=banners)
     elif isinstance(f, OrinMinstrel):
         f.update(dt, game_map, particles, opponent=opponent, projectiles=projectiles)
-    elif isinstance(f, (GoroFarmer, IchiBlade, ValeriusNecromancer, SeimeiOnmyoji, DaikiPilgrim, AoiHuntress)):
+    elif isinstance(f, (GoroFarmer, IchiBlade, ValeriusNecromancer, SeimeiOnmyoji, DaikiPilgrim, AoiHuntress, RaidenSumo, HendrikaAlchemist)):
         f.update(dt, game_map, particles, opponent=opponent, projectiles=projectiles, banners=banners)
     elif isinstance(f, (RedSamurai, SaitouSamurai, Rifleman, Kabuki, Musketeer)):
         f.update(dt, game_map, particles)
@@ -266,12 +280,11 @@ def run_matchup(c1_id: str, c2_id: str, arena_list: list, difficulty: str = "nor
 
 def run_full_tournament_simulation(arena_list: list = None, difficulty: str = "normal", battles_per_arena: int = 2):
     """
-    Simula todas as combinações de 20 guerreiros (190 pares) em todas as arenas.
-    Com 20 arenas e 2 lutas/arena (1 P1, 1 P2) = 40 batalhas por par.
-    Total = 190 * 40 = 7.600 batalhas simétricas por torneio.
+    Simula todas as combinações de guerreiros em todas as arenas padrão (Dohyo, Forest Camp, Cemitério Prussiano).
+    Com 3 arenas padrão e 2 lutas/arena (1 P1, 1 P2) = 6 batalhas por par.
     """
     if arena_list is None:
-        arena_list = [(ARENA_SPECS[a_id].name, a_id) for a_id in arena_ids()]
+        arena_list = list(STANDARD_ARENAS)
 
     n = len(CHAR_IDS)
     pairs = []
@@ -539,7 +552,7 @@ def generate_balance_report(tournament_data, merge_sorted_roster, output_path: s
     lines.append("> **Métricas Globais da Simulação**:")
     lines.append(f"> - Dificuldade da IA (ambos os lutadores): **{difficulty.upper()}**")
     lines.append(f"> - Total de Guerreiros Avaliados: **{n_fighters}**")
-    lines.append(f"> - Total de Arenas Avaliadas: **{n_arenas}** (Cobertura Integral do Jogo)")
+    lines.append(f"> - Total de Arenas Avaliadas: **{n_arenas}** ({', '.join(a[0] for a in arena_list)})")
     lines.append(f"> - Combinações Únicas de Duelos: **{n_combos} confrontos** $\\binom{{{n_fighters}}}{{2}}$")
     lines.append(f"> - Lutas por Combinação: **{total_battles // n_combos} batalhas** (2 por arena, paridade simétrica P1/P2)")
     lines.append(f"> - **Volume Total de Batalhas Simuladas**: **{total_battles} batalhas**")
@@ -575,9 +588,9 @@ def generate_balance_report(tournament_data, merge_sorted_roster, output_path: s
             lines.append(f"| {r} | **{s['name']}** | **{s['winrate']:.1f}%** | — | — | — | — | — |")
     lines.append("")
 
-    # 3. Matriz Head-to-Head 20x20
+    # 3. Matriz Head-to-Head
     lines.append(f"## 3. Matriz de Confrontos Diretos Head-to-Head ({n_fighters}x{n_fighters})")
-    lines.append("Percentual de vitórias da linha contra a coluna através de todas as 20 arenas:")
+    lines.append("Percentual de vitórias da linha contra a coluna através de todas as arenas:")
     lines.append("")
     headers = ["Lutador"] + [c["name"][:5] for c in ROSTER]
     lines.append("| " + " | ".join(headers) + " |")
@@ -660,7 +673,7 @@ def generate_comparative_report(all_tournaments: dict, output_path: str = "docs/
     lines.append("> **Resumo da Auditoria Completa**:")
     lines.append(f"> - Total de Batalhas Simuladas: **{sum(t['total_battles'] for t in all_tournaments.values())} batalhas**")
     lines.append(f"> - Roster: **{len(ROSTER)} Guerreiros**")
-    lines.append(f"> - Arenas: **{len(arena_ids())} Arenas Temáticas**")
+    lines.append(f"> - Arenas: **4 Arenas Padronizadas** (Dohyo Sagrado [Raiden], Acampamento na Floresta [Joe], Cemitério Prussiano [Valerius], Kyoto Bakumatsu [Saitou])")
     lines.append(f"> - Níveis de Dificuldade da IA: **Fácil (Easy)**, **Normal (Normal)**, **Difícil (Hard)**")
     lines.append("")
 

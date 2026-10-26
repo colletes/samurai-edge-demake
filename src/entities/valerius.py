@@ -43,8 +43,8 @@ class SkeletonSummon:
         self.hp = 1
         self.is_alive = True
         self.state = "EMERGING"  # "EMERGING", "CHASING", "DEAD"
-        self.emerge_timer = 0.35
-        self.speed = 3.8
+        self.emerge_timer = 0.40
+        self.speed = 2.65  # Velocidade calibrada de esqueleto para permitir contra-ataque e fuga tática
         self.radius = 0.38
         self.anim_time = 0.0
         self.grab_cooldown = 0.0
@@ -123,10 +123,10 @@ class SkeletonSummon:
                         banners.append(FloatingBanner("PARRY SUMMON!", self.wx, self.wy, wz=1.4, color=(100, 200, 255)))
                     return False
 
-                # Dano e imobilização espectral
+                # Dano e imobilização espectral calibrada
                 hit, dead = self.opponent.take_hit((self.facing_x, self.facing_y), damage=1)
                 if getattr(self.opponent, "is_alive", True):
-                    self.opponent.stun(1.4)
+                    self.opponent.stun(0.45)
                 if banners is not None:
                     banners.append(FloatingBanner("CORPSE GRAB!", self.opponent.wx, self.opponent.wy, wz=1.6, color=(140, 70, 180)))
                 self.take_hit(damage=1, particles=particles)
@@ -206,20 +206,20 @@ class ValeriusNecromancer(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Valerius")
         self.char_type = "valerius"
-        self.speed = 4.5
+        self.speed = 3.80  # Velocidade ponderada de necromante com foice pesada
         self.max_hp = 2
         self.hp = 2
         self.can_parry = True
 
         # Ataque Primário: Foice Fúnebre (Soul Reap)
-        self.scythe_duration = 0.18
-        self.scythe_recovery = 0.20
-        self.scythe_reach = 2.25
+        self.scythe_duration = 0.25  # Windup deliberado de foice pesada permitindo reação justa
+        self.scythe_recovery = 0.54  # Recovery calibrado para punição justa
+        self.scythe_reach = 1.95     # Alcance calibrado para permitir contestação melee
         self.scythe_radius = 1.35
         self.scythe_timer = 0.0
 
         # Ação Secundária: Evocar Mortos (Summon Skeleton)
-        self.summon_cooldown = 4.5
+        self.summon_cooldown = 6.2
         self.summon_timer = 0.0
         self.summon: SkeletonSummon | None = None
 
@@ -242,7 +242,7 @@ class ValeriusNecromancer(Samurai):
     def can_act(self) -> bool:
         return (
             self.is_alive
-            and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY)
+            and self.state in (STATE_IDLE, STATE_WALK)
             and self.roll_recovery_timer <= 0
             and self.dash_recovery_timer <= 0
         )
@@ -258,10 +258,10 @@ class ValeriusNecromancer(Samurai):
         self.hitbox_active = True
         self.hitbox_damage = 2
 
-        # Centro da hitbox à frente
+        # Centro da hitbox à frente (calibrado para 1.05m mantendo raio 1.35)
         self.hitbox_center = (
-            self.wx + self.facing_x * 1.20,
-            self.wy + self.facing_y * 1.20
+            self.wx + self.facing_x * 1.05,
+            self.wy + self.facing_y * 1.05
         )
         self.hitbox_radius = self.scythe_radius
         self.slash_dir = (self.facing_x, self.facing_y)

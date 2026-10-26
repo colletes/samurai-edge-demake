@@ -1750,5 +1750,344 @@ class SnowSpruceTree(Rock):
             draw_voxel_box(surface, camera, self.wx - w * 0.46 + ox, self.wy - w * 0.46, z0 + h * 0.55, w * 0.92, w * 0.92, h * 0.45, self.snow_bright, outline=True)
 
 
+# ===========================================================================
+# Props do Ciclo 6: Dohyo Sagrado (Raiden) & Armazém de Dejima (Hendrika)
+# ===========================================================================
+
+class DohyoCornerPost(Rock):
+    """
+    Pilar cerimonial de canto do Dohyo sagrado (Shihobashira / Sumō Fusa):
+    - Coluna laqueada de madeira com fita Shimenawa e borla cerimonial pendente (Fusa).
+    - Quatro direções rituais: Leste/Verde (Tō-fusa), Sul/Vermelho (Nan-fusa),
+      Oeste/Branco (Sei-fusa), Norte/Preto (Hoku-fusa).
+    """
+    animated = True
+
+    FUSA_COLORS = {
+        "green": (48, 142, 86),
+        "red": (196, 42, 42),
+        "white": (245, 245, 248),
+        "black": (36, 32, 42),
+    }
+
+    def __init__(self, wx: float, wy: float, fusa: str = "red"):
+        super().__init__(wx, wy, radius=0.35, height=2.4)
+        self.fusa_type = fusa
+        self.fusa_col = self.FUSA_COLORS.get(fusa, (196, 42, 42))
+        self.post_wood = (156, 42, 36)      # Laca vermelha Shinto
+        self.post_base = (72, 38, 28)       # Base de cipreste escuro
+        self.rope_col = (195, 172, 118)     # Corda de palha Shimenawa
+        self.paper_shide = (248, 248, 252)  # Papel ritual zig-zag Shide
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # 1. Base cúbica de madeira escura
+        draw_voxel_box(surface, camera, self.wx - 0.22, self.wy - 0.22, 0.0, 0.44, 0.44, 0.28, self.post_base, outline=True)
+        # 2. Coluna de laca vermelha
+        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.12, 0.28, 0.24, 0.24, 1.95, self.post_wood, outline=True)
+        # 3. Anel de corda Shimenawa trançada próximo ao topo
+        draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 1.85, 0.36, 0.36, 0.14, self.rope_col, outline=False)
+        # 4. Papéis rituais brancos Shide pendentes
+        draw_voxel_box(surface, camera, self.wx - 0.14, self.wy + 0.16, 1.55, 0.28, 0.04, 0.32, self.paper_shide, outline=False)
+        # 5. Borla cerimonial esférica e franjas (Fusa)
+        sway = math.sin(time_val * 2.8 + self.wx) * 0.03
+        draw_voxel_box(surface, camera, self.wx - 0.16 + sway, self.wy - 0.16, 1.65, 0.32, 0.32, 0.25, self.fusa_col, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.12 + sway * 1.5, self.wy - 0.12, 1.15, 0.24, 0.24, 0.52, self.fusa_col, outline=False)
+
+
+class SacredSaltMound(Rock):
+    """Monte sagrado de sal purificador (Kiyome-no-shio) sobre bandeja cerimonial Sanbō."""
+    def __init__(self, wx: float, wy: float):
+        super().__init__(wx, wy, radius=0.32, height=0.45)
+        self.wood_tray = (218, 192, 148)
+        self.wood_dark = (142, 108, 72)
+        self.salt_white = (252, 252, 255)
+        self.salt_shadow = (212, 222, 235)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # 1. Bandeja cúbica de Hinoki (Sanbō)
+        draw_voxel_box(surface, camera, self.wx - 0.24, self.wy - 0.24, 0.0, 0.48, 0.48, 0.10, self.wood_tray, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.16, self.wy - 0.16, 0.08, 0.32, 0.32, 0.05, self.wood_dark, outline=False)
+        # 2. Pirâmide de sal sagrado purificador
+        draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 0.13, 0.36, 0.36, 0.15, self.salt_shadow, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.10, self.wy - 0.10, 0.28, 0.20, 0.20, 0.16, self.salt_white, outline=False)
+
+
+class DohyoBrazier(Rock):
+    """Braseiro cerimonial de bronze em tripé de ferro para rituais noturnos de Sumô."""
+    animated = True
+
+    def __init__(self, wx: float, wy: float):
+        super().__init__(wx, wy, radius=0.34, height=1.2)
+        self.bronze_dark = (58, 48, 40)
+        self.bronze_rim = (108, 92, 72)
+        self.ember_col = (220, 78, 24)
+        self.fire_core = (255, 215, 68)
+        self.fire_tip = (255, 115, 30)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # Tripé de sustentação de ferro escuro
+        draw_voxel_box(surface, camera, self.wx - 0.09, self.wy - 0.09, 0.0, 0.18, 0.18, 0.75, self.bronze_dark, outline=True)
+        # Caldeira de bronze
+        draw_voxel_box(surface, camera, self.wx - 0.26, self.wy - 0.26, 0.72, 0.52, 0.52, 0.22, self.bronze_rim, outline=True)
+        # Leito de brasas
+        draw_voxel_box(surface, camera, self.wx - 0.20, self.wy - 0.20, 0.82, 0.40, 0.40, 0.10, self.ember_col, outline=False)
+        # Chamas rituais bruxuleantes
+        flicker = math.sin(time_val * 16.0 + self.wx * 2.5) * 0.04
+        flame_h = 0.32 + math.sin(time_val * 22.0) * 0.08
+        draw_voxel_box(surface, camera, self.wx - 0.14 + flicker, self.wy - 0.14, 0.92, 0.28, 0.28, flame_h, self.fire_core, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.08 - flicker, self.wy - 0.08, 0.92 + flame_h * 0.6, 0.16, 0.16, 0.20, self.fire_tip, outline=False)
+
+
+class AlchemyWorkbench(Rock):
+    """Bancada de carvalho de laboratório de Hendrika com balões químicos, tubos de ensaio e retortas."""
+    animated = True
+
+    def __init__(self, wx: float, wy: float):
+        super().__init__(wx, wy, radius=0.65, height=1.35)
+        self.table_oak = (68, 44, 28)
+        self.shelf_wood = (92, 62, 38)
+        self.brass_stand = (195, 162, 68)
+        self.flask_emerald = (45, 215, 175)
+        self.flask_amber = (245, 165, 45)
+        self.flask_violet = (185, 75, 225)
+        self.book_cover = (145, 34, 42)
+        self.parchment = (235, 225, 195)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # 1. Mesa pesada de carvalho holandês
+        draw_voxel_box(surface, camera, self.wx - 0.65, self.wy - 0.35, 0.0, 1.30, 0.70, 0.68, self.table_oak, outline=True)
+        # 2. Prateleira traseira elevada
+        draw_voxel_box(surface, camera, self.wx - 0.60, self.wy - 0.32, 0.68, 1.20, 0.28, 0.45, self.shelf_wood, outline=True)
+        # 3. Frascos e retortas químicas luminescentes
+        glow_pulse = math.sin(time_val * 4.5) * 0.15
+        # Balão esmeralda (ácido / fósforo)
+        draw_voxel_box(surface, camera, self.wx - 0.45, self.wy - 0.10, 0.68, 0.22, 0.22, 0.26, self.flask_emerald, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.41, self.wy - 0.06, 0.92, 0.14, 0.14, 0.08, (120, 255, 220), outline=False)
+        # Tubo de ensaio âmbar na prateleira
+        draw_voxel_box(surface, camera, self.wx - 0.10, self.wy - 0.26, 1.13, 0.16, 0.16, 0.24, self.flask_amber, outline=False)
+        # Frasco violeta
+        draw_voxel_box(surface, camera, self.wx + 0.32, self.wy - 0.24, 1.13, 0.18, 0.18, 0.22, self.flask_violet, outline=False)
+        # 4. Grimório de notas alquímicas aberto sobre a mesa
+        draw_voxel_box(surface, camera, self.wx + 0.05, self.wy - 0.12, 0.68, 0.40, 0.32, 0.06, self.book_cover, outline=True)
+        draw_voxel_box(surface, camera, self.wx + 0.08, self.wy - 0.10, 0.73, 0.34, 0.28, 0.04, self.parchment, outline=False)
+
+
+class ReagentBarrel(Rock):
+    """Barril holandês de reagentes químicos voláteis da VOC com aros de ferro e estêncil comercial."""
+    def __init__(self, wx: float, wy: float, style: str = "acid"):
+        super().__init__(wx, wy, radius=0.42, height=0.82)
+        self.style = style
+        self.stave_wood = (104, 72, 46)
+        self.iron_band = (38, 42, 50)
+        self.hazard_yellow = (235, 195, 45)
+        self.reagent_glow = (65, 225, 180) if style == "acid" else (225, 95, 45)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # Corpo do barril em 3 segmentos abaulados
+        draw_voxel_box(surface, camera, self.wx - 0.34, self.wy - 0.34, 0.0, 0.68, 0.68, 0.22, self.stave_wood, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.38, self.wy - 0.38, 0.22, 0.76, 0.76, 0.38, self.stave_wood, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.34, self.wy - 0.34, 0.60, 0.68, 0.68, 0.22, self.stave_wood, outline=True)
+        # Aros de ferro
+        draw_voxel_box(surface, camera, self.wx - 0.36, self.wy - 0.36, 0.18, 0.72, 0.72, 0.06, self.iron_band, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.36, self.wy - 0.36, 0.58, 0.72, 0.72, 0.06, self.iron_band, outline=False)
+        # Estêncil de perigo químico VOC no topo
+        draw_voxel_box(surface, camera, self.wx - 0.14, self.wy - 0.14, 0.81, 0.28, 0.28, 0.04, self.hazard_yellow, outline=False)
+        # Batoque selado com cera luminescente
+        draw_voxel_box(surface, camera, self.wx - 0.06, self.wy - 0.06, 0.84, 0.12, 0.12, 0.06, self.reagent_glow, outline=False)
+
+
+class WharfMooringBollard(Rock):
+    """Cabeço de amarração portuária de ferro fundido com corda náutica enrolada na doca chuvosa."""
+    def __init__(self, wx: float, wy: float):
+        super().__init__(wx, wy, radius=0.30, height=0.68)
+        self.iron_dark = (32, 36, 44)
+        self.iron_top = (48, 54, 66)
+        self.rope_manila = (176, 148, 98)
+        self.rope_dark = (124, 102, 68)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # 1. Base aparafusada nas tábuas da doca
+        draw_voxel_box(surface, camera, self.wx - 0.24, self.wy - 0.24, 0.0, 0.48, 0.48, 0.08, self.iron_dark, outline=True)
+        # 2. Rolo de corda de cânhamo enrolado ao redor da base
+        draw_voxel_box(surface, camera, self.wx - 0.28, self.wy - 0.28, 0.04, 0.56, 0.56, 0.14, self.rope_manila, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.22, self.wy - 0.22, 0.08, 0.44, 0.44, 0.12, self.rope_dark, outline=False)
+        # 3. Cabeço cilíndrico de ferro
+        draw_voxel_box(surface, camera, self.wx - 0.14, self.wy - 0.14, 0.08, 0.28, 0.28, 0.48, self.iron_dark, outline=True)
+        # 4. Cabeça alargada superior do cabeço
+        draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 0.52, 0.36, 0.36, 0.14, self.iron_top, outline=True)
+
+
+class WarehouseDoorwayArch(Rock):
+    """Portal de vigas de madeira do armazém marcando o limiar 50/50 entre interior e doca externa."""
+    def __init__(self, wx: float, wy: float):
+        super().__init__(wx, wy, radius=0.48, height=2.8)
+        self.timber_beam = (54, 38, 28)
+        self.iron_fitting = (42, 44, 52)
+        self.lantern_brass = (185, 145, 62)
+        self.lantern_glow = (255, 210, 95)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # Pilar de viga de madeira escura
+        draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 0.0, 0.36, 0.36, 2.50, self.timber_beam, outline=True)
+        # Ferragens e sapatas de sustentação
+        draw_voxel_box(surface, camera, self.wx - 0.22, self.wy - 0.22, 0.0, 0.44, 0.44, 0.30, self.iron_fitting, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.20, self.wy - 0.20, 2.30, 0.40, 0.40, 0.20, self.iron_fitting, outline=False)
+        # Lanterna de latão naval pendurada com luz âmbar
+        flicker = math.sin(time_val * 9.0 + self.wy) * 0.04
+        draw_voxel_box(surface, camera, self.wx + 0.18, self.wy - 0.10, 1.70, 0.20, 0.20, 0.28, self.lantern_brass, outline=True)
+        draw_voxel_box(surface, camera, self.wx + 0.21, self.wy - 0.07, 1.74, 0.14, 0.14, 0.20, self.lantern_glow, outline=False)
+
+
+class SacredBushBarrier(Rock):
+    """
+    Barreira densa de vegetação sagrada (cedro japonês Sugi / sebe densa de santuário):
+    - Bloqueia o movimento e projéteis (não caminhável), confinando o dohyo para manter o combate próximo.
+    - Múltiplas camadas volumétricas de folhagem verde-esmeralda escura, tronco de cedro e fitas Shide rituais.
+    """
+    def __init__(self, wx: float, wy: float, scale: float = 1.0):
+        super().__init__(wx, wy, radius=0.60 * scale, height=1.60 * scale)
+        self.scale = scale
+        self.foliage_dark = (26, 68, 38)
+        self.foliage_mid = (38, 96, 52)
+        self.foliage_top = (58, 128, 68)
+        self.trunk_col = (58, 40, 28)
+        self.shide_col = (248, 248, 252)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        s = self.scale
+        # Base de terra e tronco
+        draw_voxel_box(surface, camera, self.wx - 0.20 * s, self.wy - 0.20 * s, 0.0, 0.40 * s, 0.40 * s, 0.35 * s, self.trunk_col, outline=True)
+        # 3 camadas densas de folhagem volumétrica formando a barreira
+        draw_voxel_box(surface, camera, self.wx - 0.55 * s, self.wy - 0.55 * s, 0.25 * s, 1.10 * s, 1.10 * s, 0.55 * s, self.foliage_dark, outline=True, texture="foliage")
+        draw_voxel_box(surface, camera, self.wx - 0.48 * s, self.wy - 0.48 * s, 0.70 * s, 0.96 * s, 0.96 * s, 0.50 * s, self.foliage_mid, outline=True, texture="foliage")
+        draw_voxel_box(surface, camera, self.wx - 0.36 * s, self.wy - 0.36 * s, 1.12 * s, 0.72 * s, 0.72 * s, 0.45 * s, self.foliage_top, outline=True, texture="foliage")
+        # Pequena fita de papel sagrado Shide pendente na folhagem
+        draw_voxel_box(surface, camera, self.wx + 0.38 * s, self.wy - 0.10 * s, 0.85 * s, 0.12 * s, 0.04 * s, 0.25 * s, self.shide_col, outline=False)
+
+
+class WarehouseGlassWall(Rock):
+    """
+    Parede divisória semitransparente entre o interior do armazém e a doca externa de Dejima:
+    - Armação de madeira de carvalho escuro com encaixes de ferro.
+    - Vidraças semitransparentes (alpha=145) com leve tonalidade ciano/azul-marinho, permitindo
+      ver os combatentes e o laboratório através da parede, marcando claramente interior vs exterior.
+    """
+    def __init__(self, wx: float, wy: float):
+        super().__init__(wx, wy, radius=0.48, height=2.4)
+        self.frame_timber = (52, 36, 26)
+        self.iron_bracket = (36, 40, 48)
+        self.glass_pane = (175, 215, 240)
+        self.mullion_wood = (78, 54, 38)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # 1. Base sólida de sustentação de madeira
+        draw_voxel_box(surface, camera, self.wx - 0.14, self.wy - 0.50, 0.0, 0.28, 1.00, 0.45, self.frame_timber, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.16, self.wy - 0.52, 0.0, 0.32, 0.18, 0.48, self.iron_bracket, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.16, self.wy + 0.34, 0.0, 0.32, 0.18, 0.48, self.iron_bracket, outline=False)
+
+        # 2. Pilares verticais laterais do batente
+        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.50, 0.45, 0.24, 0.16, 1.85, self.frame_timber, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy + 0.34, 0.45, 0.24, 0.16, 1.85, self.frame_timber, outline=True)
+        # Viga superior da parede
+        draw_voxel_box(surface, camera, self.wx - 0.14, self.wy - 0.50, 2.25, 0.28, 1.00, 0.22, self.frame_timber, outline=True)
+
+        # 3. Painel de vidro / treliça semitransparente (alpha=145)
+        draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.34, 0.48, 0.10, 0.68, 1.74, self.glass_pane, outline=False, alpha=145)
+        # Travessas da janela
+        draw_voxel_box(surface, camera, self.wx - 0.06, self.wy - 0.34, 1.30, 0.12, 0.68, 0.06, self.mullion_wood, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.06, self.wy - 0.02, 0.48, 0.12, 0.04, 1.74, self.mullion_wood, outline=False)
+
+
+class LargeSacredCenser(Rock):
+    """Grande incensário cerimonial de bronze (O-Koro) sobre base monumental de pedra,
+    exalando espessas plumas ondulantes de fumaça aromática de incenso nos cantos do santuário."""
+    animated = True
+    RATE = 6.0  # partículas por segundo durante o combate
+
+    def __init__(self, wx: float, wy: float):
+        super().__init__(wx, wy, radius=0.48, height=1.65)
+        self.stone_base = (78, 76, 82)
+        self.stone_trim = (96, 94, 102)
+        self.bronze_body = (98, 76, 54)
+        self.bronze_rim = (142, 114, 78)
+        self.bronze_gold = (185, 152, 92)
+        self.ember_core = (235, 95, 35)
+        self._carry = random.random()
+
+    def tick(self, arena, dt: float, fighters: list, camera, particles: list, banners: list):
+        if particles is None:
+            return
+        self._carry += dt * self.RATE
+        while self._carry >= 1.0:
+            self._carry -= 1.0
+            from src.effects.particles import SmokeParticle
+            particles.append(SmokeParticle(
+                self.wx, self.wy, wz=1.35,
+                color=(218, 212, 226), radius=0.38,
+                lifetime=random.uniform(2.2, 3.2),
+            ))
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        x, y = self.wx, self.wy
+        # 1. Base monumental de pedra lavrada em 2 degraus
+        draw_voxel_box(surface, camera, x - 0.40, y - 0.40, 0.0, 0.80, 0.80, 0.22, self.stone_base, outline=True)
+        draw_voxel_box(surface, camera, x - 0.32, y - 0.32, 0.22, 0.64, 0.64, 0.16, self.stone_trim, outline=True)
+
+        # 2. Pés trípodes de bronze
+        for dx, dy in ((-0.20, -0.20), (0.20, -0.20), (0.0, 0.22)):
+            draw_voxel_box(surface, camera, x + dx - 0.06, y + dy - 0.06, 0.38, 0.12, 0.12, 0.18, self.bronze_body, outline=False)
+
+        # 3. Bojo monumental de bronze fundido
+        draw_voxel_box(surface, camera, x - 0.28, y - 0.28, 0.54, 0.56, 0.56, 0.36, self.bronze_body, outline=True)
+        # Alças ornamentadas laterais
+        draw_voxel_box(surface, camera, x - 0.36, y - 0.06, 0.64, 0.08, 0.12, 0.20, self.bronze_gold, outline=False)
+        draw_voxel_box(surface, camera, x + 0.28, y - 0.06, 0.64, 0.08, 0.12, 0.20, self.bronze_gold, outline=False)
+        # Borda dourada em relevo
+        draw_voxel_box(surface, camera, x - 0.30, y - 0.30, 0.88, 0.60, 0.60, 0.08, self.bronze_rim, outline=True)
+
+        # 4. Tampa vazada / cúpula cerimonial com pináculo
+        draw_voxel_box(surface, camera, x - 0.24, y - 0.24, 0.96, 0.48, 0.48, 0.18, self.bronze_body, outline=True)
+        draw_voxel_box(surface, camera, x - 0.08, y - 0.08, 1.14, 0.16, 0.16, 0.15, self.bronze_gold, outline=False)
+
+        # 5. Brasas sagradas pulsantes através das frestas da tampa
+        glow = 0.65 + 0.35 * math.sin(time_val * 3.5 + x * 2.0)
+        draw_voxel_box(surface, camera, x - 0.14, y - 0.14, 0.90, 0.28, 0.28, 0.06,
+                       (int(240 * glow), int(105 * glow), 40), outline=False)
+
+        # 6. Plumas visíveis de fumaça aromática ondulando para o alto (renderizadas via voxels suaves translúcidos)
+        t = time_val * 2.2 + (x * 1.7 + y * 2.3)
+        for i, h_off in enumerate((0.35, 0.70, 1.10, 1.55)):
+            swirl_x = math.sin(t + i * 1.4) * (0.08 + i * 0.04)
+            swirl_y = math.cos(t * 0.85 + i * 1.2) * (0.06 + i * 0.03)
+            size = 0.20 + i * 0.08
+            alpha = max(30, int(155 - i * 30))
+            draw_voxel_box(
+                surface, camera,
+                x - size * 0.5 + swirl_x, y - size * 0.5 + swirl_y,
+                1.25 + h_off, size, size, size * 0.75,
+                (225, 220, 235), outline=False, alpha=alpha,
+            )
+
+
+class WharfPiling(Rock):
+    """Estaca/pilar maciço de carvalho encharcado sustentando a doca suspensa sobre o canal."""
+    def __init__(self, wx: float, wy: float):
+        super().__init__(wx, wy, radius=0.28, height=1.4)
+        self.wood_piling = (42, 34, 28)
+        self.wood_top = (64, 52, 40)
+        self.iron_band = (28, 30, 36)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # Pilar que desce até o fundo do canal (-0.45) e sobe até a altura da balaustrada (0.65)
+        draw_voxel_box(surface, camera, self.wx - 0.16, self.wy - 0.16, -0.45, 0.32, 0.32, 1.10, self.wood_piling, outline=True)
+        # Cinta de ferro reforçada contra maresia
+        draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 0.20, 0.36, 0.36, 0.08, self.iron_band, outline=False)
+        # Topo da estaca
+        draw_voxel_box(surface, camera, self.wx - 0.14, self.wy - 0.14, 0.65, 0.28, 0.28, 0.06, self.wood_top, outline=False)
+
+
+
+
+
 
 

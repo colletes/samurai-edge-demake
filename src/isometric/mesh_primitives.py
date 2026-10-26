@@ -703,6 +703,22 @@ PORTRAIT_FACE_STYLES = {
         "hairline_mid": 0.65, "hairline_lat": 0.46,
         "eye_z": 0.082, "brow_z": 0.106, "spacing": 0.033, "mouth_w": 0.024,
     },
+    "raiden": {
+        # Olhar marcial estóico e intimidador de Yokozuna no tachiai (olhos amendoados focados, íris âmbar-escura)
+        "iris": (72, 45, 26), "iris_core": (150, 95, 45), "iris_limbal": (24, 16, 12),
+        "brow": (22, 18, 16), "lip": (168, 112, 98),
+        "brow_tilt": 0.30, "delicate_nose": False,
+        "eye_z": 0.076, "brow_z": 0.098, "spacing": 0.038, "mouth_w": 0.030,
+        "hairline_mid": 0.68, "hairline_lat": 0.50,
+    },
+    "hendrika": {
+        # Olhar calculista, inquisitivo e excêntrico de "mad scientist" (íris turquesa brilhante com núcleo elétrico e faísca)
+        "iris": (38, 165, 175), "iris_core": (140, 245, 250), "iris_limbal": (16, 68, 75),
+        "brow": (160, 105, 52), "lip": (224, 96, 114), "lip_lower": (248, 138, 150), "lip_shadow": (155, 52, 68),
+        "brow_tilt": 0.10, "lashes": True, "delicate_nose": True, "feminine_lips": True,
+        "hairline_mid": 0.65, "hairline_lat": 0.46,
+        "eye_z": 0.082, "brow_z": 0.108, "spacing": 0.033, "mouth_w": 0.024,
+    },
 }
 
 
@@ -808,7 +824,8 @@ def draw_portrait_face_3d(
         char_type.lower() in (
             "kenshin", "kenshi", "kasumi", "gray", "murasaki", "purple",
             "okuni", "kabuki", "tomoe", "archer", "anne", "pirate", "julie", "musketeer",
-            "chiyo", "nodachi", "orin", "o-rin", "shamisen", "ichi", "blind", "shikomizue"
+            "chiyo", "nodachi", "orin", "o-rin", "shamisen", "ichi", "blind", "shikomizue",
+            "aoi", "hendrika", "alchemist"
         )
     )
     is_male = not is_female_char

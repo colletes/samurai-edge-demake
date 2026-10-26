@@ -30,10 +30,10 @@ class SaitouSamurai(Samurai):
         # -------------------------------------------------------------
         # Parâmetros do Gatotsu (Estocada com Aceleração e Inércia)
         # -------------------------------------------------------------
-        self.initial_charge_speed = 4.6  # Começa na velocidade normal de deslocamento
+        self.initial_charge_speed = 5.2  # Arranque ágil imediato do Gatotsu
         self.charge_speed = self.initial_charge_speed
-        self.max_charge_speed = 13.0      # Calibrado: veloz e incisivo sem perder controle
-        self.charge_accel = 11.0          # Taxa de ganho progressivo de velocidade (tiles/s²)
+        self.max_charge_speed = 13.5      # Calibrado: veloz e incisivo sem perder controle
+        self.charge_accel = 12.0          # Taxa de ganho progressivo de velocidade (tiles/s²)
 
         self.charge_dir_x = 1.0
         self.charge_dir_y = 0.0
@@ -43,9 +43,9 @@ class SaitouSamurai(Samurai):
         # Perda de manobrabilidade (esterçamento rígido: 1.1 rad/s)
         self.turn_rate = 1.15
 
-        # Inércia e frenagem demorada
+        # Inércia e frenagem após Gatotsu (calibrada para permitir recuperação defensiva imediata)
         self.brake_speed = 0.0
-        self.brake_duration = 0.35
+        self.brake_duration = 0.05
         self.slide_particle_timer = 0.0
 
         # Rastro de velocidade do Gatotsu
@@ -56,15 +56,15 @@ class SaitouSamurai(Samurai):
         # -------------------------------------------------------------
         self.zeroshiki_windup = 0.07
         self.zeroshiki_active = 0.12
-        self.zeroshiki_recovery = 0.35
+        self.zeroshiki_recovery = 0.18
         self.zeroshiki_phase = "NONE" # "WINDUP", "ACTIVE", "RECOVERY"
 
-        # Terceira Ação: Esquiva Pesada Tradicional
-        self.is_agile_dodge = False
-        self.roll_speed = 8.5
+        # Terceira Ação: Esquiva Ágil Shinsengumi
+        self.is_agile_dodge = True
+        self.roll_speed = 9.4
         self.roll_duration = 0.20
-        self.roll_recovery_duration = 0.18
-        self.roll_cooldown_duration = 0.38
+        self.roll_recovery_duration = 0.12
+        self.roll_cooldown_duration = 0.35
 
     def take_hit(self, slash_dir: tuple[float, float], damage: int = 2) -> tuple[bool, bool]:
         """Aplica dano e limpa os rastros do Gatotsu ao ser atingido ou morto."""
@@ -109,7 +109,7 @@ class SaitouSamurai(Samurai):
 
         # Hitbox ativa na ponta da lâmina estendida
         self.hitbox_active = True
-        self.hitbox_radius = 0.85
+        self.hitbox_radius = 0.98  # Raio calibrado para evitar whiffs por desvio angular mínimo
         self.slash_dir = (self.charge_dir_x, self.charge_dir_y)
         self.hitbox_center = (
             self.wx + self.charge_dir_x * 0.95,

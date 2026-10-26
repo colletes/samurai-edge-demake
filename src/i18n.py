@@ -2,16 +2,95 @@
 Módulo de Internacionalização (i18n) no Padrão Boardbots.
 Suporta Português (pt) e Inglês (en) para todo o ecossistema de interface,
 regras do jogo, HUD, controles e manuais estratégicos dos 12 guerreiros.
+Permite persistir a escolha do usuário ou usar detecção automática do sistema.
 """
+import os
+import json
 
+LANG_AUTO = "auto"
 LANG_PT = "pt"
 LANG_EN = "en"
+
+
+def get_settings_path() -> str:
+    """Retorna o caminho canônico para o arquivo settings.json."""
+    try:
+        from src.config import BASE_DIR
+        return os.path.join(BASE_DIR, "settings.json")
+    except Exception:
+        return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "settings.json")
+
+
+def load_language_setting(path: str = None) -> str:
+    """
+    Retorna a preferência salva em settings.json ("auto", "pt" ou "en").
+    Retorna "auto" se o arquivo não existir, estiver corrompido ou o valor for inválido.
+    """
+    if path is None:
+        path = get_settings_path()
+
+    if not os.path.exists(path):
+        return LANG_AUTO
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            gameplay = data.get("gameplay", {})
+            if isinstance(gameplay, dict):
+                val = str(gameplay.get("language", LANG_AUTO)).strip().lower()
+                if val in (LANG_PT, LANG_EN, LANG_AUTO):
+                    return val
+    except Exception:
+        pass
+    return LANG_AUTO
+
+
+def save_language_setting(lang: str, path: str = None) -> bool:
+    """
+    Grava a preferência ("auto", "pt" ou "en") em settings.json na chave gameplay.language
+    sem sobrescrever ou corromper as demais configurações do arquivo.
+    """
+    if lang not in (LANG_AUTO, LANG_PT, LANG_EN):
+        lang = LANG_AUTO
+
+    if path is None:
+        path = get_settings_path()
+
+    try:
+        data = {}
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    loaded = json.load(f)
+                    if isinstance(loaded, dict):
+                        data = loaded
+            except Exception:
+                data = {}
+
+        if not isinstance(data, dict):
+            data = {}
+
+        if "gameplay" not in data or not isinstance(data["gameplay"], dict):
+            data["gameplay"] = {}
+
+        data["gameplay"]["language"] = lang
+
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        return True
+    except Exception:
+        return False
+
+
+def get_saved_language_preference(path: str = None) -> str:
+    """Retorna a preferência atualmente gravada no arquivo de configurações ("auto", "pt" ou "en")."""
+    return load_language_setting(path)
 
 
 def detect_system_lang() -> str:
     """Idioma da máquina: português se a interface do sistema estiver em português, senão inglês."""
     import locale
-    import os
     import sys
 
     candidates = []
@@ -46,19 +125,45 @@ def detect_system_lang() -> str:
     return LANG_EN
 
 
-_current_lang = detect_system_lang()
+def apply_saved_language(path: str = None) -> str:
+    """
+    Lê a preferência salva em settings.json e define o idioma ativo.
+    1. Override de variável de ambiente (SAMURAI_EDGE_LANG) sempre tem prioridade absoluta.
+    2. Se a preferência salva for 'pt' ou 'en', aplica-a.
+    3. Se for 'auto' (ou arquivo inexistente/inválido), detecta do sistema operacional.
+    """
+    global _current_lang
+    override = os.environ.get("SAMURAI_EDGE_LANG", "").lower()
+    if override in (LANG_PT, LANG_EN):
+        _current_lang = override
+        return _current_lang
+
+    saved = load_language_setting(path)
+    if saved in (LANG_PT, LANG_EN):
+        _current_lang = saved
+    else:
+        _current_lang = detect_system_lang()
+    return _current_lang
+
+
+_current_lang = apply_saved_language()
 
 def get_lang() -> str:
     return _current_lang
 
-def set_lang(lang: str):
+def set_lang(lang: str, persist: bool = False, path: str = None):
     global _current_lang
     if lang in (LANG_PT, LANG_EN):
         _current_lang = lang
+        if persist:
+            save_language_setting(lang, path)
 
-def toggle_lang() -> str:
+def toggle_lang(persist: bool = True, path: str = None) -> str:
+    """Alterna entre Português e Inglês, persistindo a escolha do jogador por padrão."""
     global _current_lang
     _current_lang = LANG_EN if _current_lang == LANG_PT else LANG_PT
+    if persist:
+        save_language_setting(_current_lang, path)
     return _current_lang
 
 def t(key: str, **kwargs) -> str:
@@ -76,6 +181,8 @@ def t(key: str, **kwargs) -> str:
 I18N = {
     LANG_PT: {
         # ===== GENERAL UI & SELECTION =====
+        "game_title": "SAMURAI EDGE",
+        "game_subtitle": "BAKUMATSU",
         "select_title": "ESCOLHA SEU GUERREIRO",
         "btn_help": "[ H ] GUIA DO JOGO / AJUDA",
         "btn_start": "INICIAR DUELO (ENTER)",
@@ -138,7 +245,7 @@ I18N = {
         "match_winner_banner_label": 'VENCEDOR DA PARTIDA',
         "mode_arcade_sub": "JORNADA SOLO",
         "arcade_title": "MODO ARCADE",
-        "arcade_subtitle": "11 LUTAS ATÉ O CHEFE FINAL",
+        "arcade_subtitle": "12 LUTAS ATÉ O CHEFE FINAL",
         "arcade_difficulty_title": "DIFICULDADE INICIAL",
         "arcade_difficulty_hint": "A dificuldade sobe a cada 2 lutas seguidas sem Continue e desce a cada Continue.",
         "arcade_difficulty_nav": "[Setas / D-Pad] Escolher   [ENTER / {icon:confirm}] Confirmar   [ESC / {icon:cancel}] Voltar",
@@ -615,9 +722,15 @@ I18N = {
         "arena_ezo_tundra_features": "Totens rituais Inau de madeira, fogueiras de caçador e névoa ártica",
         "arena_ezo_tundra_tactics": "Posicione armadilhas de urso na neve; fogueiras delimitam a área de combate",
         "arena_sacred_dohyo_name": "DOHYŌ SAGRADO",
-        "arena_sacred_dohyo_subtitle": "Arena do Trovão Implacável (Ciclo 6)",
+        "arena_sacred_dohyo_subtitle": "Círculo Ritual do Yokozuna (Ciclo 6)",
+        "arena_sacred_dohyo_hazard": "MÍNIMO (Duelo Direto Puro, Sal Sagrado)",
+        "arena_sacred_dohyo_features": "Plataforma circular de argila Arakida, fardos Shōbu-tawara, pilares Shihobashira com borlas e braseiros",
+        "arena_sacred_dohyo_tactics": "Arena 100% aberta sem obstáculos; controle o centro e empurre o oponente para as bordas",
         "arena_dejima_warehouse_name": "ARMAZÉM DE DEJIMA",
-        "arena_dejima_warehouse_subtitle": "Alquimia e Fósforo no Porto (Ciclo 6)",
+        "arena_dejima_warehouse_subtitle": "Laboratório e Doca Chuvosa 50/50 (Ciclo 6)",
+        "arena_dejima_warehouse_hazard": "MÉDIO (Chuva Portuária, Tábuas Molhadas Escorregadias)",
+        "arena_dejima_warehouse_features": "Interior com bancada alquímica e barris de reagente; exterior com doca de tábuas sobre o canal sob tempestade",
+        "arena_dejima_warehouse_tactics": "Alterne entre o interior firme e a doca escorregadia; use os barris químicos para encurralar",
         "banner_bell": "O SINO SOA!",
         "banner_stage_turns": "O PALCO GIRA!",
         "banner_powder_lit": "PAVIO ACESO!",
@@ -670,6 +783,14 @@ I18N = {
         "effects_quality_label": "Efeitos: [ {q_name} ] ([E] ou Clique)",
         "quality_high": "ALTA",
         "quality_low": "BAIXA",
+        "game_boost_label": "Game Boost: [ {status} ] (Clique)",
+        "fullscreen_toggle_label": "Tela Cheia: [ {status} ] (F11 / Clique)",
+        "language_toggle_label": "Idioma: [ {lang_name} ] ([L] ou Clique)",
+        "lang_auto": "Automático (Sistema)",
+        "lang_pt": "Português",
+        "lang_en": "English",
+        "status_on": "ATIVADO",
+        "status_off": "DESATIVADO",
         
         # ===== CHARACTER SELECT LABELS =====
         "char_stat_speed": "Vel",
@@ -755,6 +876,8 @@ I18N = {
     
     LANG_EN: {
         # ===== GENERAL UI & SELECTION =====
+        "game_title": "SAMURAI EDGE",
+        "game_subtitle": "BAKUMATSU",
         "select_title": "CHOOSE YOUR WARRIOR",
         "btn_help": "[ H ] GAME GUIDE / HELP",
         "btn_start": "START DUEL (ENTER)",
@@ -817,7 +940,7 @@ I18N = {
         "match_winner_banner_label": 'MATCH WINNER',
         "mode_arcade_sub": "SOLO JOURNEY",
         "arcade_title": "ARCADE MODE",
-        "arcade_subtitle": "11 FIGHTS TO THE FINAL BOSS",
+        "arcade_subtitle": "12 FIGHTS TO THE FINAL BOSS",
         "arcade_difficulty_title": "STARTING DIFFICULTY",
         "arcade_difficulty_hint": "Difficulty rises after 2 fights in a row without a Continue and drops with each Continue.",
         "arcade_difficulty_nav": "[Arrows / D-Pad] Choose   [ENTER / {icon:confirm}] Confirm   [ESC / {icon:cancel}] Back",
@@ -1294,9 +1417,15 @@ I18N = {
         "arena_ezo_tundra_features": "Ritual wooden Inau totems, hunter campfires and drifting arctic mist",
         "arena_ezo_tundra_tactics": "Hide bear traps in deep snow; campfires mark perimeter boundaries",
         "arena_sacred_dohyo_name": "SACRED SUMO DOHYŌ",
-        "arena_sacred_dohyo_subtitle": "Ring of Relentless Thunder (Cycle 6)",
+        "arena_sacred_dohyo_subtitle": "Ritual Ring of the Yokozuna (Cycle 6)",
+        "arena_sacred_dohyo_hazard": "MINIMAL (Pure Direct Duel, Sacred Salt)",
+        "arena_sacred_dohyo_features": "Circular Arakida clay platform, Shōbu-tawara straw bales, Shihobashira tassel pillars and braziers",
+        "arena_sacred_dohyo_tactics": "100% open arena with zero obstacles; control the ring center and push opponent to the edge",
         "arena_dejima_warehouse_name": "DEJIMA PORT WAREHOUSE",
-        "arena_dejima_warehouse_subtitle": "Alchemy and Phosphorus at Port (Cycle 6)",
+        "arena_dejima_warehouse_subtitle": "Laboratory & Rainy Docks 50/50 (Cycle 6)",
+        "arena_dejima_warehouse_hazard": "MODERATE (Harbor Rainstorm, Slippery Wet Planks)",
+        "arena_dejima_warehouse_features": "Indoor lab with alchemy workbench and reagent casks; exterior timber wharf over stormy canal",
+        "arena_dejima_warehouse_tactics": "Switch between solid indoor flagstones and precarious wet dock planks; corner foes against barrels",
         "banner_bell": "THE BELL RINGS!",
         "banner_stage_turns": "THE STAGE TURNS!",
         "banner_powder_lit": "FUSE LIT!",
@@ -1349,6 +1478,14 @@ I18N = {
         "effects_quality_label": "Effects: [ {q_name} ] ([E] or Click)",
         "quality_high": "HIGH",
         "quality_low": "LOW",
+        "game_boost_label": "Game Boost: [ {status} ] (Click)",
+        "fullscreen_toggle_label": "Fullscreen: [ {status} ] (F11 / Click)",
+        "language_toggle_label": "Language: [ {lang_name} ] ([L] or Click)",
+        "lang_auto": "Auto (System)",
+        "lang_pt": "Português",
+        "lang_en": "English",
+        "status_on": "ENABLED",
+        "status_off": "DISABLED",
         
         # ===== CHARACTER SELECT LABELS =====
         "char_stat_speed": "Speed",

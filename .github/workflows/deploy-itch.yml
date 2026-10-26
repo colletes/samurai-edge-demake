@@ -1,14 +1,19 @@
-name: Deploy v1.4.0 to itch.io
+name: Deploy v2.0.0 to itch.io
 
 on:
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag Name (e.g. v2.0.0)'
+        required: false
+        default: 'v2.0.0'
 
 permissions:
   contents: read
 
 jobs:
   deploy-itch:
-    name: Upload v1.4.0 to itch.io via Butler
+    name: Upload to itch.io via Butler
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -17,27 +22,37 @@ jobs:
       - name: Setup Butler
         uses: remarkablegames/setup-butler@v1
 
-      - name: Download v1.4.0 Assets from GitHub Release
+      - name: Download Assets from GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag_name || 'v2.0.0' }}
         run: |
-          gh release download v1.4.0 --dir release_assets
+          gh release download "$TAG" --dir release_assets
           ls -la release_assets/
 
       - name: Push Windows to itch.io
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          TAG: ${{ github.event.inputs.tag_name || 'v2.0.0' }}
         run: |
-          butler push release_assets/Samurai-Edge-Demake-Windows.zip colletes/samurai-edge-bakumatsu:windows --userversion "v1.4.0"
+          if [ -f "release_assets/Samurai-Edge-Demake-Windows.zip" ]; then
+            butler push release_assets/Samurai-Edge-Demake-Windows.zip colletes/samurai-edge-bakumatsu:windows --userversion "$TAG"
+          fi
 
       - name: Push macOS to itch.io
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          TAG: ${{ github.event.inputs.tag_name || 'v2.0.0' }}
         run: |
-          butler push release_assets/Samurai-Edge-Demake-macOS.zip colletes/samurai-edge-bakumatsu:osx --userversion "v1.4.0"
+          if [ -f "release_assets/Samurai-Edge-Demake-macOS.zip" ]; then
+            butler push release_assets/Samurai-Edge-Demake-macOS.zip colletes/samurai-edge-bakumatsu:osx --userversion "$TAG"
+          fi
 
       - name: Push Linux to itch.io
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          TAG: ${{ github.event.inputs.tag_name || 'v2.0.0' }}
         run: |
-          butler push release_assets/Samurai-Edge-Demake-Linux.tar.gz colletes/samurai-edge-bakumatsu:linux --userversion "v1.4.0"
+          if [ -f "release_assets/Samurai-Edge-Demake-Linux.tar.gz" ]; then
+            butler push release_assets/Samurai-Edge-Demake-Linux.tar.gz colletes/samurai-edge-bakumatsu:linux --userversion "$TAG"
+          fi

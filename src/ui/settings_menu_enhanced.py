@@ -152,7 +152,7 @@ class EnhancedSettingsMenu:
                 "resolution": "1280x720"
             },
             "gameplay": {
-                "language": "en",
+                "language": "auto",
                 "rumble": True,
                 "difficulty": "normal"
             }

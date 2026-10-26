@@ -163,7 +163,8 @@ class ArcadeDifficultyScreen:
                 if portrait:
                     surface.blit(portrait, (rect.centerx - 42, rect.y + 70))
                 name = fighter_name(run["player_char"]) if run.get("player_char") in FIGHTER_NAME_KEY else ""
-                sub = t("arcade_resume_run_sub", name=name, n=min(11, run.get("index", 0) + 1), m=11, score=run.get("score", 0))
+                total_f = len(run.get("ladder", [])) or 12
+                sub = t("arcade_resume_run_sub", name=name, n=min(total_f, run.get("index", 0) + 1), m=total_f, score=run.get("score", 0))
                 _centered(surface, get_text_font(15), sub, pm.INK_SOFT, rect.centerx, rect.y + 168, card_w - 24)
                 _centered(surface, get_title_font(20), "▶", band_color, rect.centerx, band.y + 6)
             else:
@@ -258,7 +259,7 @@ class ArcadeBracketScreen:
         _centered(surface, get_title_font(34), t("arcade_title"), pm.INK, cx, 26)
 
         n = len(run.ladder)
-        size, gap = 74, 24
+        size, gap = (70, 20) if n >= 12 else (74, 24)
         x0 = cx - (n * size + (n - 1) * gap) // 2
         for i, fight in enumerate(run.ladder):
             state = "done" if i < run.index else ("current" if i == run.index else "todo")

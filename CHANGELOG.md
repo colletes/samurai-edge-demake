@@ -5,6 +5,41 @@ All notable changes to Samurai Edge Demake are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-10-26 - The Definitive Edition
+
+### Added
+- **Full 24-Fighter Canonical Roster & 25-Card Arena Selection**:
+  - **Cycle 1**: Ren (Shaolin Martial Monk) and Chiyo (Twin Kodachi Kunoichi).
+  - **Cycle 2**: Benkei (Sōhei Warrior Monk) and O-Rin (Acoustic Courtesan Minstrel).
+  - **Cycle 3**: Goro (Yakuza Enforcer) and Ichi (Blind Zatoichi Swordsman).
+  - **Cycle 4**: Valerius (Occult Necromancer) and Seimei (Onmyoji Diviner).
+  - **Cycle 5**: Daiki (Pilgrim Monk with Bō Staff) and Aoi (Ezo Taiga Ainu Huntress).
+  - **Cycle 6**: Raiden (Sumo Yokozuna / Tachiai) and Hendrika (Dutch Alchemist / Dejima Stiletto & Flasks).
+  - **25th Arena & Fighter Card**: Random selection with roulette reveal animation, unbiased randomizer, and automatic resolution to unlocked combatants.
+- **Seimei Onmyoji Five Elements Rondel Engine**:
+  - Dynamic elemental rotation (Wood $\to$ Fire $\to$ Earth $\to$ Metal $\to$ Water) triggered by primary and secondary offensive actions.
+  - Dedicated HUD Rondel widget rendering the active element, queue indicator, cooldown timers, and element-specific visual effects and spell names.
+- **Unified Sumi-E Parchment UI Architecture (Deliverable 5.5.6)**:
+  - 100% unified Sumi-E parchment visual language across Title Screen, Settings Menu, Pause Menu, Help Guide, and Selection screens.
+  - Organic parchment texture backdrop, hand-crafted wooden scroll rod mountings, and cinnabar seal ink accents.
+  - Title screen layout repositioned to right parchment quadrant with dedicated rod scroll backing.
+- **System Language Detection & Saved User Preference (Deliverable 5.5.7)**:
+  - Automatic machine language detection (`detect_system_lang()`) with user preference persisted in `settings.json` (`gameplay.language`: `"auto"`, `"pt"`, `"en"`).
+  - Dedicated Language selector in Settings Menu (hotkey `[L]` / mouse click / touch) cycling between `Auto (Sistema)`, `Português`, and `English`.
+  - Manual language toggle (`toggle_lang(persist=True)`) persists player choices across game restarts.
+- **Crash-Proof Controller & Audio Hotplugging (PS5 DualSense Resilience)**:
+  - Resilient `SoundManager` recovery (`ensure_mixer_ready`, `is_music_busy`) preventing crashes when macOS CoreAudio switches default audio endpoints upon gamepad connection.
+  - Defensive monkeypatching on `pyvidplayer2.mixer_handler.MixerHandler` allowing opening video playback to continue uninterrupted during audio driver resets.
+  - Anti-reentrancy guard in `ControllerManager.poll_controllers()` and defensive exception shields across the main game loop.
+- **Automated Testing & CI Pipeline Hardening (P2 & P4)**:
+  - New `tests/test_translation_and_ui.py` test suite verifying 100% key symmetry and interpolation placeholder consistency between Portuguese and English.
+  - New `tests/test_language_setting.py` test suite covering persistence, environment overrides, corrupted file fallbacks, and settings menu cycling.
+  - GitHub Actions CI release workflows (`release.yml`, `release-demo.yml`, `deploy-itch.yml`) updated with headless dummy drivers, `SAMURAI_EDGE_LANG=pt`, expanded test runs, and `v2.0.0` tags.
+
+### Changed
+- Updated internal versioning across `controls_config.json`, `buildozer.spec`, `main.py`, and test suites to `2.0.0`.
+- Balanced all 24 fighters for ~50% target winrate across Easy, Normal, and Hard AI difficulties with tournament simulation harness.
+
 ## [1.8.0] - 2026-10-14
 
 ### Added

@@ -15,6 +15,9 @@ from src.config import (
 )
 from src.i18n import t
 from src.edition import is_demo
+from src.effects import parchment as pm
+from src.ui.font_manager import render_text_fx
+from src.ui.fonts import get_title_font, get_text_font
 
 MODE_ARCADE = 0
 MODE_VERSUS = 1
@@ -27,7 +30,10 @@ class SumieTitleScreen:
         self.notice_timer = 0.0
         self.notice_text = ""
 
-        # Carregar imagem conceitual Sumi-E se disponível
+        # Pétalas de cerejeira para a tela de título em pergaminho Sumi-E
+        self.petals = pm.PetalField(count=26, seed=9)
+
+        # Carregar imagem conceitual Sumi-E se disponível (para fallback)
         self.bg_surf = None
         bg_path = get_asset_path("assets/concepts/sumie_title_logo_concept.jpg")
         if os.path.exists(bg_path):
@@ -47,7 +53,7 @@ class SumieTitleScreen:
             except Exception:
                 self.bg_surf = None
 
-        # Partículas de tinta / cinzas atmosféricas
+        # Partículas de tinta / cinzas atmosféricas (para fallback)
         self.particles = []
         for _ in range(35):
             self.particles.append({
@@ -176,7 +182,10 @@ class SumieTitleScreen:
         if self.notice_timer > 0:
             self.notice_timer -= dt
 
-        # Atualizar partículas de cinzas
+        # Atualizar pétalas de cerejeira
+        self.petals.update(dt)
+
+        # Atualizar partículas de cinzas (para fallback)
         for p in self.particles:
             p["x"] += p["speed_x"] + 0.3 * math.sin(self.anim_time + p["y"] * 0.05)
             p["y"] += p["speed_y"]
@@ -185,6 +194,136 @@ class SumieTitleScreen:
                 p["x"] = random.uniform(0, SCREEN_WIDTH)
 
     def render(self, surface: pygame.Surface, font_large, font_mid, font_small):
+        parch = pm.get_backdrop() is not None
+        if parch:
+            self._render_parchment(surface, font_large, font_mid, font_small)
+        else:
+            self._render_fallback(surface, font_large, font_mid, font_small)
+
+    def _render_parchment(self, surface: pygame.Surface, font_large, font_mid, font_small):
+        # 1. Paisagem Sumi-E em papel envelhecido e moldura de madeira
+        pm.draw_backdrop(surface)
+
+        # 2. Pétalas de cerejeira em suspensão
+        self.petals.draw(surface)
+
+        # 3. Logotipo Artístico Caligrafado (Shojumaru com glow dourado e nanquim profundo)
+        font_title_big = get_title_font(46)
+        font_title_sub = get_title_font(18)
+        font_menu_title = get_title_font(18)
+        font_menu_sub = get_text_font(13)
+        font_menu_tip = get_text_font(14)
+
+        title_text = t("game_title")
+        sub_text = t("game_subtitle")
+
+        title_surf = render_text_fx(
+            font_title_big,
+            title_text,
+            color=(28, 22, 18),
+            outline=True,
+            outline_color=(58, 48, 38),
+            outline_width=1,
+            glow=True,
+            glow_color=(212, 175, 55),
+            glow_width=3,
+            shadow=True,
+            shadow_color=(20, 16, 12),
+            shadow_offset=(2, 2)
+        )
+        title_y = 65
+        surface.blit(title_surf, (SCREEN_WIDTH // 2 - title_surf.get_width() // 2, title_y))
+
+        sub_surf = render_text_fx(
+            font_title_sub,
+            f"―  {sub_text}  ―",
+            color=pm.SEAL_RED,
+            glow=True,
+            glow_color=(235, 205, 140),
+            glow_width=2,
+            shadow=True,
+            shadow_color=(30, 20, 18),
+            shadow_offset=(1, 1)
+        )
+        sub_y = title_y + title_surf.get_height() - 8
+        surface.blit(sub_surf, (SCREEN_WIDTH // 2 - sub_surf.get_width() // 2, sub_y))
+
+        # Brasão da garça no canto superior direito
+        pm.draw_crest(surface, SCREEN_WIDTH - 120, 26, scale=0.68)
+
+        # 4. Três Cartões de Modo de Jogo montados sobre a tabuleta no quadrante direito
+        modes = [
+            {"id": MODE_ARCADE, "name": t("mode_arcade"), "sub": t("demo_locked_sub") if is_demo() else t("mode_arcade_sub"), "enabled": not is_demo()},
+            {"id": MODE_VERSUS, "name": t("mode_versus"), "sub": t("mode_immediate_duel"), "enabled": True},
+            {"id": MODE_OPTIONS, "name": t("mode_options"), "sub": t("mode_configure_controls"), "enabled": True},
+        ]
+
+        card_w = 420
+        card_h = 50
+        gap = 16
+        start_x = SCREEN_WIDTH - card_w - 75  # ~785, posicionado perfeitamente sobre o quadrante direito
+        start_y = 355
+
+        # Tabuleta de pergaminho de montagem com varas cilíndricas tradicionais
+        scroll_rect = pygame.Rect(start_x - 16, start_y - 28, card_w + 32, 3 * (card_h + gap) + 32)
+        pm.draw_scroll(surface, scroll_rect, seed=55, rod_top=True)
+
+        self.btn_rects = []
+        for idx, m in enumerate(modes):
+            item_rect = pygame.Rect(start_x, start_y + idx * (card_h + gap), card_w, card_h)
+            self.btn_rects.append(item_rect)
+
+            is_sel = (self.selected_mode == m["id"])
+
+            # Cartão de papel rasgado individual
+            pm.draw_paper_card(surface, item_rect, seed=idx * 29 + 11)
+
+            if is_sel:
+                # Pincelada vermelha e borda de nanquim no item focado
+                stroke_col = pm.SEAL_RED if m["enabled"] else (100, 95, 95)
+                pm.draw_brush_highlight(surface, item_rect.inflate(12, 6), color=stroke_col, seed=idx + 3, alpha=225)
+                pm.draw_ink_border(surface, item_rect, color=stroke_col, width=2, seed=idx + 1)
+
+                # Indicador de seta de pincel
+                arrow_pts = [
+                    (item_rect.x + 12, item_rect.centery - 6),
+                    (item_rect.x + 20, item_rect.centery),
+                    (item_rect.x + 12, item_rect.centery + 6)
+                ]
+                pygame.draw.polygon(surface, (252, 246, 230), arrow_pts)
+
+                name_s = font_menu_title.render(m["name"], True, (252, 246, 230))
+                sub_max_w = card_w - name_s.get_width() - 56
+                sub_s = pm.fit_text(font_menu_sub, m["sub"], (240, 225, 190), sub_max_w)
+                surface.blit(name_s, (item_rect.x + 28, item_rect.centery - name_s.get_height() // 2))
+                surface.blit(sub_s, (item_rect.right - sub_s.get_width() - 16, item_rect.centery - sub_s.get_height() // 2))
+            else:
+                pm.draw_ink_border(surface, item_rect, color=pm.INK_SOFT, width=1, seed=idx + 1, alpha=150)
+
+                text_col = pm.INK if m["enabled"] else pm.INK_SOFT
+                name_s = pm.render_ink(font_menu_title, m["name"], color=text_col)
+                sub_col = pm.INK_SOFT if m["enabled"] else (135, 130, 125)
+                sub_max_w = card_w - name_s.get_width() - 44
+                sub_s = pm.fit_text(font_menu_sub, m["sub"], sub_col, sub_max_w)
+                surface.blit(name_s, (item_rect.x + 18, item_rect.centery - name_s.get_height() // 2))
+                surface.blit(sub_s, (item_rect.right - sub_s.get_width() - 16, item_rect.centery - sub_s.get_height() // 2))
+
+        # 5. Mensagem de aviso se tentar escolher modo desabilitado
+        if self.notice_timer > 0:
+            notice_rect = pygame.Rect(start_x, start_y - 42, card_w, 28)
+            pm.draw_paper_card(surface, notice_rect, seed=89)
+            pm.draw_ink_border(surface, notice_rect, color=pm.SEAL_RED, width=1)
+            notice_surf = pm.fit_text(font_menu_tip, self.notice_text, pm.SEAL_RED, card_w - 20)
+            surface.blit(notice_surf, (notice_rect.centerx - notice_surf.get_width() // 2, notice_rect.centery - notice_surf.get_height() // 2))
+
+        # 6. Rodapé com instruções em Zen Antique
+        if is_demo():
+            badge = font_menu_title.render(t("demo_badge"), True, pm.SEAL_RED)
+            surface.blit(badge, (SCREEN_WIDTH - badge.get_width() - 24, 20))
+        tip_text = pm.fit_text(font_menu_tip, t("title_menu_hint"), pm.INK_SOFT, SCREEN_WIDTH - 80)
+        surface.blit(tip_text, (SCREEN_WIDTH // 2 - tip_text.get_width() // 2, SCREEN_HEIGHT - 20))
+
+    def _render_fallback(self, surface: pygame.Surface, font_large, font_mid, font_small):
         # 1. Desenhar Fundo Sumi-E
         if self.bg_surf:
             surface.blit(self.bg_surf, (0, 0))
@@ -200,7 +339,6 @@ class SumieTitleScreen:
             pygame.draw.circle(surface, alpha_col, (int(p["x"]), int(p["y"])), int(p["size"]))
 
         # 3. Painel do Menu de Modos de Jogo em Tabuleta Kanban Laqueada
-        from src.ui.fonts import get_title_font, get_text_font
         font_menu_title = get_title_font(17)
         font_menu_sub = get_text_font(13)
         font_menu_tip = get_text_font(14)

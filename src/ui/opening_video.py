@@ -22,6 +22,7 @@ class OpeningVideoScreen:
         self.prompt_timer = 0.0
         self.hold_timer = 0.0
         self.is_holding = False
+        self.is_ios_native = False
         self.hold_pos = (SCREEN_WIDTH - 140, SCREEN_HEIGHT - 60)
 
         if not video_path:
@@ -64,6 +65,74 @@ class OpeningVideoScreen:
 
         try:
             from pyvidplayer2 import Video
+            import pyvidplayer2.mixer_handler
+
+            # Blindagem defensiva do MixerHandler contra quedas de driver, CoreAudio reset e hotplug de gamepad
+            def _safe_mixer_get_busy(handler_self):
+                try:
+                    if not pygame.mixer.get_init():
+                        try:
+                            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                        except Exception:
+                            return False
+                    return bool(pygame.mixer.music.get_busy())
+                except Exception:
+                    return False
+
+            def _safe_mixer_get_pos(handler_self):
+                if not getattr(handler_self, "loaded", False):
+                    return 0.0
+                try:
+                    if not pygame.mixer.get_init():
+                        try:
+                            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                        except Exception:
+                            return 0.0
+                    return max(0.0, pygame.mixer.music.get_pos() / 1000.0)
+                except Exception:
+                    return 0.0
+
+            def _safe_mixer_load(handler_self, audio_chunk):
+                try:
+                    if not pygame.mixer.get_init():
+                        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                    from io import BytesIO
+                    pygame.mixer.music.load(BytesIO(audio_chunk), "wav")
+                    handler_self.loaded = True
+                except Exception:
+                    handler_self.loaded = False
+
+            def _safe_mixer_play(handler_self):
+                try:
+                    if not pygame.mixer.get_init():
+                        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                    pygame.mixer.music.play()
+                except Exception:
+                    pass
+
+            def _safe_mixer_stop(handler_self):
+                try:
+                    if pygame.mixer.get_init():
+                        pygame.mixer.music.stop()
+                except Exception:
+                    pass
+
+            def _safe_mixer_unload(handler_self):
+                try:
+                    handler_self.stop()
+                    if pygame.mixer.get_init():
+                        pygame.mixer.music.unload()
+                except Exception:
+                    pass
+                handler_self.loaded = False
+
+            pyvidplayer2.mixer_handler.MixerHandler.get_busy = _safe_mixer_get_busy
+            pyvidplayer2.mixer_handler.MixerHandler.get_pos = _safe_mixer_get_pos
+            pyvidplayer2.mixer_handler.MixerHandler.load = _safe_mixer_load
+            pyvidplayer2.mixer_handler.MixerHandler.play = _safe_mixer_play
+            pyvidplayer2.mixer_handler.MixerHandler.stop = _safe_mixer_stop
+            pyvidplayer2.mixer_handler.MixerHandler.unload = _safe_mixer_unload
+
             # use_pygame_audio=True garante que o audio saia pelo mixer do Pygame (dispositivo de som ativo do jogo)
             # chunk_size=120 carrega a trilha inteira (99.6s) em um unico buffer continuo sem cortes
             self.video = Video(self.video_path, use_pygame_audio=True, chunk_size=120, max_chunks=1)
@@ -95,77 +164,85 @@ class OpeningVideoScreen:
         if self.prompt_timer < 0.25:
             return False
 
-        should_skip = False
+        try:
+            should_skip = False
 
-        if event.type == pygame.KEYDOWN:
-            if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_ESCAPE):
-                should_skip = True
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_ESCAPE):
+                    should_skip = True
 
-        elif event.type == pygame.JOYBUTTONDOWN:
-            from src.input.controller_manager import get_controller_manager
-            ctrl_mgr = get_controller_manager()
-            if (ctrl_mgr.is_event_menu_pause(event, 0) or
-                ctrl_mgr.is_event_menu_pause(event, 1) or
-                event.button in (6, 7)):
-                should_skip = True
-            elif (ctrl_mgr.is_event_menu_confirm(event) or
-                  ctrl_mgr.is_event_menu_cancel(event) or
-                  event.button in (0, 1, 2)):
+            elif event.type == pygame.JOYBUTTONDOWN:
+                from src.input.controller_manager import get_controller_manager
+                ctrl_mgr = get_controller_manager()
+                if (ctrl_mgr.is_event_menu_pause(event, 0) or
+                    ctrl_mgr.is_event_menu_pause(event, 1) or
+                    event.button in (6, 7)):
+                    should_skip = True
+                elif (ctrl_mgr.is_event_menu_confirm(event) or
+                      ctrl_mgr.is_event_menu_cancel(event) or
+                      event.button in (0, 1, 2)):
+                    self.is_holding = True
+
+            elif event.type == pygame.JOYBUTTONUP:
+                self.is_holding = False
+                self.hold_timer = 0.0
+
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self.is_holding = True
+                self.hold_pos = getattr(event, "pos", self.hold_pos)
 
-        elif event.type == pygame.JOYBUTTONUP:
-            self.is_holding = False
-            self.hold_timer = 0.0
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                self.is_holding = False
+                self.hold_timer = 0.0
 
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            self.is_holding = True
-            self.hold_pos = getattr(event, "pos", self.hold_pos)
+            elif event.type == pygame.FINGERDOWN:
+                self.is_holding = True
+                self.hold_pos = (event.x * SCREEN_WIDTH, event.y * SCREEN_HEIGHT)
 
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            self.is_holding = False
-            self.hold_timer = 0.0
+            elif event.type == pygame.FINGERUP:
+                self.is_holding = False
+                self.hold_timer = 0.0
 
-        elif event.type == pygame.FINGERDOWN:
-            self.is_holding = True
-            self.hold_pos = (event.x * SCREEN_WIDTH, event.y * SCREEN_HEIGHT)
+            if should_skip:
+                self.stop()
+                return True
 
-        elif event.type == pygame.FINGERUP:
-            self.is_holding = False
-            self.hold_timer = 0.0
-
-        if should_skip:
-            self.stop()
-            return True
-
-        return False
+            return False
+        except Exception as e:
+            print(f"[OpeningVideoScreen] Erro no processamento de eventos: {e}")
+            return False
 
     def update(self, dt: float):
         """Atualiza estado e temporizadores do player de video."""
         if self.is_finished:
             return
 
-        self.prompt_timer += dt
+        try:
+            self.prompt_timer += dt
 
-        if self.is_holding:
-            self.hold_timer += dt
-            if self.hold_timer >= 0.75:
+            if self.is_holding:
+                self.hold_timer += dt
+                if self.hold_timer >= 0.75:
+                    self.stop()
+                    return
+            else:
+                self.hold_timer = max(0.0, self.hold_timer - dt * 2.5)
+
+            if self.is_ios_native:
+                if not self._ios_lib.is_native_ios_video_playing():
+                    self.is_finished = True
+                return
+
+            if not self.video or not self.video.active:
                 self.stop()
                 return
-        else:
-            self.hold_timer = max(0.0, self.hold_timer - dt * 2.5)
 
-        if self.is_ios_native:
-            if not self._ios_lib.is_native_ios_video_playing():
-                self.is_finished = True
-            return
-
-        if not self.video or not self.video.active:
-            self.stop()
-            return
-
-        frame_idx = getattr(self.video, "frame", 0)
-        total_frames = getattr(self.video, "frame_count", 0)
-        if total_frames > 0 and frame_idx >= total_frames - 2:
+            frame_idx = getattr(self.video, "frame", 0)
+            total_frames = getattr(self.video, "frame_count", 0)
+            if total_frames > 0 and frame_idx >= total_frames - 2:
+                self.stop()
+        except Exception as e:
+            print(f"[OpeningVideoScreen] Erro no update do video: {e}")
             self.stop()
 
     def render(self, screen: pygame.Surface):
@@ -198,11 +275,13 @@ class OpeningVideoScreen:
         prompt_surf = self.font.render(prompt_text, True, COLOR_WHITE)
         prompt_surf.set_alpha(alpha)
 
+        target_w = screen.get_width()
+        target_h = screen.get_height()
         pill_w = prompt_surf.get_width() + 56
         pill_h = 38
         margin = 32
-        pill_x = SCREEN_WIDTH - pill_w - margin
-        pill_y = SCREEN_HEIGHT - pill_h - margin
+        pill_x = target_w - pill_w - margin
+        pill_y = target_h - pill_h - margin
 
         pill_surf = pygame.Surface((pill_w, pill_h), pygame.SRCALPHA)
         bg_color = (0, 0, 0, int(alpha * 0.70)) if self.hold_timer <= 0 else (15, 12, 10, int(alpha * 0.90))
@@ -245,7 +324,8 @@ class OpeningVideoScreen:
                 pass
             self.video = None
         try:
-            pygame.mixer.music.stop()
+            if pygame.mixer.get_init():
+                pygame.mixer.music.stop()
         except Exception:
             pass
 

@@ -125,6 +125,23 @@ def _get_death_style_for_attacker(attacker, weapon: str | None = None, victim=No
         if weapon == "trap" or (victim is not None and (getattr(victim, "state", "") == STATE_STUNNED or getattr(victim, "slow_timer", 0.0) > 0)):
             return "TRAP_AND_EXECUTE"
         return "SPEAR_HEART_SLIDE"
+    elif "raiden" in char_type or "sumo" in char_type:
+        if state == "TACHIAI_TACKLE" or weapon == "tackle":
+            return "TACHIAI_SHATTER_SLAM"
+        return "TSUPPARI_SONIC_DECAP"
+    elif "hendrika" in char_type or "alchemist" in char_type:
+        if weapon in ("flask", "acid", "fire", "ether", "frost", "miasma") or state in ("FLASK_THROW", "ALCHEMIC_FLASK"):
+            flask_type = getattr(attacker, "active_reagent", "acid")
+            if flask_type == "fire":
+                return "ALCHEMIC_FIRE_ASH"
+            elif flask_type == "ether":
+                return "ALCHEMIC_ETHER_SUFFOCATION"
+            elif flask_type == "frost":
+                return "ALCHEMIC_FROST_SHATTER"
+            elif flask_type == "miasma":
+                return "ALCHEMIC_MIASMA_MELT"
+            return "ALCHEMIC_ACID_DISSOLVE"
+        return "STILETTO_CAROTID_VITRIOL"
     if weapon in ("kunai", "shuriken"):
         return "KUNAI_PIN"
     if weapon == "arrow":
@@ -1002,7 +1019,10 @@ class CombatSystem:
                 target = p2 if proj.owner == p1 else p1
                 winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
                 if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.50 + target.radius):
-                    if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
+                    el = getattr(proj, "element", "wood")
+                    is_metal_break = (el == "metal")
+
+                    if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN") and not is_metal_break:
                         can_reflect = (
                             target.state == "MAI_DANCE" or
                             (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0) or
@@ -1025,7 +1045,27 @@ class CombatSystem:
                             self._play_sound("parry")
                             proj.is_active = False
                     else:
-                        hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=2)
+                        dmg = getattr(proj, "damage", 2)
+                        hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=dmg)
+
+                        # Efeitos especiais elementais no acerto
+                        if not dead and getattr(target, "is_alive", True):
+                            if el == "wood":
+                                target.stun(0.80)
+                                banners.append(FloatingBanner("WOOD ROOT!", target.wx, target.wy, wz=1.6, color=(50, 220, 120)))
+                            elif el == "water":
+                                target.stun(0.40)
+                                banners.append(FloatingBanner("WATER SLOW!", target.wx, target.wy, wz=1.6, color=(70, 180, 255)))
+                            elif el == "earth" and game_map is not None:
+                                target.apply_forced_displacement(proj.dir_x * 1.2, proj.dir_y * 1.2, game_map)
+                                banners.append(FloatingBanner("EARTH SLAM!", target.wx, target.wy, wz=1.6, color=(235, 185, 65)))
+                            elif el == "metal" and target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
+                                target.stun(0.60)
+                                banners.append(FloatingBanner("GUARD CRUSH!", target.wx, target.wy, wz=1.6, color=(245, 248, 255)))
+                            elif el == "yinyang":
+                                target.stun(0.70)
+                                banners.append(FloatingBanner("ORACLE SEAL!", target.wx, target.wy, wz=1.6, color=(225, 150, 255)))
+
                         if dead:
                             camera.add_shake(16.0)
                             for _ in range(25):
@@ -1033,8 +1073,9 @@ class CombatSystem:
                             self.hitstop_timer = 0.12
                             winner = winner_id
                             self._play_sound("fatal_strike")
+                            finisher_style = f"SEIMEI_FATAL_{el.upper()}" if el in ("wood", "fire", "earth", "metal", "water", "yinyang") else "SEAL_STASIS_COLLAPSE"
                             if cinematic_director:
-                                cinematic_director.trigger_fatal_strike(proj.owner, target, "SEAL_STASIS_COLLAPSE", (proj.dir_x, proj.dir_y))
+                                cinematic_director.trigger_fatal_strike(proj.owner, target, finisher_style, (proj.dir_x, proj.dir_y))
                         else:
                             camera.add_shake(7.0)
                             for _ in range(12):

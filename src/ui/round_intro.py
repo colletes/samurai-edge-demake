@@ -26,6 +26,32 @@ def _ease_out_cubic(t: float) -> float:
     return 1.0 - (1.0 - t) ** 3
 
 
+def _parse_name_and_badge(raw_name: str) -> tuple[str, str]:
+    """Separa o nome base do lutador e sua etiqueta secundária (ex: '(ESPELHO)', '(MIRROR)', '(IA 2)')."""
+    import re
+    m = re.search(r"\(([^)]+)\)", raw_name)
+    if m:
+        badge = m.group(1).strip()
+        base_name = raw_name[:m.start()].strip()
+        return base_name, f"[ {badge} ]"
+    return raw_name.strip(), ""
+
+
+def _render_fitted_text(text: str, color, max_w: int, base_size: int = 24, min_size: int = 14) -> pygame.Surface:
+    """Renderiza texto com escala tipográfica adaptativa para garantir que caiba no pergaminho."""
+    for sz in range(base_size, min_size - 1, -2):
+        font = get_title_font(sz)
+        surf = font.render(text, True, color)
+        if surf.get_width() <= max_w:
+            return surf
+    # Se ainda exceder, faz escala suave proporcional
+    surf = get_title_font(min_size).render(text, True, color)
+    if surf.get_width() > max_w:
+        scale = max_w / surf.get_width()
+        return pygame.transform.smoothscale(surf, (max_w, max(1, int(surf.get_height() * scale))))
+    return surf
+
+
 class RoundIntroScreen:
     """Controla a cinemática de abertura de cada round: rotação suave da
     câmera e pergaminho vertical Sumi-E revelando os nomes dos lutadores."""
@@ -100,25 +126,47 @@ class RoundIntroScreen:
 
         if reveal > 0.55:
             text_alpha = int(255 * min(1.0, (reveal - 0.55) / 0.45))
-            font_title = get_title_font(24)
             font_vs = get_text_font(20)
+            font_badge = get_text_font(13)
+            max_name_w = scroll_w - 24
 
-            p1_surf = font_title.render(self.p1_name, True, pm.darken(self.p1_color, 0.6) if parch else self.p1_color)
+            p1_base, p1_badge = _parse_name_and_badge(self.p1_name)
+            p1_col = pm.darken(self.p1_color, 0.6) if parch else self.p1_color
+            p1_surf = _render_fitted_text(p1_base, p1_col, max_name_w, base_size=24, min_size=14)
+
+            p2_base, p2_badge = _parse_name_and_badge(self.p2_name)
+            p2_col = pm.darken(self.p2_color, 0.6) if parch else self.p2_color
+            p2_surf = _render_fitted_text(p2_base, p2_col, max_name_w, base_size=24, min_size=14)
+
+            badge_col = pm.SEAL_RED if parch else (190, 50, 40)
+            b1_surf = font_badge.render(p1_badge, True, badge_col) if p1_badge else None
+            b2_surf = font_badge.render(p2_badge, True, badge_col) if p2_badge else None
+
             vs_surf = font_vs.render("対", True, pm.SEAL_RED if parch else (60, 40, 20))
-            p2_surf = font_title.render(self.p2_name, True, pm.darken(self.p2_color, 0.6) if parch else self.p2_color)
+
             if text_alpha < 255:
-                p1_surf.fill((255, 255, 255, text_alpha), special_flags=pygame.BLEND_RGBA_MULT)
-                vs_surf.fill((255, 255, 255, text_alpha), special_flags=pygame.BLEND_RGBA_MULT)
-                p2_surf.fill((255, 255, 255, text_alpha), special_flags=pygame.BLEND_RGBA_MULT)
+                for s in (p1_surf, p2_surf, vs_surf, b1_surf, b2_surf):
+                    if s is not None:
+                        s.fill((255, 255, 255, text_alpha), special_flags=pygame.BLEND_RGBA_MULT)
 
             cy = scroll_y + scroll_h // 2
-            surface.blit(p1_surf, (scroll_x + scroll_w // 2 - p1_surf.get_width() // 2, cy - 90))
-            surface.blit(vs_surf, (scroll_x + scroll_w // 2 - vs_surf.get_width() // 2, cy - 14))
-            surface.blit(p2_surf, (scroll_x + scroll_w // 2 - p2_surf.get_width() // 2, cy + 40))
+            mid_x = scroll_x + scroll_w // 2
+
+            p1_y = cy - 90
+            surface.blit(p1_surf, (mid_x - p1_surf.get_width() // 2, p1_y))
+            if b1_surf is not None:
+                surface.blit(b1_surf, (mid_x - b1_surf.get_width() // 2, p1_y + p1_surf.get_height() + 2))
+
+            surface.blit(vs_surf, (mid_x - vs_surf.get_width() // 2, cy - 14))
+
+            p2_y = cy + 40
+            surface.blit(p2_surf, (mid_x - p2_surf.get_width() // 2, p2_y))
+            if b2_surf is not None:
+                surface.blit(b2_surf, (mid_x - b2_surf.get_width() // 2, p2_y + p2_surf.get_height() + 2))
 
             if self.round_label:
                 font_round = get_text_font(16)
                 r_surf = font_round.render(self.round_label, True, pm.SEAL_RED if parch else (70, 45, 20))
                 if text_alpha < 255:
                     r_surf.fill((255, 255, 255, text_alpha), special_flags=pygame.BLEND_RGBA_MULT)
-                surface.blit(r_surf, (scroll_x + scroll_w // 2 - r_surf.get_width() // 2, scroll_y + 46 if parch else scroll_y - 26))
+                surface.blit(r_surf, (mid_x - r_surf.get_width() // 2, scroll_y + 46 if parch else scroll_y - 26))

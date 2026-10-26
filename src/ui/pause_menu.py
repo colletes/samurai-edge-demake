@@ -133,28 +133,63 @@ class PauseMenu:
         shade.fill((6, 6, 10, 170))
         surface.blit(shade, (0, 0))
 
+        parch = pm.get_backdrop() is not None
         panel_h = HEADER_H + ROW_H * len(self.items) + PAD_BOTTOM
         panel = pygame.Rect((SCREEN_WIDTH - PANEL_W) // 2, (SCREEN_HEIGHT - panel_h) // 2, PANEL_W, panel_h)
-        pm.draw_paper_card(surface, panel, seed=57)
 
-        title_font = get_title_font(30)
-        title = pm.render_ink(title_font, t("pause_title"), pm.INK)
-        surface.blit(title, (panel.centerx - title.get_width() // 2, panel.y + 24))
-        pygame.draw.line(surface, pm.INK_SOFT, (panel.x + 60, panel.y + HEADER_H - 10), (panel.right - 60, panel.y + HEADER_H - 10), 1)
+        if parch:
+            # Pergaminho Sumi-E unificado: papel envelhecido, varas de madeira e brasão
+            pm.draw_paper_card(surface, panel, seed=57)
+            pm.draw_rod(surface, "top", panel.centerx, panel.y - 14, panel.width + 24)
+            pm.draw_rod(surface, "bottom", panel.centerx, panel.bottom - 18, panel.width + 24)
+            pm.draw_crest(surface, panel.right - 56, panel.y + 12, scale=0.45)
 
-        item_font = get_title_font(19)
-        self.item_rects = []
-        for i, (key, _action) in enumerate(self.items):
-            row = pygame.Rect(panel.x + 36, panel.y + HEADER_H + i * ROW_H, PANEL_W - 72, ROW_H - 6)
-            self.item_rects.append(row)
-            selected = i == self.selected
-            text = t("arcade_abandon_confirm") if (self.confirm_abandon and _action == ACTION_ABANDON) else t(key)
-            if selected:
-                pm.draw_brush_highlight(surface, row.inflate(10, 4), pm.SEAL_RED, seed=i + 3)
-                label = item_font.render(text, True, (252, 244, 226))
-            else:
-                label = pm.render_ink(item_font, text, pm.INK)
-            max_w = row.width - 24
-            if label.get_width() > max_w:
-                label = pygame.transform.smoothscale(label, (max_w, label.get_height()))
-            surface.blit(label, (row.centerx - label.get_width() // 2, row.centery - label.get_height() // 2))
+            title_font = get_title_font(30)
+            title = pm.render_ink(title_font, t("pause_title"), pm.INK)
+            surface.blit(title, (panel.centerx - title.get_width() // 2, panel.y + 24))
+            pygame.draw.line(surface, pm.INK_SOFT, (panel.x + 60, panel.y + HEADER_H - 10), (panel.right - 60, panel.y + HEADER_H - 10), 1)
+
+            item_font = get_title_font(19)
+            self.item_rects = []
+            for i, (key, _action) in enumerate(self.items):
+                row = pygame.Rect(panel.x + 36, panel.y + HEADER_H + i * ROW_H, PANEL_W - 72, ROW_H - 6)
+                self.item_rects.append(row)
+                selected = i == self.selected
+                text = t("arcade_abandon_confirm") if (self.confirm_abandon and _action == ACTION_ABANDON) else t(key)
+                if selected:
+                    pm.draw_brush_highlight(surface, row.inflate(10, 4), pm.SEAL_RED, seed=i + 3)
+                    label = item_font.render(text, True, (252, 244, 226))
+                else:
+                    label = pm.render_ink(item_font, text, pm.INK)
+                max_w = row.width - 24
+                if label.get_width() > max_w:
+                    label = pygame.transform.smoothscale(label, (max_w, label.get_height()))
+                surface.blit(label, (row.centerx - label.get_width() // 2, row.centery - label.get_height() // 2))
+        else:
+            # Fallback sem assets de pergaminho: tabuleta laqueada escura com borda dourada
+            pygame.draw.rect(surface, (20, 18, 22), panel, border_radius=8)
+            pygame.draw.rect(surface, COLOR_GOLD, panel, 2, border_radius=8)
+            pygame.draw.rect(surface, (45, 40, 38), panel.inflate(-8, -8), 1, border_radius=6)
+
+            title_font = get_title_font(30)
+            title = title_font.render(t("pause_title"), True, COLOR_GOLD)
+            surface.blit(title, (panel.centerx - title.get_width() // 2, panel.y + 24))
+            pygame.draw.line(surface, (80, 70, 50), (panel.x + 60, panel.y + HEADER_H - 10), (panel.right - 60, panel.y + HEADER_H - 10), 1)
+
+            item_font = get_title_font(19)
+            self.item_rects = []
+            for i, (key, _action) in enumerate(self.items):
+                row = pygame.Rect(panel.x + 36, panel.y + HEADER_H + i * ROW_H, PANEL_W - 72, ROW_H - 6)
+                self.item_rects.append(row)
+                selected = i == self.selected
+                text = t("arcade_abandon_confirm") if (self.confirm_abandon and _action == ACTION_ABANDON) else t(key)
+                if selected:
+                    pygame.draw.rect(surface, (80, 24, 24), row, border_radius=4)
+                    pygame.draw.rect(surface, COLOR_GOLD, row, 1, border_radius=4)
+                    label = item_font.render(text, True, COLOR_GOLD)
+                else:
+                    label = item_font.render(text, True, (200, 195, 190))
+                max_w = row.width - 24
+                if label.get_width() > max_w:
+                    label = pygame.transform.smoothscale(label, (max_w, label.get_height()))
+                surface.blit(label, (row.centerx - label.get_width() // 2, row.centery - label.get_height() // 2))

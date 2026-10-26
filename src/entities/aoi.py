@@ -32,13 +32,13 @@ class AoiHuntress(Samurai):
         self.can_parry = True
 
         # Ataque Primário: Estocada Veloz de Lança Op
-        self.spear_duration = 0.15
-        self.spear_recovery = 0.17
-        self.spear_reach = 2.15
+        self.spear_duration = 0.20
+        self.spear_recovery = 0.46  # Recovery calibrado para permitir punição em caso de whiff
+        self.spear_reach = 1.85     # Alcance calibrado
         self.spear_radius = 1.05
 
         # Ação Secundária: Armadilha de Urso (Bear Trap)
-        self.trap_cooldown = 3.4
+        self.trap_cooldown = 5.5  # Cooldown calibrado para evitar sobrecarga de armadilhas
         self.trap_timer = 0.0
         self.active_traps: list[BearTrapProjectile] = []
 
@@ -61,7 +61,7 @@ class AoiHuntress(Samurai):
     def can_act(self) -> bool:
         return (
             self.is_alive
-            and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY)
+            and self.state in (STATE_IDLE, STATE_WALK)
             and self.roll_recovery_timer <= 0
             and self.dash_recovery_timer <= 0
         )
@@ -78,8 +78,8 @@ class AoiHuntress(Samurai):
         self.hitbox_damage = 2
 
         self.hitbox_center = (
-            self.wx + self.facing_x * 1.25,
-            self.wy + self.facing_y * 1.25
+            self.wx + self.facing_x * 1.05,
+            self.wy + self.facing_y * 1.05
         )
         self.hitbox_radius = self.spear_radius
         self.slash_dir = (self.facing_x, self.facing_y)
@@ -104,9 +104,9 @@ class AoiHuntress(Samurai):
             trap_x = max(min_x + 0.35, min(max_x - 0.35, trap_x))
             trap_y = max(min_y + 0.35, min(max_y - 0.35, trap_y))
 
-        # Limitar a 2 armadilhas ativas simultaneamente
+        # Limitar a 1 armadilha ativa simultaneamente
         self.active_traps = [t for t in self.active_traps if getattr(t, "is_active", False)]
-        if len(self.active_traps) >= 2:
+        if len(self.active_traps) >= 1:
             oldest = self.active_traps.pop(0)
             oldest.detonate()
 

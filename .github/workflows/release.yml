@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag Name (e.g. v1.3.2)'
+        description: 'Release Tag Name (e.g. v2.0.0)'
         required: false
-        default: 'v1.3.2'
+        default: 'v2.0.0'
 
 permissions:
   contents: write
@@ -34,16 +34,25 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Automated Game Tests
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+          SAMURAI_EDGE_LANG: pt
         run: |
-          python test_game.py
-          python tests/test_controllers_and_touch.py
-          python tests/test_tomoe_hold_release.py
-          python tests/test_phase3_controls_and_persistence.py
-          python tests/test_patches_and_improvements.py
-          python tests/test_audio_system.py
+          python tests/test_game.py
           python tests/test_arcade_mode.py
           python tests/test_boss_oni.py
+          python tests/test_cycle6_full_integration.py
+          python tests/test_cycle6_combat.py
+          python tests/test_cycle6_arenas.py
           python tests/test_demo_edition.py
+          python tests/test_translation_and_ui.py
+          python tests/test_language_setting.py
+          python tests/test_parchment_screens.py
+          python tests/test_opening_video.py
+          python tests/test_seimei_rondel.py
+          python tests/test_audio_system.py
+          python tests/test_controllers_and_touch.py
 
   build:
     name: Build (${{ matrix.platform }})

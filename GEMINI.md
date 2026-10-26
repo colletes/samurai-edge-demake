@@ -155,3 +155,9 @@ Whenever executing a new Roadmap Expansion Cycle (adding new fighters and arenas
 - **Taiga de Ezo (`bgm_ezo_taiga.mp3` — Aoi)**:
   - *Prompt (Suno / Gemini)*: `Northern Hokkaido Ezo wilderness fighting game soundtrack, 128 BPM, A Minor pentatonic with traditional Ainu folk motifs, resonant mukkuri (Ainu bamboo jaw harp) and tonkori (five-stringed zither) rhythms, deep tribal frame drums and taiko, icy wind atmosphere, intense staccato pizzicato strings and brass swells evoking a snowy taiga hunt, seamless loopable combat track, no vocals.`
 
+### Active Suno / Gemini BGM Prompts Reference (Cycle 6):
+- **Dohyo Sagrado (`bgm_sacred_dohyo.mp3` — Raiden)**:
+  - *Prompt (Suno / Gemini)*: `Ancient Japanese Shinto shrine sumo tournament battle theme, 126 BPM, massive ceremonial O-daiko taiko thunder strikes, hyper-resonant hyoshigi wooden clappers and rhythmic referee kakegoe shouts, booming brass and majestic low strings, solemn Gagaku ryuteki flute and hichiriki harmonies evoking divine sumo ritual and unstoppable physical mass, driving cinematic combat progression, loopable, no vocals.`
+- **Armazém de Dejima com Doca Chuvosa (`bgm_dejima_dock.mp3` — Hendrika)**:
+  - *Prompt (Suno / Gemini)*: `19th-century Bakumatsu Nagasaki Dejima harbor soundtrack, 124 BPM, stormy rainy atmosphere with driving rain and thunder swells, clash of Dutch Baroque harpsichord and virtuoso classical violin with Japanese koto and shakuhachi, eccentric ticking clockwork rhythms, sinister low cello and bassoon arpeggios evoking clandestine alchemy experiments and slippery nighttime harbor intrigue, loopable combat battle theme, no vocals.`
+

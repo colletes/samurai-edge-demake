@@ -45,6 +45,23 @@ class GrayNinja(Samurai):
             and self.dash_recovery_timer <= 0
         )
 
+    def trigger_tanto_slash(self, target_wx: float, target_wy: float, particles: list = None) -> bool:
+        """Golpe Melee Defensivo: Corte relâmpago de adaga Tanto shinobi para curta distância."""
+        if not self.can_act():
+            return False
+        self.set_facing(target_wx, target_wy)
+        self.state = STATE_ATTACK
+        self.state_timer = 0.14
+        self.hitbox_active = True
+        self.hitbox_damage = 2
+        self.hitbox_radius = 1.15
+        self.hitbox_center = (self.wx + self.facing_x * 1.15, self.wy + self.facing_y * 1.15)
+        self.slash_dir = (self.facing_x, self.facing_y)
+        if particles is not None:
+            for _ in range(6):
+                particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.35, color=(180, 195, 215)))
+        return True
+
     def trigger_throw_bomb(self, target_wx: float, target_wy: float, projectiles: list):
         """Ataque Primário: Arremessa bomba em arco 3D (até 2 ativas). Detona por contato ou tempo."""
         if not self.can_act() or self.bomb_timer > 0:
@@ -160,7 +177,19 @@ class GrayNinja(Samurai):
             # Recuperação gradual de transparência quando fora do roll, sem stealth e fora do bambu
             self.alpha = min(255, self.alpha + int(240 * dt))
 
-        if self.state == STATE_RECOVERY:
+        if self.state == STATE_ATTACK:
+            self.state_timer -= dt
+            # Avanço veloz de estocada com a adaga Tanto
+            step_speed = 4.2
+            self.wx += self.facing_x * step_speed * dt
+            self.wy += self.facing_y * step_speed * dt
+            self.hitbox_center = (self.wx + self.facing_x * 0.95, self.wy + self.facing_y * 0.95)
+            if self.state_timer <= 0:
+                self.state = STATE_RECOVERY
+                self.state_timer = 0.12
+                self.hitbox_active = False
+
+        elif self.state == STATE_RECOVERY:
             self.state_timer -= dt
             if self.state_timer <= 0:
                 self.state = STATE_IDLE

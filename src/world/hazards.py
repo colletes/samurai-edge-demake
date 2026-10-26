@@ -1850,3 +1850,126 @@ class EzoTaigaHazard:
             p0 = camera.apply(sg["x"], sg["y"], sg["z"])
             p1 = camera.apply(sg["x"] + wx_d * length, sg["y"] + wy_d * length, sg["z"] - 0.08)
             pygame.draw.line(surface, col, p0, p1, 2 if self.blizzard_active > 0.0 else 1)
+
+
+# ===========================================================================
+# Hazards do Ciclo 6: Dohyo Sagrado (Raiden) & Armazém de Dejima (Hendrika)
+# ===========================================================================
+
+class DohyoHazard:
+    """
+    Hazard do Dohyo Sagrado (`sacred_dohyo` — Raiden):
+    - Arena 100% focada em duelo direto e tensão marcial (sem pilastras ou obstáculos obstrutivos).
+    - Tensão de Borda do Ringue (Shōbu-tawara): Quando os combatentes pisam na borda do círculo sagrado (raio ~4.8),
+      uma onda sutil de sal ritual (Kiyome-no-shio) e poeira dourada se dispersa no solo.
+    - Purificação Ritual: Motes translúcidos de sal e incenso sagrado sobem da arena.
+    """
+    def __init__(self):
+        self.salt_motes = [
+            {"x": random.uniform(7.0, 14.0), "y": random.uniform(7.0, 14.0), "z": random.uniform(0.05, 0.45), "vz": random.uniform(0.12, 0.28)}
+            for _ in range(16)
+        ]
+
+    def update(self, arena, dt: float, fighters: list, camera, particles: list, banners: list, cinematic_director=None):
+        # Motes de sal sagrado flutuando suavemente
+        for m in self.salt_motes:
+            m["z"] += m["vz"] * dt
+            if m["z"] > 0.85:
+                m["z"] = 0.05
+                ang = random.uniform(0, math.tau)
+                r = random.uniform(2.0, 5.0)
+                m["x"] = 10.5 + math.cos(ang) * r
+                m["y"] = 10.5 + math.sin(ang) * r
+
+    def get_render_items(self, camera):
+        return []
+
+    def render_ground(self, arena, surface: pygame.Surface, camera, time_val: float):
+        # Desenha a linha de fardos de palha (Shōbu-tawara) do ringue central (raio 4.8)
+        cx, cy = 10.5, 10.5
+        ring_pts = [
+            camera.apply(cx + math.cos(i / 32 * math.tau) * 4.85,
+                         cy + math.sin(i / 32 * math.tau) * 4.85, 0.02)
+            for i in range(32)
+        ]
+        if len(ring_pts) >= 3:
+            # Anel de palha entrelaçada
+            pygame.draw.polygon(surface, (186, 154, 102), ring_pts, 3)
+            # Linha interna de cal sagrada
+            ring_inner = [
+                camera.apply(cx + math.cos(i / 32 * math.tau) * 4.75,
+                             cy + math.sin(i / 32 * math.tau) * 4.75, 0.02)
+                for i in range(32)
+            ]
+            pygame.draw.polygon(surface, (235, 235, 245), ring_inner, 1)
+
+    def render_overhead(self, arena, surface: pygame.Surface, camera, time_val: float):
+        # Motes sutis de sal purificador cintilando sobre o dohyo
+        for m in self.salt_motes:
+            pt = camera.apply(m["x"], m["y"], m["z"])
+            pygame.draw.circle(surface, (250, 248, 240), pt, 1)
+
+
+class DejimaHazard:
+    """
+    Hazard do Armazém de Dejima com Doca Chuvosa (`dejima_warehouse` — Hendrika):
+    - Arena dividida entre laboratório interno (x <= 7.5, protegido pelas paredes de vidro)
+      e cais exterior de tábuas sobre canais de água (x > 7.5, sob chuva contínua e vento marinho).
+    - Tábuas Precárias da Doca: Piso de madeira molhada com leve deslizamento (inércia reduzida)
+      sobre pontes estreitas e canais abertos onde o jogador pode cair.
+    - Tempestade de Chuva e Salpicos na Doca: Riscos translúcidos de chuva caindo diagonalmente apenas
+      do lado de fora do armazém (x >= 7.2).
+    """
+    def __init__(self):
+        # Partículas de chuva na área externa da doca (x > 7.2)
+        self.rain_drops = [
+            {"x": random.uniform(7.2, 19.5), "y": random.uniform(1.0, 20.0), "z": random.uniform(0.1, 3.2), "spd": random.uniform(8.5, 12.0)}
+            for _ in range(54)
+        ]
+        self.wind_angle = 0.35
+
+    def update(self, arena, dt: float, fighters: list, camera, particles: list, banners: list, cinematic_director=None):
+        # Atualiza pingos de chuva na área externa
+        for drop in self.rain_drops:
+            drop["z"] -= drop["spd"] * dt
+            drop["x"] += math.sin(self.wind_angle) * 2.2 * dt
+            drop["y"] += math.cos(self.wind_angle) * 1.5 * dt
+            if drop["z"] <= 0.0:
+                drop["z"] = random.uniform(2.8, 3.8)
+                drop["x"] = random.uniform(7.2, 19.5)
+                drop["y"] = random.uniform(1.0, 20.0)
+
+        # Fricção e tábuas precárias na doca externa (x > 7.5)
+        for f in fighters:
+            if f and getattr(f, "is_alive", False) and getattr(f, "wx", 0.0) > 7.5:
+                # Na doca molhada, leve impulso de deslizamento se estiver em movimento rápido
+                if getattr(f, "is_moving", False) and hasattr(f, "apply_forced_displacement"):
+                    fx = getattr(f, "facing_x", 0.0)
+                    fy = getattr(f, "facing_y", 0.0)
+                    # Deslizamento suave nas tábuas molhadas
+                    f.apply_forced_displacement(fx * 0.40 * dt, fy * 0.40 * dt, arena)
+
+    def get_render_items(self, camera):
+        return []
+
+    def render_ground(self, arena, surface: pygame.Surface, camera, time_val: float):
+        # Salpicos de chuva no piso molhado da doca (x > 7.5)
+        splash_time = time_val * 6.0
+        for i in range(10):
+            sx = 8.5 + (i * 1.15) % 9.5
+            sy = 2.5 + (i * 1.9) % 15.0
+            rad = 2 + int(math.sin(splash_time + i) * 1.5 + 1.5)
+            s_pt = camera.apply(sx, sy, 0.02)
+            pygame.draw.circle(surface, (150, 185, 215), s_pt, rad, 1)
+
+    def render_overhead(self, arena, surface: pygame.Surface, camera, time_val: float):
+        # Riscos de chuva na doca externa
+        rain_col = (185, 210, 235)
+        for drop in self.rain_drops:
+            if drop["x"] >= 7.2:  # Só renderiza chuva do lado de fora do armazém
+                p0 = camera.apply(drop["x"], drop["y"], drop["z"])
+                p1 = camera.apply(drop["x"] + 0.12, drop["y"] + 0.18, drop["z"] - 0.28)
+                pygame.draw.line(surface, rain_col, p0, p1, 1)
+                p1 = camera.apply(drop["x"] + 0.12, drop["y"] + 0.18, drop["z"] - 0.28)
+                pygame.draw.line(surface, rain_col, p0, p1, 1)
+

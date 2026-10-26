@@ -15,7 +15,7 @@ CONFIG_PATH = os.path.join(BASE_DIR, CONFIG_FILENAME)
 def get_default_config() -> dict:
     """Retorna a estrutura de configuração padrão de fábrica."""
     return {
-        "version": "1.4.0",
+        "version": "2.0.0",
         "keyboard": {k: int(v) for k, v in DEFAULT_CONTROLS.items()},
         "controllers": {
             "P1": {},
@@ -121,7 +121,7 @@ def save_controls_config(keyboard_controls: dict, controller_mgr=None, touch_mod
         saved_touch_cfg = touch_controls_cfg or existing.get("touch_controls", default_cfg["touch_controls"])
 
         cfg = {
-            "version": "1.4.0",
+            "version": "2.0.0",
             "keyboard": keyboard_section,
             "controllers": {
                 "P1": {},

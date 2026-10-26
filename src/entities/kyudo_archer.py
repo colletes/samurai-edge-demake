@@ -28,7 +28,7 @@ class KyudoArcher(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Tomoe")
         self.char_type = "tomoe"
-        self.speed = 4.2
+        self.speed = 4.5  # Velocidade ágil de Miko para manutenção de espaçamento e kiting tático
 
         # Mecânica de Disparo com Yumi (Mira Manual - Sem Windup)
         self.draw_duration = 0.0
@@ -218,7 +218,7 @@ class KyudoArcher(Samurai):
         self.target_aim_x = target_wx
         self.target_aim_y = target_wy
         self.state = STATE_RECOVERY
-        self.state_timer = 0.32  # Recovery aumentado (era 0.20) para criar abertura contra melee
+        self.state_timer = 0.20  # Recovery calibrado para evitar freeze prolongado após o disparo
         self.arrow_cooldown_timer = self.arrow_cooldown
 
         proj_list = projectiles if projectiles is not None else getattr(self, "projectiles_ref", None)

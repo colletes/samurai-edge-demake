@@ -6,7 +6,7 @@
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-lightgrey.svg)](https://colletes.itch.io/samurai-edge-bakumatsu)
 [![License: Proprietary](https://img.shields.io/badge/license-Personal%20Use-red.svg)](LICENSE)
 
-A tactical isometric lethal dueling game in **3D Voxel Art** and **HD-2D**, inspired by the unforgiving realism of classics like *Bushido Blade*, Akira Kurosawa's samurai cinema, and retro demake aesthetics. Featuring volumetric dismemberment physics, dynamic procedural lighting, interactive atmospheric hazards, a blade clash QTE system, cloth physics, and a finely balanced roster of 12 warriors across 12 distinct arenas.
+A tactical isometric lethal dueling game in **3D Voxel Art** and **HD-2D**, inspired by the unforgiving realism of classics like *Bushido Blade*, Akira Kurosawa's samurai cinema, and retro demake aesthetics. Featuring volumetric dismemberment physics, dynamic procedural lighting, interactive atmospheric hazards, a blade clash QTE system, cloth physics, and a finely balanced roster of **24 warriors** across **25 distinct arenas**, unified **Sumi-E Parchment UI**, full bilingual localization, and crash-proof controller support.
 
 ![Samurai Edge: Bakumatsu - Sumi-E Title Screen](docs/screenshots/01_title_screen.png)
 
@@ -101,11 +101,16 @@ Each arena features unique environmental hazards, destructible elements, tactica
   - **High-Contrast Monochrome Flash**: Desaturates the world into stark black-and-white, highlighting vivid crimson blood sprays in homage to Akira Kurosawa classics (*Sanjuro*, *Yojimbo*).
   - **Delayed Death**: Victims freeze in suspended shock for ~0.4s before collapsing into geysers of blood and 3D volumetric voxel dismemberment.
   - **Persistent Bloodstains**: Blood splatters remain permanently on wooden decks, stone roads, and grass for the duration of the match.
-- **Blade Clash QTE System (New in v1.4.0)**:
+- **Blade Clash QTE System**:
   - When two weapon strikes meet simultaneously at equal priority, fighters lock weapons in a fierce **Clash**. Rapidly mash the attack button to overpower your opponent and stagger them backwards!
-- **Arcade Mode (New in v1.5.0)**:
+- **Arcade Mode**:
   - Solo journey of 11 fights: 7 best-of-3 duels, a mirror match, an endurance match (1x2), the ninja challenge and the final boss, **Oni Gashadokuro** (5 voxel phases, telegraphed attacks).
   - Continues are infinite but counted: each one costs 2000 points and lowers the AI difficulty; two fights in a row without a Continue raise it. High scores and the current run are saved in `arcade_save.json`.
+- **The Definitive 2.0 Edition**:
+  - **Expanded 24-Fighter Canonical Roster**: Features all 6 expansion cycles, including Seimei (Five Elements Rondel), Raiden (Sumo Yokozuna), Hendrika (Dejima Alchemist), Daiki (Bō Staff), and Aoi (Ezo Huntress), plus the 25th Random Roulette card.
+  - **Unified Sumi-E Parchment UI**: Authentic visual parchment design unifying Title Screen, Settings Menu, Pause Menu, Help Guide, and Selection Carousels.
+  - **Persisted System Language**: Automatic OS language detection (`auto`) with seamless persistence in `settings.json` and in-game cycling (`[L]` hotkey).
+  - **Crash-Proof Hardware Resilience**: Safe hotplugging of gamepads (PS5 DualSense / CoreAudio dynamic audio device switching) with zero crashes.
 - **Demo edition**: the itch.io `-demo` channels ship Kenshi and Tomoe only, Kenshi's arena, 1P or 2P, without Arcade. Run `SAMURAI_EDGE_DEMO=1 python main.py` to try it from source.
 - **Match Flow & Best-of-3 Format**:
   - Rounds begin with dramatic banner announcements (`DUEL 1`, `FINAL DUEL`).

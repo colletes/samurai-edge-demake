@@ -383,6 +383,26 @@ CHARACTERS = {
         "portrait_file": "aoi_bust.png",
         "color_accent": (155, 225, 255),
     },
+    "raiden": {
+        "name": "Raiden",
+        "char_type": "raiden",
+        "title": "O Yokozuna dos Trovões & Força Rikishi",
+        "weapon": "Palmas Tsuppari Pesadas e Tachiai Tackle",
+        "description": "Físico colossal de rikishi em trânsito com manto cerimonial Haori bordado a ouro e brasões Mon, mawashi índigo com cordões Sagari e coque Oicho-mage.",
+        "concept_file": "raiden_full_concept.jpg",
+        "portrait_file": "raiden_bust.png",
+        "color_accent": (235, 185, 70),
+    },
+    "hendrika": {
+        "name": "Hendrika",
+        "char_type": "hendrika",
+        "title": "A Alquimista de Dejima & VOC Scholar",
+        "weapon": "Estilete Corrosivo, 5 Frascos Alquímicos e Bandoleira de Reagentes",
+        "description": "Casaca barroca de veludo azul-safira com botões dourados, quepe com óculos de latão (goggles), bandoleira de reagentes luminescentes e sorriso excêntrico.",
+        "concept_file": "hendrika_full_concept.jpg",
+        "portrait_file": "hendrika_bust.png",
+        "color_accent": (85, 225, 235),
+    },
     "gashadokuro": {
         "name": "Gashadokuro",
         "char_type": "gashadokuro",
@@ -451,6 +471,9 @@ class ModelInspector:
 
         # Botões clicáveis do menu lateral e ações
         self.sidebar_rects: list[tuple[pygame.Rect, int]] = []
+        self.sidebar_scroll_y = 0.0
+        self.sidebar_target_scroll_y = 0.0
+        self.sidebar_max_scroll = 0.0
         self.pose_btn_rects: list[tuple[str, pygame.Rect]] = []
         self.reload_btn_rect = pygame.Rect(0, 0, 0, 0)
         self.reset_cam_btn_rect = pygame.Rect(0, 0, 0, 0)
@@ -486,6 +509,19 @@ class ModelInspector:
         now_colossal = (self.char_keys[self.current_char_idx] == "gashadokuro")
         if prev_colossal != now_colossal:
             self.camera.reset(self.macro_focus, is_colossal=now_colossal)
+        self.ensure_char_visible(self.current_char_idx)
+
+    def ensure_char_visible(self, idx: int):
+        btn_h = 28 if len(self.char_keys) > 18 else 32
+        spacing = 2 if len(self.char_keys) > 18 else 3
+        item_top = idx * (btn_h + spacing)
+        item_bot = item_top + btn_h
+        list_h = max(100, self.height - 80)
+
+        if item_top < self.sidebar_target_scroll_y:
+            self.sidebar_target_scroll_y = float(item_top)
+        elif item_bot > self.sidebar_target_scroll_y + list_h:
+            self.sidebar_target_scroll_y = float(item_bot - list_h)
 
     def next_character(self):
         self.select_character(self.current_char_idx + 1)
@@ -741,32 +777,63 @@ class ModelInspector:
         # Título da Barra Lateral
         title_s = self.font_header.render(f"ROSTER ({len(self.char_keys)})", True, (240, 215, 120))
         surface.blit(title_s, (16, 16))
-        sub_s = self.font_small.render("Clique ou use [ / ] para navegar", True, (160, 165, 180))
+        sub_s = self.font_small.render("Scroll / Clique para navegar", True, (160, 165, 180))
         surface.blit(sub_s, (16, 44))
 
         self.sidebar_rects.clear()
-        btn_y = 66
-        btn_h = 28 if len(self.char_keys) > 18 else 32
-        spacing = 2 if len(self.char_keys) > 18 else 3
+        list_top = 68
+        list_h = max(100, self.height - list_top - 12)
+        btn_h = 28
+        spacing = 3
+        total_content_h = len(self.char_keys) * (btn_h + spacing)
+        self.sidebar_max_scroll = max(0.0, float(total_content_h - list_h))
+
+        # Suavização da rolagem (Damped interpolation)
+        self.sidebar_target_scroll_y = max(0.0, min(self.sidebar_max_scroll, self.sidebar_target_scroll_y))
+        self.sidebar_scroll_y += (self.sidebar_target_scroll_y - self.sidebar_scroll_y) * 0.35
+        if abs(self.sidebar_target_scroll_y - self.sidebar_scroll_y) < 0.5:
+            self.sidebar_scroll_y = self.sidebar_target_scroll_y
+        scroll_offset = int(self.sidebar_scroll_y)
+
+        # Região de recorte para que os botões não vazem fora da barra lateral
+        old_clip = surface.get_clip()
+        surface.set_clip(pygame.Rect(0, list_top, sidebar_w, list_h))
+
         for idx, key in enumerate(self.char_keys):
             info = CHARACTERS[key]
             is_selected = (idx == self.current_char_idx)
-            btn_rect = pygame.Rect(12, btn_y, sidebar_w - 24, btn_h)
-            self.sidebar_rects.append((btn_rect, idx))
+            btn_y = list_top - scroll_offset + idx * (btn_h + spacing)
+            btn_rect = pygame.Rect(12, btn_y, sidebar_w - 28, btn_h)
 
-            if is_selected:
-                pygame.draw.rect(surface, (45, 52, 70), btn_rect, border_radius=4)
-                pygame.draw.rect(surface, info["color_accent"], btn_rect, width=2, border_radius=4)
-                # Pip indicador
-                pygame.draw.circle(surface, info["color_accent"], (btn_rect.x + 10, btn_rect.centery), 4)
-            else:
-                pygame.draw.rect(surface, (22, 26, 34), btn_rect, border_radius=4)
+            # Apenas registra e desenha se estiver visível na janela de rolagem
+            if btn_rect.bottom >= list_top and btn_rect.top <= list_top + list_h:
+                self.sidebar_rects.append((btn_rect, idx))
 
-            text_color = (255, 255, 255) if is_selected else (175, 180, 195)
-            name_s = self.font_body.render(f"{idx+1}. {info['name']}", True, text_color)
-            surface.blit(name_s, (btn_rect.x + 22, btn_rect.centery - 6))
+                if is_selected:
+                    pygame.draw.rect(surface, (45, 52, 70), btn_rect, border_radius=4)
+                    pygame.draw.rect(surface, info["color_accent"], btn_rect, width=2, border_radius=4)
+                    pygame.draw.circle(surface, info["color_accent"], (btn_rect.x + 10, btn_rect.centery), 4)
+                else:
+                    pygame.draw.rect(surface, (22, 26, 34), btn_rect, border_radius=4)
 
-            btn_y += btn_h + spacing
+                text_color = (255, 255, 255) if is_selected else (175, 180, 195)
+                name_s = self.font_body.render(f"{idx+1}. {info['name']}", True, text_color)
+                surface.blit(name_s, (btn_rect.x + 22, btn_rect.centery - 6))
+
+        surface.set_clip(old_clip)
+
+        # Barra de rolagem visual (Scrollbar indicator)
+        if self.sidebar_max_scroll > 0:
+            bar_x = sidebar_w - 8
+            track_y = list_top
+            track_h = list_h
+            pygame.draw.rect(surface, (25, 28, 38), (bar_x, track_y, 4, track_h), border_radius=2)
+
+            thumb_ratio = list_h / total_content_h
+            thumb_h = max(24, int(track_h * thumb_ratio))
+            scroll_pct = self.sidebar_scroll_y / self.sidebar_max_scroll
+            thumb_y = track_y + int((track_h - thumb_h) * scroll_pct)
+            pygame.draw.rect(surface, (220, 195, 115), (bar_x, thumb_y, 4, thumb_h), border_radius=2)
 
         # -------------------------------------------------------------
         # 1.5 Barra de Ação Superior: Hot-Reload e Reset de Câmera
@@ -973,6 +1040,17 @@ class ModelInspector:
                 self.camera.screen_w = self.width
                 self.camera.screen_h = self.height
 
+            elif event.type == pygame.MOUSEWHEEL:
+                mouse_pos = pygame.mouse.get_pos()
+                if self.show_hud and mouse_pos[0] < 240:
+                    self.sidebar_target_scroll_y -= event.y * 42.0
+                    self.sidebar_target_scroll_y = max(0.0, min(self.sidebar_max_scroll, self.sidebar_target_scroll_y))
+                else:
+                    if event.y > 0:
+                        self.camera.zoom_in(1.10)
+                    elif event.y < 0:
+                        self.camera.zoom_out(1.10)
+
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Botão Esquerdo
                     clicked_btn = False
@@ -1003,10 +1081,18 @@ class ModelInspector:
                 elif event.button == 3:  # Botão Direito (Pan)
                     self.is_dragging_pan = True
                     self.drag_start_x, self.drag_start_y = event.pos
-                elif event.button == 4:  # Scroll Up (Zoom In)
-                    self.camera.zoom_in(1.10)
-                elif event.button == 5:  # Scroll Down (Zoom Out)
-                    self.camera.zoom_out(1.10)
+                elif event.button == 4:  # Scroll Up
+                    if self.show_hud and event.pos[0] < 240:
+                        self.sidebar_target_scroll_y -= 45.0
+                        self.sidebar_target_scroll_y = max(0.0, min(self.sidebar_max_scroll, self.sidebar_target_scroll_y))
+                    else:
+                        self.camera.zoom_in(1.10)
+                elif event.button == 5:  # Scroll Down
+                    if self.show_hud and event.pos[0] < 240:
+                        self.sidebar_target_scroll_y += 45.0
+                        self.sidebar_target_scroll_y = max(0.0, min(self.sidebar_max_scroll, self.sidebar_target_scroll_y))
+                    else:
+                        self.camera.zoom_out(1.10)
 
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
@@ -1031,9 +1117,9 @@ class ModelInspector:
                     return False
 
                 # Navegação de personagens
-                elif event.key in (pygame.K_RIGHT, pygame.K_PAGEDOWN, pygame.K_RIGHTBRACKET):
+                elif event.key in (pygame.K_RIGHT, pygame.K_DOWN, pygame.K_PAGEDOWN, pygame.K_RIGHTBRACKET):
                     self.next_character()
-                elif event.key in (pygame.K_LEFT, pygame.K_PAGEUP, pygame.K_LEFTBRACKET):
+                elif event.key in (pygame.K_LEFT, pygame.K_UP, pygame.K_PAGEUP, pygame.K_LEFTBRACKET):
                     self.prev_character()
 
                 # Poses

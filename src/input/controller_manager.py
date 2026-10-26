@@ -686,68 +686,80 @@ class ControllerManager:
             pass
 
     def _remove_device(self, instance_id: int):
-        if instance_id in self.controllers:
-            del self.controllers[instance_id]
-        if self.player_map[0] == instance_id:
-            self.player_map[0] = None
-        if self.player_map[1] == instance_id:
-            self.player_map[1] = None
-        self._reassign_players()
+        try:
+            if instance_id in self.controllers:
+                del self.controllers[instance_id]
+            if self.player_map[0] == instance_id:
+                self.player_map[0] = None
+            if self.player_map[1] == instance_id:
+                self.player_map[1] = None
+            self._reassign_players()
+        except Exception:
+            pass
 
     def poll_controllers(self):
-        """Verifica dinamicamente a contagem de joysticks do SDL e atualiza dispositivos."""
-        if not pygame.joystick.get_init():
+        """Verifica dinamicamente a contagem de joysticks do SDL e atualiza dispositivos com anti-reentrância."""
+        if getattr(self, "_is_polling", False):
+            return
+        self._is_polling = True
+        try:
+            if not pygame.joystick.get_init():
+                try:
+                    pygame.joystick.init()
+                except Exception:
+                    return
+
             try:
-                pygame.joystick.init()
+                count = pygame.joystick.get_count()
             except Exception:
                 return
 
-        try:
-            count = pygame.joystick.get_count()
-        except Exception:
-            return
+            if count != len(self.controllers):
+                active_ids = set()
+                new_added = False
+                for i in range(count):
+                    try:
+                        j = pygame.joystick.Joystick(i)
+                        if not j.get_init():
+                            j.init()
+                        iid = j.get_instance_id()
+                        active_ids.add(iid)
+                        if iid not in self.controllers:
+                            self.controllers[iid] = ControllerDevice(j, invert_y=self.invert_y)
+                            new_added = True
+                    except Exception:
+                        pass
 
-        if count != len(self.controllers):
-            active_ids = set()
-            new_added = False
-            for i in range(count):
-                try:
-                    j = pygame.joystick.Joystick(i)
-                    if not j.get_init():
-                        j.init()
-                    iid = j.get_instance_id()
-                    active_ids.add(iid)
-                    if iid not in self.controllers:
-                        self.controllers[iid] = ControllerDevice(j, invert_y=self.invert_y)
-                        new_added = True
-                except Exception:
-                    pass
+                for dead_id, ctrl in list(self.controllers.items()):
+                    # Preserve test mocks or non-native joysticks that are injected directly
+                    if hasattr(pygame.joystick, "JoystickType") and not isinstance(ctrl.joystick, pygame.joystick.JoystickType):
+                        continue
+                    if dead_id not in active_ids:
+                        del self.controllers[dead_id]
 
-            for dead_id, ctrl in list(self.controllers.items()):
-                # Preserve test mocks or non-native joysticks that are injected directly
-                if hasattr(pygame.joystick, "JoystickType") and not isinstance(ctrl.joystick, pygame.joystick.JoystickType):
-                    continue
-                if dead_id not in active_ids:
-                    del self.controllers[dead_id]
+                self._reassign_players()
+                if new_added:
+                    try:
+                        from src.input.controls_storage import load_controls_config
+                        cfg = load_controls_config()
+                        if "controllers" in cfg:
+                            self.apply_saved_mappings(cfg["controllers"])
+                    except Exception:
+                        pass
 
-            self._reassign_players()
-            if new_added:
-                try:
-                    from src.input.controls_storage import load_controls_config
-                    cfg = load_controls_config()
-                    if "controllers" in cfg:
-                        self.apply_saved_mappings(cfg["controllers"])
-                except Exception:
-                    pass
-
-            self._reassign_players()
+                self._reassign_players()
+        finally:
+            self._is_polling = False
 
     def handle_event(self, event: pygame.event.Event):
-        """Atualiza a lista de controles em caso de plug/unplug."""
-        if event.type == pygame.JOYDEVICEADDED:
-            self._add_device(event.device_index)
-        elif event.type == pygame.JOYDEVICEREMOVED:
-            self._remove_device(event.instance_id)
+        """Atualiza a lista de controles em caso de plug/unplug com tolerância total a falhas de driver."""
+        try:
+            if event.type == pygame.JOYDEVICEADDED:
+                self._add_device(getattr(event, "device_index", 0))
+            elif event.type == pygame.JOYDEVICEREMOVED:
+                self._remove_device(getattr(event, "instance_id", 0))
+        except Exception:
+            pass
 
     def get_controller_for_player(self, player_idx: int) -> ControllerDevice | None:
         self.poll_controllers()

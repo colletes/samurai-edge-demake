@@ -29,10 +29,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Run Automated Game Tests
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+          SAMURAI_EDGE_LANG: pt
         run: |
-          python test_game.py
+          python tests/test_game.py
           python tests/test_demo_edition.py
           python tests/test_audio_system.py
+          python tests/test_translation_and_ui.py
+          python tests/test_language_setting.py
+          python tests/test_parchment_screens.py
+          python tests/test_opening_video.py
 
   build:
     name: Build demo (${{ matrix.platform }})

@@ -150,6 +150,8 @@ COLOR_BOSS_AURA = (190, 50, 240)           # Púrpura miasmático espectral Oni
 # Cores dos Guerreiros do Ciclo 5 (Daiki & Aoi)
 COLOR_DAIKI_AURA = (180, 235, 195)          # Brisa montanhesa esmeralda/pinho
 COLOR_AOI_AURA = (155, 225, 255)            # Geada boreal cristalina de Ezo
+COLOR_RAIDEN_AURA = (245, 215, 115)         # Trovão dourado cerimonial de Yokozuna
+COLOR_HENDRIKA_AURA = (85, 235, 245)        # Reação química e vapor luminescente de Dejima
 
 
 # Identificadores de Personagens (12 Guerreiros: 6 Mulheres e 6 Homens)

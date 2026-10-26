@@ -91,6 +91,7 @@ if sys.platform == 'darwin':
             'CFBundleVersion': '2.0.0',
             'CFBundleShortVersionString': '2.0.0',
             'NSHighResolutionCapable': 'True',
+            'LSApplicationCategoryType': 'public.app-category.action-games',
             'LSMinimumSystemVersion': '10.13.0',
         },
     )

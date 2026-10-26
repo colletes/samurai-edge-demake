@@ -1,7 +1,7 @@
 """
 Entregável 8.1: regras do Modo Torneio Arcade (módulo puro, sem pygame).
 
-A jornada tem 11 lutas: 7 duelos BO3 (sem ninjas), espelho, endurance (1x2), ninja challenge e o chefe.
+A jornada tem 12 lutas: 8 duelos BO3 (sem ninjas), espelho, endurance (1x2), ninja challenge e o chefe.
 Os Continues são infinitos, contados e penalizados na pontuação; a dificuldade da IA sobe e desce durante a jornada.
 """
 import random
@@ -14,7 +14,8 @@ from src.roster import ARCADE_TIER_ORDER, ARCADE_MATCHUP_TABLE, ARENA_BY_FIGHTER
 # Ninja challenge: Joe, Kasumi, Murasaki e Hanzo, nessa ordem
 NINJA_ORDER = (CHAR_AMERICAN, CHAR_GRAY, CHAR_PURPLE, CHAR_NINJA)
 NINJAS = frozenset(NINJA_ORDER)
-DUEL_COUNT = 7
+DUEL_COUNT = 8
+TOTAL_FIGHTS = 12
 ROUNDS_TO_WIN = 2
 CHALLENGE_PLAYER_LIVES = 2
 DIFFICULTIES = ("easy", "normal", "hard")
@@ -35,7 +36,7 @@ FIGHT_LOST = "FIGHT_LOST"
 
 ORDER_TIER = "tier"
 ORDER_RANDOM = "random"
-TIER_JITTER = 1.6  # em posições de tier: só oponentes próximos na escala podem trocar de lugar
+TIER_JITTER = 2.4  # em posições de tier: permite permutas dinâmicas mantendo progressão geral
 
 
 class FightKind(Enum):
@@ -63,20 +64,42 @@ def _non_ninjas_without(player_char: str) -> list[str]:
     return [c for c in ARCADE_TIER_ORDER if c not in NINJAS and c != player_char]
 
 
-def _strongest_vs(player_char: str, candidates: list[str], count: int) -> list[str]:
+def _strongest_vs(player_char: str, candidates: list[str], count: int, rng: random.Random | None = None) -> list[str]:
     """Os `count` candidatos com melhor taxa de vitória contra o lutador do jogador, do mais fraco ao mais forte."""
     def rate(c):
         return ARCADE_MATCHUP_TABLE.get(c, {}).get(player_char, 50.0)
-    best = sorted(candidates, key=lambda c: (-rate(c), ARCADE_TIER_ORDER.index(c)))[:count]
-    return sorted(best, key=lambda c: (rate(c), -ARCADE_TIER_ORDER.index(c)))
+    top_pool = sorted(candidates, key=lambda c: (-rate(c), ARCADE_TIER_ORDER.index(c)))[:max(count, 4)]
+    if rng is not None and len(top_pool) > count:
+        picked = rng.sample(top_pool, count)
+    else:
+        picked = top_pool[:count]
+    return sorted(picked, key=lambda c: (rate(c), -ARCADE_TIER_ORDER.index(c)))
 
 
 def build_ladder(player_char: str, seed: int = 0, order: str = ORDER_TIER) -> list[ArcadeFight]:
-    """Monta as 11 lutas da jornada para o lutador escolhido."""
+    """Monta as 12 lutas da jornada para o lutador escolhido com distribuição variada."""
     rng = random.Random(seed)
-    pool = _non_ninjas_without(player_char)  # do mais fraco ao mais forte
-    while len(pool) > DUEL_COUNT:
-        pool.remove(rng.choice(pool))
+    candidates = _non_ninjas_without(player_char)  # do mais fraco ao mais forte
+
+    if len(candidates) <= DUEL_COUNT:
+        pool = list(candidates)
+    else:
+        # Divide os candidatos em 4 faixas de progressão (iniciante, intermediário-baixo, intermediário-alto, avançado)
+        # e sorteia 2 oponentes de cada faixa para garantir diversidade contínua a cada run
+        buckets = [[] for _ in range(4)]
+        for i, c in enumerate(candidates):
+            b_idx = min(3, int(i * 4 / len(candidates)))
+            buckets[b_idx].append(c)
+        pool = []
+        for b in buckets:
+            take = min(len(b), 2)
+            pool.extend(rng.sample(b, take))
+        while len(pool) < DUEL_COUNT:
+            rem = [c for c in candidates if c not in pool]
+            if not rem:
+                break
+            pool.append(rng.choice(rem))
+
     if order == ORDER_RANDOM:
         rng.shuffle(pool)
     else:
@@ -86,7 +109,7 @@ def build_ladder(player_char: str, seed: int = 0, order: str = ORDER_TIER) -> li
 
     ladder.append(ArcadeFight(FightKind.MIRROR, (player_char,), ARENA_BY_FIGHTER[player_char]))
 
-    endurance = tuple(_strongest_vs(player_char, _non_ninjas_without(player_char), 2))
+    endurance = tuple(_strongest_vs(player_char, _non_ninjas_without(player_char), 2, rng=rng))
     ladder.append(ArcadeFight(FightKind.ENDURANCE, endurance, ARENA_BY_FIGHTER[endurance[0]],
                               player_round_lives=CHALLENGE_PLAYER_LIVES))
 
@@ -94,7 +117,7 @@ def build_ladder(player_char: str, seed: int = 0, order: str = ORDER_TIER) -> li
     ladder.append(ArcadeFight(FightKind.NINJA_CHALLENGE, NINJA_ORDER, ARENA_SHADOW_CAVE,
                               player_round_lives=CHALLENGE_PLAYER_LIVES))
 
-    # Luta 11: o Oni Gashadokuro (8.2) numa só luta: 1 ponto de vitória e a primeira derrota vale um Continue (D8)
+    # Luta 12: o Oni Gashadokuro (8.2) numa só luta: 1 ponto de vitória e a primeira derrota vale um Continue (D8)
     ladder.append(ArcadeFight(FightKind.BOSS, (CHAR_BOSS,), ARENA_GASHADOKURO, rounds_to_win=1))
     return ladder
 

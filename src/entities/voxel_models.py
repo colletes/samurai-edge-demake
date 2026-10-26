@@ -29,7 +29,7 @@ from src.isometric.mesh_primitives import (
     PORTRAIT_FACE_STYLES,
 )
 from src.isometric.iso_math import rotate_xy
-from src.entities import model_kit, okuni_model, kenshi_model, murasaki_model, musashi_model, hanzo_model, joe_model, saitou_model, teppo_model, kasumi_model, tomoe_model, anne_model, julie_model, ren_model, chiyo_model, benkei_model, orin_model, goro_model, ichi_model, valerius_model, seimei_model, daiki_model, aoi_model, pose_scripts
+from src.entities import model_kit, okuni_model, kenshi_model, murasaki_model, musashi_model, hanzo_model, joe_model, saitou_model, teppo_model, kasumi_model, tomoe_model, anne_model, julie_model, ren_model, chiyo_model, benkei_model, orin_model, goro_model, ichi_model, valerius_model, seimei_model, daiki_model, aoi_model, raiden_model, hendrika_model, pose_scripts
 from src.isometric.voxel_rig import calc_leg_joints, calc_blade_slash_3d, calc_character_idle_pose, calc_spine_and_pelvis_rig
 from src.config import (
     COLOR_STEEL, COLOR_GOLD, COLOR_WHITE, COLOR_BLACK,
@@ -78,7 +78,8 @@ def is_female_character(char_type: str) -> bool:
                  "chiyo", "nodachi", "orin", "o-rin", "shamisen",
                  "ichi", "blind", "shikomizue",
                  "seimei", "onmyoji",
-                 "aoi", "ainu", "huntress")
+                 "aoi", "ainu", "huntress",
+                 "hendrika", "alchemist")
 
 
 def _canonical_char_type(char_type: str) -> str:
@@ -105,6 +106,8 @@ def _canonical_char_type(char_type: str) -> str:
     if "seimei" in char_type or "onmyoji" in char_type: return "seimei"
     if "daiki" in char_type or "pilgrim" in char_type or "bostaff" in char_type: return "daiki"
     if "aoi" in char_type or "ainu" in char_type or "huntress" in char_type: return "aoi"
+    if "raiden" in char_type or "sumo" in char_type or "rikishi" in char_type: return "raiden"
+    if "hendrika" in char_type or "alchemist" in char_type or "dejima" in char_type: return "hendrika"
     return char_type
 
 
@@ -134,6 +137,8 @@ MODEL_FIGHTERS = {
     "seimei": seimei_model,
     "daiki": daiki_model,
     "aoi": aoi_model,
+    "raiden": raiden_model,
+    "hendrika": hendrika_model,
 }
 
 
@@ -359,8 +364,8 @@ def _render_voxel_humanoid(
     )
 
     pelvis_z = base_z + (0.48 if is_female else 0.46)
-    pelvis_w = 0.33 if char_type == "benkei" else (0.27 if char_type == "kenshin" else (0.24 if is_female else 0.28))
-    pelvis_d = 0.25 if char_type == "benkei" else (0.18 if is_female else 0.21)
+    pelvis_w = 0.35 if char_type in ("benkei", "raiden") else (0.27 if char_type == "kenshin" else (0.24 if is_female else 0.28))
+    pelvis_d = 0.27 if char_type in ("benkei", "raiden") else (0.18 if is_female else 0.21)
 
     # Contexto dos modelos próprios: alturas do tronco e da cabeça já são conhecidas aqui
     model = MODEL_FIGHTERS.get(char_type)
@@ -372,8 +377,9 @@ def _render_voxel_humanoid(
             fx=fx, fy=fy, px=px, py=py, pelvis_z=pelvis_z, pelvis_w=pelvis_w, walk_timer=walk_timer, is_moving=is_moving, is_melee=is_melee,
             atk_progress=atk_progress, lunge_curve=lunge_curve, legs_data=legs_data, state=state, state_timer=state_timer, extra_props=extra_props,
             materials=model_kit.material_map(model.pal(), getattr(model, "MATERIALS", {})), torso_z=torso_z0, neck_z=torso_z0 + 0.26, head_z=torso_z0 + 0.31,
-            head_w=0.16 if char_type == "benkei" else (0.155 if char_type == "goro" else (0.13 if is_female else 0.15)),
-            sh_span=0.21 if char_type == "benkei" else (0.185 if char_type == "goro" else (0.14 if is_female else 0.17)),
+            torso_w=0.36 if char_type in ("benkei", "raiden") else (0.23 if is_female else 0.29),
+            head_w=0.165 if char_type in ("benkei", "raiden") else (0.155 if char_type == "goro" else (0.13 if is_female else 0.15)),
+            sh_span=0.22 if char_type in ("benkei", "raiden") else (0.185 if char_type == "goro" else (0.14 if is_female else 0.17)),
             char_type=char_type)
         if hasattr(model, "draw_behind") and state != "DYING_HEADLESS" and not (extra_props and extra_props.get("hide_head", False)):
             model.draw_behind(model_c)
@@ -429,14 +435,14 @@ def _render_voxel_humanoid(
     # 3. OMBROS, BRAÇOS E TRONCO COM ORDENAÇÃO DE PROFUNDIDADE 3D
     # -------------------------------------------------------------
     torso_z = pelvis_z + 0.13
-    waist_w = 0.29 if char_type == "benkei" else (0.20 if is_female else 0.25)
-    waist_d = 0.23 if char_type == "benkei" else (0.15 if is_female else 0.19)
-    chest_w = 0.35 if char_type == "benkei" else (0.23 if is_female else 0.29)
-    chest_d = 0.26 if char_type == "benkei" else (0.17 if is_female else 0.22)
+    waist_w = 0.31 if char_type in ("benkei", "raiden") else (0.20 if is_female else 0.25)
+    waist_d = 0.25 if char_type in ("benkei", "raiden") else (0.15 if is_female else 0.19)
+    chest_w = 0.36 if char_type in ("benkei", "raiden") else (0.23 if is_female else 0.29)
+    chest_d = 0.27 if char_type in ("benkei", "raiden") else (0.17 if is_female else 0.22)
     chest_lean_x = rig_spine["chest_lean_x"]
     chest_lean_y = rig_spine["chest_lean_y"]
     sh_px, sh_py = rig_spine["sh_px"], rig_spine["sh_py"]
-    sh_span = 0.21 if char_type == "benkei" else (0.14 if is_female else 0.17)
+    sh_span = 0.22 if char_type in ("benkei", "raiden") else (0.14 if is_female else 0.17)
 
     walk_swing = math.sin(walk_timer * 9.0) if is_moving else 0.0
     arm_l_pos = [base_x + chest_lean_x + sh_px * sh_span, base_y + chest_lean_y + sh_py * sh_span, torso_z + 0.18]

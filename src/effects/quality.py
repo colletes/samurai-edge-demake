@@ -18,6 +18,31 @@ _dt_history: deque[float] = deque(maxlen=60)
 _low_fps_streak = 0
 _high_fps_streak = 0
 _governor_stepped_down = False
+_game_boost_enabled: bool = False
+
+
+def set_game_boost(enabled: bool):
+    global _game_boost_enabled
+    _game_boost_enabled = bool(enabled)
+    if _game_boost_enabled:
+        _apply_process_boost()
+
+
+def is_game_boost_enabled() -> bool:
+    return _game_boost_enabled
+
+
+def _apply_process_boost():
+    """Eleva a prioridade de processo / QoS para Game Mode no macOS / POSIX quando suportado."""
+    try:
+        import os
+        if hasattr(os, "nice"):
+            try:
+                os.nice(-2)
+            except Exception:
+                pass
+    except Exception:
+        pass
 
 
 def set_effects_quality(level: str):
@@ -38,7 +63,9 @@ def is_high() -> bool:
 
 
 def scaled(count: int, minimum: int = 1) -> int:
-    """Quantidade de partículas na qualidade atual: a baixa usa um terço."""
+    """Quantidade de partículas na qualidade atual: com Game Boost ativo usa um quarto; baixa usa um terço."""
+    if _game_boost_enabled:
+        return max(minimum, int(count / 4))
     return count if _level == HIGH else max(minimum, int(count / 3))
 
 
@@ -114,13 +141,15 @@ def update_fps_governor(dt: float) -> str:
 
 
 def load_effects_quality(settings_path: str):
-    """Aplica `video.effects_quality` do settings.json; sem o arquivo ou a chave fica "high"."""
+    """Aplica `video.effects_quality` e `video.game_boost` do settings.json; sem o arquivo ou a chave fica "high"."""
     try:
         with open(settings_path, encoding="utf-8") as f:
             video = json.load(f).get("video", {})
             set_effects_quality(video.get("effects_quality", HIGH))
             if "auto_fps_governor" in video:
                 set_auto_adjust(bool(video.get("auto_fps_governor", True)))
+            if "game_boost" in video:
+                set_game_boost(bool(video.get("game_boost", False)))
     except (OSError, ValueError, AttributeError):
         set_effects_quality(HIGH)
 

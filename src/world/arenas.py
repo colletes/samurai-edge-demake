@@ -7,7 +7,8 @@ Aqui ficam os dados de cada arena e o registro dos tipos de prop, estrutura e pe
 from src.config import (
     ARENA_BAMBOO, ARENA_KYOTO, ARENA_GANRYU, ARENA_IGA, ARENA_PIRATE_DECK, ARENA_SHADOW_CAVE, ARENA_MIST_TEMPLE, ARENA_FOREST_CAMP, ARENA_NAGASHINO, ARENA_KABUKI_STAGE, ARENA_MOUNTAIN_SHRINE, ARENA_BAROQUE_COURT, ARENA_GASHADOKURO,
     ARENA_SHAOLIN, ARENA_HIGANBANA, ARENA_GOJO_BRIDGE, ARENA_YOSHIWARA, ARENA_RICE_PADDIES, ARENA_RAIN_MILL,
-    ARENA_GOTHIC_CEMETERY, ARENA_HEIAN_SHRINE, ARENA_SACRED_PINES, ARENA_EZO_TUNDRA, COLOR_BG, COLOR_KYOTO_BG,
+    ARENA_GOTHIC_CEMETERY, ARENA_HEIAN_SHRINE, ARENA_SACRED_PINES, ARENA_EZO_TUNDRA,
+    ARENA_DOHYO, ARENA_DEJIMA, COLOR_BG, COLOR_KYOTO_BG,
     COLOR_GRASS, COLOR_GRASS_LIGHT, COLOR_EARTH, COLOR_WATER, COLOR_WATER_HIGHLIGHT,
     COLOR_KYOTO_STONE, COLOR_KYOTO_STONE_LIGHT, COLOR_KYOTO_STONE_DARK, COLOR_KYOTO_CURB, COLOR_KYOTO_PAVEMENT,
     MAP_COLS, MAP_ROWS,
@@ -26,11 +27,14 @@ from src.world.decor import (
     GothicHeadstone, MausoleumCrypt, WroughtIronFence, GothicDeadTree, HeianTorii, GinkgoTree, ShimenawaBanner, HeianToro,
     SoulFissure, BoneMound, SpectralToro,
     AkamatsuPine, MountainHokora, TimberLogPile, AinuInauTotem, HideDryingRack, SnowSpruceTree,
+    DohyoCornerPost, SacredSaltMound, DohyoBrazier, AlchemyWorkbench, ReagentBarrel, WharfMooringBollard, WarehouseDoorwayArch,
+    SacredBushBarrier, WarehouseGlassWall, LargeSacredCenser, WharfPiling,
 )
 from src.world.hazards import (
     ChainPendulum, FireworkMortars, RotatingStage, ShipRoll, TideSurge,
     GothicCemeteryHazard, HeianShrineHazard, GashadokuroArenaHazard,
     PineForestHazard, EzoTaigaHazard,
+    DohyoHazard, DejimaHazard,
 )
 from src.world.solid_props import Cannon, PowderBarrel, ShrineBell, SolidProp
 from src.world.kyoto_map import (
@@ -112,6 +116,17 @@ register_prop("timber_logs", lambda x, y, **p: TimberLogPile(x, y), "rocks")
 register_prop("ainu_inau", lambda x, y, **p: AinuInauTotem(x, y), "rocks")
 register_prop("hide_rack", lambda x, y, **p: HideDryingRack(x, y), "rocks")
 register_prop("snow_spruce", lambda x, y, **p: SnowSpruceTree(x, y, **p), "trees")
+register_prop("dohyo_post", lambda x, y, **p: DohyoCornerPost(x, y, **p), "lanterns")
+register_prop("salt_mound", lambda x, y, **p: SacredSaltMound(x, y), "rocks")
+register_prop("dohyo_brazier", lambda x, y, **p: DohyoBrazier(x, y), "lanterns")
+register_prop("alchemy_bench", lambda x, y, **p: AlchemyWorkbench(x, y), "rocks")
+register_prop("reagent_barrel", lambda x, y, **p: ReagentBarrel(x, y, **p), "buildings")
+register_prop("wharf_bollard", lambda x, y, **p: WharfMooringBollard(x, y), "rocks")
+register_prop("doorway_arch", lambda x, y, **p: WarehouseDoorwayArch(x, y), "buildings")
+register_prop("sacred_bush", lambda x, y, **p: SacredBushBarrier(x, y, **p), "trees")
+register_prop("glass_wall", lambda x, y, **p: WarehouseGlassWall(x, y, **p), "buildings")
+register_prop("large_censer", lambda x, y, **p: LargeSacredCenser(x, y), "lanterns")
+register_prop("wharf_piling", lambda x, y, **p: WharfPiling(x, y), "rocks")
 register_structure("arched_bridge", ArchedBridge)
 register_structure("roof_beam", RoofBeam)
 register_structure("plank_bridge", PlankBridge)
@@ -127,6 +142,8 @@ register_hazard("heian_shrine_hazard", HeianShrineHazard)
 register_hazard("gashadokuro_hazard", GashadokuroArenaHazard)
 register_hazard("pine_forest_hazard", PineForestHazard)
 register_hazard("ezo_taiga_hazard", EzoTaigaHazard)
+register_hazard("dohyo_hazard", DohyoHazard)
+register_hazard("dejima_hazard", DejimaHazard)
 
 
 # ---------------------------------------------------------------------------
@@ -1688,6 +1705,306 @@ EZO_TUNDRA_SPEC = ArenaSpec(
 
 
 # ---------------------------------------------------------------------------
+# Dohyo Sagrado (Ciclo 6 - Raiden)
+# ---------------------------------------------------------------------------
+TILE_DOHYO_MOSS = 123
+TILE_DOHYO_WOOD = 115
+TILE_DOHYO_RING = 116
+TILE_DOHYO_CLAY = 117
+TILE_DOHYO_DIRT = 124
+
+_DOHYO_LIGHTS = (
+    LightSource(5.2, 5.2, 1.8, (255, 185, 95), 3.8, flicker=0.15),
+    LightSource(15.8, 5.2, 1.8, (255, 185, 95), 3.8, flicker=0.15),
+    LightSource(15.8, 15.8, 1.8, (255, 185, 95), 3.8, flicker=0.15),
+    LightSource(5.2, 15.8, 1.8, (255, 185, 95), 3.8, flicker=0.15),
+    LightSource(10.5, 3.8, 1.2, (255, 160, 60), 3.5, flicker=0.22),
+    LightSource(10.5, 17.2, 1.2, (255, 160, 60), 3.5, flicker=0.22),
+    LightSource(10.5, 10.5, 2.4, (255, 235, 180), 5.5, flicker=0.04),
+)
+
+SACRED_DOHYO_SPEC = ArenaSpec(
+    id=ARENA_DOHYO,
+    name="Dohyo Sagrado",
+    cols=MAP_COLS,
+    rows=MAP_ROWS,
+    bg_color=(20, 24, 18),
+    music="bgm_sacred_dohyo",
+    wind=WindSpec(0.4, 0.20, 0.60, 0.35),
+    tile_styles={
+        TILE_DOHYO_MOSS: TileStyle("flat", ((32, 64, 38), (26, 52, 30)), pattern="third", edge=(18, 38, 22), surface="grass"),
+        TILE_DOHYO_WOOD: TileStyle("flat", ((138, 102, 68), (124, 90, 58)), pattern="rows", edge=(94, 68, 42), surface="wood"),
+        TILE_DOHYO_RING: TileStyle("flat", ((198, 168, 114), (184, 154, 102)), pattern="parity", edge=(146, 118, 76), surface="grass"),
+        TILE_DOHYO_CLAY: TileStyle("flat", ((182, 142, 98), (170, 130, 88)), pattern="parity", edge=(132, 98, 64), surface="sand"),
+        TILE_DOHYO_DIRT: TileStyle("flat", ((154, 118, 80), (138, 104, 68)), pattern="parity", edge=(104, 76, 48), surface="sand"),
+    },
+    layers=(
+        # Vegetação densa e solo de bosque sagrado circundando o santuário
+        FillLayer(TILE_DOHYO_MOSS),
+        # Caminho de terra no canto inferior direito que dá acesso ao santuário
+        RectLayer(TILE_DOHYO_DIRT, 17, 21, 17, 21),
+        RectLayer(TILE_DOHYO_DIRT, 15, 18, 15, 18),
+        RectLayer(TILE_DOHYO_DIRT, 14, 16, 14, 16),
+        # Passadiço circular de madeira Hinoki delimitado
+        EllipseLayer(TILE_DOHYO_WOOD, cx=10.5, cy=10.5, radius=7.2),
+        # Fardos de palha Shōbu-tawara
+        EllipseLayer(TILE_DOHYO_RING, cx=10.5, cy=10.5, radius=5.2),
+        # Terra batida sagrada Arakida no centro
+        EllipseLayer(TILE_DOHYO_CLAY, cx=10.5, cy=10.5, radius=4.8),
+    ),
+    props=(
+        # Pilares cerimoniais Shihobashira com borlas direcionais Fusa
+        PropSpec("dohyo_post", 5.2, 5.2, {"fusa": "green"}),
+        PropSpec("dohyo_post", 15.8, 5.2, {"fusa": "red"}),
+        PropSpec("dohyo_post", 15.8, 15.8, {"fusa": "white"}),
+        PropSpec("dohyo_post", 5.2, 15.8, {"fusa": "black"}),
+        # Montes de sal sagrado purificador Sanbō
+        PropSpec("salt_mound", 5.2, 10.5),
+        PropSpec("salt_mound", 15.8, 10.5),
+        # Braseiros cerimoniais nas bordas norte/sul
+        PropSpec("dohyo_brazier", 10.5, 3.8),
+        PropSpec("dohyo_brazier", 10.5, 17.2),
+        # Grandes incensários cerimoniais nos cantos da arena exalando plumas de fumaça aromática
+        PropSpec("large_censer", 4.0, 4.0),
+        PropSpec("large_censer", 17.0, 4.0),
+        PropSpec("large_censer", 4.0, 17.0),
+        PropSpec("large_censer", 16.5, 16.5),
+        # Lanternas de pedra ladeando o caminho de terra do canto inferior direito
+        PropSpec("stone_lantern", 18.8, 15.2),
+        PropSpec("stone_lantern", 15.2, 18.8),
+        # --- Floresta densa e intransponível preenchendo a área verde ---
+        # Faixa Norte (y <= 3.5)
+        PropSpec("akamatsu_pine", 1.2, 1.2),
+        PropSpec("akamatsu_pine", 3.6, 1.0),
+        PropSpec("akamatsu_pine", 6.2, 1.2),
+        PropSpec("akamatsu_pine", 8.8, 1.0),
+        PropSpec("akamatsu_pine", 11.5, 1.2),
+        PropSpec("akamatsu_pine", 14.2, 1.0),
+        PropSpec("akamatsu_pine", 16.8, 1.2),
+        PropSpec("akamatsu_pine", 19.5, 1.2),
+        PropSpec("pine", 2.4, 2.4),
+        PropSpec("pine", 5.0, 2.0),
+        PropSpec("pine", 7.6, 1.8),
+        PropSpec("pine", 10.5, 1.6),
+        PropSpec("pine", 13.2, 1.8),
+        PropSpec("pine", 15.8, 2.0),
+        PropSpec("pine", 18.2, 2.4),
+        PropSpec("sacred_bush", 1.5, 3.0),
+        PropSpec("sacred_bush", 3.8, 2.8),
+        PropSpec("sacred_bush", 6.0, 2.8),
+        PropSpec("sacred_bush", 8.4, 2.6),
+        PropSpec("sacred_bush", 12.6, 2.6),
+        PropSpec("sacred_bush", 15.0, 2.8),
+        PropSpec("sacred_bush", 17.4, 2.8),
+        PropSpec("sacred_bush", 19.8, 3.0),
+        # Faixa Sul (y >= 17.5, exceto canto sudeste reservado ao caminho de terra)
+        PropSpec("akamatsu_pine", 1.2, 19.5),
+        PropSpec("akamatsu_pine", 3.6, 19.5),
+        PropSpec("akamatsu_pine", 6.2, 19.2),
+        PropSpec("akamatsu_pine", 8.8, 19.5),
+        PropSpec("akamatsu_pine", 11.5, 19.2),
+        PropSpec("akamatsu_pine", 13.8, 19.5),
+        PropSpec("pine", 2.4, 18.2),
+        PropSpec("pine", 5.0, 18.4),
+        PropSpec("pine", 7.6, 18.2),
+        PropSpec("pine", 10.5, 18.8),
+        PropSpec("pine", 12.8, 18.4),
+        PropSpec("sacred_bush", 1.5, 17.2),
+        PropSpec("sacred_bush", 3.8, 17.0),
+        PropSpec("sacred_bush", 6.0, 17.2),
+        PropSpec("sacred_bush", 8.4, 17.2),
+        PropSpec("sacred_bush", 12.4, 17.2),
+        # Faixa Oeste (x <= 3.5)
+        PropSpec("akamatsu_pine", 1.0, 4.0),
+        PropSpec("akamatsu_pine", 1.2, 6.8),
+        PropSpec("akamatsu_pine", 1.0, 9.5),
+        PropSpec("akamatsu_pine", 1.2, 12.2),
+        PropSpec("akamatsu_pine", 1.0, 15.0),
+        PropSpec("akamatsu_pine", 1.2, 17.2),
+        PropSpec("pine", 2.2, 5.0),
+        PropSpec("pine", 2.4, 7.8),
+        PropSpec("pine", 2.2, 10.5),
+        PropSpec("pine", 2.4, 13.2),
+        PropSpec("pine", 2.2, 15.8),
+        PropSpec("sacred_bush", 3.0, 4.5),
+        PropSpec("sacred_bush", 3.0, 7.2),
+        PropSpec("sacred_bush", 3.0, 11.2),
+        PropSpec("sacred_bush", 3.0, 14.0),
+        PropSpec("sacred_bush", 3.0, 16.5),
+        # Faixa Leste (x >= 17.5, y <= 14.5)
+        PropSpec("akamatsu_pine", 19.5, 4.0),
+        PropSpec("akamatsu_pine", 19.2, 6.8),
+        PropSpec("akamatsu_pine", 19.5, 9.5),
+        PropSpec("akamatsu_pine", 19.2, 12.2),
+        PropSpec("akamatsu_pine", 19.5, 14.0),
+        PropSpec("pine", 18.4, 5.0),
+        PropSpec("pine", 18.2, 7.8),
+        PropSpec("pine", 18.4, 10.5),
+        PropSpec("pine", 18.2, 13.0),
+        PropSpec("sacred_bush", 17.5, 4.5),
+        PropSpec("sacred_bush", 17.5, 7.2),
+        PropSpec("sacred_bush", 17.5, 11.2),
+        PropSpec("sacred_bush", 17.5, 13.8),
+        # Sebes protetoras contornando o anel do Dohyo
+        PropSpec("sacred_bush", 3.4, 6.8),
+        PropSpec("sacred_bush", 3.4, 10.5),
+        PropSpec("sacred_bush", 3.4, 14.2),
+        PropSpec("sacred_bush", 17.6, 6.8),
+        PropSpec("sacred_bush", 17.6, 10.5),
+        PropSpec("sacred_bush", 6.8, 3.4),
+        PropSpec("sacred_bush", 10.5, 3.4),
+        PropSpec("sacred_bush", 14.2, 3.4),
+        PropSpec("sacred_bush", 6.8, 17.6),
+        PropSpec("sacred_bush", 10.5, 17.6),
+    ),
+    hazards=(HazardSpec("dohyo_hazard", {}),),
+    playable_bounds=(3.8, 3.8, 17.2, 17.2),
+    spawns=SpawnRule(x_range=(7.5, 13.5), margin=4.0, min_distance=5.5, fallback=((8.5, 10.5), (12.5, 10.5))),
+    stage=StageSpec(10.5, 10.5),
+    drift_count=42,
+    drift_petals=0.0,
+    lighting=LightingEnvironment(
+        ambient_color=(235, 205, 155), ambient_strength=0.72, vignette=0.32,
+        lights=_DOHYO_LIGHTS,
+        atmosphere=(
+            AtmosphereEffect("sunbeams", density=0.55),
+            AtmosphereEffect("dust", density=0.45),
+        ),
+    ),
+)
+
+
+# ---------------------------------------------------------------------------
+# Armazém de Dejima com Doca Chuvosa (Ciclo 6 - Hendrika)
+# ---------------------------------------------------------------------------
+TILE_DEJIMA_WOOD = 119
+TILE_DEJIMA_PLANK = 120
+TILE_DEJIMA_WET_PLANK = 121
+TILE_DEJIMA_WATER = 122
+
+_DEJIMA_LIGHTS = (
+    LightSource(4.5, 5.5, 1.2, (255, 195, 115), 3.8, flicker=0.12),
+    LightSource(4.5, 15.5, 1.2, (255, 195, 115), 3.8, flicker=0.12),
+    LightSource(7.5, 8.2, 1.8, (245, 185, 95), 3.5, flicker=0.15),
+    LightSource(7.5, 12.8, 1.8, (245, 185, 95), 3.5, flicker=0.15),
+    LightSource(10.5, 7.5, 1.4, (140, 185, 235), 4.2, flicker=0.08),
+    LightSource(10.5, 16.5, 1.4, (140, 185, 235), 4.5, flicker=0.10),
+    LightSource(16.5, 5.5, 0.8, (135, 195, 245), 3.5, flicker=0.18),
+    LightSource(16.5, 15.5, 0.8, (135, 195, 245), 3.8, flicker=0.18),
+)
+
+DEJIMA_WAREHOUSE_SPEC = ArenaSpec(
+    id=ARENA_DEJIMA,
+    name="Armazém de Dejima",
+    cols=MAP_COLS,
+    rows=MAP_ROWS,
+    bg_color=(16, 22, 30),
+    music="bgm_dejima_dock",
+    wind=WindSpec(1.2, 0.70, 1.65, 0.85),
+    tile_styles={
+        TILE_DEJIMA_WOOD: TileStyle("flat", ((118, 82, 54), (104, 72, 46)), pattern="rows", edge=(72, 48, 30), surface="wood"),
+        TILE_DEJIMA_PLANK: TileStyle("slab", ((96, 82, 72), (84, 72, 62)), height=0.22, edge=(58, 48, 40), speed_mult=1.05, surface="wood", outline=True),
+        TILE_DEJIMA_WET_PLANK: TileStyle("slab", ((68, 84, 98), (56, 72, 86)), height=0.20, edge=(42, 54, 66), speed_mult=1.12, surface="marble", outline=True),
+        TILE_DEJIMA_WATER: TileStyle("water", ((22, 38, 54), (16, 30, 44)), edge=(12, 22, 32), depth=0.35, speed_mult=0.50, surface="water"),
+    },
+    layers=(
+        # 1. Base geral do canal portuário (águas escuras)
+        FillLayer(TILE_DEJIMA_WATER),
+        # 2. Área interna reduzida do armazém (x de 1 a 7): piso de madeira nobre
+        RectLayer(TILE_DEJIMA_WOOD, 1, 7, 2, 19),
+        # 3. Grande Plataforma Superior e Central do Cais (x de 7 a 16, y de 3 a 11)
+        RectLayer(TILE_DEJIMA_PLANK, 7, 16, 3, 11),
+        RectLayer(TILE_DEJIMA_WET_PLANK, 14, 16, 3, 11),
+        # 4. Grandes Pranchas ligando o Cais Superior ao Cais Inferior sobre o Buraco 1
+        RectLayer(TILE_DEJIMA_PLANK, 7, 9, 12, 13),   # Prancha larga oeste
+        RectLayer(TILE_DEJIMA_PLANK, 14, 16, 12, 13), # Prancha larga leste
+        # 5. Doca Inferior Expandida (fazendo excelente uso do espaço inferior com grandes pranchas)
+        RectLayer(TILE_DEJIMA_PLANK, 7, 16, 14, 15),  # Plataforma norte do cais inferior
+        RectLayer(TILE_DEJIMA_PLANK, 7, 9, 16, 17),   # Prancha larga oeste do cais inferior
+        RectLayer(TILE_DEJIMA_PLANK, 14, 16, 16, 17), # Prancha larga leste do cais inferior
+        RectLayer(TILE_DEJIMA_PLANK, 7, 16, 18, 19),  # Grande calçadão sul de tábuas
+        RectLayer(TILE_DEJIMA_WET_PLANK, 14, 16, 18, 19), # Borda sul molhada
+    ),
+    pits=(
+        # Canais abertos e buracos entrecortando o deck de madeira suspensa:
+        # 1. Canal marítimo norte ao redor da doca
+        PitZone(7.0, 0.0, 17.0, 3.6, "VOID", railed=False, water=((20, 36, 52), (52, 92, 134))),
+        # 2. Mar aberto a leste da doca
+        PitZone(17.0, 3.6, float(MAP_COLS), float(MAP_ROWS), "VOID", railed=False, water=((20, 36, 52), (52, 92, 134))),
+        # 3. Foz marítima ao sul do calçadão inferior
+        PitZone(7.0, 19.92, 17.0, float(MAP_ROWS), "L", railed=False, water=((20, 36, 52), (52, 92, 134))),
+        # 4. Buraco 1: vão de água central entre o cais superior e o cais inferior
+        PitZone(10.0, 12.0, 14.0, 14.08, "L", railed=False, water=((20, 36, 52), (52, 92, 134))),
+        # 5. Buraco 2: fosso marítimo de descarga em pleno deck do espaço inferior
+        PitZone(10.0, 16.0, 14.0, 18.08, "L", railed=False, water=((20, 36, 52), (52, 92, 134))),
+    ),
+    props=(
+        # Interior do Laboratório Alquímico (x <= 7.0)
+        PropSpec("alchemy_bench", 4.2, 5.8),
+        PropSpec("reagent_barrel", 3.8, 14.5, {"style": "acid"}),
+        PropSpec("reagent_barrel", 4.8, 15.2, {"style": "volatile"}),
+        PropSpec("crate", 3.2, 9.5),
+        PropSpec("crate", 3.2, 11.5),
+        PropSpec("paper_lantern", 5.5, 3.8, {"color": (235, 185, 75)}),
+        PropSpec("paper_lantern", 5.5, 17.2, {"color": (235, 185, 75)}),
+        # Paredes Semitransparentes com Vidraças no limiar x = 7.5
+        PropSpec("glass_wall", 7.5, 2.2),
+        PropSpec("glass_wall", 7.5, 3.4),
+        PropSpec("glass_wall", 7.5, 4.6),
+        PropSpec("glass_wall", 7.5, 5.8),
+        PropSpec("glass_wall", 7.5, 7.0),
+        # Portal / Vãos de passagem central do Armazém para a doca
+        PropSpec("doorway_arch", 7.5, 8.5),
+        PropSpec("doorway_arch", 7.5, 12.5),
+        # Paredes Semitransparentes ao sul da porta
+        PropSpec("glass_wall", 7.5, 14.0),
+        PropSpec("glass_wall", 7.5, 15.2),
+        PropSpec("glass_wall", 7.5, 16.4),
+        PropSpec("glass_wall", 7.5, 17.6),
+        PropSpec("glass_wall", 7.5, 18.8),
+        # Estacas de sustentação em torno dos buracos e na orla da doca
+        PropSpec("wharf_piling", 9.8, 12.0),
+        PropSpec("wharf_piling", 14.2, 12.0),
+        PropSpec("wharf_piling", 9.8, 14.1),
+        PropSpec("wharf_piling", 14.2, 14.1),
+        PropSpec("wharf_piling", 9.8, 16.0),
+        PropSpec("wharf_piling", 14.2, 16.0),
+        PropSpec("wharf_piling", 9.8, 18.1),
+        PropSpec("wharf_piling", 14.2, 18.1),
+        PropSpec("wharf_piling", 16.8, 5.5),
+        PropSpec("wharf_piling", 16.8, 9.5),
+        PropSpec("wharf_piling", 16.8, 14.5),
+        PropSpec("wharf_piling", 16.8, 18.5),
+        # Cabeços de amarração na beirada da doca suspensa
+        PropSpec("wharf_bollard", 15.8, 6.5),
+        PropSpec("wharf_bollard", 15.8, 11.0),
+        PropSpec("wharf_bollard", 15.8, 15.5),
+        PropSpec("wharf_bollard", 15.8, 19.0),
+        # Barris químicos e caixotes de carga distribuídos nos decks superior e inferior
+        PropSpec("reagent_barrel", 15.0, 7.5, {"style": "acid"}),
+        PropSpec("reagent_barrel", 15.0, 18.2, {"style": "volatile"}),
+        PropSpec("crate", 11.5, 5.5),
+        PropSpec("crate", 8.2, 15.5),
+        PropSpec("crate", 15.2, 14.8),
+    ),
+    hazards=(HazardSpec("dejima_hazard", {}),),
+    playable_bounds=(1.5, 2.5, 16.5, 19.5),
+    spawns=SpawnRule(x_range=(4.5, 12.5), margin=3.0, min_distance=5.5, fallback=((4.5, 10.5), (11.5, 7.5))),
+    stage=StageSpec(10.5, 7.5),
+    drift_count=55,
+    drift_petals=0.0,
+    lighting=LightingEnvironment(
+        ambient_color=(165, 192, 225), ambient_strength=0.58, vignette=0.42,
+        lights=_DEJIMA_LIGHTS,
+        atmosphere=(
+            AtmosphereEffect("mist", density=0.65),
+            AtmosphereEffect("rain", density=0.85),
+        ),
+    ),
+)
+
+
+# ---------------------------------------------------------------------------
 # Registro de arenas jogáveis
 # ---------------------------------------------------------------------------
 ARENA_SPECS: dict[str, ArenaSpec] = {
@@ -1708,6 +2025,8 @@ ARENA_SPECS: dict[str, ArenaSpec] = {
     ARENA_HEIAN_SHRINE: HEIAN_SHRINE_SPEC,
     ARENA_SACRED_PINES: SACRED_PINES_SPEC,
     ARENA_EZO_TUNDRA: EZO_TUNDRA_SPEC,
+    ARENA_DOHYO: SACRED_DOHYO_SPEC,
+    ARENA_DEJIMA: DEJIMA_WAREHOUSE_SPEC,
 }
 
 

@@ -75,27 +75,33 @@ class TestOpeningVideo(unittest.TestCase):
         self.assertTrue(screen.handle_event(btn_start))
         self.assertTrue(screen.is_finished)
 
-        # Cross / Confirm (button 0)
+        # Cross / Confirm (button 0): Segure para pular (0.75s)
         screen.is_finished = False
         screen.prompt_timer = 1.0
         btn_cross = pygame.event.Event(pygame.JOYBUTTONDOWN, button=0, instance_id=0)
-        self.assertTrue(screen.handle_event(btn_cross))
+        screen.handle_event(btn_cross)
+        self.assertTrue(screen.is_holding)
+        screen.update(0.80)
         self.assertTrue(screen.is_finished)
 
     def test_skip_mouse_touch(self):
-        """Verify mouse click or touchscreen tap triggers skip."""
+        """Verify mouse hold or touchscreen hold triggers skip."""
         screen = OpeningVideoScreen()
         screen.is_finished = False
         screen.prompt_timer = 1.0
 
         click_event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(640, 360))
-        self.assertTrue(screen.handle_event(click_event))
+        screen.handle_event(click_event)
+        self.assertTrue(screen.is_holding)
+        screen.update(0.80)
         self.assertTrue(screen.is_finished)
 
         screen.is_finished = False
         screen.prompt_timer = 1.0
         finger_event = pygame.event.Event(pygame.FINGERDOWN, x=0.5, y=0.5, finger_id=0)
-        self.assertTrue(screen.handle_event(finger_event))
+        screen.handle_event(finger_event)
+        self.assertTrue(screen.is_holding)
+        screen.update(0.80)
         self.assertTrue(screen.is_finished)
 
     def test_clean_stop_and_close(self):
@@ -106,6 +112,43 @@ class TestOpeningVideo(unittest.TestCase):
         self.assertIsNone(screen.video)
         screen.close()
         self.assertTrue(screen.is_finished)
+
+    def test_dualsense_hotplug_events(self):
+        """Verify JOYDEVICEADDED and JOYDEVICEREMOVED during opening do not crash."""
+        from src.input.controller_manager import get_controller_manager
+        ctrl_mgr = get_controller_manager()
+        screen = OpeningVideoScreen()
+        screen.is_finished = False
+
+        # Simulate hotplugging a DualSense controller
+        add_event = pygame.event.Event(pygame.JOYDEVICEADDED, device_index=0)
+        ctrl_mgr.handle_event(add_event)
+        self.assertFalse(screen.handle_event(add_event))
+
+        # Simulate removing the controller
+        remove_event = pygame.event.Event(pygame.JOYDEVICEREMOVED, instance_id=0)
+        ctrl_mgr.handle_event(remove_event)
+        self.assertFalse(screen.handle_event(remove_event))
+
+    def test_audio_device_reset_recovery(self):
+        """Verify that a CoreAudio device drop (mixer quit) recovers seamlessly without crashing."""
+        from src.audio.sound_manager import get_sound_manager, MusicTrack
+        sound_mgr = get_sound_manager()
+        screen = OpeningVideoScreen()
+        screen.is_finished = False
+
+        surf = pygame.Surface((1280, 720))
+        # Simulate audio device dropped by OS during controller connection
+        pygame.mixer.quit()
+
+        # Render and update should not throw unhandled pygame.error: mixer not initialized
+        screen.render(surf)
+        screen.update(0.016)
+
+        # Sound manager should ensure mixer ready and play title theme safely
+        sound_mgr.ensure_mixer_ready()
+        sound_mgr.play_music(MusicTrack.TITLE_THEME)
+        self.assertTrue(sound_mgr.is_audio_available)
 
 
 if __name__ == "__main__":

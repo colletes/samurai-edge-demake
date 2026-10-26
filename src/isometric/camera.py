@@ -7,10 +7,11 @@ from src.config import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.isometric.iso_math import world_to_iso, iso_depth
 
 class Camera:
-    ZOOM_CLOSE = 1.28
-    ZOOM_FAR = 0.88
-    DIST_CLOSE = 3.0
-    DIST_FAR = 9.0
+    ZOOM_CLOSE = 1.50
+    ZOOM_CLOSE_MOBILE = 1.60
+    ZOOM_FAR = 0.85
+    DIST_CLOSE = 2.8
+    DIST_FAR = 8.5
 
     def __init__(self, target_wx: float = 11.0, target_wy: float = 11.0):
         # Posição central no mundo que a câmera está olhando
@@ -34,6 +35,10 @@ class Camera:
         self.target_zoom = 1.0
         self.zoom_impulse = 0.0
         self._last_parry_state = (False, False)
+
+        # Suavização dinâmica de intenção de velocidade (anti-solavanco)
+        self.lead_x = 0.0
+        self.lead_y = 0.0
 
         # Altura do piso sob o foco (ex.: tabuleiro da ponte), onde as sombras dos lutadores são desenhadas
         self.ground_z = 0.0
@@ -63,16 +68,17 @@ class Camera:
         self.zoom_impulse = max(self.zoom_impulse, min(0.16, impulse))
 
     @classmethod
-    def compute_distance_zoom(cls, dist: float) -> float:
-        """Calcula o zoom ideal em função da distância entre os lutadores (1.28x em melee <=3u até 0.88x >=9u)."""
+    def compute_distance_zoom(cls, dist: float, is_mobile: bool = False) -> float:
+        """Calcula o zoom ideal em função da distância entre os lutadores (1.50x no desktop / 1.60x no mobile até 0.85x)."""
+        close_zoom = cls.ZOOM_CLOSE_MOBILE if is_mobile else cls.ZOOM_CLOSE
         if dist <= cls.DIST_CLOSE:
-            return cls.ZOOM_CLOSE
+            return close_zoom
         if dist >= cls.DIST_FAR:
             return cls.ZOOM_FAR
         t = (dist - cls.DIST_CLOSE) / (cls.DIST_FAR - cls.DIST_CLOSE)
         # Curva Hermite smoothstep
         smooth_t = t * t * (3.0 - 2.0 * t)
-        return cls.ZOOM_CLOSE + (cls.ZOOM_FAR - cls.ZOOM_CLOSE) * smooth_t
+        return close_zoom + (cls.ZOOM_FAR - close_zoom) * smooth_t
 
     def update(self, target_wx: float, target_wy: float, dt: float):
         """Atualiza a posição da câmera com suavização (lerp) em direção ao alvo."""
@@ -99,8 +105,8 @@ class Camera:
         """
         Enquadramento dinâmico de combate (Pilar 7):
         - Mantém a rotação fixa (`azimuth == 0.0` em duelo normal).
-        - Auto-zoom suave baseado na distância entre os lutadores (`0.88x` a `1.28x`).
-        - Rastreamento com avanço de velocidade/intenção (velocity lead) durante ataques/dashes.
+        - Auto-zoom dinâmico e suave baseado na distância entre os lutadores (~1.50x a 0.85x).
+        - Rastreamento com avanço de velocidade suave (exponential lead decay) sem solavancos em dashes/ataques.
         - Micro-zoom reativo (`+0.06x`) em parries e deflexões.
         - Clamping inteligente nas bordas da arena.
         """
@@ -111,19 +117,24 @@ class Camera:
         mid_x = p1.wx * (1.0 - w2) + p2.wx * w2
         mid_y = p1.wy * (1.0 - w2) + p2.wy * w2
 
-        # Velocity / Action Lead: antecipa levemente o movimento em investidas e ataques
-        lead_x, lead_y = 0.0, 0.0
+        # Velocity / Action Lead com decaimento exponencial suave (elimina estalos e solavancos)
+        desired_lead_x, desired_lead_y = 0.0, 0.0
         for f in (p1, p2):
             st = getattr(f, "state", "IDLE")
             if st in ("DASH", "ROLL", "GATOTSU_CHARGE", "FLECHE", "TACKLE_CHARGE", "JUMP"):
-                lead_x += getattr(f, "facing_x", 0.0) * 0.28
-                lead_y += getattr(f, "facing_y", 0.0) * 0.28
+                desired_lead_x += getattr(f, "facing_x", 0.0) * 0.28
+                desired_lead_y += getattr(f, "facing_y", 0.0) * 0.28
             elif st in ("ATTACK", "CUTLASS_CLEAVE", "ZEROSHIKI"):
-                lead_x += getattr(f, "facing_x", 0.0) * 0.16
-                lead_y += getattr(f, "facing_y", 0.0) * 0.16
+                desired_lead_x += getattr(f, "facing_x", 0.0) * 0.16
+                desired_lead_y += getattr(f, "facing_y", 0.0) * 0.16
 
-        target_wx = mid_x + lead_x
-        target_wy = mid_y + lead_y
+        # Filtro passa-baixa criticamente amortecido para adiantamento suave
+        lead_decay = 1.0 - math.exp(-7.5 * dt)
+        self.lead_x += (desired_lead_x - self.lead_x) * min(1.0, lead_decay)
+        self.lead_y += (desired_lead_y - self.lead_y) * min(1.0, lead_decay)
+
+        target_wx = mid_x + self.lead_x
+        target_wy = mid_y + self.lead_y
 
         # Clamping inteligente dentro dos limites da arena
         if game_map is not None:
@@ -148,19 +159,23 @@ class Camera:
             self.add_zoom_impulse(0.06)
         self._last_parry_state = (p1_parry, p2_parry)
 
+        from src.input.device_info import is_mobile_device
+        is_mobile = is_mobile_device()
+
         # Calcular zoom alvo pela distância entre os combatentes
         if is_boss:
             base_zoom = 0.85
         else:
             dist = math.hypot(p1.wx - p2.wx, p1.wy - p2.wy)
-            base_zoom = self.compute_distance_zoom(dist)
+            base_zoom = self.compute_distance_zoom(dist, is_mobile=is_mobile)
 
-        self.target_zoom = min(1.42, base_zoom + self.zoom_impulse)
+        max_cap = 1.68 if is_mobile else 1.58
+        self.target_zoom = min(max_cap, base_zoom + self.zoom_impulse)
 
-        # Interpolação criticamente amortecida do zoom (quantizada ao estabilizar para maximizar hits do cache de terreno)
-        zoom_lerp = min(1.0, dt * 5.2)
-        new_zoom = self.zoom + (self.target_zoom - self.zoom) * zoom_lerp
-        if abs(self.target_zoom - new_zoom) < 0.004:
+        # Interpolação suave e criticamente amortecida do zoom
+        zoom_lerp = 1.0 - math.exp(-4.5 * dt)
+        new_zoom = self.zoom + (self.target_zoom - self.zoom) * min(1.0, zoom_lerp)
+        if abs(self.target_zoom - new_zoom) < 0.003:
             self.zoom = round(self.target_zoom, 3)
         else:
             self.zoom = round(new_zoom, 3)

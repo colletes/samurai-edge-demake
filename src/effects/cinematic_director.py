@@ -215,6 +215,12 @@ class CinematicDirector:
             "DRAGGED_TO_GRAVE": ("黄泉引摺", "DRAGGED TO GRAVE — ARRASTADO PARA A COVA"),
             "SEAL_STASIS_COLLAPSE": ("青炎灰燼", "SEIEN KAIJIN — CONSUMIDO EM CHAMAS VERDES ÀS CINZAS"),
             "OFUDA_PURIFICATION_PILLAR": ("青炎灰燼", "SEIEN KAIJIN — CONSUMIDO EM CHAMAS VERDES ÀS CINZAS"),
+            "SEIMEI_FATAL_FIRE": ("青炎灰燼", "SEIEN KAIJIN — CONSUMIDO EM CHAMAS VERDES ÀS CINZAS"),
+            "SEIMEI_FATAL_WATER": ("水葬昇華", "SUISOU SHOUKA — DISSOLVIDO EM NÉVOA ESPECTRAL"),
+            "SEIMEI_FATAL_WOOD": ("神樹輪廻", "SHINJU RINNE — ENRAIZADO NO REPOUSO ETERNO"),
+            "SEIMEI_FATAL_METAL": ("金剛封縛", "KONGOU FUUBAKU — EMPALADO POR LÂMINAS ASTRAIS"),
+            "SEIMEI_FATAL_EARTH": ("岩宿化石", "GANSHUKU KASEKI — PETRIFICADO EM ROCHA ANCESTRAL"),
+            "SEIMEI_FATAL_YINYANG": ("陰陽天誅", "IN-YOU TENCHUU — BANIDO AO REINO DOS ESPÍRITOS"),
             # Ciclo 5 Fatalities: Okuni, Tomoe, Daiki, Aoi
             "TESSEN_DECAP": ("鉄扇斬首", "TESSEN ZANSHU — DECAPITAÇÃO DO LEQUE DE FERRO"),
             "DOKUKIRI_MELT": ("毒霧融骸", "DOKUKIRI YUUGAI — DISSOLUÇÃO DA NÉVOA VENENOSA"),
@@ -226,6 +232,14 @@ class CinematicDirector:
             "METEOR_STAFF_CRUSH": ("金剛墜撃", "KONGOU TSUIGEKI — IMPACTO METEORO DO BASTÃO"),
             "SPEAR_HEART_SLIDE": ("氷滑心貫", "HYOUKATSU SHINKAN — DESLIZE DA LANÇA NO CORAÇÃO"),
             "TRAP_AND_EXECUTE": ("獣罠処刑", "JUUWANA SHOKEI — ARMADILHA DE CAÇA E EXECUÇÃO"),
+            "TSUPPARI_SONIC_DECAP": ("雷電掌断", "RAIDEN SHODAN — DECAPITAÇÃO SÔNICA TSUPPARI"),
+            "TACHIAI_SHATTER_SLAM": ("立合粉砕", "TACHIAI FUNSAI — ESMAGAMENTO DE SUMÔ"),
+            "STILETTO_CAROTID_VITRIOL": ("硫酸頸割", "RYUUSAN KEIKATSU — ESTILETE DISSOLVENTE"),
+            "ALCHEMIC_ACID_DISSOLVE": ("強酸溶解", "KYOU SAN YOUKAI — DISSOLUÇÃO ÁCIDA ALQUÍMICA"),
+            "ALCHEMIC_FIRE_ASH": ("焦熱灰燼", "SHOU NETSU KAIJIN — FOGO GREGO EM CINZAS"),
+            "ALCHEMIC_ETHER_SUFFOCATION": ("幽冥窒息", "YUUMEI CHISSOKU — ÉTER SOPORÍFERO"),
+            "ALCHEMIC_FROST_SHATTER": ("氷華砕裂", "HYOUKA SAIRETSU — CONGELAMENTO E ESTILHAÇO"),
+            "ALCHEMIC_MIASMA_MELT": ("毒瘴崩壊", "DOKU SHOU HOUKAI — COLAPSO NEUROTÓXICO"),
         }
 
         # Pool de expressões clássicas de cinema samurai
@@ -498,7 +512,7 @@ class CinematicDirector:
             self.bw_flash_timer = 2.05
             self.delayed_death_timer = 1.60
 
-        elif death_style in ("SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR"):
+        elif death_style in ("SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR", "SEIMEI_FATAL_FIRE", "SEIMEI_FATAL_WATER", "SEIMEI_FATAL_WOOD", "SEIMEI_FATAL_METAL", "SEIMEI_FATAL_EARTH", "SEIMEI_FATAL_YINYANG"):
             # Seimei (Ciclo 4): Ofuda atinge o peito/testa, chamas verdes espirituais consomem o rival até que só sobrem cinzas!
             self.seimei_attacker = attacker
             self.seimei_victim = victim
@@ -547,7 +561,7 @@ class CinematicDirector:
             self.delayed_death_timer = dur
             self._arm_closeup_finisher_strike(attacker, victim, duration=dur)
 
-        elif death_style in ("TESSEN_DECAP", "THROAT_TEMPLE_CRUSH", "METEOR_STAFF_CRUSH", "SPEAR_HEART_SLIDE", "TRAP_AND_EXECUTE", "PINNED_TO_EARTH", "HAMAYA_HOLY_PIERCE", "DOKUKIRI_MELT"):
+        elif death_style in ("TESSEN_DECAP", "THROAT_TEMPLE_CRUSH", "METEOR_STAFF_CRUSH", "SPEAR_HEART_SLIDE", "TRAP_AND_EXECUTE", "PINNED_TO_EARTH", "HAMAYA_HOLY_PIERCE", "DOKUKIRI_MELT", "TSUPPARI_SONIC_DECAP", "TACHIAI_SHATTER_SLAM", "STILETTO_CAROTID_VITRIOL", "ALCHEMIC_ACID_DISSOLVE", "ALCHEMIC_FIRE_ASH", "ALCHEMIC_ETHER_SUFFOCATION", "ALCHEMIC_FROST_SHATTER", "ALCHEMIC_MIASMA_MELT"):
             if attacker is not None and death_style == "METEOR_STAFF_CRUSH":
                 attacker.wz = 0.0
             dur = 0.72 if attacker is not None else 0.52
@@ -1214,7 +1228,7 @@ class CinematicDirector:
                 # O suspense acabou: O corpo se parte e o geiser explode!
                 self.shuriken_active = False
                 ds = getattr(self.pending_corpse, "death_style", "")
-                if ds in ("WINDMILL_SHURIKEN_DECAP", "DUAL_IMPALE_X_SPREAD", "KUWA_SKULL_CLEAVE", "EARTH_STOMP_CRUSH", "BLIND_CAROTID_SLICE", "BLIND_SPINE_PIERCE", "KENSHIN_SPLIT", "VERTICAL_BISECTION", "SOUL_REAP", "DRAGGED_TO_GRAVE", "SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR"):
+                if ds in ("WINDMILL_SHURIKEN_DECAP", "DUAL_IMPALE_X_SPREAD", "KUWA_SKULL_CLEAVE", "EARTH_STOMP_CRUSH", "BLIND_CAROTID_SLICE", "BLIND_SPINE_PIERCE", "KENSHIN_SPLIT", "VERTICAL_BISECTION", "SOUL_REAP", "DRAGGED_TO_GRAVE", "SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR", "SEIMEI_FATAL_FIRE", "SEIMEI_FATAL_WATER", "SEIMEI_FATAL_WOOD", "SEIMEI_FATAL_METAL", "SEIMEI_FATAL_EARTH", "SEIMEI_FATAL_YINYANG"):
                     try:
                         from src.audio.sound_manager import get_sound_manager
                         from src.audio.sound_events import SoundEvent

@@ -117,6 +117,14 @@ def idle_arms(c):
         left = (bx + fx * 0.08 + px * 0.12, by + fy * 0.08 + py * 0.12, tz + 0.12)
         return left, right
 
+    if pose == "bo_twirl":
+        # Braços sustentando o centro de gravidade do bastão giratório em transição acrobática
+        twirl_prog = c.extra_props.get("twirl_progress", 0.0) if c.extra_props else 0.0
+        bob = math.sin(twirl_prog * math.pi * 4.0) * 0.02
+        left = (bx + fx * 0.16 + px * 0.06, by + fy * 0.16 + py * 0.06, tz + 0.14 + bob)
+        right = (bx + fx * 0.16 - px * 0.06, by + fy * 0.16 - py * 0.06, tz + 0.14 - bob)
+        return left, right
+
     left = (
         bx + fx * 0.18 + px * 0.10,
         by + fy * 0.18 + py * 0.10,
@@ -500,6 +508,46 @@ def _render_bo_staff(c, hand_l, hand_r):
         mk.obox(c, bot, (0.0, 0.0, 1.0), 0.16, 0.046, 0.046, P["bo_iron"], up=(fx, fy, 0.0))
         mk.obox(c, (rx, ry, c.base_z + 1.66), (0.0, 0.0, 1.0), 0.16, 0.046, 0.046, P["bo_iron"], up=(fx, fy, 0.0))
         mk.obox(c, (rx, ry, c.base_z + 1.64), (0.0, 0.0, 1.0), 0.03, 0.050, 0.050, P["bo_gold_ring"], up=(fx, fy, 0.0), outline=False)
+        return
+
+    if pose == "bo_twirl":
+        # Giro acrobático do bastão Yamabushi entre golpes (reduz frequência de ataque)
+        twirl_prog = c.extra_props.get("twirl_progress", 0.0) if c.extra_props else 0.0
+        angle = twirl_prog * math.pi * 4.0  # 2 rotações de 360° no recovery
+        rot_cos = math.cos(angle)
+        rot_sin = math.sin(angle)
+
+        dx = px * rot_cos + fx * rot_sin * 0.45
+        dy = py * rot_cos + fy * rot_sin * 0.45
+        dz = math.sin(angle * 2.0) * 0.35 + rot_sin * 0.75
+        dlen = math.sqrt(dx * dx + dy * dy + dz * dz)
+        if dlen > 0.001:
+            dx /= dlen; dy /= dlen; dz /= dlen
+        else:
+            dx, dy, dz = px, py, 0.0
+
+        mid_x = (hand_l[0] + hand_r[0]) * 0.5 + fx * 0.08
+        mid_y = (hand_l[1] + hand_r[1]) * 0.5 + fy * 0.08
+        mid_z = (hand_l[2] + hand_r[2]) * 0.5
+
+        staff_len = 1.82
+        half_len = staff_len * 0.5
+        tail_pos = (mid_x - dx * half_len, mid_y - dy * half_len, mid_z - dz * half_len)
+        tip_cap = (mid_x + dx * (half_len - 0.18), mid_y + dy * (half_len - 0.18), mid_z + dz * (half_len - 0.18))
+        grip_pos = (mid_x - dx * 0.22, mid_y - dy * 0.22, mid_z - dz * 0.22)
+
+        mk.obox(c, tail_pos, (dx, dy, dz), staff_len, 0.040, 0.040, P["bo_wood"], texture="wood")
+        mk.obox(c, grip_pos, (dx, dy, dz), 0.44, 0.044, 0.044, P["bo_grip"], outline=False)
+        mk.obox(c, tail_pos, (dx, dy, dz), 0.18, 0.045, 0.045, P["bo_iron"])
+        mk.obox(c, (tail_pos[0] + dx * 0.16, tail_pos[1] + dy * 0.16, tail_pos[2] + dz * 0.16), (dx, dy, dz), 0.03, 0.050, 0.050, P["bo_gold_ring"], outline=False)
+        mk.obox(c, tip_cap, (dx, dy, dz), 0.18, 0.045, 0.045, P["bo_iron"])
+        mk.obox(c, (tip_cap[0] - dx * 0.02, tip_cap[1] - dy * 0.02, tip_cap[2] - dz * 0.02), (dx, dy, dz), 0.03, 0.050, 0.050, P["bo_gold_ring"], outline=False)
+
+        # Brilho de vento montanhês nas pontas giratórias
+        tip_end1 = (mid_x + dx * half_len, mid_y + dy * half_len, mid_z + dz * half_len)
+        tip_end2 = (mid_x - dx * half_len, mid_y - dy * half_len, mid_z - dz * half_len)
+        mk.cbox(c, tip_end1[0], tip_end1[1], tip_end1[2], 0.10, 0.10, 0.10, P["wind_aura"], outline=False)
+        mk.cbox(c, tip_end2[0], tip_end2[1], tip_end2[2], 0.10, 0.10, 0.10, P["wind_aura"], outline=False)
         return
 
     # Vetor direcional ligando a mão direita (traseira) à mão esquerda (dianteira)

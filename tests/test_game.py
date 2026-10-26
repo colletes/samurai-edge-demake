@@ -760,7 +760,6 @@ def test_complete_roster():
             pygame.mixer.quit()
     except Exception:
         pass
-    pygame.quit()
     os._exit(0)
 
 if __name__ == "__main__":

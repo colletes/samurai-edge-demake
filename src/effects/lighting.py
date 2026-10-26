@@ -140,6 +140,19 @@ class _Effect:
 
 
 class _Fireflies(_Effect):
+    def __init__(self, arena, density, points=()):
+        super().__init__(arena, density, points)
+        if not self.points:
+            # Sem pontos fixos no spec: espalha vaga-lumes pelo miolo do mapa conforme a densidade
+            n = int(6 + 18 * max(0.0, min(1.0, density)))
+            margin = 2.0
+            self.points = tuple(
+                (self.rng.uniform(margin, max(margin + 1.0, self.cols - margin)),
+                 self.rng.uniform(margin, max(margin + 1.0, self.rows - margin)),
+                 self.rng.uniform(0.2, 1.2))
+                for _ in range(n)
+            )
+
     def render_glow(self, surface, camera, time_val):
         for fx, fy, fz in _take(self.points):
             x = fx + math.sin(time_val * 2.0 + fy) * 0.12

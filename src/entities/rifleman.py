@@ -114,18 +114,18 @@ class Rifleman(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Teppo")
         self.char_type = "teppo"
-        self.speed = 4.0  # Velocidade calibrada (era 4.3) para permitir aproximação melee
+        self.speed = 4.35  # Velocidade ágil para permitir reposicionamento e kiting tático
 
         # Mecânica de Munição e Pólvora
         self.has_ammo = True           # Inicia CARREGADO com munição
-        self.cocking_timer = 0.80      # Delay de armação de cão antes do tiro no início do round
-        self.reload_cooldown = 2.0     # Cooldown de 2s de recarga automática (sem bolsas de pólvora)
+        self.cocking_timer = 0.40      # Delay de armação de cão antes do tiro no início do round (calibrado)
+        self.reload_cooldown = 0.95     # Cooldown ágil de recarga automática (buff de sobrevivência)
         self.reload_timer = 0.0
         self.is_reloading = False
         self.reload_progress = 0.0
 
         # Mecânica de Mira (Windup antes do disparo para permitir esquiva)
-        self.aim_duration = 0.24       # Delay para simular a mira e a queima da mecha
+        self.aim_duration = 0.14       # Disparo rápido da mecha
         self.target_aim_wx = 0.0
         self.target_aim_wy = 0.0
         self.pending_projectiles = None
@@ -283,7 +283,7 @@ class Rifleman(Samurai):
         self.reload_progress = 0.0
 
         self.state = STATE_RECOVERY
-        self.state_timer = 0.38
+        self.state_timer = 0.25
 
         # Recuo da pólvora
         self.wx -= self.facing_x * 0.4
@@ -312,9 +312,9 @@ class Rifleman(Samurai):
             return
         self.set_facing(target_wx, target_wy)
         self.state = STATE_ATTACK
-        self.state_timer = 0.20
+        self.state_timer = 0.16
         self.hitbox_active = True
-        self.hitbox_radius = 1.15
+        self.hitbox_radius = 1.45  # Raio aumentado para defesa segura de curto alcance
         self.is_rifle_butt = True
         self.hitbox_center = (self.wx + self.facing_x * 0.75, self.wy + self.facing_y * 0.75)
         self.slash_dir = (self.facing_x, self.facing_y)

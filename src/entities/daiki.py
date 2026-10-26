@@ -26,19 +26,21 @@ class DaikiPilgrim(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Daiki")
         self.char_type = "daiki"
-        self.speed = 4.75
+        self.speed = 4.40  # Velocidade calibrada de peregrino
         self.max_hp = 2
         self.hp = 2
         self.can_parry = True
 
         # Ataque Primário: Estocada & Varredura de Bastão Bō (Longo Alcance)
-        self.bo_duration = 0.17
-        self.bo_recovery = 0.18
-        self.bo_reach = 2.65
+        self.bo_duration = 0.22
+        self.bo_recovery = 0.58        # Janela de recuperação com giro acrobático do bastão
+        self.bo_reach = 2.10           # Calibrado: alcance balanceado com giro
         self.bo_radius = 1.25
+        self.flourish_spin_active = False
+        self.recovery_max_time = self.bo_recovery
 
         # Ação Secundária: Salto com Vara / Impacto Meteoro (Pole Vault)
-        self.vault_cooldown = 3.6
+        self.vault_cooldown = 4.6      # Cooldown calibrado
         self.vault_timer = 0.0
         self.vault_duration = 0.36
         self.vault_speed = 9.5
@@ -76,7 +78,7 @@ class DaikiPilgrim(Samurai):
     def can_act(self) -> bool:
         return (
             self.is_alive
-            and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY)
+            and self.state in (STATE_IDLE, STATE_WALK)
             and self.roll_recovery_timer <= 0
             and self.dash_recovery_timer <= 0
         )
@@ -93,8 +95,8 @@ class DaikiPilgrim(Samurai):
         self.hitbox_damage = 2
 
         self.hitbox_center = (
-            self.wx + self.facing_x * 1.45,
-            self.wy + self.facing_y * 1.45
+            self.wx + self.facing_x * 1.15,
+            self.wy + self.facing_y * 1.15
         )
         self.hitbox_radius = self.bo_radius
         self.slash_dir = (self.facing_x, self.facing_y)
@@ -172,6 +174,8 @@ class DaikiPilgrim(Samurai):
             if self.state_timer <= 0:
                 self.state = STATE_RECOVERY
                 self.state_timer = self.bo_recovery
+                self.recovery_max_time = self.bo_recovery
+                self.flourish_spin_active = True
                 self.hitbox_active = False
             return
 
@@ -245,6 +249,7 @@ class DaikiPilgrim(Samurai):
             self.state_timer -= dt
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
+                self.flourish_spin_active = False
             return
 
         elif self.state == STATE_PARRY:
@@ -258,6 +263,9 @@ class DaikiPilgrim(Samurai):
         extra = {}
         if self.state == STATE_POLE_VAULT:
             extra = {"pose": "pole_vault", "is_vaulting": True}
+        elif self.state == STATE_RECOVERY and getattr(self, "flourish_spin_active", False):
+            prog = 1.0 - max(0.0, min(1.0, self.state_timer / max(0.001, getattr(self, "recovery_max_time", 0.45))))
+            extra = {"pose": "bo_twirl", "twirl_progress": prog}
         elif self.state in ("DEFEND", "PARRY") or getattr(self, "is_parrying", False):
             extra = {"pose": "bo_spin_guard"}
 

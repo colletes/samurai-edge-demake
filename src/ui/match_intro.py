@@ -91,6 +91,11 @@ def draw_fighter_banner(surface: pygame.Surface, cache: dict, name: str, color, 
 
     radius = 58
     gap = 22
+    max_text_w = SCREEN_WIDTH - (radius * 2 + gap + 120)
+    if name_surf.get_width() > max_text_w:
+        sc = max_text_w / name_surf.get_width()
+        name_surf = pygame.transform.smoothscale(name_surf, (max_text_w, max(1, int(name_surf.get_height() * sc))))
+
     text_w = max(name_surf.get_width(), label_surf.get_width())
     total_w = radius * 2 + gap + text_w
     alpha = int(255 * enter * leave)

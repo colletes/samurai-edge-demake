@@ -305,22 +305,22 @@ def test_arena_hidden_from_selection():
 
 def test_arcade_integration_and_checkpoint():
     run = ArcadeRun("kenshin")
-    boss_fight = run.ladder[10]
+    boss_fight = run.ladder[-1]
     assert boss_fight.kind == FightKind.BOSS and boss_fight.opponents == (CHAR_BOSS,) and boss_fight.arena_id == ARENA_GASHADOKURO
-    run.index = 10
+    run.index = len(run.ladder) - 1
     run._reset_fight_state()
     assert run.on_round_end("P2") == FIGHT_LOST, "a primeira derrota no chefe pede Continue (D8)"
     run.boss_phase = 3
     run.score = 5000
     run.on_continue()
-    assert run.boss_phase == 3 and run.index == 10 and run.continues == 1 and run.score == 3000
+    assert run.boss_phase == 3 and run.index == len(run.ladder) - 1 and run.continues == 1 and run.score == 3000
     boss = BossOni(10.5, 7.5)
     boss.set_phase(run.boss_phase)
     assert boss.phase == 3 and boss.hp == 4, "recomeça a fase atual com os 2 pontos dela"
     again = ArcadeRun.from_dict(run.to_dict())
     assert again.boss_phase == 3
     assert run.on_round_end("P1") == FIGHT_WON and run.is_finished and run.boss_phase == 0
-    print("  [OK] Arcade: 11ª luta é o chefe, derrota usa Continue e recomeça na fase atingida, vitória fecha a jornada.", flush=True)
+    print("  [OK] Arcade: 12ª luta é o chefe, derrota usa Continue e recomeça na fase atingida, vitória fecha a jornada.", flush=True)
 
 
 def test_heal_on_phases_three_and_five():
