@@ -125,16 +125,34 @@ class SeimeiOnmyoji(Samurai):
         p_name = ELEMENT_SPELL_NAMES[el][0]
         col = ELEMENT_COLORS[el]
 
-        ofuda = OfudaProjectile(
-            spawn_x, spawn_y,
-            wz=0.45,
-            dir_x=dir_x,
-            dir_y=dir_y,
-            owner=self,
-            max_range=6.2,
-            element=el
-        )
-        projectiles.append(ofuda)
+        if el == "wood":
+            # Madeira: Dispara leque triplo de agulhas Kusabi-Bari com dispersão em leque
+            base_ang = math.atan2(dir_y, dir_x)
+            for d_ang in (-0.20, 0.0, 0.20):
+                ang = base_ang + d_ang
+                fx = math.cos(ang)
+                fy = math.sin(ang)
+                ofuda = OfudaProjectile(
+                    self.wx + fx * 0.45, self.wy + fy * 0.45,
+                    wz=0.45,
+                    dir_x=fx,
+                    dir_y=fy,
+                    owner=self,
+                    max_range=6.5,
+                    element="wood"
+                )
+                projectiles.append(ofuda)
+        else:
+            ofuda = OfudaProjectile(
+                spawn_x, spawn_y,
+                wz=0.45,
+                dir_x=dir_x,
+                dir_y=dir_y,
+                owner=self,
+                max_range=6.5,
+                element=el
+            )
+            projectiles.append(ofuda)
 
         if banners is not None:
             banners.append(FloatingBanner(f"{p_name}!", self.wx, self.wy, wz=1.75, color=col, duration=0.75))

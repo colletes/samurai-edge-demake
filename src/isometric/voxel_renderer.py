@@ -21,7 +21,7 @@ def _get_alpha_scratch(bw: int, bh: int) -> tuple[pygame.Surface, pygame.Rect]:
         sh = max(256, bh + 32)
         _ALPHA_SCRATCH = pygame.Surface((sw, sh), pygame.SRCALPHA)
     sub_rect = pygame.Rect(0, 0, bw, bh)
-    _ALPHA_SCRATCH.fill((0, 0, 0, 0), sub_rect)
+    _ALPHA_SCRATCH.fill((0, 0, 0, 0))
     return _ALPHA_SCRATCH, sub_rect
 
 

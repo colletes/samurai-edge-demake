@@ -1490,6 +1490,7 @@ class CharacterSelectScreen:
         surface.blit(title_s, (text_left + name_s.get_width() + 14, rect.centery - title_s.get_height() // 2))
 
         p1_label = "IA 1" if self.match_mode == self.MODE_WATCH else "P1"
+        p2_label = "IA 2" if self.match_mode == self.MODE_WATCH else ("IA" if self.vs_ai else "P2")
         if is_p1:
             draw_hanko_stamp(surface, font_stamp, p1_label, rect.right - 54, rect.y + 6, size=24, color=COLOR_HANKO_RED, border_w=1)
         if is_p2:

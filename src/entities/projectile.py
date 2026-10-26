@@ -2160,15 +2160,14 @@ class EarthStompShockwave:
 class OfudaProjectile:
     """
     Talismã Sagrado e Projétil Elemental de Seimei (Rondel Onmyōdō).
-    - Suporta os 6 elementos: Madeira (wood), Fogo (fire), Terra (earth), Metal (metal), Água (water), Yin-Yang (yinyang).
-    - Madeira: Agulhas Kusabi-Bari com enraizamento (Root 0.8s) e partículas de folhas/esmeralda.
-    - Fogo: Guren no Ofuda, projétil veloz que explode em raio ardente no impacto.
-    - Terra: Ganseki-dan, projétil rúnico denso com knockback sísmico e poeira de âmbar.
-    - Metal: Hagane no Yaiba, lâmina de prata supersônica (26 m/s) que ignora defesas convencionais.
-    - Água: Suiryū no Ya, torrente líquida que ricocheteia 1 vez e causa lentidão (slow).
-    - Yin-Yang: Senkō / Kurayami, esferas de luz e vácuo em trajetória espiral suavemente teleguiada.
+    - Madeira (wood): Agulhas Kusabi-Bari em leque com enraizamento imediato (Root 1.8s) e folhas verdes.
+    - Fogo (fire): Guren no Ofuda, esfera ígnea de alto impacto que explode em área (1.4m) e quebra guarda.
+    - Terra (earth): Ganseki-dan, monólito rochoso pesado que causa tremor e derruba o rival (Knockdown).
+    - Metal (metal): Hagane no Yaiba, lâmina de prata supersônica (32 m/s) 100% IMPARÁVEL (Unblockable).
+    - Água (water): Suiryū no Ya, serpente líquida curva e teleguiada que ricocheteia 2 vezes e causa lentidão (-65%).
+    - Yin-Yang (yinyang): Senkō / Kurayami, esferas duplas em espiral que atravessam obstáculos e invertem controles.
     """
-    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, max_range: float = 6.2, element: str = "wood"):
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, max_range: float = 6.8, element: str = "wood"):
         self.wx = wx
         self.wy = wy
         self.wz = wz
@@ -2177,69 +2176,113 @@ class OfudaProjectile:
         self.dir_y = dir_y
         self.element = element
 
-        # Configuração de velocidade e dano por elemento
+        # Configuração de velocidade, massa, alcance e dano por afinidade elemental
         if element == "metal":
-            self.speed = 26.0
+            self.speed = 32.0
             self.damage = 2
+            self.radius = 0.34
+            self.is_unblockable = True
+            self.is_homing = False
         elif element == "earth":
-            self.speed = 13.5
+            self.speed = 11.8
             self.damage = 2
+            self.radius = 0.52
+            self.is_unblockable = False
+            self.is_homing = False
         elif element == "fire":
-            self.speed = 15.0
+            self.speed = 16.5
             self.damage = 2
-        elif element == "yinyang":
-            self.speed = 15.0
-            self.damage = 2
+            self.radius = 0.44
+            self.is_unblockable = False
+            self.is_homing = False
         elif element == "water":
+            self.speed = 15.2
+            self.damage = 1
+            self.radius = 0.40
+            self.is_unblockable = False
+            self.is_homing = True
+        elif element == "yinyang":
+            self.speed = 14.5
+            self.damage = 2
+            self.radius = 0.42
+            self.is_unblockable = False
+            self.is_homing = False
+        else:  # wood (default)
             self.speed = 16.0
             self.damage = 1
-        else:  # wood (default)
-            self.speed = 15.0
-            self.damage = 1
+            self.radius = 0.36
+            self.is_unblockable = False
+            self.is_homing = False
 
         self.vx = dir_x * self.speed
         self.vy = dir_y * self.speed
         self.max_range = max_range
         self.dist_traveled = 0.0
         self.is_active = True
-        self.radius = 0.38
         self.spin_timer = 0.0
         self.has_been_reflected = False
-        self.bounce_count = 0  # Para a Água que ricocheteia
+        self.bounce_count = 0
 
-    def update(self, dt: float, game_map, particles: list) -> bool:
+    def update(self, dt: float, game_map, particles: list, opponent=None) -> bool:
         if not self.is_active:
             return False
 
         self.spin_timer += dt * 18.0
-        step = math.hypot(self.vx * dt, self.vy * dt)
-        self.wx += self.vx * dt
-        self.wy += self.vy * dt
+
+        # Água: Guiamento suave em direção ao oponente (Homing Serpent)
+        if self.is_homing and opponent and getattr(opponent, "is_alive", True):
+            dx_t = opponent.wx - self.wx
+            dy_t = opponent.wy - self.wy
+            dist_t = math.hypot(dx_t, dy_t)
+            if 0.4 < dist_t < 6.5:
+                ndx, ndy = dx_t / dist_t, dy_t / dist_t
+                steer_rate = 3.8 * dt
+                self.dir_x += (ndx - self.dir_x) * steer_rate
+                self.dir_y += (ndy - self.dir_y) * steer_rate
+                mag = math.hypot(self.dir_x, self.dir_y) or 1.0
+                self.dir_x /= mag
+                self.dir_y /= mag
+                self.vx = self.dir_x * self.speed
+                self.vy = self.dir_y * self.speed
+
+        # Yin-Yang: Trajetória ondulatória espiral de dupla hélice
+        if self.element == "yinyang":
+            perp_x = -self.dir_y
+            perp_y = self.dir_x
+            wobble = math.sin(self.spin_timer * 1.6) * 0.12
+            cur_vx = self.vx + perp_x * wobble * 18.0
+            cur_vy = self.vy + perp_y * wobble * 18.0
+        else:
+            cur_vx = self.vx
+            cur_vy = self.vy
+
+        step = math.hypot(cur_vx * dt, cur_vy * dt)
+        self.wx += cur_vx * dt
+        self.wy += cur_vy * dt
         self.dist_traveled += step
 
-        # Efeitos visuais e partículas por elemento
-        if particles is not None and random.random() < 0.60:
-            from src.effects.particles import SparkParticle
+        # Efeitos visuais e partículas contínuas características por elemento
+        if particles is not None and random.random() < 0.70:
+            from src.effects.particles import SparkParticle, SmokeParticle, FlameVoxelParticle
             if self.element == "fire":
-                col = random.choice([(255, 80, 45), (255, 160, 40), (255, 230, 80)])
+                particles.append(FlameVoxelParticle(self.wx, self.wy, random.uniform(0.18, 0.55), color=random.choice([(255, 80, 35), (255, 170, 45), (255, 235, 95)])))
             elif self.element == "water":
-                col = random.choice([(60, 160, 255), (130, 210, 255), (210, 240, 255)])
+                particles.append(SparkParticle(self.wx, self.wy, random.uniform(0.20, 0.45), color=random.choice([(70, 185, 255), (140, 225, 255), (225, 245, 255)])))
             elif self.element == "wood":
-                col = random.choice([(45, 215, 120), (110, 240, 140), (180, 250, 160)])
+                particles.append(SparkParticle(self.wx, self.wy, random.uniform(0.18, 0.45), color=random.choice([(45, 225, 120), (120, 245, 150), (200, 255, 180)])))
             elif self.element == "metal":
-                col = random.choice([(245, 248, 255), (190, 205, 230), (255, 250, 220)])
+                particles.append(SparkParticle(self.wx, self.wy, random.uniform(0.15, 0.35), color=random.choice([(250, 252, 255), (185, 205, 235), (255, 245, 200)])))
             elif self.element == "earth":
-                col = random.choice([(235, 185, 65), (180, 135, 45), (250, 225, 120)])
+                particles.append(SmokeParticle(self.wx, self.wy, wz=0.25, color=(165, 125, 65), radius=0.18, lifetime=0.35))
             else:  # yinyang
-                col = random.choice([(235, 180, 255), (30, 25, 40), (255, 255, 255)])
-            particles.append(SparkParticle(self.wx, self.wy, random.uniform(0.18, 0.40), color=col))
+                particles.append(SparkParticle(self.wx, self.wy, random.uniform(0.20, 0.50), color=random.choice([(235, 180, 255), (35, 25, 45), (255, 255, 255)])))
 
         min_bound = 1.2
         max_bound_x = (game_map.cols - 1.2) if (game_map and hasattr(game_map, "cols")) else 19.8
         max_bound_y = (game_map.rows - 1.2) if (game_map and hasattr(game_map, "rows")) else 19.8
 
-        # Ricochete da Água
-        if self.element == "water" and self.bounce_count < 1:
+        # Ricochete duplo da Água
+        if self.element == "water" and self.bounce_count < 2:
             bounced = False
             if self.wx <= min_bound or self.wx >= max_bound_x:
                 self.vx = -self.vx
@@ -2253,8 +2296,8 @@ class OfudaProjectile:
                 self.bounce_count += 1
                 if particles is not None:
                     from src.effects.particles import SparkParticle
-                    for _ in range(6):
-                        particles.append(SparkParticle(self.wx, self.wy, 0.4, color=(100, 200, 255)))
+                    for _ in range(8):
+                        particles.append(SparkParticle(self.wx, self.wy, 0.45, color=(100, 210, 255)))
         else:
             if self.wx <= min_bound or self.wx >= max_bound_x or self.wy <= min_bound or self.wy >= max_bound_y:
                 self.is_active = False
@@ -2276,39 +2319,61 @@ class OfudaProjectile:
             return
         from src.isometric.mesh_primitives import draw_oriented_voxel_box, draw_voxel_box
         wz = getattr(self, "wz", 0.45)
+        el = self.element
 
-        # Cor do brilho e do corpo de acordo com a afinidade elemental
-        if self.element == "fire":
-            glow_c = (255, 80, 45)
-            paper_c = (255, 235, 220)
-            kanji_c = (230, 30, 20)
-        elif self.element == "water":
-            glow_c = (60, 170, 255)
-            paper_c = (220, 245, 255)
-            kanji_c = (20, 90, 220)
-        elif self.element == "wood":
-            glow_c = (45, 215, 120)
-            paper_c = (230, 255, 235)
-            kanji_c = (20, 150, 60)
-        elif self.element == "metal":
-            glow_c = (240, 245, 255)
-            paper_c = (210, 220, 235)
-            kanji_c = (140, 150, 170)
-        elif self.element == "earth":
-            glow_c = (235, 185, 65)
-            paper_c = (250, 240, 210)
-            kanji_c = (160, 110, 30)
-        else:  # yinyang
-            glow_c = (225, 150, 255)
-            paper_c = (245, 235, 255)
-            kanji_c = (140, 50, 210)
+        if el == "fire":
+            # 1. FOGO: Esfera ígnea de plasma com chamas vivas e núcleo incandescente
+            draw_voxel_box(surface, camera, self.wx - 0.16, self.wy - 0.16, wz - 0.08, 0.32, 0.32, 0.20, (255, 70, 30), outline=False, alpha=160)
+            draw_voxel_box(surface, camera, self.wx - 0.10, self.wy - 0.10, wz - 0.04, 0.20, 0.20, 0.14, (255, 175, 45), outline=False, alpha=210)
+            draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.05, wz - 0.02, 0.10, 0.10, 0.08, (255, 255, 200), outline=False, alpha=255)
+            # Línguas de fogo orbitais
+            rot_a = self.spin_timer * 0.8
+            fx = math.cos(rot_a) * 0.14
+            fy = math.sin(rot_a) * 0.14
+            draw_voxel_box(surface, camera, self.wx + fx - 0.04, self.wy + fy - 0.04, wz + 0.04, 0.08, 0.08, 0.08, (255, 95, 30), outline=False, alpha=180)
+            draw_voxel_box(surface, camera, self.wx - fx - 0.04, self.wy - fy - 0.04, wz - 0.04, 0.08, 0.08, 0.08, (255, 140, 40), outline=False, alpha=180)
 
-        # Brilho místico translúcido ao redor do talismã
-        draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.08, wz - 0.04, 0.16, 0.16, 0.08, glow_c, outline=False, alpha=160)
-        # Corpo retangular de papel sagrado Kariginu
-        draw_oriented_voxel_box(surface, camera, self.wx, self.wy, wz, self.dir_x, self.dir_y, 0.0, 0.28, 0.12, 0.02, paper_c, outline=True)
-        # Inscrição do kanji sagrado no centro
-        draw_oriented_voxel_box(surface, camera, self.wx + self.dir_x * 0.02, self.wy + self.dir_y * 0.02, wz + 0.005, self.dir_x, self.dir_y, 0.0, 0.18, 0.06, 0.025, kanji_c, outline=False)
+        elif el == "earth":
+            # 2. TERRA: Monólito rochoso facetado denso com rachaduras rúnicas
+            draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, wz - 0.10, 0.36, 0.36, 0.24, (145, 105, 55), outline=True)
+            draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.12, wz + 0.08, 0.24, 0.24, 0.14, (185, 145, 75), outline=True)
+            draw_voxel_box(surface, camera, self.wx - 0.06, self.wy - 0.06, wz - 0.04, 0.12, 0.12, 0.10, (245, 205, 95), outline=False, alpha=200)
+
+        elif el == "metal":
+            # 3. METAL: Lâmina de prata supersônica estilizada em agulha aerodinâmica afiada
+            draw_oriented_voxel_box(surface, camera, self.wx, self.wy, wz, self.dir_x, self.dir_y, 0.0, 0.50, 0.08, 0.03, (240, 245, 255), outline=True)
+            draw_oriented_voxel_box(surface, camera, self.wx - self.dir_x * 0.08, self.wy - self.dir_y * 0.08, wz, self.dir_x, self.dir_y, 0.0, 0.20, 0.18, 0.02, (180, 195, 220), outline=True)
+            # Rastro de velocidade prateado
+            draw_oriented_voxel_box(surface, camera, self.wx - self.dir_x * 0.26, self.wy - self.dir_y * 0.26, wz, self.dir_x, self.dir_y, 0.0, 0.32, 0.04, 0.02, (255, 255, 255), outline=False, alpha=150)
+
+        elif el == "water":
+            # 4. ÁGUA: Esfera líquida azul celeste com anel turbilhonante
+            draw_voxel_box(surface, camera, self.wx - 0.14, self.wy - 0.14, wz - 0.06, 0.28, 0.28, 0.18, (60, 170, 255), outline=False, alpha=175)
+            draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.08, wz - 0.03, 0.16, 0.16, 0.12, (180, 230, 255), outline=False, alpha=220)
+            # Anel de água rodopiante
+            ring_rot = self.spin_timer * 1.2
+            rx = math.cos(ring_rot) * 0.18
+            ry = math.sin(ring_rot) * 0.18
+            draw_voxel_box(surface, camera, self.wx + rx - 0.03, self.wy + ry - 0.03, wz, 0.06, 0.06, 0.06, (220, 245, 255), outline=False, alpha=200)
+            draw_voxel_box(surface, camera, self.wx - rx - 0.03, self.wy - ry - 0.03, wz, 0.06, 0.06, 0.06, (90, 195, 255), outline=False, alpha=200)
+
+        elif el == "yinyang":
+            # 5. YIN-YANG: Orbes duplas entrelaçadas em órbita perpétua (Luz e Vácuo)
+            orbit_a = self.spin_timer * 1.5
+            ox = math.cos(orbit_a) * 0.14
+            oy = math.sin(orbit_a) * 0.14
+            # Orbe de Luz (Yang)
+            draw_voxel_box(surface, camera, self.wx + ox - 0.07, self.wy + oy - 0.07, wz - 0.04, 0.14, 0.14, 0.12, (255, 255, 255), outline=True, alpha=240)
+            draw_voxel_box(surface, camera, self.wx + ox - 0.04, self.wy + oy - 0.04, wz - 0.02, 0.08, 0.08, 0.08, (230, 180, 255), outline=False, alpha=220)
+            # Orbe de Escuridão (Yin)
+            draw_voxel_box(surface, camera, self.wx - ox - 0.07, self.wy - oy - 0.07, wz - 0.04, 0.14, 0.14, 0.12, (28, 20, 38), outline=True, alpha=240)
+            draw_voxel_box(surface, camera, self.wx - ox - 0.04, self.wy - oy - 0.04, wz - 0.02, 0.08, 0.08, 0.08, (140, 50, 200), outline=False, alpha=220)
+
+        else:  # wood (default)
+            # 6. MADEIRA: Talismã Ofuda de cipreste com papéis rituais e folhas de esmeralda
+            draw_voxel_box(surface, camera, self.wx - 0.10, self.wy - 0.10, wz - 0.04, 0.20, 0.20, 0.10, (45, 215, 120), outline=False, alpha=160)
+            draw_oriented_voxel_box(surface, camera, self.wx, self.wy, wz, self.dir_x, self.dir_y, 0.0, 0.30, 0.12, 0.02, (235, 255, 240), outline=True)
+            draw_oriented_voxel_box(surface, camera, self.wx + self.dir_x * 0.02, self.wy + self.dir_y * 0.02, wz + 0.005, self.dir_x, self.dir_y, 0.0, 0.18, 0.06, 0.025, (25, 160, 65), outline=False)
 
 
 class TalismanWard:
@@ -2530,19 +2595,42 @@ class TalismanWard:
             pillar_c = (210, 140, 255)
 
         if self.state == "ARMED":
-            # Talismã Ofuda central fincado no chão
-            draw_voxel_box(surface, camera, self.wx - 0.06, self.wy - 0.06, 0.02, 0.12, 0.12, 0.20, (252, 250, 245), outline=True)
-            draw_voxel_box(surface, camera, self.wx - 0.03, self.wy - 0.03, 0.05, 0.06, 0.06, 0.12, (225, 45, 55), outline=False)
-
             sx, sy = camera.apply(self.wx, self.wy, 0.0)
             r_px = int(self.trigger_radius * 36 * camera.zoom)
             pulse = int(150 + math.sin(self.rot_ang * 2.5) * 50)
 
             # Anel externo da mandala sagrada com cor do elemento
             pygame.draw.ellipse(surface, (*ring_col, pulse), (sx - r_px, sy - r_px // 2, r_px * 2, r_px), max(2, int(2 * camera.zoom)))
-            # Anel interno dourado
             r_inner = r_px // 2
             pygame.draw.ellipse(surface, (*inner_col, pulse // 2), (sx - r_inner, sy - r_inner // 2, r_inner * 2, r_inner), 1)
+
+            # Estrutura 3D temática facetada por elemento no centro da barreira
+            if self.element == "wood":
+                # Raízes sagradas e estacas de madeira vivas entrelaçadas
+                draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 0.0, 0.36, 0.36, 0.65, (75, 160, 80), outline=True)
+                draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.08, 0.65, 0.16, 0.16, 0.40, (120, 220, 110), outline=True)
+                draw_voxel_box(surface, camera, self.wx - 0.28, self.wy - 0.05, 0.0, 0.56, 0.10, 0.35, (55, 120, 60), outline=True)
+            elif self.element == "fire":
+                # Braseiro ritual com carvão em brasa e chamas ativas
+                draw_voxel_box(surface, camera, self.wx - 0.16, self.wy - 0.16, 0.0, 0.32, 0.32, 0.20, (60, 45, 45), outline=True)
+                draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.12, 0.20, 0.24, 0.24, 0.12, (255, 80, 30), outline=False, alpha=220)
+                draw_voxel_box(surface, camera, self.wx - 0.06, self.wy - 0.06, 0.32, 0.12, 0.12, 0.25, (255, 210, 60), outline=False, alpha=240)
+            elif self.element == "earth":
+                # Monólito megalítico de pedra rúnica ancestral
+                draw_voxel_box(surface, camera, self.wx - 0.22, self.wy - 0.22, 0.0, 0.44, 0.44, 0.85, (135, 105, 65), outline=True)
+                draw_voxel_box(surface, camera, self.wx - 0.15, self.wy - 0.15, 0.85, 0.30, 0.30, 0.35, (175, 140, 85), outline=True)
+            elif self.element == "metal":
+                # Espelho Kagami adamantino de 8 faces refletoras
+                draw_voxel_box(surface, camera, self.wx - 0.15, self.wy - 0.15, 0.0, 0.30, 0.30, 0.90, (235, 240, 255), outline=True)
+                draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.08, 0.25, 0.16, 0.16, 0.40, (255, 255, 255), outline=False, alpha=220)
+            elif self.element == "water":
+                # Bacia sagrada com redemoinho de água translúcido
+                draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 0.0, 0.36, 0.36, 0.22, (50, 75, 110), outline=True)
+                draw_voxel_box(surface, camera, self.wx - 0.14, self.wy - 0.14, 0.22, 0.28, 0.28, 0.20, (70, 180, 255), outline=False, alpha=180)
+            else:  # yinyang
+                # Disco Taijitu astral flutuante
+                draw_voxel_box(surface, camera, self.wx - 0.16, self.wy - 0.16, 0.15, 0.32, 0.32, 0.10, (255, 255, 255), outline=True, alpha=230)
+                draw_voxel_box(surface, camera, self.wx - 0.10, self.wy - 0.10, 0.25, 0.20, 0.20, 0.10, (30, 22, 40), outline=True, alpha=230)
 
             # Cúpula Kekkai translúcida de proteção espiritual
             b_height = int(36 * camera.zoom)
@@ -2556,14 +2644,14 @@ class TalismanWard:
 
         elif self.state == "DETONATING":
             prog = self.detonate_timer / self.detonate_duration
-            height = 2.4 * math.sin(prog * math.pi)
+            height = 2.8 * math.sin(prog * math.pi)
             sx, sy = camera.apply(self.wx, self.wy, 0.0)
             r_px = int(self.pillar_radius * 36 * camera.zoom * math.sin(prog * math.pi))
             if r_px > 4:
                 pygame.draw.ellipse(surface, (*ring_col, 200), (sx - r_px, sy - r_px // 2, r_px * 2, r_px))
                 pygame.draw.ellipse(surface, (*inner_col, 240), (sx - r_px // 2, sy - r_px // 4, r_px, r_px // 2))
-            draw_voxel_box(surface, camera, self.wx - 0.20, self.wy - 0.20, 0.0, 0.40, 0.40, height, pillar_c, outline=False, alpha=220)
-            draw_voxel_box(surface, camera, self.wx - 0.10, self.wy - 0.10, 0.1, 0.20, 0.20, height * 0.8, (255, 245, 160), outline=False, alpha=240)
+            draw_voxel_box(surface, camera, self.wx - 0.22, self.wy - 0.22, 0.0, 0.44, 0.44, height, pillar_c, outline=False, alpha=220)
+            draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.12, 0.1, 0.24, 0.24, height * 0.85, (255, 245, 160), outline=False, alpha=240)
 
 
 # =============================================================================
@@ -2767,71 +2855,76 @@ class ChemicalPoolHazard:
         from src.effects.particles import FloatingBanner, SparkParticle, SmokeParticle
 
         if self.reagent == "acid":
-            # Ácido Corrosivo: Quebra guarda de parry com stun prolongado + 1 de dano
+            # Ácido Corrosivo: Quebra parry com stun severo + 1 de dano + corrosão contínua
+            target.acid_timer = 4.0
             if getattr(target, "state", "") == "PARRY":
-                target.stun(0.80)
+                target.stun(1.10)
                 if banners is not None:
-                    banners.append(FloatingBanner("ARMOR ERODED!", target.wx, target.wy, wz=1.75, color=self.col_core, duration=1.0))
+                    banners.append(FloatingBanner("ARMOR ERODED (GUARD CRUSH)!", target.wx, target.wy, wz=1.75, color=(80, 245, 90), duration=1.0))
             hit, dead = target.take_hit((0.0, 0.0), damage=1)
             if banners is not None and getattr(target, "state", "") != "PARRY":
-                banners.append(FloatingBanner("ACID MELT!", target.wx, target.wy, wz=1.75, color=self.col_core, duration=0.85))
+                banners.append(FloatingBanner("VITRIOL ACID CORROSION!", target.wx, target.wy, wz=1.75, color=(80, 245, 90), duration=0.85))
             if particles is not None:
-                for _ in range(12):
-                    particles.append(SparkParticle(target.wx, target.wy, 0.40, color=self.col_core))
+                for _ in range(16):
+                    particles.append(SparkParticle(target.wx, target.wy, 0.40, color=(100, 255, 110)))
             if dead and cinematic_director:
                 cinematic_director.trigger_fatal_strike(self.owner, target, "ALCHEMIC_ACID_DISSOLVE", (1.0, 0.0))
 
         elif self.reagent == "fire":
-            # Fogo Grego: Dano imediato e repulsão térmica violenta
+            # Fogo Grego: Dano térmico imediato + queimação contínua + repulsão violenta
+            target.burning_timer = 3.5
             dx = target.wx - self.wx
             dy = target.wy - self.wy
             mag = math.hypot(dx, dy) or 1.0
             hit, dead = target.take_hit((dx / mag, dy / mag), damage=1)
-            push_force = 1.35 if self.tier == 1 else 1.95
+            push_force = 1.65 if self.tier == 1 else 2.25
             target.wx += (dx / mag) * push_force
             target.wy += (dy / mag) * push_force
             if banners is not None:
-                banners.append(FloatingBanner("GREEK FIRE!", target.wx, target.wy, wz=1.75, color=(255, 105, 40), duration=0.85))
+                banners.append(FloatingBanner("GREEK FIRE (BLAZE)!", target.wx, target.wy, wz=1.75, color=(255, 90, 35), duration=0.85))
             if particles is not None:
+                from src.effects.particles import FlameVoxelParticle
                 for _ in range(16):
-                    particles.append(SparkParticle(target.wx, target.wy, 0.45, color=(255, 90, 40)))
+                    particles.append(FlameVoxelParticle(target.wx, target.wy, 0.50, color=(255, 110, 40)))
             if dead and cinematic_director:
                 cinematic_director.trigger_fatal_strike(self.owner, target, "ALCHEMIC_FIRE_ASH", (dx / mag, dy / mag))
 
         elif self.reagent == "ether":
-            # Éter Soporífero: Névoa narcótica densa que atordoa o rival
-            target.stun(1.10 if self.tier == 1 else 1.65)
+            # Éter Soporífero: Névoa narcótica densa que coloca o rival em sono profundo (Sleep Stun)
+            target.sleep_timer = 2.4 if self.tier == 1 else 3.5
+            target.stun(2.4 if self.tier == 1 else 3.5)
             if banners is not None:
-                banners.append(FloatingBanner("SOPORIFIC ETHER!", target.wx, target.wy, wz=1.75, color=self.col_core, duration=1.0))
+                banners.append(FloatingBanner("SOPORIFIC ETHER (SLEEP)!", target.wx, target.wy, wz=1.75, color=(130, 235, 255), duration=1.2))
             if particles is not None:
-                for _ in range(14):
-                    particles.append(SmokeParticle(target.wx, target.wy, wz=0.5, color=self.col_core, radius=0.35, lifetime=0.9))
+                for _ in range(16):
+                    particles.append(SmokeParticle(target.wx, target.wy, wz=0.5, color=(140, 240, 255), radius=0.35, lifetime=1.1))
 
         elif self.reagent == "frost":
-            # Salitre Congelante: Dano de geada no impacto direto/T2 e lentidão severa (-65% vel)
+            # Salitre Congelante: Dano de geada + aprisionamento em gelo (Frozen) + lentidão severa
+            target.frozen_timer = 2.2 if self.tier == 1 else 3.2
+            if hasattr(target, "apply_slow"):
+                target.apply_slow(4.5 if self.tier == 1 else 6.5)
+            else:
+                target.slow_timer = 4.5 if self.tier == 1 else 6.5
             if is_direct or self.tier == 2:
                 hit, dead = target.take_hit((0.0, 0.0), damage=1)
                 if dead and cinematic_director:
                     cinematic_director.trigger_fatal_strike(self.owner, target, "ALCHEMIC_FROST_SHATTER", (1.0, 0.0))
-            if hasattr(target, "apply_slow"):
-                target.apply_slow(3.5 if self.tier == 1 else 5.5)
-            else:
-                target.slow_timer = 3.5 if self.tier == 1 else 5.5
             if banners is not None:
-                banners.append(FloatingBanner("FROSTBITE!", target.wx, target.wy, wz=1.75, color=self.col_core, duration=0.85))
+                banners.append(FloatingBanner("FROSTBITE (DEEP FREEZE)!", target.wx, target.wy, wz=1.75, color=(160, 230, 255), duration=1.0))
             if particles is not None:
-                for _ in range(16):
-                    particles.append(SparkParticle(target.wx, target.wy, 0.40, color=(160, 230, 255)))
+                for _ in range(18):
+                    particles.append(SparkParticle(target.wx, target.wy, 0.40, color=(190, 240, 255)))
 
         elif self.reagent == "miasma":
-            # Miasma Neurotóxico: Inverte controles do rival e causa 1 de dano
-            target.confused_timer = 3.0 if self.tier == 1 else 5.0
+            # Miasma Neurotóxico: Inverte controles do rival (Confusão) e causa 1 de dano
+            target.confused_timer = 4.0 if self.tier == 1 else 6.0
             hit, dead = target.take_hit((0.0, 0.0), damage=1)
             if banners is not None:
-                banners.append(FloatingBanner("NEUROTOXIN!", target.wx, target.wy, wz=1.75, color=self.col_core, duration=0.85))
+                banners.append(FloatingBanner("NEUROTOXIC MIASMA (CONFUSED)!", target.wx, target.wy, wz=1.75, color=(220, 110, 255), duration=1.0))
             if particles is not None:
-                for _ in range(14):
-                    particles.append(SmokeParticle(target.wx, target.wy, wz=0.4, color=self.col_core, radius=0.30, lifetime=1.0))
+                for _ in range(16):
+                    particles.append(SmokeParticle(target.wx, target.wy, wz=0.4, color=(190, 80, 245), radius=0.30, lifetime=1.1))
             if dead and cinematic_director:
                 cinematic_director.trigger_fatal_strike(self.owner, target, "ALCHEMIC_MIASMA_MELT", (1.0, 0.0))
 
@@ -2843,12 +2936,49 @@ class ChemicalPoolHazard:
         pulse = 0.09 * math.sin(t + self.wx * 2.0)
         r = self.radius + pulse
 
-        # 1. Poça translúcida ampla no chão
+        # 1. Poça química translúcida ampla no solo
         draw_voxel_box(surface, camera, self.wx - r * 0.88, self.wy - r * 0.88, 0.004, r * 1.76, r * 1.76, 0.02, self.col_edge, outline=False, alpha=110)
-        # 2. Anel intermediário saturado
+        # 2. Anel intermediário saturado com cor da substância
         draw_voxel_box(surface, camera, self.wx - r * 0.58, self.wy - r * 0.58, 0.010, r * 1.16, r * 1.16, 0.025, self.col_core, outline=False, alpha=160)
-        # 3. Núcleo efervescente com bolhas
+        # 3. Núcleo central
         draw_voxel_box(surface, camera, self.wx - 0.24, self.wy - 0.24, 0.018, 0.48, 0.48, 0.03, (255, 255, 255), outline=False, alpha=140)
+
+        # 4. Elementos volumétricos 3D característicos para cada um dos 5 reagentes alquímicos
+        reagent = self.reagent
+        if reagent == "frost":
+            # Agulhas / Espetos de cristal de gelo 3D pontiagudos brotando da poça
+            c_ice = (210, 245, 255)
+            c_ice_core = (140, 215, 255)
+            draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.12, 0.02, 0.24, 0.24, 0.38, c_ice_core, outline=True)
+            draw_voxel_box(surface, camera, self.wx + 0.18, self.wy - 0.10, 0.02, 0.16, 0.16, 0.28, c_ice, outline=True)
+            draw_voxel_box(surface, camera, self.wx - 0.20, self.wy + 0.12, 0.02, 0.18, 0.18, 0.32, c_ice, outline=True)
+            draw_voxel_box(surface, camera, self.wx + 0.08, self.wy + 0.18, 0.02, 0.14, 0.14, 0.24, c_ice_core, outline=True)
+
+        elif reagent == "fire":
+            # Línguas de fogo 3D saltitantes e chamas ativas dançando na poça
+            flame_h = 0.35 + 0.10 * math.sin(t * 4.0 + self.wy)
+            draw_voxel_box(surface, camera, self.wx - 0.14, self.wy - 0.14, 0.02, 0.28, 0.28, flame_h, (255, 80, 25), outline=False, alpha=230)
+            draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.08, 0.04, 0.16, 0.16, flame_h * 1.25, (255, 190, 50), outline=False, alpha=240)
+            draw_voxel_box(surface, camera, self.wx - 0.04, self.wy - 0.04, 0.08, 0.08, 0.08, flame_h * 0.70, (255, 255, 180), outline=False, alpha=255)
+
+        elif reagent == "acid":
+            # Bolhas volumétricas de ácido verde efervescente surgindo na superfície
+            b_bob = 0.03 * math.sin(t * 5.0)
+            draw_voxel_box(surface, camera, self.wx - 0.10, self.wy - 0.10, 0.02 + b_bob, 0.20, 0.20, 0.15, (65, 235, 85), outline=True, alpha=220)
+            draw_voxel_box(surface, camera, self.wx + 0.14, self.wy + 0.08, 0.02 - b_bob, 0.14, 0.14, 0.12, (95, 255, 115), outline=True, alpha=200)
+            draw_voxel_box(surface, camera, self.wx - 0.16, self.wy + 0.12, 0.02 + b_bob * 0.5, 0.12, 0.12, 0.10, (140, 255, 150), outline=True, alpha=200)
+
+        elif reagent == "ether":
+            # Nuvens de névoa ciano ondulantes acima da poça soporífera
+            mist_bob = 0.05 * math.sin(t * 2.2)
+            draw_voxel_box(surface, camera, self.wx - 0.22, self.wy - 0.22, 0.12 + mist_bob, 0.44, 0.44, 0.14, (160, 235, 255), outline=False, alpha=130)
+            draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.12, 0.22 - mist_bob, 0.24, 0.24, 0.16, (220, 250, 255), outline=False, alpha=160)
+
+        elif reagent == "miasma":
+            # Orbes densas de lodo roxo venenoso e emanação tóxica
+            draw_voxel_box(surface, camera, self.wx - 0.15, self.wy - 0.15, 0.02, 0.30, 0.30, 0.18, (140, 45, 195), outline=True, alpha=210)
+            draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.08, 0.15, 0.16, 0.16, 0.15, (200, 85, 245), outline=True, alpha=230)
+            draw_voxel_box(surface, camera, self.wx - 0.04, self.wy - 0.04, 0.26, 0.08, 0.08, 0.08, (255, 195, 255), outline=False, alpha=250)
 
 
 class AlchemicFlaskProjectile:

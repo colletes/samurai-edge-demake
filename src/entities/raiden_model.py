@@ -192,7 +192,7 @@ def draw_behind(c):
     hl, hr = _current_hands(c)
     w_mid = ((hl[0] + hr[0]) * 0.5, (hl[1] + hr[1]) * 0.5)
     if mk.depth(c, w_mid[0], w_mid[1]) < d_torso:
-        _render_palm_effects(c, hr)
+        _render_palm_effects(c, hl, hr)
 
 
 def _render_haori_back(c, P):
@@ -404,8 +404,6 @@ def draw_arm(c, shoulder, hand, side):
     fwd_x = h_box[0] + c.fx * 0.035
     fwd_y = h_box[1] + c.fy * 0.035
     mk.obox(c, (fwd_x, fwd_y, h_box[2]), (c.fx, c.fy, 0.0), 0.038, 0.062, 0.040, P["skin_shadow"], up=(0.0, 0.0, 1.0), outline=False)
-
-    return s, e
 
     return s, e
 

@@ -1067,23 +1067,40 @@ class CombatSystem:
                         dmg = getattr(proj, "damage", 2)
                         hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=dmg)
 
-                        # Efeitos especiais elementais no acerto
+                        # Efeitos especiais elementais distintos e viscerais no acerto
                         if not dead and getattr(target, "is_alive", True):
                             if el == "wood":
-                                target.stun(0.80)
-                                banners.append(FloatingBanner("WOOD ROOT!", target.wx, target.wy, wz=1.6, color=(50, 220, 120)))
+                                target.root_timer = 2.0
+                                target.is_rooted = True
+                                target.stun(0.85)
+                                banners.append(FloatingBanner("KUSABI ROOT (IMMOBILIZED)!", target.wx, target.wy, wz=1.6, color=(50, 220, 120)))
+                                camera.add_shake(6.0)
+                            elif el == "fire":
+                                target.burning_timer = 3.5
+                                banners.append(FloatingBanner("GUREN EXPLOSIVE BLAZE!", target.wx, target.wy, wz=1.6, color=(255, 80, 45)))
+                                camera.add_shake(12.0)
                             elif el == "water":
-                                target.stun(0.40)
-                                banners.append(FloatingBanner("WATER SLOW!", target.wx, target.wy, wz=1.6, color=(70, 180, 255)))
+                                if hasattr(target, "apply_slow"):
+                                    target.apply_slow(3.8)
+                                else:
+                                    target.slow_timer = 3.8
+                                target.stun(0.45)
+                                banners.append(FloatingBanner("TIDAL TORRENT (SLOW -65%)!", target.wx, target.wy, wz=1.6, color=(70, 180, 255)))
+                                camera.add_shake(8.0)
                             elif el == "earth" and game_map is not None:
-                                target.apply_forced_displacement(proj.dir_x * 1.2, proj.dir_y * 1.2, game_map)
-                                banners.append(FloatingBanner("EARTH SLAM!", target.wx, target.wy, wz=1.6, color=(235, 185, 65)))
-                            elif el == "metal" and target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
-                                target.stun(0.60)
-                                banners.append(FloatingBanner("GUARD CRUSH!", target.wx, target.wy, wz=1.6, color=(245, 248, 255)))
+                                target.state = STATE_STUNNED
+                                target.state_timer = 1.25
+                                target.apply_forced_displacement(proj.dir_x * 1.8, proj.dir_y * 1.8, game_map)
+                                banners.append(FloatingBanner("EARTHQUAKE (KNOCKDOWN)!", target.wx, target.wy, wz=1.6, color=(235, 185, 65)))
+                                camera.add_shake(15.0)
+                            elif el == "metal":
+                                target.stun(0.95)
+                                banners.append(FloatingBanner("HAGANE PIERCE (UNBLOCKABLE)!", target.wx, target.wy, wz=1.6, color=(245, 248, 255)))
+                                camera.add_shake(12.0)
                             elif el == "yinyang":
-                                target.stun(0.70)
-                                banners.append(FloatingBanner("ORACLE SEAL!", target.wx, target.wy, wz=1.6, color=(225, 150, 255)))
+                                target.confused_timer = 3.8
+                                banners.append(FloatingBanner("ASTRAL ECLIPSE (CONFUSED)!", target.wx, target.wy, wz=1.6, color=(225, 150, 255)))
+                                camera.add_shake(10.0)
 
                         if dead:
                             camera.add_shake(16.0)

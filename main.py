@@ -2506,9 +2506,10 @@ def run_game():
                 if random.random() < 0.28:
                     particles.append(SparkParticle(fighter.wx, fighter.wy, 0.45, color=(80, 235, 110)))
 
-        # Indicador de Confusão / Controles Invertidos (Pavilhão Astral Heian)
+        # Indicador de Confusão / Controles Invertidos (Pavilhão Astral Heian / Miasma)
         for fighter in (p1, p2):
             if fighter and fighter.is_alive and getattr(fighter, "confused_timer", 0.0) > 0:
+                fighter.confused_timer = max(0.0, fighter.confused_timer - dt)
                 csx, csy = camera.apply(fighter.wx, fighter.wy, 2.12)
                 orbit_r = 16.0
                 for s_i in range(3):
@@ -2519,6 +2520,56 @@ def run_game():
                     pygame.draw.circle(screen, (255, 235, 150), (sx_o, sy_o), 2)
                 if random.random() < 0.18:
                     particles.append(SparkParticle(fighter.wx, fighter.wy, 1.95, color=(220, 120, 255)))
+
+            # 1. Status: Congelamento / Gelo nos pés (Frostbite / Salitre Alquímico)
+            if fighter and fighter.is_alive and getattr(fighter, "frozen_timer", 0.0) > 0:
+                fighter.frozen_timer = max(0.0, fighter.frozen_timer - dt)
+                from src.isometric.mesh_primitives import draw_voxel_box
+                c_ice = (205, 240, 255)
+                c_ice_core = (130, 215, 255)
+                draw_voxel_box(screen, camera, fighter.wx - 0.22, fighter.wy - 0.22, 0.01, 0.44, 0.44, 0.36, c_ice_core, outline=True)
+                draw_voxel_box(screen, camera, fighter.wx - 0.14, fighter.wy - 0.14, 0.36, 0.28, 0.28, 0.26, c_ice, outline=True)
+                if random.random() < 0.25:
+                    particles.append(SparkParticle(fighter.wx, fighter.wy, 0.30, color=(190, 240, 255)))
+
+            # 2. Status: Enraizamento de Madeira (Wood Root / Kusabi-Bari)
+            if fighter and fighter.is_alive and getattr(fighter, "root_timer", 0.0) > 0:
+                fighter.root_timer = max(0.0, fighter.root_timer - dt)
+                from src.isometric.mesh_primitives import draw_voxel_box
+                draw_voxel_box(screen, camera, fighter.wx - 0.24, fighter.wy - 0.06, 0.01, 0.48, 0.12, 0.28, (70, 155, 75), outline=True)
+                draw_voxel_box(screen, camera, fighter.wx - 0.06, fighter.wy - 0.24, 0.01, 0.12, 0.48, 0.28, (50, 120, 55), outline=True)
+                if random.random() < 0.22:
+                    particles.append(SparkParticle(fighter.wx, fighter.wy, 0.25, color=(90, 240, 130)))
+
+            # 3. Status: Em Chamas / Fogo Grego / Guren (Burning Blaze)
+            if fighter and fighter.is_alive and getattr(fighter, "burning_timer", 0.0) > 0:
+                fighter.burning_timer = max(0.0, fighter.burning_timer - dt)
+                from src.isometric.mesh_primitives import draw_voxel_box
+                fl_h = 0.28 + 0.08 * math.sin(game_time * 18.0)
+                draw_voxel_box(screen, camera, fighter.wx - 0.12, fighter.wy - 0.12, 0.65, 0.24, 0.24, fl_h, (255, 75, 25), outline=False, alpha=220)
+                draw_voxel_box(screen, camera, fighter.wx - 0.06, fighter.wy - 0.06, 0.70, 0.12, 0.12, fl_h * 1.3, (255, 195, 45), outline=False, alpha=240)
+                if random.random() < 0.30:
+                    from src.effects.particles import FlameVoxelParticle
+                    particles.append(FlameVoxelParticle(fighter.wx, fighter.wy, random.uniform(0.65, 1.35), color=(255, 95, 35)))
+
+            # 4. Status: Corrosão Ácida (Vitriol Acid Corrosion)
+            if fighter and fighter.is_alive and getattr(fighter, "acid_timer", 0.0) > 0:
+                fighter.acid_timer = max(0.0, fighter.acid_timer - dt)
+                from src.isometric.mesh_primitives import draw_voxel_box
+                draw_voxel_box(screen, camera, fighter.wx - 0.10, fighter.wy - 0.10, 0.55, 0.20, 0.20, 0.14, (75, 245, 95), outline=False, alpha=190)
+                if random.random() < 0.25:
+                    particles.append(SparkParticle(fighter.wx, fighter.wy, random.uniform(0.5, 1.1), color=(100, 255, 115)))
+
+            # 5. Status: Sono de Éter (Soporific Ether Sleep)
+            if fighter and fighter.is_alive and getattr(fighter, "sleep_timer", 0.0) > 0:
+                fighter.sleep_timer = max(0.0, fighter.sleep_timer - dt)
+                zsx, zsy = camera.apply(fighter.wx, fighter.wy, 2.10)
+                z_bob = int(math.sin(game_time * 4.0) * 6)
+                try:
+                    z_lbl = font_mid.render("Z z z", True, (140, 235, 255))
+                    screen.blit(z_lbl, (zsx - z_lbl.get_width() // 2, zsy - 15 + z_bob))
+                except Exception:
+                    pass
 
         # Barra de Cooldown flutuante sobre a cabeça dos combatentes na arena (Item 6)
         if round_winner is None:

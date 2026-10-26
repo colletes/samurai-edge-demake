@@ -77,8 +77,8 @@ class PropSurfaceCache:
     def _get_scratch(self) -> pygame.Surface:
         if self._scratch is None:
             self._scratch = pygame.Surface((self.SCRATCH_W, self.SCRATCH_H), pygame.SRCALPHA)
-        elif self._last_dirty_rect is not None:
-            self._scratch.fill((0, 0, 0, 0), self._last_dirty_rect)
+        else:
+            self._scratch.fill((0, 0, 0, 0))
             self._last_dirty_rect = None
         return self._scratch
 
