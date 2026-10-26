@@ -323,7 +323,7 @@ def get_fighter_action_labels(fighter):
         return "Foice Fúnebre", "Evocar Mortos"
     elif isinstance(fighter, SeimeiOnmyoji):
         el = getattr(fighter, "current_element", "wood")
-        from src.ui.hud_rondel import ELEMENT_SPELL_NAMES
+        from src.entities.seimei import ELEMENT_SPELL_NAMES
         sp = ELEMENT_SPELL_NAMES.get(el, ("Ofuda", "Selo"))
         return sp[0], sp[1]
     elif isinstance(fighter, DaikiPilgrim):
@@ -485,7 +485,7 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
 
     elif isinstance(fighter, SeimeiOnmyoji):
         el = getattr(fighter, "current_element", "wood")
-        from src.ui.hud_rondel import ELEMENT_SPELL_NAMES, ELEMENT_COLORS
+        from src.entities.seimei import ELEMENT_SPELL_NAMES, ELEMENT_COLORS
         s_name = ELEMENT_SPELL_NAMES.get(el, ("Ofuda", "Selo"))[1]
         col = ELEMENT_COLORS.get(el, (80, 190, 255))
         timer = max(0.0, getattr(fighter, "ward_timer", 0.0))

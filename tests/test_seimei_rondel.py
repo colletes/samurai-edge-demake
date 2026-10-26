@@ -91,8 +91,33 @@ def test_elemental_fatalities():
     print("  -> Fatalidades Elementais Adaptativas: 100% OK!")
 
 
+def test_cooldown_and_labels_integration():
+    print("Testando integração de cooldowns e rótulos do HUD (main.py)...")
+    from main import get_fighter_cooldown_data, get_fighter_action_labels, create_fighter
+    from src.ui.hud_rondel import ELEMENT_SPELL_NAMES as RONDEL_SPELL_NAMES, ELEMENT_COLORS as RONDEL_COLORS
+    assert RONDEL_SPELL_NAMES is not None
+    assert RONDEL_COLORS is not None
+
+    seimei = create_fighter("seimei", 10.0, 10.0)
+    for i, el in enumerate(ELEMENTS):
+        seimei.rondel_index = i
+        labels = get_fighter_action_labels(seimei)
+        assert len(labels) == 2
+        cd = get_fighter_cooldown_data(seimei)
+        assert cd is not None
+        assert "name" in cd
+        assert "color" in cd
+
+    hendrika = create_fighter("hendrika", 10.0, 10.0)
+    labels = get_fighter_action_labels(hendrika)
+    assert len(labels) == 2
+    cd = get_fighter_cooldown_data(hendrika)
+    print("  -> Integração de cooldowns e rótulos do HUD: 100% OK!")
+
+
 if __name__ == "__main__":
     test_rondel_cycle_progression()
     test_rondel_hud_rendering()
     test_elemental_fatalities()
+    test_cooldown_and_labels_integration()
     print("TODOS OS TESTES DO OVERHAUL DO RONDEL PASSARAM COM SUCESSO!")

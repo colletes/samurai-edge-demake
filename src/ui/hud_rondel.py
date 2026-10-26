@@ -10,6 +10,7 @@ import random
 import pygame
 from src.config import COLOR_GOLD
 from src.ui.fonts import get_text_font, get_title_font
+from src.entities.seimei import ELEMENT_SPELL_NAMES, ELEMENT_COLORS
 
 ELEMENT_DATA = [
     {
