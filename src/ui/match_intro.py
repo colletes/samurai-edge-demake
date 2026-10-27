@@ -103,10 +103,17 @@ def draw_fighter_banner(surface: pygame.Surface, cache: dict, name: str, color, 
     cy = LETTERBOX_H + 18 + radius
 
     shade = cached(("shade",), build_banner_shade)
-    shade.set_alpha(alpha)
-    surface.blit(shade, (0, LETTERBOX_H))
+    if alpha < 255:
+        temp_shade = shade.copy()
+        fade_mask = pygame.Surface(temp_shade.get_size(), pygame.SRCALPHA)
+        fade_mask.fill((255, 255, 255, max(0, min(255, alpha))))
+        temp_shade.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        surface.blit(temp_shade, (0, LETTERBOX_H))
+    else:
+        surface.blit(shade, (0, LETTERBOX_H))
 
     layer = pygame.Surface((total_w + 20, radius * 2 + 20), pygame.SRCALPHA)
+    layer.fill((0, 0, 0, 0))
     pcx, pcy = radius + 10, radius + 10
     draw_enso_circle(layer, pcx, pcy, radius, ring, time)
     portrait = get_portrait(char_id, size=(radius * 2 - 6, radius * 2 - 6), circular=True)
@@ -115,7 +122,12 @@ def draw_fighter_banner(surface: pygame.Surface, cache: dict, name: str, color, 
     tx = radius * 2 + 10 + gap
     layer.blit(label_surf, (tx, pcy - radius + 10))
     layer.blit(name_surf, (tx, pcy - 6))
-    layer.set_alpha(alpha)
+
+    if alpha < 255:
+        fade_mask = pygame.Surface(layer.get_size(), pygame.SRCALPHA)
+        fade_mask.fill((255, 255, 255, max(0, min(255, alpha))))
+        layer.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
     surface.blit(layer, (left - 10, cy - radius - 10))
 
 
@@ -292,7 +304,10 @@ class MatchIntro:
             layer.blit(ink_reveal(title_base, p_text, edge=70), (cx - title_base.get_width() // 2, 410))
 
         fade_out = 1.0 - _smooth((lt - (T_TITLE - 0.5)) / 0.5)
-        layer.set_alpha(int(255 * fade_out))
+        if fade_out < 0.999:
+            fade_mask = pygame.Surface(layer.get_size(), pygame.SRCALPHA)
+            fade_mask.fill((255, 255, 255, max(0, min(255, int(255 * fade_out)))))
+            layer.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
         surface.blit(layer, (0, 0))
 
     def _render_fighter_banner(self, surface: pygame.Surface, idx: int, lt: float):

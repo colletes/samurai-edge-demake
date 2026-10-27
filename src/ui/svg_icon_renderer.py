@@ -271,6 +271,7 @@ def render_text_with_icons(
 
     pad = 4
     comp_surf = pygame.Surface((total_w + pad * 2, line_h + pad * 2), pygame.SRCALPHA)
+    comp_surf.fill((0, 0, 0, 0))
 
     if shadow:
         cur_x = pad + shadow_offset[0]
@@ -298,7 +299,9 @@ def render_text_with_icons(
         cur_x += iw
 
     if alpha < 255:
-        comp_surf.set_alpha(max(0, min(255, alpha)))
+        fade_mask = pygame.Surface(comp_surf.get_size(), pygame.SRCALPHA)
+        fade_mask.fill((255, 255, 255, max(0, min(255, alpha))))
+        comp_surf.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
     dest_x = center_x - comp_surf.get_width() // 2
     dest_y = center_y - comp_surf.get_height() // 2

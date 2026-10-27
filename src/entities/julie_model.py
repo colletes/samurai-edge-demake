@@ -351,6 +351,9 @@ def draw_behind(c):
     hand_l, hand_r = _current_hands(c)
     if mk.depth(c, hand_r[0], hand_r[1]) < d_torso and not _flourishing(c):
         _draw_weapons(c, hand_l, hand_r)
+        c._weapon_drawn = True
+    else:
+        c._weapon_drawn = False
 
 
 def draw_legs(c):
@@ -529,11 +532,11 @@ def draw_head(c):
 def draw_front(c, arm_l, arm_r):
     """
     Camada frontal (Painter's Algorithm):
-    - O florete e a capa do CAPE_FLOURISH são desenhados aqui APENAS se a mão/arma estiver à frente do tronco.
+    - O florete e a capa do CAPE_FLOURISH são desenhados aqui se não foram desenhados em draw_behind.
     """
-    d_torso = mk.depth(c, c.base_x, c.base_y)
-    hand_l = (arm_l[0], arm_l[1], arm_l[2] - 0.060)
-    hand_r = (arm_r[0], arm_r[1], arm_r[2] - 0.060)
+    if getattr(c, "_weapon_drawn", False):
+        return
 
-    if _flourishing(c) or mk.depth(c, hand_r[0], hand_r[1]) >= d_torso:
-        _draw_weapons(c, hand_l, hand_r)
+    hand_l, hand_r = _current_hands(c)
+    _draw_weapons(c, hand_l, hand_r)
+    c._weapon_drawn = True

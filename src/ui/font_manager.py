@@ -81,6 +81,7 @@ def render_text_fx(
     sx, sy = shadow_offset if shadow else (0, 0)
     pad = max(ow + max(abs(sx), abs(sy)), glow_width * 2 if glow else 0, ow) + 1
     surf = pygame.Surface((w + pad * 2, h + pad * 2), pygame.SRCALPHA)
+    surf.fill((0, 0, 0, 0))
 
     # Silhouette of text + outline (shared by shadow and outline layers)
     ring = []
@@ -100,9 +101,12 @@ def render_text_fx(
     if shadow:
         mask = font.render(text, True, shadow_color)
         shade = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+        shade.fill((0, 0, 0, 0))
         for dx, dy in ring + [(0, 0)]:
             shade.blit(mask, (pad + dx + sx, pad + dy + sy))
-        shade.set_alpha(170)
+        fade_mask = pygame.Surface(shade.get_size(), pygame.SRCALPHA)
+        fade_mask.fill((255, 255, 255, 170))
+        shade.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
         surf.blit(shade, (0, 0))
 
     if ring:
