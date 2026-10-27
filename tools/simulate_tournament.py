@@ -29,7 +29,7 @@ from src.config import (
     CHAR_BENKEI, CHAR_ORIN, CHAR_GORO, CHAR_ICHI,
     CHAR_VALERIUS, CHAR_SEIMEI, CHAR_DAIKI, CHAR_AOI,
     CHAR_RAIDEN, CHAR_HENDRIKA,
-    ARENA_DOHYO, ARENA_FOREST_CAMP, ARENA_GOTHIC_CEMETERY, ARENA_KYOTO
+    ARENA_DOHYO, ARENA_IGA, ARENA_GANRYU, ARENA_KYOTO
 )
 from src.world.map_data import GameMap
 from src.world.kyoto_map import KyotoMap
@@ -60,11 +60,11 @@ from src.entities.hendrika import HendrikaAlchemist
 from src.entities.pickups import PowderPouch
 from main import get_random_arena_spawns, get_kyoto_arena_spawns, create_fighter
 
-# 4 Arenas Padrão de Balanceamento (Raiden: Dohyo, Joe: Forest Camp, Valerius: Cemitério Prussiano, Saitou: Kyoto)
+# 4 Arenas Padrão de Balanceamento (Raiden: Dohyo, Hanzo: Telhados de Iga, Musashi: Ilha Ganryu, Saitou: Kyoto)
 STANDARD_ARENAS = [
     ("Dohyo Sagrado", ARENA_DOHYO),
-    ("Acampamento na Floresta", ARENA_FOREST_CAMP),
-    ("Cemitério Prussiano", ARENA_GOTHIC_CEMETERY),
+    ("Telhados de Iga", ARENA_IGA),
+    ("Duelo na Ilha Ganryu", ARENA_GANRYU),
     ("Kyoto: Bakumatsu em Chamas", ARENA_KYOTO),
 ]
 
@@ -280,7 +280,7 @@ def run_matchup(c1_id: str, c2_id: str, arena_list: list, difficulty: str = "nor
 
 def run_full_tournament_simulation(arena_list: list = None, difficulty: str = "normal", battles_per_arena: int = 2):
     """
-    Simula todas as combinações de guerreiros em todas as arenas padrão (Dohyo, Forest Camp, Cemitério Prussiano).
+    Simula todas as combinações de guerreiros em todas as arenas padrão (Dohyo, Iga, Ganryu, Kyoto).
     Com 3 arenas padrão e 2 lutas/arena (1 P1, 1 P2) = 6 batalhas por par.
     """
     if arena_list is None:
@@ -673,7 +673,7 @@ def generate_comparative_report(all_tournaments: dict, output_path: str = "docs/
     lines.append("> **Resumo da Auditoria Completa**:")
     lines.append(f"> - Total de Batalhas Simuladas: **{sum(t['total_battles'] for t in all_tournaments.values())} batalhas**")
     lines.append(f"> - Roster: **{len(ROSTER)} Guerreiros**")
-    lines.append(f"> - Arenas: **4 Arenas Padronizadas** (Dohyo Sagrado [Raiden], Acampamento na Floresta [Joe], Cemitério Prussiano [Valerius], Kyoto Bakumatsu [Saitou])")
+    lines.append(f"> - Arenas: **4 Arenas Padronizadas** (Dohyo Sagrado [Raiden], Telhados de Iga [Hanzo], Duelo na Ilha Ganryu [Musashi], Kyoto Bakumatsu [Saitou])")
     lines.append(f"> - Níveis de Dificuldade da IA: **Fácil (Easy)**, **Normal (Normal)**, **Difícil (Hard)**")
     lines.append("")
 
