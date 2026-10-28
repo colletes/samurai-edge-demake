@@ -1,8 +1,8 @@
 # 🗺️ ROADMAP — Samurai Edge Demake
 
-> **Versão atual:** `v1.4.0` (código em `main` já inclui o 7.2 e o 7.2.1, ainda sem tag) | **Branch:** `main`  
-> Última atualização: 05 de Outubro de 2026  
-> Este documento consolida todo o histórico concluído e define a ordem sequencial das **8 Fases de Evolução Mestre**, divididas em entregáveis pequenos, iterativos e testáveis. Os itens pendentes (5.5.6, 5.5.7, 7.3, 7.4, 8.1, 8.2 e as pendências técnicas ao final) estão detalhados até o nível de arquivo, teste e critério de aceite.
+> **Versão atual:** `v1.4.0` (24 guerreiros e 24 arenas concluídos) | **Branch:** `main`  
+> Última atualização: 27 de Outubro de 2026  
+> Este documento consolida todo o histórico concluído e define a ordem sequencial das próximas **Fases Estratégicas de Refinamento Cinematográfico & Visual**, divididas em entregáveis pequenos, iterativos e testáveis.
 
 ---
 
@@ -10,9 +10,45 @@
 
 ```mermaid
 pie title Status dos Recursos e Frentes do Projeto
-    "Concluído (Fases 1-6, 7, 8, 5.5.6, Patches, Balanceamento)" : 99
-    "Fase 5.5: idioma salvo (5.5.7)" : 1
+    "Concluído (Fases 1-8, 24 Lutadores, 24 Arenas, Modo Arcade, Retina)" : 85
+    "Fase 1: Dynamic Combat Camera Upgrade" : 3
+    "Fase 2: Revamp de Intros & Câmera" : 3
+    "Fase 3: Revamp de Finishers" : 3
+    "Fase 4: Revamp de Animações de Vitória" : 3
+    "Fase 5: Revamp Geral das Arenas" : 3
 ```
+
+---
+
+## ⚡ Próximas Fases Estratégicas (Prioridade Ativa)
+
+Consulte o documento mestre [`docs/EXPANSION_ROADMAP_AND_DESIGN.md`](EXPANSION_ROADMAP_AND_DESIGN.md) para especificações detalhadas:
+
+1. **Fase 1: Dynamic Combat Camera Upgrade**
+   - 📦 `C-1.1`: Tighter Duel Base Zoom (`1.75x`) & Curva Não-Linear de Distância
+   - 📦 `C-1.2`: Margens de Segurança Vertical (*Overhead Clamping*) & Anti-Corte de HUD
+   - 📦 `C-1.3`: Enquadramento Direcional Reativo de Projéteis Rápidos
+2. **Fase 2: Revamp de Intros de Personagens & Câmera de Abertura**
+   - 📦 `I-2.1`: Sistema Core de Câmera 'Sequential Dual Spotlight' & Skip
+   - 📦 `I-2.2`: Roteiros 3D de Intro — Onda 1: Veteranos Lâmina & Pólvora (6 Guerreiros)
+   - 📦 `I-2.3`: Roteiros 3D de Intro — Onda 2: Veteranos Ocidentais & Kunoichi (6 Guerreiros)
+   - 📦 `I-2.4`: Roteiros 3D de Intro — Onda 3: Expansões Ciclos 1 a 3 (6 Guerreiros)
+   - 📦 `I-2.5`: Roteiros 3D de Intro — Onda 4: Expansões Ciclos 4 a 6 (6 Guerreiros)
+3. **Fase 3: Revamp de Finishers**
+   - 📦 `F-3.1`: Motor Aprimorado de Câmera de Finisher & Dinâmica de Sangue Arterial
+   - 📦 `F-3.2`: Fatalities Sob Medida — Grupo 1: Espadachins & Katanas (6 Guerreiros)
+   - 📦 `F-3.3`: Fatalities Sob Medida — Grupo 2: Armas Pesadas & Lanças (5 Guerreiros)
+   - 📦 `F-3.4`: Fatalities Sob Medida — Grupo 3: Ninjas & Pólvora (6 Guerreiros)
+   - 📦 `F-3.5`: Fatalities Sob Medida — Grupo 4: Esotéricos & Marciais (7 Guerreiros)
+4. **Fase 4: Revamp de Animações de Vitória**
+   - 📦 `W-4.1`: Framework da Câmera de Triunfo & Apresentação Hanko
+   - 📦 `W-4.2`: Roteiros 3D de Vitória — Veteranos (12 Guerreiros)
+   - 📦 `W-4.3`: Roteiros 3D de Vitória — Expansões (12 Guerreiros)
+5. **Fase 5: Revamp Visual e Atmosférico das Arenas**
+   - 📦 `A-5.1`: Santuários & Jardins Zen (6 Arenas)
+   - 📦 `A-5.2`: Cenários Urbanos & Históricos (6 Arenas)
+   - 📦 `A-5.3`: Campos de Batalha & Vilarejos Rurais (6 Arenas)
+   - 📦 `A-5.4`: Locais Extremos & Noturnos (6 Arenas)
 
 ---
 

@@ -436,14 +436,14 @@ ARENAS_DATA = [   {   'concept_art': 'assets/concepts/bamboo_forest_concept.jpg'
         'historical_context_en': 'Endless plains carpeted in crimson red spider lilies (Higanbana), the fabled blooms '
                                  'that flourish around cemeteries and guide departed souls across the River Sanzu into '
                                  "the afterlife. In Bakumatsu folklore, the blossoms' deep scarlet springs from the "
-                                 'blood of fallen warriors. Chiyo glides among the blooms with her sweeping naginata, '
-                                 'shepherding spirits and cleansing the slaughter of war.',
+                                 'blood of fallen warriors. Chiyo glides among the blooms with paired Kodachi short '
+                                 'swords, shepherding spirits and cleansing the slaughter of war.',
         'historical_context_pt': 'Campos infinitos cobertos por lírios vermelhos da aranha (Higanbana), as lendárias '
                                  'flores que florescem nos cemitérios e marcam a passagem das almas para o pós-vida '
                                  '(Sanzu-no-Kawa). No folclore do Bakumatsu, a cor carmesim viva das flores deriva do '
                                  'sangue de incontáveis soldados caídos em rebeliões esquecidas. Chiyo dança entre as '
-                                 'flores com sua naginata afiada, guiando os espíritos e expiando o massacre da '
-                                 'guerra.',
+                                 'flores com suas duas lâminas Kodachi, interceptando invasores antes que alcancem o '
+                                 'selo da Caverna Sombria.',
         'id': 'higanbana',
         'location_en': 'Plains of Asuka, Yamato Province (Crimson Dusk)',
         'location_pt': 'Planícies de Asuka, Província de Yamato (Crepúsculo Carmesim)',
@@ -455,11 +455,12 @@ ARENAS_DATA = [   {   'concept_art': 'assets/concepts/bamboo_forest_concept.jpg'
         'soil_alchemy_pt': 'Solo: Terra negra de cemitério saturada de alcaloides tóxicos florais. Coleta de Hendrika: '
                            'Bulbo de Higanbana e Pólen Paralisante (Componente para Poções de Atordoamento e Veneno). '
                            'Seimei: Propriedades arcanas de Alma e Madeira.',
-        'tactics_en': 'The sweeping reach of the naginata reigns supreme over these open flats. Keep short-blade '
-                      'rushers at maximum spearhead range, deploying 360-degree sweeps to deny all flanking maneuvers.',
-        'tactics_pt': 'O longo alcance da Naginata de Chiyo domina este descampado aberto. Mantenha os duelistas de '
-                      'espada curta na distância máxima da ponta da lâmina, usando giros de 360 graus para controlar '
-                      'todo o perímetro.'},
+        'tactics_en': 'The open field offers unrestricted freedom of movement. Control the center ring and use Chiyo\'s '
+                      'superior speed to flank opponents diagonally, evading wide slashes and punishing recoveries with '
+                      'rapid dual-blade cuts.',
+        'tactics_pt': 'O descampado aberto oferece liberdade total de movimentação. Controle o centro da arena e aproveite '
+                      'a alta velocidade para flanquear o oponente pelas diagonais, esquivando de golpes pesados e punindo '
+                      'com cortes velozes de kodachi.'},
     {   'concept_art': 'assets/concepts/gojo_bridge_concept.jpg',
         'fighter_id': 'benkei',
         'hazards_en': '2 instant-drowning ring-out drops into the deep Kamo River on both bridge edges. High-tension '

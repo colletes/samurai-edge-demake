@@ -1,72 +1,84 @@
 """
 Banco de dados completo em Português para a geração do Manual Oficial de Samurai Edge em PDF.
+Edição Final de Alta Densidade (24 Páginas).
 """
 
 LORE_PT = {
     "title": "A LENDA DO BAKUMATSU & O SELO DAS CINZAS",
     "p1": (
-        "No crepúsculo do século XIX (década de 1860), o Japão foi sacudido pela chegada dos 'Navios Negros' do Ocidente, "
-        "rompendo mais de dois séculos de isolamento sagrado (Sakoku). A terra do sol nascente rachou em uma guerra civil "
-        "selvagem e impiedosa: de um lado, os lealistas do Xogunato Tokugawa lutando para preservar a ordem feudal; "
-        "do outro, os rebeldes e nacionalistas que exigiam a restauração do poder imperial supremo."
+        "No crepúsculo do século XIX (década de 1860), o Japão foi sacudido pela chegada dos 'Navios Negros' do Comodoro Perry, "
+        "rompendo abruptamente mais de dois séculos de isolamento sagrado (Sakoku). A terra do sol nascente rachou em uma guerra civil "
+        "selvagem e impiedosa: de um lado, os lealistas do Xogunato Tokugawa lutando para preservar a ordem feudal e o código samurai; "
+        "do outro, os rebeldes monarquistas de Choshu e Satsuma que exigiam a restauração do poder imperial supremo e a expulsão dos estrangeiros."
     ),
     "p2": (
-        "No entanto, sob o véu das disputas políticas e do avanço implacável da pólvora e das armas modernas, uma força "
+        "No entanto, sob o véu das disputas políticas entre espadachins e do avanço implacável das armas de fogo ocidentais, uma força "
         "ancestral muito mais aterrorizante começou a se agitar. Na província montanhosa e impenetrável de Iga, sob "
         "o manto perpétuo da Caverna Sombria, jazia selado há mais de mil anos o Oni Gashadokuro: o titã esquelético "
-        "colossal forjado a partir do ódio e da agonia de milhares de almas mortas em guerras antigas e deixadas sem sepultura."
+        "colossal forjado a partir do ódio acumulado e da agonia de dezenas de milhares de guerreiros mortos em guerras antigas e abandonados sem sepultura."
     ),
     "p3": (
-        "A profecia dos antigos monges de Onmyodo previa que, se o solo do Japão fosse novamente inundado com o sangue "
-        "de guerreiros e inocentes sem descanso espiritual, os grilhões mágicos que aprisionavam o titã se romperiam. "
+        "A profecia dos antigos monges de Onmyodo previa que, se o solo do arquipélago fosse novamente inundado com o sangue "
+        "de inocentes e guerreiros sem descanso espiritual, os grilhões mágicos que aprisionavam o titã se romperiam. "
         "Sem saber, cada duelo de espadas travado nos becos em chamas de Kyoto, cada emboscada nas florestas de bambu "
         "e cada execução sumária realizada nas docas chuvosas de Dejima alimenta a escuridão crescente, acelerando o retorno "
         "do titã faminto para extinguir toda a vida nas quatro ilhas do Japão."
-    )
+    ),
+    "p4": (
+        "Enquanto os líderes militares conspiram em salões de chá protegidos por guardas, as estradas e arrozais do Japão "
+        "tornaram-se campos de caça para mercenários sem mestre, alquimistas clandestinos e espadachins errantes. O destino "
+        "da nação já não pertence aos diplomatas nem aos tratados selados em tinta: ele será esculpido pelo gume de lâminas afiadas."
+    ),
+    "p5": (
+        "Apenas aqueles capazes de transcender o medo da própria finitude e dominar a fração de segundo que separa o corte mortal "
+        "do vazio do erro conseguirão alcançar o coração da montanha de Iga e decidir se o Japão renascerá sob uma nova era de honra "
+        "ou será engolido pelas mandíbulas de ferro do titã das cinzas."
+    ),
+    "quote": "«No fio da navalha, entre o saque e o corte, não há espaço para o ódio: apenas a verdade nua do aço.»"
 }
 
 FACTIONS_PT = [
     {
         "name": "1. Protetores do Povo & Ronins Virtuosos",
-        "desc": "Espadachins, arqueiras, monges e camponeses que pegaram em armas não por ambição política, mas para proteger vilarejos, templos e inocentes contra os massacres e pilhagens da guerra civil.",
+        "desc": "Espadachins, arqueiras, monges e camponeses que pegaram em armas não por ambição política, mas para proteger vilarejos, templos e camponeses inocentes contra massacres e pilhagens da guerra civil.",
         "members": ["Kenshi", "Tomoe", "Daiki", "Goro", "Benkei"],
-        "philosophy": "A espada que protege a vida (Katsujinken). Defendem os fracos contra a tirania e a violência desenfreada."
+        "philosophy": "A espada que preserva a vida (Katsujinken). Defendem os indefesos contra a tirania feudal e a opressão dos senhores da guerra."
     },
     {
         "name": "2. Duelistas do Auge & Buscadores de Glória",
-        "desc": "Mestres de artes marciais lendárias que veem o tumulto do Bakumatsu como o crisol definitivo para testar seus limites físicos e espirituais contra os guerreiros mais letais do mundo.",
+        "desc": "Mestres de artes marciais lendárias que veem o tumulto do Bakumatsu como o crisol definitivo para testar seus limites físicos e espirituais contra os combatentes mais letais do mundo.",
         "members": ["Musashi", "Ren", "Raiden"],
-        "philosophy": "A busca intransigente pela maestria marcial absoluta, onde cada duelo de lâminas é um diálogo com a própria mortalidade."
+        "philosophy": "A busca intransigente pela maestria marcial absoluta, onde cada duelo de lâminas é um diálogo direto com a própria mortalidade."
     },
     {
         "name": "3. Lealistas & Servidores da Ordem",
-        "desc": "Guerreiros disciplinados guiados por juramentos inquebrantáveis de lealdade a seus comandantes, ao Xogunato, ao Imperador ou a coroas soberanas estrangeiras.",
+        "desc": "Guerreiros implacáveis guiados por juramentos inquebrantáveis de lealdade a seus comandantes, ao Xogunato, ao Imperador ou a coroas soberanas estrangeiras.",
         "members": ["Saitou", "Julie", "Ichi"],
-        "philosophy": "Dever absoluto, honra militar e lealdade cega à bandeira que juraram servir até o último sopro de vida."
+        "philosophy": "Dever absoluto, honra militar e lealdade cega à bandeira jurada até o último sopro de vida."
     },
     {
         "name": "4. Oportunistas & Cientistas do Caos",
-        "desc": "Eruditos excêntricos, necromantes arcanos e dançarinas místicas que operam nas sombras da guerra civil, aproveitando o sangue derramado para conduzir experimentos proibidos e colher poder sobrenatural.",
+        "desc": "Eruditos excêntricos, necromantes arcanos e dançarinas místicas que operam nas sombras da guerra, aproveitando o sangue derramado para conduzir experimentos proibidos e colher poder sobrenatural.",
         "members": ["Hendrika", "Valerius", "Okuni"],
-        "philosophy": "O caos é um laboratório fértil. A moralidade tradicional é descartada em prol do avanço científico e alquímico."
+        "philosophy": "O caos é um laboratório fértil. A moralidade tradicional é descartada em prol do avanço alquímico e da colheita espiritual."
     },
     {
         "name": "5. Mercenários & Corsários de Guerra",
-        "desc": "Atiradores de aluguel e navegadores audaciosos que singram as fendas do comércio marítimo e dos conflitos feudais em busca de riqueza, pólvora e liberdade absoluta.",
+        "desc": "Atiradores de aluguel e navegadores audaciosos que singram as fendas do comércio marítimo e dos conflitos feudais em busca de riqueza, pólvora e liberdade irrestrita.",
         "members": ["Anne", "Teppo"],
-        "philosophy": "Sobrevivência, ouro e independência. Lutam pelo melhor pagador ou pela própria tripulação sem submissão a senhores feudais."
+        "philosophy": "Sobrevivência, ouro e independência. Lutam pelo melhor pagador ou pela própria tripulação sem submissão a senhores de terras."
     },
     {
         "name": "6. Os Guardiões do Selo (Clã Shinobi de Iga)",
-        "desc": "A elite das sombras de Iga. Aparentam ser assassinos impiedosos, mas na verdade formam a linha secreta de defesa que guarda a Caverna Sombria para impedir que o Oni Gashadokuro desperte.",
-        "members": ["Hanzo", "Kasumi", "Murasaki"],
-        "philosophy": "Sacrifício invisível. Manter o titã adormecido mesmo que o mundo os veja como vilões e sombras cruéis."
+        "desc": "A elite das sombras de Iga. Aparentam ser assassinos impiedosos aos olhos do mundo, mas na verdade formam a linha secreta de defesa que guarda a Caverna Sombria para impedir que o Oni Gashadokuro desperte.",
+        "members": ["Hanzo", "Kasumi", "Murasaki", "Chiyo"],
+        "philosophy": "Sacrifício invisível. Manter o titã adormecido mesmo que a história os condene como sombras cruéis e conspiratórias."
     },
     {
         "name": "7. O Viajante Temporal & Aliado Inusitado",
-        "desc": "Um fuzileiro americano e agente tático do século XXI, fanático por cultura pop japonesa e animes, que acidentalmente viajou no tempo para o crepúsculo do xogunato.",
+        "desc": "Um fuzileiro americano e operador tático do século XXI, fanático por animes e cultura pop, acidentalmente lançado no Japão de 1863 por uma falha em experimento governamental secreto.",
         "members": ["Joe"],
-        "philosophy": "Sobrevivência com estilo ninja tático moderno. Ao descobrir a nobre causa dos ninjas de Iga, jurou protegê-los com seu cão e seu arsenal militar."
+        "philosophy": "Sobrevivência com estilo ninja militar moderno. Ao descobrir o nobre sacrifício dos ninjas de Iga, jurou lutar ao seu lado com seu fiel cão de guerra Yamato."
     }
 ]
 
@@ -77,19 +89,18 @@ CONTROLS_PT = {
         "e na precisão cirúrgica de Bushido Blade. Cada golpe carrega letalidade brutal e posicionamento tridimensional estrito."
     ),
     "table": [
-        ("Movimento 8-Way", "D-Pad / Analógico Esquerdo", "[W, A, S, D] (P1) / [Setas] (P2)", "Deslocamento e posicionamento tático na arena"),
-        ("Ataque Primário", "Botão X / Quadrado", "[E] (P1) / [U] (P2)", "Golpe principal da arma (saque, corte, estocada ou tiro)"),
-        ("Ação Secundária", "Botão Y / Triângulo", "[R] (P1) / [I] (P2)", "Habilidade especial, projétil, postura ou magia alquímica"),
-        ("Defesa / Parry", "Botão RB / R1", "[F] (P1) / [O] (P2)", "Postura de bloqueio com janela de parry e deflexão de projéteis"),
-        ("Esquiva / Rolamento", "Botão A / Cruz", "[Espaço] (P1) / [P] (P2)", "Rolamento acrobático com frames de invulnerabilidade"),
-        ("Salto Tático", "Botão LB / L1", "[Q] (P1) / [Y] (P2)", "Salto vertical/direcional sobre buracos e fossos"),
-        ("Pausa / Menu", "Start / Opções", "[ESC]", "Pausa cerimonial em pergaminho Sumi-E")
+        ("Movimento 8-Way", "D-Pad / Analógico Esquerdo", "[W, A, S, D] (P1) / [Setas] (P2)", "Deslocamento e posicionamento tridimensional na arena"),
+        ("Ataque Primário", "Botão X / Quadrado", "[E] (P1) / [U] (P2)", "Golpe principal da arma (saque Battojutsu, corte rápido, estocada ou tiro)"),
+        ("Ação Secundária / Especial", "Botão Y / Triângulo", "[R] (P1) / [I] (P2)", "Golpe especial exclusivo, acrobacia, projétil ou parry reativo"),
+        ("Esquiva / Rolamento", "Botão B / Círculo", "[T] (P1) / [O] (P2)", "Rolamento acrobático dedicado com 12 frames de invulnerabilidade"),
+        ("Bloqueio / Parry Universal", "Botão RB / R1", "[F] (P1) / [I] (P2)", "Postura de guarda com janela de deflexão e contra-golpe"),
+        ("Pausa / Menu Cerimonial", "Botão Start / Opções", "[ESC]", "Pausa em pergaminho Sumi-E e consulta de golpes")
     ],
     "mechanics": [
-        ("Choque de Lâminas (Clash QTE)", "Quando dois ataques simultâneos colidem no mesmo frame espacial, as lâminas se travam com faíscas cinemáticas. O combatente que pressionar o botão de ataque mais rápido no micro-evento vence o choque e desequilibra o rival com recuo forçado."),
-        ("Precedência Absoluta", "Certos golpes (como a Foice da Kusarigama de Murasaki ou a Estocada de Hendrika) possuem prioridade matemática garantida, vencendo disputas normais e cortando a iniciativa do oponente."),
-        ("Quebra de Postura (Guard Crush)", "Golpes banhados em ácido, projéteis pesados de artilharia ou martelos titânicos quebram defesas de Parry, aplicando Stun prolongado no defensor."),
-        ("Letalidade Cirúrgica", "Os lutadores possuem entre 1 e 3 Pontos de Vida (HP). Um único acerto limpo em momento de recuperação ou contra-ataque decide o destino do round instantaneamente.")
+        ("Choque de Lâminas (Blade Clash QTE)", "Quando dois ataques de corte simétricos colidem no mesmo frame espacial, o tempo congela por 600ms com faíscas cinemáticas. O jogador que teclar mais rápido o botão de ataque desequilibra o rival, forçando 24 frames de cambaleio."),
+        ("Precedência Absoluta", "Certos golpes (como a Foice da Kusarigama de Murasaki ou a Estocada Ácida de Hendrika) possuem prioridade matemática garantida, ignorando o Choque de Lâminas e interrompendo qualquer ataque comum."),
+        ("Quebra de Postura (Guard Crush)", "Disparos de pólvora pesada (Teppo), golpes de maça maciça (Benkei) e estocadas químicas (Hendrika) quebram posturas de bloqueio ativo, aplicando atordoamento severo no defensor."),
+        ("Letalidade Cirúrgica (1 a 3 HP)", "Quase todos os combatentes possuem 2 Pontos de Vida (com exceção de Musashi e Raiden, que possuem 3 HP). Um único golpe limpo desferido durante a recuperação do rival decide a vida instantaneamente.")
     ]
 }
 
@@ -98,14 +109,15 @@ MODES_PT = {
     "arcade_title": "MODO ARCADE — A JORNADA DE 12 LUTAS",
     "arcade_desc": (
         "A campanha solo definitiva. O jogador escolhe seu guerreiro e avança por uma escada de 12 confrontos rituais "
-        "onde o sangue derramado ecoa pelos quatro cantos do Japão, desestabilizando o selo da Caverna Sombria:"
+        "onde o sangue derramado ecoa pelos quatro cantos do Japão, desestabilizando progressivamente o selo sagrado da Caverna Sombria:"
     ),
     "arcade_stages": [
-        ("Lutas 1 a 8: Duelos Ranqueados", "Confrontos clássicos Melhor-de-3 (BO3) contra 8 guerreiros sorteados democraticamente entre todas as 4 faixas de dificuldade, garantindo jornadas sempre imprevisíveis."),
-        ("Luta 9: Confronto de Espelho (Mirror Match)", "O guerreiro enfrenta sua própria sombra espectral em sua arena natal. Uma batalha psicológica e técnica com paridade absoluta de armas."),
-        ("Luta 10: Desafio de Resistência (Endurance Challenge)", "Dois adversários de elite consecutivos em sequência ininterrupta, compartilhando apenas 2 vidas de round. A vitória exige compostura e gestão de espaço."),
-        ("Luta 11: O Desafio dos Guardiões (Ninja Challenge)", "Entrada na Caverna Sombria de Iga. O jogador deve derrotar a falange completa dos 4 Ninjas Guardiões (Joe, Kasumi, Murasaki e Hanzo) sob névoa venenosa."),
-        ("Luta 12: O Despertar do Titã (Final Boss)", "Com a queda dos guardiões, o selo milenar se rompe. O gigantesco Oni Gashadokuro ergue-se das cinzas da caverna em um duelo colossal de 1 round de pura sobrevivência.")
+        ("Ato I: Duelos Ranqueados 1 a 4", "Confrontos clássicos Melhor-de-3 (BO3) contra espadachins e guerreiros sorteados democraticamente entre as categorias iniciais de dificuldade."),
+        ("Ato II: A Prova dos Mestres 5 a 8", "Duelos de alta tensão tática contra mestres veteranos, arqueiros e especialistas em armas exóticas nas arenas mais perigosas do país."),
+        ("Ato III: O Confronto de Espelho (Luta 9)", "O guerreiro enfrenta sua própria sombra espectral em sua arena natal. Uma batalha de reflexos e técnica pura com paridade absoluta de armas."),
+        ("Ato IV: Desafio de Resistência (Luta 10)", "Dois adversários de elite consecutivos em sequência ininterrupta, compartilhando as mesmas vidas de round. Exige controle rigoroso de espaço e paciência."),
+        ("Ato V: O Portão dos Guardiões (Luta 11)", "Entrada na Caverna Sombria de Iga. O jogador deve derrotar a falange dos Guardiões do Selo (Joe, Kasumi, Murasaki, Hanzo e Chiyo) sob névoa venenosa."),
+        ("Epílogo: O Despertar do Titã (Luta 12)", "Com a queda dos guardiões, o selo milenar racha. O gigantesco Oni Gashadokuro ergue-se das profundezas em um duelo colossal de 1 round de pura sobrevivência.")
     ],
     "versus_title": "MODO VERSUS LOCAL & DUELOS DE IA",
     "versus_desc": (
@@ -124,7 +136,7 @@ BOSS_TEASER_PT = {
         "de Shimenawa, jaz o segredo mais apavorante do Japão feudal. O Gashadokuro não é um demônio comum: "
         "ele é uma força da natureza sobrenatural, um titã colossal composto pelos ossos fundidos de todos os combatentes, "
         "camponeses e inocentes massacrados nas guerras sangrentas desde a era Sengoku até o crepúsculo do Bakumatsu. "
-        "\n\nOs quatro Ninjas Guardiões de Iga (Hanzo, Kasumi, Murasaki e Joe) dedicaram suas vidas a repelir qualquer "
+        "\n\nOs Ninjas Guardiões de Iga (Hanzo, Kasumi, Murasaki, Chiyo e Joe) dedicaram suas vidas a repelir qualquer "
         "intruso para manter o solo calmo. Mas quando os doze duelos do Modo Arcade chegam ao fim e o sangue dos melhores "
         "espadachins é absorvido pelas fendas da caverna, os grilhões espirituais se partem com o estrondo de um trovão. "
         "Um par de olhos incandescentes acende na escuridão, e uma mão esquelética gigante com garras de ferro emerge "
@@ -161,7 +173,7 @@ APPENDIX_PT = {
         ("12", "Musashi", "Kensei Duas Lâminas (Niten Ichi-ryu / Katanas Gêmeas)", "87", "96", "47.3%", "Tier B"),
         ("13", "Kasumi", "Kunoichi da Névoa (Ninja-to / Bombas de Fumaça)", "87", "96", "47.3%", "Tier B"),
         ("14", "Aoi", "Caçadora Selvagem Ainu (Arco de Chifre / Makiri Nórdico)", "87", "97", "47.3%", "Tier B"),
-        ("15", "Chiyo", "Dançarina das Lâminas (Dual Nodachi Higanbana)", "82", "102", "44.6%", "Tier C"),
+        ("15", "Chiyo", "Dançarina das Lâminas (Dual Kodachi Higanbana)", "82", "102", "44.6%", "Tier C"),
         ("16", "Daiki", "Peregrino do Cajado (Bo de Carvalho / Salto com Vara)", "81", "103", "44.0%", "Tier C"),
         ("17", "Goro", "Fazendeiro Rebelde (Foice Kuwa / Pisotão Sísmico)", "80", "103", "43.5%", "Tier C"),
         ("18", "Anne", "Capitã Corsária (Alfanje Pirata 180° / Pistola de Pederneira)", "78", "105", "42.4%", "Tier C"),
@@ -174,18 +186,19 @@ APPENDIX_PT = {
     ],
     "soil_table_title": "TABELA DE REAGENTES DE SOLO & ALQUIMIA CLANDESTINA (HENDRIKA & SEIMEI)",
     "soil_table": [
-        ("Armazém de Dejima / Portos", "Enxofre Puro, Salitre Fino, Resíduos Ácidos", "Poção Ácida (Quebra de Guarda) & Fogo Alquímico", "+30% velocidade de coleta"),
-        ("Kyoto em Chamas / Ruas", "Sangue Fresco, Fuligem de Fogo, Pólvora", "Poção Venenosa Fatal & Granada Incendiária", "Resistência a dano de fogo"),
-        ("Bosques / Pinheiros / Taiga", "Raízes Medicinais, Seiva de Pinheiro, Resina", "Elixir de Restauração de HP & Vigor Máximo", "Acelera recuperação de esquiva"),
-        ("Cemitérios / Caverna Sombria", "Pó Cadavérico, Miasma Fúngico, Cinza Negra", "Névoa Ofuscante & Neurotoxina Paralisante", "Causa lentidão no oponente"),
-        ("Santuários / Dohyo Sagrado", "Sal Consagrado, Cânfora, Areia Estelar", "Poção de Armadura de Ferro & Elixir de Foco", "Anula venenos e sangramento")
+        ("Armazém de Dejima / Portos", "Enxofre Puro, Salitre Fino, Resíduos Ácidos", "Poção Ácida (Quebra de Guarda) & Fogo Alquímico", "+30% velocidade de coleta de frascos"),
+        ("Kyoto em Chamas / Ruas", "Sangue Fresco, Fuligem de Fogo, Pólvora", "Poção Venenosa Fatal & Granada Incendiária", "Resistência a dano contínuo de fogo"),
+        ("Bosques / Pinheiros / Taiga", "Raízes Medicinais, Seiva de Pinheiro, Resina", "Elixir de Restauração de HP & Vigor Máximo", "Acelera recuperação de esquiva e rolamento"),
+        ("Cemitérios / Caverna Sombria", "Pó Cadavérico, Miasma Fúngico, Cinza Negra", "Névoa Ofuscante & Neurotoxina Paralisante", "Causa lentidão na velocidade do oponente"),
+        ("Santuários / Dohyo Sagrado", "Sal Consagrado, Cânfora, Areia Estelar", "Poção de Armadura de Ferro & Elixir de Foco", "Anula sangramento e venenos ativos"),
+        ("Planícies de Asuka / Arrozais", "Argila Fina, Água de Nascente, Brotos de Bambu", "Bálsamo Fortificante & Névoa de Camuflagem", "Aumenta distância de impulsão do dash"),
+        ("Criptas da Silésia / Enclave", "Prata Fundida, Óleo de Pederneira, Salpetra", "Frasco de Chamas Purificadoras & Ácido Real", "Amplifica atordoamento de contra-golpe")
     ],
-    "credits_title": "CRÉDITOS DA PRODUÇÃO",
+    "credits_title": "CRÉDITOS & COLABORADORES",
     "credits": [
-        ("Concepção Original & Game Design", "Thiago Carvalho"),
-        ("Arquitetura de Código & Engenharia de IA", "Antigravity AI (Google DeepMind)"),
-        ("Direção de Arte & Modelagem Voxel 3D", "Estúdio Samurai Edge Bakumatsu"),
-        ("Música & Paisagens Sonoras", "Composições Originais do Folclore Bakumatsu"),
-        ("Dedicatória Especial", "A todos os mestres do cinema épico de samurai e da era de ouro dos jogos de luta dos anos 90.")
-    ]
+        ("Game Designer, Songwriter & Artist", "Colletes"),
+        ("Toolset de Desenvolvimento", "Gemini / Antigravity, Suno, Google Flow"),
+        ("Dedicatória", "À Lorena. Sempre à Lorena, que me apoia nas minhas loucuras.")
+    ],
+    "dedication_production": "Inspirado pelas grandes obras e mangás do Japão Feudal."
 }

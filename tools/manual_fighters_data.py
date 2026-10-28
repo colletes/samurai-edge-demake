@@ -1050,31 +1050,29 @@ FIGHTERS_DATA = [   {   'bust_art': 'assets/portraits/kenshi_bust.png',
         'concept_art': 'assets/concepts/chiyo_full_concept.jpg',
         'faction_en': '6. Guardians of the Seal (Iga Shinobi Clan)',
         'faction_pt': '6. Os Guardiões do Selo (Clã Shinobi de Iga)',
-        'gameplan_en': '• Phase 1 (Reach Dominance): Use the dual greatswords to dictate exchanges outside standard '
-                       'katana range.\n'
-                       '• Phase 2 (Vortex Trap): When the enemy attempts to sidestep around your flanks, unleash '
-                       'Crimson Vortex [R].\n'
-                       "• Phase 3 (Twin Cleave Finish): Decapitate with Twin Kodachi Cleave [E] during the opponent's "
-                       'staggering recovery.',
-        'gameplan_pt': '• Fase 1 (Controle de Alcance): Aproveite as duas lâminas longas para atacar de uma distância '
-                       'onde katanas normais não chegam.\n'
-                       '• Fase 2 (Vórtice no Desespero): Quando o rival tentar esquivar para seus flancos, acione o '
-                       'Vórtice Carmim [R].\n'
-                       '• Fase 3 (Execução Dupla): Finalize com o Corte Duplo [E] na recuperação do oponente.',
+        'gameplan_en': '• Phase 1 (Rapid Pressure): Close the gap quickly using her high mobility (4.80 m/s) to strike '
+                       'with Dual Kodachi Cleave [E].\n'
+                       '• Phase 2 (Vortex Trap): When the enemy counters or throws projectiles, activate Evasive '
+                       'Mai Dance [R] to spin, deflect, and daze.\n'
+                       '• Phase 3 (Decapitation Finish): Slice through the staggered opponent before their recovery frames end.',
+        'gameplan_pt': '• Fase 1 (Pressão Veloz): Encurte a distância com sua agilidade (4.80 m/s) e ataque rápido com '
+                       'o Corte Duplo de Kodachi [E].\n'
+                       '• Fase 2 (Vórtice Evasivo): Quando o rival contra-atacar ou disparar projéteis, acione a Dança '
+                       'Mai [R] para girar, defletir o golpe e atordoar.\n'
+                       '• Fase 3 (Execução Dupla): Finalize o oponente atordoado antes do término de sua recuperação.',
         'how_to_beat_en': 'Following the Crimson Vortex spin, Chiyo experiences an 0.30s dizziness recovery lag. Wait '
                           'outside her spin perimeter and punish her instantly the moment her rotation ceases.',
         'how_to_beat_pt': 'Após girar no Vórtice Carmim, Chiyo sofre uma janela de tontura/recuperação de 0.30s. '
                           'Espere o giro terminar de fora do alcance e puna imediatamente com uma estocada rápida.',
         'hp': 2,
         'id': 'chiyo',
-        'lore_en': 'Heavy weapon specialist of the Iga shinobi clan. Unlike traditional assassins who rely on small '
-                   'daggers, Chiyo brandishes two colossal Kodachi greatswords with the graceful lightness of scarlet '
-                   'spider lilies. Her duty is ambushing advancing armies marching towards the Shadow Cave, cleaving '
-                   'soldiers and cavalry in sweeping circular whirlwinds.',
-        'lore_pt': 'Especialista em armas pesadas do clã de Iga. Diferente dos ninjas convencionais que usam adagas '
-                   'discretas, Chiyo maneja duas gigantescas lâminas Kodachi com a leveza de pétalas de lírio '
-                   'vermelho. Sua missão é interceptar regimentos inteiros que marcham em direção à Caverna Sombria, '
-                   'cortando soldados e cavaleiros com arcos circulares devastadores.',
+        'lore_en': 'Master of the twin blade dance in the Iga clan. Unlike traditional assassins who rely on small '
+                   'daggers, Chiyo brandishes paired Kodachi short swords (55cm) with the graceful lightness of scarlet '
+                   'spider lilies. Her duty is patrolling the ancient perimeter of the Shadow Cave, cleaving '
+                   'intruders with lightning circular footwork and defensive spins.',
+        'lore_pt': 'Mestra da dança de lâminas gêmeas do clã Iga. Chiyo empunha um par de lâminas Kodachi de 55cm '
+                   'com a agilidade graciosa dos lírios vermelhos (Higanbana). Sua missão é patrulhar o perímetro da '
+                   'Caverna Sombria, cortando invasores com esquivas rápidas e giros defensivos de alta velocidade.',
         'moveset_en': [   (   'Dual Kodachi Strike',
                               '[X] / [Square]',
                               '[E] (P1) / [U] (P2)',
@@ -1109,8 +1107,8 @@ FIGHTERS_DATA = [   {   'bust_art': 'assets/portraits/kenshi_bust.png',
                               'Deslocamento fluido e silencioso com esquiva acrobática.')],
         'name_en': 'CHIYO',
         'name_pt': 'CHIYO',
-        'reach_en': 'Long (Twin Colossal Nodachi Blades)',
-        'reach_pt': 'Longo (Duas Grandes Lâminas Nodachi)',
+        'reach_en': 'Short-Medium (Dual Kodachi 55cm Swords)',
+        'reach_pt': 'Curto-Médio (Duas Lâminas Kodachi de 55cm)',
         'speed': '4.80 m/s',
         'style_en': 'Kodachi Nitoryu (Twin Kodachi & Mai Dance)',
         'style_pt': 'Kodachi Nitoryu (Laminas Gemeas & Danca Mai)',
