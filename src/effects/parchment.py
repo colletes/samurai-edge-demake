@@ -438,11 +438,14 @@ def render_ink(font: pygame.font.Font, text: str, color=INK) -> pygame.Surface:
     """Texto com halo claro de papel para ler bem sobre a pintura."""
     core = font.render(text, True, color)
     halo = font.render(text, True, (*paper_tone(),))
+    fade_mask = pygame.Surface(halo.get_size(), pygame.SRCALPHA)
+    fade_mask.fill((255, 255, 255, 150))
+    halo.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
     out = pygame.Surface((core.get_width() + 2, core.get_height() + 2), pygame.SRCALPHA)
+    out.fill((0, 0, 0, 0))
     for dx, dy in ((0, 0), (2, 0), (0, 2), (2, 2), (1, 0), (1, 2), (0, 1), (2, 1)):
-        h = halo.copy()
-        h.set_alpha(150)
-        out.blit(h, (dx, dy))
+        out.blit(halo, (dx, dy))
     out.blit(core, (1, 1))
     return out
 

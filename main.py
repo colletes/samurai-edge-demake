@@ -2797,36 +2797,38 @@ def run_game():
 
             if banner_alpha > 5:
                 banner_surf = pygame.Surface((card_w, card_h), pygame.SRCALPHA)
-                pygame.draw.rect(banner_surf, (16, 22, 19, banner_alpha), (0, 0, card_w, card_h), border_radius=10)
+                banner_surf.fill((0, 0, 0, 0))
+                pygame.draw.rect(banner_surf, (16, 22, 19, 240), (0, 0, card_w, card_h), border_radius=10)
 
                 if round_start_timer > 0.6:
                     # 準備 (Junbi / READY...)
-                    border_col = (200, 170, 80, banner_alpha)
+                    border_col = (200, 170, 80, 240)
                     pygame.draw.rect(banner_surf, border_col, (0, 0, card_w, card_h), 2, border_radius=10)
 
                     font_kanji = get_text_font(46)
                     k_surf = font_kanji.render("準備", True, (250, 240, 205))
-                    k_surf.set_alpha(banner_alpha)
                     banner_surf.blit(k_surf, (card_w // 2 - k_surf.get_width() // 2, 8))
 
                     font_sub = get_title_font(18)
                     sub_surf = font_sub.render("READY...", True, (215, 200, 160))
-                    sub_surf.set_alpha(banner_alpha)
                     banner_surf.blit(sub_surf, (card_w // 2 - sub_surf.get_width() // 2, 60))
                 else:
                     # 始め! (Hajime! / START!)
-                    border_col = (245, 70, 60, banner_alpha)
+                    border_col = (245, 70, 60, 240)
                     pygame.draw.rect(banner_surf, border_col, (0, 0, card_w, card_h), 3, border_radius=10)
 
                     font_kanji = get_text_font(48)
                     k_surf = font_kanji.render("始め!", True, (255, 85, 75))
-                    k_surf.set_alpha(banner_alpha)
                     banner_surf.blit(k_surf, (card_w // 2 - k_surf.get_width() // 2, 6))
 
                     font_sub = get_title_font(20)
                     sub_surf = font_sub.render("START!", True, (255, 220, 90))
-                    sub_surf.set_alpha(banner_alpha)
                     banner_surf.blit(sub_surf, (card_w // 2 - sub_surf.get_width() // 2, 60))
+
+                if banner_alpha < 240:
+                    fade_mask = pygame.Surface(banner_surf.get_size(), pygame.SRCALPHA)
+                    fade_mask.fill((255, 255, 255, max(0, min(255, banner_alpha))))
+                    banner_surf.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
                 screen.blit(banner_surf, (center_x - card_w // 2, center_y - card_h // 2))
 

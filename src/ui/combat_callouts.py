@@ -104,13 +104,17 @@ def render_sumie_ribbon(
 
     # Sombra do texto
     shadow_font_surf = font.render(text, True, (0, 0, 0))
-    shadow_font_surf.set_alpha(int(alpha * 0.8))
     txt_y = oy + pad_h
     ink_surf.blit(shadow_font_surf, (text_start_x + 2, txt_y + 2))
 
     # Texto frontal iluminado
-    txt_surf.set_alpha(alpha)
     ink_surf.blit(txt_surf, (text_start_x, txt_y))
+
+    # Modular alfa do banner de tinta inteiro de forma limpa (sem corromper transparência de fontes)
+    if alpha < 255:
+        fade_mask = pygame.Surface(ink_surf.get_size(), pygame.SRCALPHA)
+        fade_mask.fill((255, 255, 255, max(0, min(255, alpha))))
+        ink_surf.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
     # Blit centralizado na tela
     dest_x = cx - (ribbon_w + skew * 2) // 2
@@ -144,6 +148,7 @@ def draw_overhead_marker(
 
     # Superfície semi-transparente
     surf = pygame.Surface((box_w + 8, box_h + 16), pygame.SRCALPHA)
+    surf.fill((0, 0, 0, 0))
     ox = 4
     oy = 0
 
@@ -156,11 +161,10 @@ def draw_overhead_marker(
         (ox + 4, oy + box_h),
         (ox, oy + box_h // 2),
     ]
-    pygame.draw.polygon(surf, (12, 14, 16, int(alpha * 0.88)), lacquer_poly)
-    pygame.draw.polygon(surf, (*color, int(alpha * 0.85)), lacquer_poly, width=1)
+    pygame.draw.polygon(surf, (12, 14, 16, 225), lacquer_poly)
+    pygame.draw.polygon(surf, (*color, 215), lacquer_poly, width=1)
 
     # Texto centralizado
-    txt.set_alpha(alpha)
     surf.blit(txt, (ox + (box_w - txt_w) // 2, oy + (box_h - txt_h) // 2))
 
     # Ponta em V / flecha minimalista apontando para a cabeça do guerreiro
@@ -169,7 +173,12 @@ def draw_overhead_marker(
         (ox + box_w // 2 + 5, oy + box_h + 1),
         (ox + box_w // 2, oy + box_h + 7),
     ]
-    pygame.draw.polygon(surf, (*color, int(alpha * 0.90)), arrow_pts)
+    pygame.draw.polygon(surf, (*color, 215), arrow_pts)
+
+    if alpha < 255:
+        fade_mask = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+        fade_mask.fill((255, 255, 255, max(0, min(255, alpha))))
+        surf.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
     surface.blit(surf, (bx - 4, by))
 

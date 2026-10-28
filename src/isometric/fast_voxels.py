@@ -35,10 +35,13 @@ def _sprite(color, size: float, azimuth: float, zoom: float, alpha: int):
     min_y, max_y = min(p[1] for p in pts) * zoom, max(p[1] for p in pts) * zoom
     ox, oy = 1.0 - min_x, 1.0 - min_y
     surf = pygame.Surface((int(max_x - min_x) + 3, int(max_y - min_y) + 3), pygame.SRCALPHA)
+    surf.fill((0, 0, 0, 0))
     draw_voxel_box(surf, _SpriteCamera(azimuth, zoom, ox, oy), -h, -h, -h, size, size, size, color,
                    outline=size >= _OUTLINE_MIN_SIZE)
     if alpha < 255:
-        surf.set_alpha(alpha)
+        fade_mask = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+        fade_mask.fill((255, 255, 255, max(0, min(255, alpha))))
+        surf.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     return surf, int(ox), int(oy)
 
 

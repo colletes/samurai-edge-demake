@@ -89,10 +89,25 @@ Utility, generation, and inspection scripts:
   - **Continuous 3D Ribbon Legs to Boot Cuffs**: When connecting breeches/trousers into bucket-top or cavalier boots, the upper ribbon mesh must extend continuously to the cuff anchor (`spine_points=[top, knee, cuff_pos]`), eliminating blank gaps/shelves before the boot shaft.
   - **Model Viewer & Inspector Synchronization**: Whenever a new character model is created or updated, ALWAYS immediately register and synchronize the new combatants in the 3D Model Inspector (`tools/model_inspector.py`) and the in-game help manual (`src/ui/game_help.py`), ensuring they appear in the roster catalog, HUD cards, pedestals, and interactive orbital 3D viewer.
 
-
-
-
-## 10. iOS & Cross-Platform Directives (Mobile & Apple Silicon)
+## 9. 2D Rendering, UI, Text & Font Transparency Directives (Zero Artifacts Policy)
+Whenever implementing UI elements, banners, floating combat callouts, or cinematic overlays with text:
+- **STRICT PROHIBITION: Never call `.set_alpha()` on `pygame.SRCALPHA` Surfaces or Font Surfaces**:
+  - In Pygame and SDL2, `font.render(text, True, color)` produces an `SRCALPHA` surface where transparent pixels retain the text's RGB values with `A=0`.
+  - Calling `surface.set_alpha(alpha)` on a surface with per-pixel alpha destroys the per-pixel alpha flag in SDL2 software blits, treating the background's `A=0` as opaque pixels modulated by surface alpha. This causes the infamous "font highlight box" bug (opaque white/black rectangular boxes around text and Kanji overlays).
+- **The Golden Rule for Alpha / Fading on Per-Pixel Alpha Surfaces**:
+  - Always fade surfaces with per-pixel alpha using `special_flags=pygame.BLEND_RGBA_MULT`:
+    ```python
+    if alpha < 255:
+        fade_mask = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+        fade_mask.fill((255, 255, 255, max(0, min(255, alpha))))
+        surf.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    ```
+- **Zero Uninitialized Alpha Buffers**:
+  - Every freshly allocated `pygame.Surface((w, h), pygame.SRCALPHA)` intended as a composite canvas must immediately execute `surf.fill((0, 0, 0, 0))` before drawing shapes or blitting text onto it.
+- **Cinematic & Kanji Overlays**:
+  - All cinematic banners (`_build_kanji_overlay`), round announcements (`準備 / 始め`), victory banners, and combat callouts must use `BLEND_RGBA_MULT` for alpha fading. Never mutate cached source surfaces with `set_alpha()`.
+- **Automated Verification**:
+  - Keep `tests/test_font_transparency.py` passing 100% to ensure no text bounding boxes or opaque artifacts regress.
 Whenever implementing new features, UI screens, combat systems, or asset additions, ALWAYS consider iOS compatibility:
 - **Strict Case-Sensitivity on APFS**: The physical iOS filesystem is strictly case-sensitive. All asset paths, filenames, and extensions must match the exact disk casing (e.g. `.png` vs `.PNG`, `assets/sounds/` vs `assets/Sounds/`).
 - **Path Resolution**: Never use hardcoded desktop machine paths (`/Users/...`, `C:\...`). Always use relative paths from the project root or resolve dynamically via `os.path.join(os.path.dirname(__file__), ...)`.

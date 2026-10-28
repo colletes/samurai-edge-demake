@@ -316,9 +316,12 @@ class FloatingBanner:
             render_sumie_ribbon(surface, self.text, sx, sy, color=self.color, alpha=alpha, font_size=18, kanji_seal=seal)
         except Exception:
             txt_surf = font.render(self.text, True, self.color)
-            txt_surf.set_alpha(alpha)
             shadow_surf = font.render(self.text, True, (0, 0, 0))
-            shadow_surf.set_alpha(alpha)
+            if alpha < 255:
+                f_mask = pygame.Surface(txt_surf.get_size(), pygame.SRCALPHA)
+                f_mask.fill((255, 255, 255, max(0, min(255, alpha))))
+                txt_surf.blit(f_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                shadow_surf.blit(f_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
             rect = txt_surf.get_rect(center=(sx, sy))
             surface.blit(shadow_surf, (rect.x + 2, rect.y + 2))
             surface.blit(txt_surf, rect)

@@ -266,6 +266,7 @@ class CinematicDirector:
         kh = kanji_main.get_height() + sub_main.get_height() + 24
 
         overlay = pygame.Surface((kw, kh), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 0))
 
         # Selo tradicional de nanquim (Inkan estilizado vermelho à esquerda)
         seal_rect = pygame.Rect(4, 12, 6, kh - 24)
@@ -1575,7 +1576,6 @@ class CinematicDirector:
         # Pincelada e Kanjis Sumi-E (desenhados durante o flash após o enquadramento da câmera)
         if self.camera_setup_timer <= 0 and self.bw_flash_timer > 0 and self.cached_kanji_surf is not None:
             kanji_alpha = int(min(255, (self.bw_flash_timer / self.bw_flash_duration) * 255))
-            self.cached_kanji_surf.set_alpha(kanji_alpha)
             cx = SCREEN_WIDTH // 2
             cy = 140
 

@@ -273,7 +273,10 @@ class OpeningVideoScreen:
 
         prompt_text = "Segure para pular"
         prompt_surf = self.font.render(prompt_text, True, COLOR_WHITE)
-        prompt_surf.set_alpha(alpha)
+        if alpha < 255:
+            fade_mask = pygame.Surface(prompt_surf.get_size(), pygame.SRCALPHA)
+            fade_mask.fill((255, 255, 255, max(0, min(255, alpha))))
+            prompt_surf.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
         target_w = screen.get_width()
         target_h = screen.get_height()
@@ -284,6 +287,7 @@ class OpeningVideoScreen:
         pill_y = target_h - pill_h - margin
 
         pill_surf = pygame.Surface((pill_w, pill_h), pygame.SRCALPHA)
+        pill_surf.fill((0, 0, 0, 0))
         bg_color = (0, 0, 0, int(alpha * 0.70)) if self.hold_timer <= 0 else (15, 12, 10, int(alpha * 0.90))
         pygame.draw.rect(pill_surf, bg_color, (0, 0, pill_w, pill_h), border_radius=19)
         border_col = (215, 185, 95, alpha) if self.hold_timer > 0 else (160, 140, 90, int(alpha * 0.6))
