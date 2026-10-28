@@ -2328,7 +2328,7 @@ def run_game():
             cinematic_director.apply_camera(camera, dt)
         else:
             if round_intro_timer <= 0:
-                camera.update_combat_framing(p1, p2, game_map, dt, is_boss=boss_fight)
+                camera.update_combat_framing(p1, p2, game_map, dt, is_boss=boss_fight, projectiles=projectiles)
             else:
                 camera.update(mid_x, mid_y, dt)
             if camera_was_replaying:

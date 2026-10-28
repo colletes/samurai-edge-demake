@@ -24,10 +24,10 @@ pie title Status dos Recursos e Frentes do Projeto
 
 Consulte o documento mestre [`docs/EXPANSION_ROADMAP_AND_DESIGN.md`](EXPANSION_ROADMAP_AND_DESIGN.md) para especificações detalhadas:
 
-1. **Fase 1: Dynamic Combat Camera Upgrade**
-   - 📦 `C-1.1`: Tighter Duel Base Zoom (`1.75x`) & Curva Não-Linear de Distância
-   - 📦 `C-1.2`: Margens de Segurança Vertical (*Overhead Clamping*) & Anti-Corte de HUD
-   - 📦 `C-1.3`: Enquadramento Direcional Reativo de Projéteis Rápidos
+1. **Fase 1: Dynamic Combat Camera Upgrade [CONCLUÍDA ✅]**
+   - 📦 `C-1.1`: Tighter Duel Base Zoom (`1.75x`) & Curva Não-Linear de Distância [✅]
+   - 📦 `C-1.2`: Margens de Segurança Vertical (*Overhead Clamping*) & Anti-Corte de HUD [✅]
+   - 📦 `C-1.3`: Enquadramento Direcional Reativo de Projéteis Rápidos [✅]
 2. **Fase 2: Revamp de Intros de Personagens & Câmera de Abertura**
    - 📦 `I-2.1`: Sistema Core de Câmera 'Sequential Dual Spotlight' & Skip
    - 📦 `I-2.2`: Roteiros 3D de Intro — Onda 1: Veteranos Lâmina & Pólvora (6 Guerreiros)

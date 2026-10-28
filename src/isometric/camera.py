@@ -7,11 +7,12 @@ from src.config import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.isometric.iso_math import world_to_iso, iso_depth
 
 class Camera:
-    ZOOM_CLOSE = 1.50
-    ZOOM_CLOSE_MOBILE = 1.60
-    ZOOM_FAR = 0.85
+    ZOOM_CLOSE = 1.75
+    ZOOM_CLOSE_MOBILE = 1.90
+    ZOOM_FAR = 0.95
     DIST_CLOSE = 2.8
     DIST_FAR = 8.5
+    HUD_SAFE_TOP = 95.0
 
     def __init__(self, target_wx: float = 11.0, target_wy: float = 11.0):
         # Posição central no mundo que a câmera está olhando
@@ -22,7 +23,9 @@ class Camera:
 
         # Offset na tela
         self.screen_x = SCREEN_WIDTH // 2
-        self.screen_y = SCREEN_HEIGHT // 2
+        self.base_screen_y = SCREEN_HEIGHT // 2
+        self.screen_y = self.base_screen_y
+        self.overhead_offset_y = 0.0
 
         # Sistema de Screen Shake (tremor na tela)
         self.shake_intensity = 0.0
@@ -39,6 +42,9 @@ class Camera:
         # Suavização dinâmica de intenção de velocidade (anti-solavanco)
         self.lead_x = 0.0
         self.lead_y = 0.0
+        # Enquadramento reativo de projéteis rápidos balísticos (Entregável C-1.3)
+        self.projectile_bias_x = 0.0
+        self.projectile_bias_y = 0.0
 
         # Altura do piso sob o foco (ex.: tabuleiro da ponte), onde as sombras dos lutadores são desenhadas
         self.ground_z = 0.0
@@ -69,14 +75,14 @@ class Camera:
 
     @classmethod
     def compute_distance_zoom(cls, dist: float, is_mobile: bool = False) -> float:
-        """Calcula o zoom ideal em função da distância entre os lutadores (1.50x no desktop / 1.60x no mobile até 0.85x)."""
+        """Calcula o zoom ideal em função da distância entre os lutadores (1.75x no desktop / 1.90x no mobile até 0.95x)."""
         close_zoom = cls.ZOOM_CLOSE_MOBILE if is_mobile else cls.ZOOM_CLOSE
         if dist <= cls.DIST_CLOSE:
             return close_zoom
         if dist >= cls.DIST_FAR:
             return cls.ZOOM_FAR
         t = (dist - cls.DIST_CLOSE) / (cls.DIST_FAR - cls.DIST_CLOSE)
-        # Curva Hermite smoothstep
+        # Curva Hermite smoothstep cúbica para sustentação orgânica do enquadramento próximo
         smooth_t = t * t * (3.0 - 2.0 * t)
         return close_zoom + (cls.ZOOM_FAR - close_zoom) * smooth_t
 
@@ -101,12 +107,14 @@ class Camera:
             self.shake_offset_x = 0.0
             self.shake_offset_y = 0.0
 
-    def update_combat_framing(self, p1, p2, game_map=None, dt: float = 0.016, is_boss: bool = False):
+    def update_combat_framing(self, p1, p2, game_map=None, dt: float = 0.016, is_boss: bool = False, projectiles=None):
         """
-        Enquadramento dinâmico de combate (Pilar 7):
+        Enquadramento dinâmico de combate (Pilar 7, Entregáveis C-1.1, C-1.2 e C-1.3):
         - Mantém a rotação fixa (`azimuth == 0.0` em duelo normal).
-        - Auto-zoom dinâmico e suave baseado na distância entre os lutadores (~1.50x a 0.85x).
+        - Auto-zoom dinâmico com base mais próxima (1.75x a 0.95x).
+        - Overhead clamping vertical: evita que saltos e golpes aéreos cortem no HUD.
         - Rastreamento com avanço de velocidade suave (exponential lead decay) sem solavancos em dashes/ataques.
+        - Enquadramento direcional reativo de projéteis rápidos (balas de mosquete e flechas).
         - Micro-zoom reativo (`+0.06x`) em parries e deflexões.
         - Clamping inteligente nas bordas da arena.
         """
@@ -128,13 +136,69 @@ class Camera:
                 desired_lead_x += getattr(f, "facing_x", 0.0) * 0.16
                 desired_lead_y += getattr(f, "facing_y", 0.0) * 0.16
 
+        # Entregável C-1.3: Enquadramento Direcional Reativo de Projéteis Rápidos
+        desired_proj_bias_x = 0.0
+        desired_proj_bias_y = 0.0
+        max_proj_reach_dist = 0.0
+
+        if projectiles:
+            for proj in projectiles:
+                if not getattr(proj, "is_active", False):
+                    continue
+                cls_name = getattr(proj, "__class__", type(None)).__name__
+                vx = getattr(proj, "vx", 0.0)
+                vy = getattr(proj, "vy", 0.0)
+                speed = math.hypot(vx, vy)
+                if cls_name in ("MusketBulletProjectile", "KyudoArrowProjectile", "HamayaArrowProjectile", "RopeArrowProjectile", "SacredArrowVolleyProjectile") or speed >= 18.0:
+                    dir_x = getattr(proj, "dir_x", None)
+                    dir_y = getattr(proj, "dir_y", None)
+                    if dir_x is None or dir_y is None:
+                        if speed > 1e-4:
+                            dir_x = vx / speed
+                            dir_y = vy / speed
+                        else:
+                            dir_x, dir_y = 0.0, 0.0
+
+                    # Adiantamento direcional reativo ao disparo veloz
+                    desired_proj_bias_x += dir_x * 0.36
+                    desired_proj_bias_y += dir_y * 0.36
+
+                    p_wx = getattr(proj, "wx", 0.0)
+                    p_wy = getattr(proj, "wy", 0.0)
+
+                    # Expande o enquadramento se o projétil avançar além do perímetro dos lutadores
+                    min_fx = min(p1.wx, p2.wx)
+                    max_fx = max(p1.wx, p2.wx)
+                    min_fy = min(p1.wy, p2.wy)
+                    max_fy = max(p1.wy, p2.wy)
+
+                    if p_wx > max_fx:
+                        desired_proj_bias_x += (p_wx - max_fx) * 0.25
+                    elif p_wx < min_fx:
+                        desired_proj_bias_x += (p_wx - min_fx) * 0.25
+
+                    if p_wy > max_fy:
+                        desired_proj_bias_y += (p_wy - max_fy) * 0.25
+                    elif p_wy < min_fy:
+                        desired_proj_bias_y += (p_wy - min_fy) * 0.25
+
+                    proj_dist = max(math.hypot(p1.wx - p_wx, p1.wy - p_wy), math.hypot(p2.wx - p_wx, p2.wy - p_wy))
+                    if proj_dist > max_proj_reach_dist:
+                        max_proj_reach_dist = proj_dist
+                    break
+
         # Filtro passa-baixa criticamente amortecido para adiantamento suave
         lead_decay = 1.0 - math.exp(-7.5 * dt)
         self.lead_x += (desired_lead_x - self.lead_x) * min(1.0, lead_decay)
         self.lead_y += (desired_lead_y - self.lead_y) * min(1.0, lead_decay)
 
-        target_wx = mid_x + self.lead_x
-        target_wy = mid_y + self.lead_y
+        # Filtro passa-baixa para viés de projétil balístico
+        proj_decay = 1.0 - math.exp(-8.0 * dt)
+        self.projectile_bias_x += (desired_proj_bias_x - self.projectile_bias_x) * min(1.0, proj_decay)
+        self.projectile_bias_y += (desired_proj_bias_y - self.projectile_bias_y) * min(1.0, proj_decay)
+
+        target_wx = mid_x + self.lead_x + self.projectile_bias_x
+        target_wy = mid_y + self.lead_y + self.projectile_bias_y
 
         # Clamping inteligente dentro dos limites da arena
         if game_map is not None:
@@ -162,14 +226,19 @@ class Camera:
         from src.input.device_info import is_mobile_device
         is_mobile = is_mobile_device()
 
-        # Calcular zoom alvo pela distância entre os combatentes
+        # Calcular zoom alvo pela distância entre os combatentes (Entregável C-1.1 & C-1.3)
         if is_boss:
-            base_zoom = 0.85
+            base_zoom = 0.90
         else:
             dist = math.hypot(p1.wx - p2.wx, p1.wy - p2.wy)
-            base_zoom = self.compute_distance_zoom(dist, is_mobile=is_mobile)
+            if max_proj_reach_dist > dist:
+                # Expansão sutil do enquadramento balístico sem perder o duelo de vista
+                effective_dist = dist + (max_proj_reach_dist - dist) * 0.45
+            else:
+                effective_dist = dist
+            base_zoom = self.compute_distance_zoom(effective_dist, is_mobile=is_mobile)
 
-        max_cap = 1.68 if is_mobile else 1.58
+        max_cap = 2.05 if is_mobile else 1.90
         self.target_zoom = min(max_cap, base_zoom + self.zoom_impulse)
 
         # Interpolação suave e criticamente amortecida do zoom
@@ -179,6 +248,33 @@ class Camera:
             self.zoom = round(self.target_zoom, 3)
         else:
             self.zoom = round(new_zoom, 3)
+
+        # Entregável C-1.2: Overhead Clamping & Margem de Segurança contra corte no HUD
+        max_overhead_deficit = 0.0
+        for f in (p1, p2):
+            if not getattr(f, "is_alive", True):
+                continue
+            f_wz = getattr(f, "wz", 0.0)
+            head_wz = f_wz + getattr(f, "height", 1.65)
+            st = getattr(f, "state", "")
+            if st in ("RYUU_TSUI_SEN", "POLE_VAULT", "JUMP"):
+                head_wz += 0.35
+
+            # Projeta a altura da cabeça com a posição de câmera alvo
+            _, iso_head_y = world_to_iso(f.wx - target_wx, f.wy - target_wy, head_wz, self.azimuth)
+            projected_y = iso_head_y * self.zoom + self.base_screen_y
+            if projected_y < self.HUD_SAFE_TOP:
+                deficit = self.HUD_SAFE_TOP - projected_y
+                if deficit > max_overhead_deficit:
+                    max_overhead_deficit = deficit
+
+        # Limitar o deslocamento para não empurrar os pés fora do chão visível
+        desired_overhead_shift = min(120.0, max_overhead_deficit)
+        lerp_rate = 8.5 if desired_overhead_shift > self.overhead_offset_y else 5.0
+        decay = 1.0 - math.exp(-lerp_rate * dt)
+        self.overhead_offset_y += (desired_overhead_shift - self.overhead_offset_y) * min(1.0, decay)
+
+        self.screen_y = int(round(self.base_screen_y + self.overhead_offset_y))
 
         # Atualizar posição e screen shake
         self.update(target_wx, target_wy, dt)

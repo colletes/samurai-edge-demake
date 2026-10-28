@@ -24,10 +24,10 @@ flowchart TD
 
 ## 🎯 1. Detalhamento dos Entregáveis Testáveis
 
-### 🎥 Fase 1: Dynamic Combat Camera Upgrade
+### 🎥 Fase 1: Dynamic Combat Camera Upgrade [CONCLUÍDA ✅]
 Foco: Trazer o jogador para a intimidade brutal do combate marcial (*Bushido Duel Framing*), tornando o combate próximo muito mais imersivo e dramático sem perder visão tática.
 
-#### 📦 Entregável C-1.1: Tighter Duel Base Zoom (`1.75x`) & Curva Não-Linear de Distância
+#### 📦 Entregável C-1.1: Tighter Duel Base Zoom (`1.75x`) & Curva Não-Linear de Distância [CONCLUÍDO ✅]
 - **Objetivo de Valor:** Elevar a proximidade do confronto corpo a corpo, preenchendo a tela com os modelos e armas dos lutadores.
 - **Especificações Técnicas:**
   - Modificar `src/isometric/camera.py`:
@@ -37,7 +37,7 @@ Foco: Trazer o jogador para a intimidade brutal do combate marcial (*Bushido Due
 - **Procedimento de Teste & Validação:**
   - Criar `tests/test_combat_camera_zoom.py` validando os níveis de zoom em distâncias de 1.5, 3.0, 6.0 e 10.0 tiles.
 
-#### 📦 Entregável C-1.2: Margens de Segurança Vertical (*Overhead Clamping*) & Anti-Corte de HUD
+#### 📦 Entregável C-1.2: Margens de Segurança Vertical (*Overhead Clamping*) & Anti-Corte de HUD [CONCLUÍDO ✅]
 - **Objetivo de Valor:** Evitar que golpes aéreos, saltos ou chapéus volumosos fiquem encobertos pelas barras de vida do HUD ou cortados no topo da tela.
 - **Especificações Técnicas:**
   - Implementar em `src/isometric/camera.py`:
@@ -46,12 +46,12 @@ Foco: Trazer o jogador para a intimidade brutal do combate marcial (*Bushido Due
 - **Procedimento de Teste & Validação:**
   - Testar Kenshi (*Ryuu Tsui Sen* a 2.6m de altura) e Daiki (*Salto com Vara*) verificando que a cabeça permanece 100% visível abaixo do HUD.
 
-#### 📦 Entregável C-1.3: Enquadramento Direcional Reativo de Projéteis Rápidos
+#### 📦 Entregável C-1.3: Enquadramento Direcional Reativo de Projéteis Rápidos [CONCLUÍDO ✅]
 - **Objetivo de Valor:** Ajustar sutilmente a câmera para antecipar trajetórias balísticas em disparos de projéteis em alta velocidade.
 - **Especificações Técnicas:**
-  - Em `camera.update()`, detectar tiros ativos de mosquete (Teppo/Julie) e flechas velozes (Kyudo/Hamaya), expandindo o ponto focal para o ponto médio entre o atirador e a ponta do projétil durante o voo.
+  - Em `camera.update_combat_framing()`, detectar tiros ativos de mosquete (Teppo/Julie) e flechas velozes (Kyudo/Hamaya), expandindo o ponto focal e o campo de visão na direção balística durante o voo com decaimento exponencial suave.
 - **Procedimento de Teste & Validação:**
-  - Simular disparo de Teppo em arena aberta e verificar expansão suave do quadro sem solavancos bruscos.
+  - Simular disparo de Teppo em arena aberta e verificar expansão suave do quadro sem solavancos bruscos. Validado em `tests/test_combat_camera_zoom.py`.
 
 ---
 
