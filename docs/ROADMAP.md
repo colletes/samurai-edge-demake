@@ -28,27 +28,36 @@ Consulte o documento mestre [`docs/EXPANSION_ROADMAP_AND_DESIGN.md`](EXPANSION_R
    - 📦 `C-1.1`: Tighter Duel Base Zoom (`1.75x`) & Curva Não-Linear de Distância [✅]
    - 📦 `C-1.2`: Margens de Segurança Vertical (*Overhead Clamping*) & Anti-Corte de HUD [✅]
    - 📦 `C-1.3`: Enquadramento Direcional Reativo de Projéteis Rápidos [✅]
-2. **Fase 2: Revamp de Intros de Personagens & Câmera de Abertura**
-   - 📦 `I-2.1`: Sistema Core de Câmera 'Sequential Dual Spotlight' & Skip
-   - 📦 `I-2.2`: Roteiros 3D de Intro — Onda 1: Veteranos Lâmina & Pólvora (6 Guerreiros)
-   - 📦 `I-2.3`: Roteiros 3D de Intro — Onda 2: Veteranos Ocidentais & Kunoichi (6 Guerreiros)
-   - 📦 `I-2.4`: Roteiros 3D de Intro — Onda 3: Expansões Ciclos 1 a 3 (6 Guerreiros)
-   - 📦 `I-2.5`: Roteiros 3D de Intro — Onda 4: Expansões Ciclos 4 a 6 (6 Guerreiros)
-3. **Fase 3: Revamp de Finishers**
-   - 📦 `F-3.1`: Motor Aprimorado de Câmera de Finisher & Dinâmica de Sangue Arterial
-   - 📦 `F-3.2`: Fatalities Sob Medida — Grupo 1: Espadachins & Katanas (6 Guerreiros)
-   - 📦 `F-3.3`: Fatalities Sob Medida — Grupo 2: Armas Pesadas & Lanças (5 Guerreiros)
-   - 📦 `F-3.4`: Fatalities Sob Medida — Grupo 3: Ninjas & Pólvora (6 Guerreiros)
-   - 📦 `F-3.5`: Fatalities Sob Medida — Grupo 4: Esotéricos & Marciais (7 Guerreiros)
-4. **Fase 4: Revamp de Animações de Vitória**
-   - 📦 `W-4.1`: Framework da Câmera de Triunfo & Apresentação Hanko
-   - 📦 `W-4.2`: Roteiros 3D de Vitória — Veteranos (12 Guerreiros)
-   - 📦 `W-4.3`: Roteiros 3D de Vitória — Expansões (12 Guerreiros)
-5. **Fase 5: Revamp Visual e Atmosférico das Arenas**
-   - 📦 `A-5.1`: Santuários & Jardins Zen (6 Arenas)
-   - 📦 `A-5.2`: Cenários Urbanos & Históricos (6 Arenas)
-   - 📦 `A-5.3`: Campos de Batalha & Vilarejos Rurais (6 Arenas)
-   - 📦 `A-5.4`: Locais Extremos & Noturnos (6 Arenas)
+2. **Fase 2: A Grande Reformulação dos 24 Guerreiros (Movesets, Atributos, Finishers & Animações)**
+   - 🥋 `2.1`: Kenshi (Hiten Mitsurugi-ryu — Shukuchi Battoujutsu & Ryuu Tsui Sen)
+   - ⚔️ `2.2`: Musashi (Hyoho Niten Ichi-ryu — Dual Cleave & Cross Shockwave)
+   - 🥷 `2.3`: Hanzo (Iga Ninjutsu — Reverse Slash & Kunai Snipe)
+   - 🐕 `2.4`: Joe & Yamato (Tactical Tanto & Pounce do Doberman)
+   - 🐺 `2.5`: Saitou (Lobos de Mibu — Shinsengumi Slash & Gatotsu Zero-Shiki)
+   - 💥 `2.6`: Teppo (Ashigaru — Tiro de Arcabuz Tanegashima & Coronhada)
+   - ⛓️ `2.7`: Murasaki (Kusarigama — Foice Curta & Arremesso do Peso de Ferro)
+   - 💣 `2.8`: Kasumi (Leques Tessen & Bomba de Cerâmica Horoku)
+   - 🎭 `2.9`: Okuni (Dançarina Kabuki — Leques de Aço & Névoa Dokukiri)
+   - 🏹 `2.10`: Tomoe (Kyudo Onna-musha — Flecha Yumi & Hamaya Exorcista)
+   - 🏴‍☠️ `2.11`: Anne (Corsária Naval — Cutlass Cleave 180° & Pouch de Pólvora)
+   - ⚜️ `2.12`: Julie (Mosqueteira Real — Fleche Thrust & Pederneira de Bolso)
+   - 📿 `2.13`: Ren (Monge Shaolin — Palma de Ferro & Rugido Kiai)
+   - 🗡️ `2.14`: Chiyo (Kunoichi das Sombras — Kodachi Dupla Invertida)
+   - 🛡️ `2.15`: Benkei (Monge Guardião — Naginata Pesada & Hoist Slam)
+   - 🎶 `2.16`: O-Rin (Menestrel Cega — Shamisen & Lâminas de Vácuo Kamaitachi)
+   - 🌾 `2.17`: Goro (Fazendeiro Rebelde — Enxada Kuwa & Fissura Terrestre)
+   - 🦯 `2.18`: Ichi (Espadachim Cega — Saque Rápido da Shikomizue & Escuta)
+   - 🕯️ `2.19`: Valerius (Necromante Prussiano — Chamas Espectrais & Servo Esqueleto)
+   - ☯️ `2.20`: Seimei (Mestre Onmyoji — Rajada de Talismãs Ofuda & Barreira Sagrada)
+   - 🎋 `2.21`: Daiki (Peregrino Yamabushi — Varredura com Bastão Bō & Salto com Vara)
+   - ❄️ `2.22`: Aoi (Caçadora Ainu — Lança de Osso de Hokkaido & Armadilha de Urso)
+   - 🤼 `2.23`: Raiden (Campeão Yokozuna — Empurrões Tsuppari & Carga Tachiai)
+   - ⚗️ `2.24`: Hendrika (Alquimista de Dejima — Estilete Cirúrgico & Frascos de Ácido)
+3. **Fase 3: Revamp Visual e Atmosférico das Arenas (24 Palcos)**
+   - 📦 `A-3.1`: Santuários & Jardins Zen (6 Arenas)
+   - 📦 `A-3.2`: Cenários Urbanos & Históricos (6 Arenas)
+   - 📦 `A-3.3`: Campos de Batalha & Vilarejos Rurais (6 Arenas)
+   - 📦 `A-3.4`: Locais Extremos & Noturnos (6 Arenas)
 
 ---
 
