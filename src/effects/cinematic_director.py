@@ -1260,6 +1260,12 @@ class CinematicDirector:
                 prog = 1.0 - (self.kenshin_split_timer / max(0.001, self.kenshin_split_duration))
                 atk.state = "RECOVERY"
                 atk.state_timer = max(0.02, 0.45 * (1.0 - prog))
+                if hasattr(atk, "zanzou_ghosts"):
+                    for i, g in enumerate(atk.zanzou_ghosts):
+                        base_a = 130 + 18 * i
+                        fade = max(0.0, min(1.0, 1.0 - prog * 1.15 + i * 0.06))
+                        g["alpha"] = max(0, min(255, int(base_a * fade)))
+                        g["duration"] = max(0.0, self.kenshin_split_timer)
                 # No instante 0.35s após parar de costas, clica a katana na bainha (Noto)
                 if prog >= (0.35 / 0.65) and not self.kenshin_noto_played:
                     self.kenshin_noto_played = True
@@ -1273,6 +1279,8 @@ class CinematicDirector:
                         from src.effects.particles import SparkParticle
                         for _ in range(6):
                             particles.append(SparkParticle(atk.wx, atk.wy, 0.55, color=(255, 235, 130)))
+                if self.kenshin_split_timer <= 0.0 and hasattr(atk, "zanzou_ghosts"):
+                    atk.zanzou_ghosts.clear()
 
         # 8b. Kenshi Finisher Especial: Divisão Celestial de Bambu (Amakakeru Ryuu Tsui Sen — 2.1.4b)
         if self.ryuu_fatal_timer > 0:
@@ -1281,6 +1289,13 @@ class CinematicDirector:
             vic = self.ryuu_fatal_victim
             if atk is not None and vic is not None:
                 elapsed = self.ryuu_fatal_duration - self.ryuu_fatal_timer
+                prog = 1.0 - (self.ryuu_fatal_timer / max(0.001, self.ryuu_fatal_duration))
+                if hasattr(atk, "zanzou_ghosts"):
+                    for i, g in enumerate(atk.zanzou_ghosts):
+                        base_a = 120 + 20 * i
+                        fade = max(0.0, min(1.0, 1.0 - prog * 1.20 + i * 0.05))
+                        g["alpha"] = max(0, min(255, int(base_a * fade)))
+                        g["duration"] = max(0.0, self.ryuu_fatal_timer)
                 atk.set_facing(vic.wx, vic.wy)
                 if elapsed < 0.25:
                     # Fase 1 (0.25s): Salto vertical explosivo e suspensão no ápice (wz=2.5m) com katana erguida nas duas mãos
@@ -1336,6 +1351,8 @@ class CinematicDirector:
                         atk.wz = 0.0
                         atk.state = "RECOVERY"
                         atk.state_timer = 0.45
+                        if hasattr(atk, "zanzou_ghosts"):
+                            atk.zanzou_ghosts.clear()
 
         # 8. Coreografia universal de golpe final no ângulo fechado (após descongelar o tempo)
         if self.finisher_strike_timer > 0:

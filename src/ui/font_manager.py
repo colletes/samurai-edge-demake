@@ -93,6 +93,7 @@ def render_text_fx(
 
     if glow:
         halo = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+        halo.fill((0, 0, 0, 0))
         halo.blit(font.render(text, True, glow_color or color), (pad, pad))
         halo = _blur(halo, max(2, glow_width))
         for _ in range(2):
@@ -297,6 +298,7 @@ class FontManager:
             total_height = sum(s.get_height() for s in line_surfaces)
             total_width = max(s.get_width() for s in line_surfaces)
             result = pygame.Surface((total_width, total_height), pygame.SRCALPHA)
+            result.fill((0, 0, 0, 0))
             y = 0
             for surf in line_surfaces:
                 result.blit(surf, (0, y))

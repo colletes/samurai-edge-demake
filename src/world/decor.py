@@ -471,6 +471,7 @@ class StripedCurtain:
         bh = int(max_y - min_y + 8)
         if bw > 0 and bh > 0:
             c_surf = pygame.Surface((bw, bh), pygame.SRCALPHA)
+            c_surf.fill((0, 0, 0, 0))
             ox, oy = min_x - 4, min_y - 4
             for q, col in quads:
                 local_q = [(pt[0] - ox, pt[1] - oy) for pt in q]

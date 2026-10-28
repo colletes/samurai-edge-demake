@@ -275,6 +275,7 @@ def draw_enso_circle(surface, cx: int, cy: int, radius: int, color, anim_time: f
 def draw_mystery_silhouette(surface: pygame.Surface, cx: int, cy: int, radius: int = 20):
     """Desenha uma silhueta de sombra indefinida no estilo Sumi-E para personagens em produção."""
     orb = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+    orb.fill((0, 0, 0, 0))
     pygame.draw.circle(orb, (16, 15, 18, 235), (radius, radius), radius)
     # Ombros e vestes em nanquim escuro
     pygame.draw.ellipse(orb, (36, 34, 40, 240), (2, radius + 2, (radius - 2) * 2, radius))
@@ -290,6 +291,7 @@ def draw_round_help_button(surface, font, rect: pygame.Rect, anim_time: float):
     radius = rect.width // 2
     if hovered:
         glow = pygame.Surface((rect.width + 16, rect.height + 16), pygame.SRCALPHA)
+        glow.fill((0, 0, 0, 0))
         pygame.draw.circle(glow, (255, 215, 90, 90), (glow.get_width() // 2, glow.get_height() // 2), radius + 7)
         surface.blit(glow, (rect.x - 8, rect.y - 8))
     pygame.draw.circle(surface, (244, 238, 222) if hovered else (226, 218, 198), center, radius)

@@ -82,6 +82,82 @@ def _sword_frame(c):
     return k, b
 
 
+def _chiburi_pose(c):
+    """
+    Cinemática 3D contínua do Yokochiburi (sacudida lateral de sangue na vitória):
+    - Inicia suavemente do fim do arco de ataque (p=0.96), ergue de leve o punho e chicoteia a lâmina
+      para a direita/baixo (seg_u: 0.0 -> 0.38), mantendo a postura estendida até seg_u = 1.0.
+    """
+    extra = getattr(c, "extra_props", None) or {}
+    u = float(extra.get("seg_u", 0.5))
+    h_slash_end = _arc_hand(c, 0.96)
+    tsuba_slash = (h_slash_end[0], h_slash_end[1], h_slash_end[2] - 0.065)
+    tsuba_windup = (c.base_x + c.fx * 0.16 - c.px * 0.14, c.base_y + c.fy * 0.16 - c.py * 0.14, c.torso_z + 0.15)
+    tsuba_snap = (c.base_x + c.fx * 0.22 - c.px * 0.24, c.base_y + c.fy * 0.22 - c.py * 0.24, c.torso_z + 0.05)
+
+    d_slash = _blade_dir(c, 0.96)
+    d_windup = mk.norm((c.fx * 0.65 - c.px * 0.45, c.fy * 0.65 - c.py * 0.45, 0.28))
+    d_snap = mk.norm((c.fx * 0.55 - c.px * 0.72, c.fy * 0.55 - c.py * 0.72, -0.36))
+
+    if u < 0.22:
+        t = _smooth(u / 0.22)
+        tsuba = mk.lerp(tsuba_slash, tsuba_windup, t)
+        d_blade = mk.norm(mk.lerp(d_slash, d_windup, t))
+    elif u < 0.48:
+        t = _smooth((u - 0.22) / 0.26)
+        tsuba = mk.lerp(tsuba_windup, tsuba_snap, t)
+        d_blade = mk.norm(mk.lerp(d_windup, d_snap, t))
+    else:
+        tsuba = tsuba_snap
+        d_blade = d_snap
+    return tsuba, d_blade, u
+
+
+def _noto_pose(c):
+    """
+    Cinemática 3D contínua do Noto (embainhamento cerimonial em 2 fases físicas reais):
+    - Fase A (prog 0.00 -> 0.36): Traz a katana em arco frontal amplo da direita (posição final do Chiburi)
+      até alinhar o dorso/ponta da lâmina com a boca da bainha (koiguchi `k`), apontando na direção `b` (para dentro da saya).
+    - Fase B (prog 0.36 -> 0.92): Desliza a mão direita suavemente ao longo do eixo `-b -> k`, fazendo a lâmina
+      entrar progressivamente dentro da boca da bainha (`k`) sem descontinuidade.
+    - Fase C (prog 0.92 -> 1.00): Tsuba encostada no koiguchi com estalo metálico dourado.
+    """
+    extra = getattr(c, "extra_props", None) or {}
+    dur = 0.45
+    prog = float(extra.get("noto_prog", max(0.0, min(1.0, 1.0 - (getattr(c, "state_timer", 0.0) / dur)))))
+    k, b = _sword_frame(c)
+
+    tsuba_chiburi = (c.base_x + c.fx * 0.22 - c.px * 0.24, c.base_y + c.fy * 0.22 - c.py * 0.24, c.torso_z + 0.05)
+    d_chiburi = mk.norm((c.fx * 0.55 - c.px * 0.72, c.fy * 0.55 - c.py * 0.72, -0.36))
+
+    slide_start_len = 0.50
+    tsuba_align = mk.add(k, b, -slide_start_len)
+    tsuba_mid_arc = (c.base_x + c.fx * 0.26 - c.px * 0.04, c.base_y + c.fy * 0.26 - c.py * 0.04, c.torso_z + 0.14)
+    d_mid_arc = mk.norm((c.fx * 0.62 + c.px * 0.18, c.fy * 0.62 + c.py * 0.18, 0.18))
+
+    if prog < 0.36:
+        u_a = prog / 0.36
+        if u_a < 0.5:
+            t = _smooth(u_a * 2.0)
+            tsuba = mk.lerp(tsuba_chiburi, tsuba_mid_arc, t)
+            d_blade = mk.norm(mk.lerp(d_chiburi, d_mid_arc, t))
+            length = 0.72
+        else:
+            t = _smooth((u_a - 0.5) * 2.0)
+            tsuba = mk.lerp(tsuba_mid_arc, tsuba_align, t)
+            d_blade = mk.norm(mk.lerp(d_mid_arc, b, t))
+            length = 0.72 - (0.72 - slide_start_len) * t
+        return tsuba, d_blade, length, False, False
+
+    if prog < 0.86:
+        u_s = _smooth((prog - 0.36) / 0.50)
+        exposed_len = slide_start_len * (1.0 - u_s)
+        tsuba = mk.add(k, b, -exposed_len)
+        return tsuba, b, exposed_len, False, False
+
+    return k, b, 0.0, True, (prog < 0.985)
+
+
 def idle_arms(c):
     """
     Poses de braços da Kenshi conforme o estado e roteiro cinematográfico:
@@ -125,20 +201,18 @@ def idle_arms(c):
         return arm_l, arm_r
 
     if state == "RECOVERY" or pose == "noto_sheath":
-        # Animação de Noto (embainhamento fluido enquanto caminha ou após vitória)
-        dur = 0.45
-        prog = extra.get("noto_prog", max(0.0, min(1.0, 1.0 - (getattr(c, "state_timer", 0.0) / dur))))
-        left = mk.add(k, b, 0.06)
-        start_r = (c.base_x + c.fx * 0.20 - c.px * 0.18, c.base_y + c.fy * 0.20 - c.py * 0.18, c.torso_z + 0.16)
-        end_r = mk.add(k, b, -0.08)
-        hand_r = mk.lerp(start_r, (end_r[0], end_r[1], end_r[2] + 0.07), _smooth(prog))
-        return (left[0], left[1], left[2] + 0.07), hand_r
+        # Animação de Noto: mão esquerda guia o koiguchi da saya enquanto a mão direita desliza o cabo até a bainha
+        tsuba, d_blade, _, is_sheathed, _ = _noto_pose(c)
+        left = mk.add(k, b, 0.03 if not is_sheathed else 0.08)
+        grip_r = mk.add(tsuba, d_blade, -0.06)
+        return (left[0], left[1], left[2] + 0.065), (grip_r[0], grip_r[1], grip_r[2] + 0.065)
 
     if pose == "chiburi_flick":
-        # Chiburi lateral elegante: braço direito estendido sacudindo o sangue da lâmina
-        left = mk.add(k, b, 0.08)
-        hand_r = (c.base_x + c.fx * 0.22 - c.px * 0.24, c.base_y + c.fy * 0.22 - c.py * 0.24, c.torso_z + 0.10)
-        return (left[0], left[1], left[2] + 0.07), hand_r
+        # Chiburi lateral elegante: mão direita empunha o cabo sacudindo o sangue da lâmina
+        tsuba, d_blade, _ = _chiburi_pose(c)
+        left = mk.add(k, b, 0.06)
+        grip_r = mk.add(tsuba, d_blade, -0.06)
+        return (left[0], left[1], left[2] + 0.065), (grip_r[0], grip_r[1], grip_r[2] + 0.065)
 
     if pose == "victory_bow":
         # Reverência serena com a mão esquerda na saya e direita relaxada no cabo
@@ -255,7 +329,17 @@ def draw_behind(c):
     saya_mid = mk.add(k, b, 0.22)
     if mk.depth(c, saya_mid[0], saya_mid[1]) < d_torso:
         _saya(c)
-    if not c.is_melee or c.atk_progress < 0.1:
+    state = getattr(c, "state", "IDLE")
+    pose = (getattr(c, "extra_props", None) or {}).get("pose", "")
+    is_noto = (state == "RECOVERY" or pose == "noto_sheath")
+    noto_sheathed = _noto_pose(c)[3] if is_noto else True
+    sword_unsheathed = (
+        (c.is_melee and c.atk_progress >= 0.06)
+        or state in ("RYUU_TSUI_SEN", "PARRY_BACKHOP")
+        or pose in ("chiburi_flick", "ryuu_apex", "ryuu_cleave")
+        or (is_noto and not noto_sheathed)
+    )
+    if not sword_unsheathed:
         tsuka_mid = mk.add(k, b, -0.08)
         if mk.depth(c, tsuka_mid[0], tsuka_mid[1]) < d_torso:
             _tsuka(c, k, b)
@@ -631,35 +715,39 @@ def draw_front(c, arm_l, arm_r):
 
     # 3. Chiburi (Sacudida lateral de sangue na Vitória)
     if pose == "chiburi_flick":
-        hand = (arm_r[0], arm_r[1], arm_r[2] - 0.055)
-        d = mk.norm((c.fx * 0.55 - c.px * 0.72, c.fy * 0.55 - c.py * 0.72, -0.38))
+        tsuba, d, u_chiburi = _chiburi_pose(c)
         length = 0.72
-        _tsuka(c, hand, d)
-        mk.obox(c, hand, d, length, 0.05, 0.034, P["steel"])
-        mk.obox(c, mk.add(hand, d, 0.02), d, length - 0.02, 0.018, 0.036, P["edge"], outline=False)
+        _tsuka(c, tsuba, d)
+        mk.obox(c, tsuba, d, length, 0.05, 0.034, P["steel"])
+        mk.obox(c, mk.add(tsuba, d, 0.02), d, length - 0.02, 0.018, 0.036, P["edge"], outline=False)
+        if 0.18 <= u_chiburi <= 0.55:
+            # Arco carmesim de gotas de sangue sacudidas da ponta da lâmina no Yokochiburi
+            tip_a = mk.add(tsuba, d, length)
+            d_prev = mk.norm((c.fx * 0.62 - c.px * 0.55, c.fy * 0.62 - c.py * 0.55, -0.08))
+            tip_b = mk.add(tsuba, d_prev, length * 0.96)
+            mk.band(c, (mk.add(tsuba, d, length * 0.65), tip_a, tip_b, mk.add(tsuba, d_prev, length * 0.65)), P["trail"] + (185,))
         return
 
     # 4. Embainhamento Cerimonial (Noto em RECOVERY ou Vitória)
     if state == "RECOVERY" or pose == "noto_sheath":
-        dur = 0.45
-        prog = extra.get("noto_prog", max(0.0, min(1.0, 1.0 - (getattr(c, "state_timer", 0.0) / dur))))
-        rem = max(0.0, 1.0 - _smooth(prog))
-        if rem <= 0.05:
+        tsuba, d_blade, length, is_sheathed, clink_glint = _noto_pose(c)
+        if is_sheathed:
             tsuka_mid = mk.add(k, b, -0.08)
             if mk.depth(c, tsuka_mid[0], tsuka_mid[1]) >= d_torso:
                 _tsuka(c, k, b)
-                if rem > 0.001:
-                    # Estalo metálico final do Noto (clink glint)
-                    sx, sy = c.camera.apply(k[0], k[1], k[2] + 0.02)
-                    pygame.draw.circle(c.surface, (255, 245, 190), (sx, sy), 4)
+            if clink_glint:
+                # Estalo metálico final do Noto (clink glint dourado em estrela na tsuba)
+                sx, sy = c.camera.apply(k[0], k[1], k[2] + 0.02)
+                r_px = max(3, int(6 * getattr(c.camera, "zoom", 1.0)))
+                pygame.draw.line(c.surface, (255, 235, 110), (sx - r_px, sy), (sx + r_px, sy), 2)
+                pygame.draw.line(c.surface, (255, 235, 110), (sx, sy - r_px), (sx, sy + r_px), 2)
+                pygame.draw.circle(c.surface, (255, 250, 220), (sx, sy), max(2, r_px // 2))
             return
-        hand = (arm_r[0], arm_r[1], arm_r[2] - 0.065)
-        d_sheath = (-b[0], -b[1], -b[2])
-        tsuba = mk.lerp(k, hand, rem)
-        length = 0.72 * rem
-        _tsuka(c, tsuba, d_sheath)
-        if length > 0.03:
-            mk.obox(c, tsuba, d_sheath, length, 0.048, 0.032, P["steel"])
+        _tsuka(c, tsuba, d_blade)
+        if length > 0.02:
+            mk.obox(c, tsuba, d_blade, length, 0.048, 0.032, P["steel"])
+            if length > 0.04:
+                mk.obox(c, mk.add(tsuba, d_blade, 0.015), d_blade, length - 0.015, 0.018, 0.034, P["edge"], outline=False)
         return
 
     # 5. Parry Backhop / Somersault (lâmina empunhada na mão direita durante o giro acrobático)

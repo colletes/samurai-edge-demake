@@ -77,6 +77,7 @@ class PropSurfaceCache:
     def _get_scratch(self) -> pygame.Surface:
         if self._scratch is None:
             self._scratch = pygame.Surface((self.SCRATCH_W, self.SCRATCH_H), pygame.SRCALPHA)
+            self._scratch.fill((0, 0, 0, 0))
         else:
             self._scratch.fill((0, 0, 0, 0))
             self._last_dirty_rect = None
@@ -163,6 +164,7 @@ class PropSurfaceCache:
         self._last_dirty_rect = dirty_rect
 
         baked_surf = pygame.Surface(dirty_rect.size, pygame.SRCALPHA)
+        baked_surf.fill((0, 0, 0, 0))
         baked_surf.blit(scratch, (0, 0), dirty_rect)
         off_x = x0 - self.ANCHOR_X
         off_y = y0 - self.ANCHOR_Y
@@ -244,6 +246,7 @@ class TerrainSurfaceCache:
         ref_y = -min_y
 
         surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 0))
         bake_cam = _BakingCamera(0.0, 0.0, ref_x, ref_y, zoom)
         anchors: set[int] = set()
 

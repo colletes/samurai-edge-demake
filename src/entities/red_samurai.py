@@ -347,15 +347,24 @@ class RedSamurai(Samurai):
         if not hasattr(self, "zanzou_ghosts"):
             self.zanzou_ghosts = []
 
-        # Atualizar interpolador de pose (Pose LERP 0.08s — Entregável 2.1.9)
+        # Atualizar interpolador de pose (Pose LERP 0.08s — Entregável 2.1.9; avança mesmo em INTRO/VICTORY quando dt == 0)
+        lerp_dt = dt if dt > 0.0 else (1.0 / 60.0)
         if hasattr(self, "_pose_lerp_tracker") and self._pose_lerp_tracker["blend_timer"] > 0.0:
-            self._pose_lerp_tracker["blend_timer"] = max(0.0, self._pose_lerp_tracker["blend_timer"] - dt)
+            self._pose_lerp_tracker["blend_timer"] = max(0.0, self._pose_lerp_tracker["blend_timer"] - lerp_dt)
 
-        # Atualizar e desvanecer pós-imagens zanzou
-        for g in self.zanzou_ghosts:
-            g["duration"] -= dt
-            g["alpha"] = max(0, int(200 * (g["duration"] / 0.28)))
-        self.zanzou_ghosts = [g for g in self.zanzou_ghosts if g["duration"] > 0]
+        # Atualizar e desvanecer pós-imagens zanzou (continua desvanecendo mesmo no pós-round quando dt == 0)
+        if not self.is_alive or self.state in ("VICTORY", "INTRO"):
+            self.zanzou_ghosts.clear()
+        else:
+            decay_dt = dt if dt > 0.0 else (1.0 / 60.0)
+            for g in self.zanzou_ghosts:
+                if "max_duration" not in g:
+                    g["max_duration"] = max(0.01, float(g["duration"]))
+                if "max_alpha" not in g:
+                    g["max_alpha"] = max(0, min(255, int(g.get("alpha", 200))))
+                g["duration"] -= decay_dt
+                g["alpha"] = max(0, min(255, int(g["max_alpha"] * (g["duration"] / g["max_duration"]))))
+            self.zanzou_ghosts = [g for g in self.zanzou_ghosts if g["duration"] > 0]
 
         if not self.is_alive:
             return
@@ -645,7 +654,7 @@ class RedSamurai(Samurai):
                 pygame.draw.lines(surface, COLOR_WHITE, False, pts, 2)
 
         # Renderizar pós-imagens zanzou translúcidas deixadas pelo Shukuchi / Ryuu Tsui Sen
-        if hasattr(self, "zanzou_ghosts"):
+        if hasattr(self, "zanzou_ghosts") and self.state not in ("VICTORY", "INTRO"):
             for g in self.zanzou_ghosts:
                 if g["alpha"] > 20:
                     render_voxel_humanoid(

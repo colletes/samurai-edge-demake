@@ -186,10 +186,10 @@ INTRO = {
 VICTORY = {
     # Kenshi (2.1.6): Chiburi lateral elegante (sacode o sangue da lâmina no piso) -> Noto fluido para dentro da bainha com estalo metálico -> reverência serena com pétalas
     "kenshin": [
-        _seg(0.0, 0.25, "ATTACK", 0.35, 0.90),
-        _idle(0.25, 0.52, pose="chiburi_flick"),
-        _idle(0.52, 0.78, pose="noto_sheath", noto_prog=0.85),
-        _idle(0.78, 1.0, pose="victory_bow"),
+        _seg(0.0, 0.22, "ATTACK", 0.35, 0.96),
+        _idle(0.22, 0.46, pose="chiburi_flick"),
+        _idle(0.46, 0.82, pose="noto_sheath"),
+        _idle(0.82, 1.0, pose="victory_bow"),
     ],
     "musashi": [_idle(0.0, 0.1), _seg(0.1, 0.4, "ATTACK", 0.0, 1.0, combo_step=1), _seg(0.4, 0.85, "PARRY", 0.15, 0.85), _idle(0.85, 1.0)],
     "ninja": [_idle(0.0, 0.1), _seg(0.1, 0.45, "ATTACK", 0.0, 1.0), _idle(0.45, 0.55), _seg(0.55, 0.9, "ATTACK", 0.0, 1.0), _idle(0.9, 1.0)],
@@ -330,7 +330,11 @@ def sample(char_type: str, kind: str, p: float) -> PoseFrame:
     for t0, t1, state, a0, a1, alpha, extra in script:
         if p <= t1 or t1 >= 1.0:
             u = 0.0 if t1 <= t0 else max(0.0, min(1.0, (p - t0) / (t1 - t0)))
-            return PoseFrame(state, a0 + (a1 - a0) * u, dict(extra), alpha[0] + (alpha[1] - alpha[0]) * u)
+            ex = dict(extra)
+            ex.setdefault("seg_u", u)
+            if ex.get("pose") == "noto_sheath" and "noto_prog" not in extra:
+                ex["noto_prog"] = u
+            return PoseFrame(state, a0 + (a1 - a0) * u, ex, alpha[0] + (alpha[1] - alpha[0]) * u)
     return PoseFrame()
 
 

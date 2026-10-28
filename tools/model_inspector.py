@@ -817,7 +817,6 @@ class ModelInspector:
             "ssaa_2x": not is_legacy,
             "pose_lerp_tracker": None if is_legacy else self._inspector_lerp_tracker,
         }
-        ghosts = []
 
         if act == "IDLE":
             state = "IDLE"
@@ -870,13 +869,9 @@ class ModelInspector:
                     u = prog / 0.28
                     extra_props["ryuu_phase"] = "ASCEND"
                     wz = 0.15 + 0.85 * (1.0 - (1.0 - u) ** 2)
-                    for gi in range(2):
-                        gu = max(0.0, u - (gi + 1) * 0.25)
-                        ghosts.append((0.0, 0.0, 0.10 + 0.80 * gu, 140 - gi * 45))
                 elif prog < 0.52:
                     extra_props["ryuu_phase"] = "APEX"
                     wz = 1.00
-                    ghosts.append((0.0, 0.0, 0.55, 110))
                 else:
                     u = (prog - 0.52) / 0.48
                     extra_props["ryuu_phase"] = "DESCEND"
@@ -885,17 +880,12 @@ class ModelInspector:
             state = "SHUKUCHI" if not is_legacy else "IDLE"
             shift = math.sin(prog * math.pi) * 0.34
             wx, wy = shift, shift
-            for gi in range(3):
-                g_shift = max(0.0, shift - (gi + 1) * 0.11)
-                ghosts.append((g_shift, g_shift, 0.0, 165 - gi * 45))
         elif act == "SHUKUCHI_CANCEL":
             # 2.1.3: Shukuchi (0..0.38) -> Cancelamento nos últimos 40% direto para Iai Slice!
             if prog < 0.38:
                 u = prog / 0.38
                 state = "SHUKUCHI"
                 wx, wy = -0.25 + 0.25 * u, -0.25 + 0.25 * u
-                ghosts.append((-0.25, -0.25, 0.0, 160))
-                ghosts.append((-0.12, -0.12, 0.0, 120))
             elif prog < 0.50 and not is_legacy:
                 state = "ATTACK"
                 extra_props["pose"] = "koiguchi_glint"
@@ -904,7 +894,6 @@ class ModelInspector:
                 state = "ATTACK"
                 state_timer = max(0.01, (1.0 - u) * 0.14)
                 wx, wy = 0.22 * u, 0.22 * u
-                ghosts.append((-0.05, -0.05, 0.0, 130))
         elif act == "PARRY_GROUND":
             # 2.1.1: Salto parabático para trás + Noto andando ao pousar
             if prog < 0.52:
@@ -912,7 +901,6 @@ class ModelInspector:
                 state = "PARRY_BACKHOP"
                 wz = math.sin(u * math.pi) * 0.48
                 wx, wy = -0.26 * u, -0.26 * u
-                ghosts.append((0.0, 0.0, 0.05, 135))
             else:
                 u = (prog - 0.52) / 0.48
                 state = "RECOVERY"
@@ -932,7 +920,6 @@ class ModelInspector:
                 if not is_legacy:
                     extra_props["is_aerial_parry"] = True
                     extra_props["somersault_angle"] = u * 360.0
-                ghosts.append((-0.12 * u, -0.12 * u, wz + 0.12, 140))
             else:
                 u = (prog - 0.65) / 0.35
                 state = "RECOVERY"
@@ -956,24 +943,18 @@ class ModelInspector:
                 state_timer = pose_scripts.state_timer_for(char_type, pf)
                 extra_props.update(pf.extra)
         elif act == "FINISHER_1":
-            # 2.1.4a: Ittou Ryoudan (5 sombras Zanzou + Noto de costas)
-            for gi in range(5):
-                gu = (gi - 2) * 0.16
-                ghosts.append((gu, gu, 0.0, 115 + gi * 18))
+            # 2.1.4a: Ittou Ryoudan
             state = "RECOVERY"
             wx, wy = 0.28, 0.28
             if not is_legacy:
                 extra_props["pose"] = "noto_sheath"
                 extra_props["noto_prog"] = min(1.0, prog * 1.25)
         elif act == "FINISHER_2":
-            # 2.1.4b: Divisão Celestial de Bambu (5 Zanzou verticais + Ápice + Queda Meteórica)
+            # 2.1.4b: Divisão Celestial de Bambu (Ápice + Queda Meteórica)
             if prog < 0.42:
                 state = "RYUU_TSUI_SEN"
                 extra_props["ryuu_phase"] = "APEX"
                 wz = 0.95
-                for gi in range(5):
-                    gz = 0.15 + gi * 0.18
-                    ghosts.append((0.0, 0.0, gz, 110 + gi * 18))
             else:
                 u = (prog - 0.42) / 0.58
                 state = "RYUU_TSUI_SEN" if u < 0.65 else "RECOVERY"
@@ -983,30 +964,14 @@ class ModelInspector:
                     extra_props["pose"] = "noto_sheath"
                     extra_props["noto_prog"] = (u - 0.65) / 0.35
 
-        return wx, wy, wz, state, state_timer, is_moving, walk_timer, extra_props, ghosts
+        return wx, wy, wz, state, state_timer, is_moving, walk_timer, extra_props
 
     def _draw_single_character(self, surface: pygame.Surface, cam: InspectorCamera, is_legacy: bool = False):
         char_info = self.current_char_info
         char_type = char_info["char_type"]
         facing_x, facing_y = 1.0, 1.0
 
-        wx, wy, wz, state, state_timer, is_moving, walk_timer, extra_props, ghosts = self._eval_action_frame(char_type, is_legacy=is_legacy)
-
-        # Renderizar sombras Zanzou (quando presentes no golpe/esquiva/finisher)
-        if not is_legacy:
-            for gx, gy, gz, g_alpha in ghosts:
-                render_voxel_humanoid(
-                    surface, cam,
-                    gx, gy, gz,
-                    facing_x, facing_y,
-                    "IDLE", 0.0,
-                    is_alive=True,
-                    char_type=char_type,
-                    walk_timer=walk_timer,
-                    alpha=max(25, min(220, int(g_alpha))),
-                    is_moving=False,
-                    extra_props={"legacy_mode": False, "ssaa_2x": False},
-                )
+        wx, wy, wz, state, state_timer, is_moving, walk_timer, extra_props = self._eval_action_frame(char_type, is_legacy=is_legacy)
 
         render_voxel_humanoid(
             surface, cam,

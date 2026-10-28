@@ -24,6 +24,7 @@ def band(c, points, rgba):
     if w < 2 or h < 2 or w > 1600 or h > 1600:
         return
     layer = pygame.Surface((w, h), pygame.SRCALPHA)
+    layer.fill((0, 0, 0, 0))
     pygame.draw.polygon(layer, (rgba[0], rgba[1], rgba[2], int(rgba[3] * c.alpha / 255)), [(p[0] - x0, p[1] - y0) for p in scr])
     c.surface.blit(layer, (x0, y0))
 

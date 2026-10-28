@@ -651,6 +651,7 @@ class WillOWisp:
         r_outer = max(6, int(12 * pulse * camera.zoom))
         r_inner = max(3, int(6 * pulse * camera.zoom))
         glow_surf = pygame.Surface((r_outer * 2 + 4, r_outer * 2 + 4), pygame.SRCALPHA)
+        glow_surf.fill((0, 0, 0, 0))
         pygame.draw.circle(glow_surf, (50, 220, 170, 75), (r_outer + 2, r_outer + 2), r_outer)
         pygame.draw.circle(glow_surf, (140, 255, 220, 170), (r_outer + 2, r_outer + 2), r_inner)
         pygame.draw.circle(glow_surf, (240, 255, 250, 230), (r_outer + 2, r_outer + 2), max(2, r_inner // 2))
@@ -1152,6 +1153,7 @@ class HealingTalisman:
             pulse = 0.5 + 0.5 * math.sin(self.rot_timer * 8.0)
             r_px = int(18 * camera.zoom)
             glow_surf = pygame.Surface((r_px * 2 + 4, r_px * 2 + 4), pygame.SRCALPHA)
+            glow_surf.fill((0, 0, 0, 0))
             pygame.draw.circle(glow_surf, (60, 240, 130, int(100 * pulse + 50)), (r_px + 2, r_px + 2), r_px)
             pygame.draw.circle(glow_surf, (200, 255, 210, 200), (r_px + 2, r_px + 2), max(2, int(r_px * 0.4)))
             surface.blit(glow_surf, (sx - r_px - 2, sy - r_px - 2), special_flags=pygame.BLEND_ADD)
@@ -1167,6 +1169,7 @@ class HealingTalisman:
             surface.blit(paper_surf, (sx - w_px // 2, sy - h_px // 2))
             glow_r = max(12, int(22 * camera.zoom))
             glow_s = pygame.Surface((glow_r * 2 + 2, glow_r * 2 + 2), pygame.SRCALPHA)
+            glow_s.fill((0, 0, 0, 0))
             pygame.draw.circle(glow_s, (60, 240, 130, 60), (glow_r + 1, glow_r + 1), glow_r)
             surface.blit(glow_s, (sx - glow_r - 1, sy - glow_r - 1), special_flags=pygame.BLEND_ADD)
 

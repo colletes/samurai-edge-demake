@@ -68,6 +68,7 @@ def ink_reveal(base: pygame.Surface, progress: float, diagonal: bool = False, ed
 def build_banner_shade() -> pygame.Surface:
     h = 190
     shade = pygame.Surface((SCREEN_WIDTH, h), pygame.SRCALPHA)
+    shade.fill((0, 0, 0, 0))
     for y in range(h):
         pygame.draw.line(shade, (6, 6, 8, int(170 * (1 - y / h) ** 1.3)), (0, y), (SCREEN_WIDTH, y))
     return shade
@@ -280,6 +281,7 @@ class MatchIntro:
         title_font = get_title_font(60)
 
         layer = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        layer.fill((0, 0, 0, 0))
         cx = SCREEN_WIDTH // 2
 
         # Kanji 死 e 闘, um após o outro, com varredura diagonal de pincel

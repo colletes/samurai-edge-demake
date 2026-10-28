@@ -391,6 +391,7 @@ def _render_voxel_humanoid(
             if len(_SHADOW_SURF_CACHE) > 64:
                 _SHADOW_SURF_CACHE.clear()
             shadow_surf = pygame.Surface((shadow_w, shadow_h), pygame.SRCALPHA)
+            shadow_surf.fill((0, 0, 0, 0))
             pygame.draw.ellipse(shadow_surf, (14, 18, 16, shadow_alpha), (0, 0, shadow_w, shadow_h))
             _SHADOW_SURF_CACHE[sh_key] = shadow_surf
         surface.blit(shadow_surf, (sx - shadow_w // 2, sy - shadow_h // 2))

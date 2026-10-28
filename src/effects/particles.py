@@ -61,6 +61,7 @@ def get_pooled_smoke_surface(radius: int) -> pygame.Surface:
     surf = _SMOKE_SURFACE_POOL.get(dim)
     if surf is None:
         surf = pygame.Surface((dim, dim), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 0))
         _SMOKE_SURFACE_POOL[dim] = surf
     else:
         surf.fill((0, 0, 0, 0))
