@@ -111,6 +111,8 @@ Whenever implementing UI elements, banners, floating combat callouts, or cinemat
   - All cinematic banners (`_build_kanji_overlay`), round announcements (`準備 / 始め`), victory banners, and combat callouts must use `BLEND_RGBA_MULT` for alpha fading. Never mutate cached source surfaces with `set_alpha()`.
 - **Automated Verification**:
   - Keep `tests/test_font_transparency.py` passing 100% to ensure no text bounding boxes or opaque artifacts regress.
+
+## 10. iOS Packaging & Porting Architecture Directives
 Whenever implementing new features, UI screens, combat systems, or asset additions, ALWAYS consider iOS compatibility:
 - **Strict Case-Sensitivity on APFS**: The physical iOS filesystem is strictly case-sensitive. All asset paths, filenames, and extensions must match the exact disk casing (e.g. `.png` vs `.PNG`, `assets/sounds/` vs `assets/Sounds/`).
 - **Path Resolution**: Never use hardcoded desktop machine paths (`/Users/...`, `C:\...`). Always use relative paths from the project root or resolve dynamically via `os.path.join(os.path.dirname(__file__), ...)`.
@@ -169,4 +171,51 @@ Whenever executing a new Roadmap Expansion Cycle (adding new fighters and arenas
   - *Prompt (Suno / Gemini)*: `Ancient Japanese Shinto shrine sumo tournament battle theme, 126 BPM, massive ceremonial O-daiko taiko thunder strikes, hyper-resonant hyoshigi wooden clappers and rhythmic referee kakegoe shouts, booming brass and majestic low strings, solemn Gagaku ryuteki flute and hichiriki harmonies evoking divine sumo ritual and unstoppable physical mass, driving cinematic combat progression, loopable, no vocals.`
 - **Armazém de Dejima com Doca Chuvosa (`bgm_dejima_dock.mp3` — Hendrika)**:
   - *Prompt (Suno / Gemini)*: `19th-century Bakumatsu Nagasaki Dejima harbor soundtrack, 124 BPM, stormy rainy atmosphere with driving rain and thunder swells, clash of Dutch Baroque harpsichord and virtuoso classical violin with Japanese koto and shakuhachi, eccentric ticking clockwork rhythms, sinister low cello and bassoon arpeggios evoking clandestine alchemy experiments and slippery nighttime harbor intrigue, loopable combat battle theme, no vocals.`
+
+## 13. Character Overhaul Pipeline & Architectural Standards (Sub-fases 2.x)
+Whenever executing the overhaul of ANY character in Phase 2, adhere strictly to the 11-deliverable standard established and perfected during the Kenshi revamp:
+
+### 13.1. The 11 Mandatory Deliverables per Fighter
+1. **`2.x.1: Primary Attack & Recovery/Noto`**:
+   - Explicit timing split: Startup anticipation (e.g. thumb pushing tsuba *koiguchi-kiri* with a spark particle or blade gleam), Active frames (directional 3D hitbox arc), and Whiff Recovery.
+   - Fluid sheathing / weapon recovery (*Noto*) transition.
+   - Authentic combat reaction on hit (directional knockback, blood spray) and custom impact/clash SFX.
+2. **`2.x.2: Secondary / Special Attack`**:
+   - Signature combat technique (projectile, dive attack, multi-hit flurry, command grab).
+   - Clear multi-phase kinematics (anticipation / ascent, apex suspension, strike/descent).
+   - Distinct aerial or ground vulnerability windows and defensive interactions.
+3. **`2.x.3: Mobility & Defensive Reactions`**:
+   - Dedicated evasive maneuver (dash, roll, slide, hop) with specific i-frames.
+   - **Offensive Cancel Window**: Inputting an attack during the final ~40% of the dash immediately cancels into an instant running strike (e.g. *Shukuchi Battou-Giri*).
+   - **Ground Parry Reaction**: Clean defensive reaction (e.g. backhop + walking Noto sheathing).
+   - **Aerial Parry Reaction**: High-flying defensive counter (e.g. 360° somersault / acrobatic backflip with tucked knees).
+4. **`2.x.4a: Finisher A (Primary Attack)`**:
+   - Bespoke cinematic fatality triggered by a lethal primary hit. Close-up cinematic framing, hitstop, black-and-white flash, dynamic blood burst, and clean post-strike pose (e.g. turning back while sheathing).
+5. **`2.x.4b: Finisher B (Secondary / Special Attack)`**:
+   - Bespoke cinematic fatality tied specifically to special move kills (e.g. vertical celestial split, decapitation, impalement).
+6. **`2.x.5: Intro Animation`**:
+   - Fighter-specific pre-fight stance ritual and weapon unsheathing/readiness.
+7. **`2.x.6: Victory Animation`**:
+   - Bespoke victory choreography with weapon flourish (e.g. *Chiburi* lateral blood flick) and ceremonial settling into rest/sheath.
+8. **`2.x.7: SSAA 2x (Supersampling Anti-Aliasing)`**:
+   - Offscreen 2x render buffer scaled down via `pygame.transform.smoothscale(hi_res, dst_size)`, completely eliminating voxel jaggedness and blade edge shimmering without altering camera math.
+9. **`2.x.8: HD Anime / Martial Eyes & Facial Geometry`**:
+   - Faceted 3D nose wedge with directional shading and specular tip catchlight.
+   - 3-plane faceted lips with Cupid's bow and catchlight.
+   - **Feminine fighters**: Luminous open anime eyes, ivory sclera, large vertical irises, dual catchlights, winged lashline, open lower rim (strictly zero dark under-eye orbital lines).
+   - **Masculine fighters**: Resolute martial apertures, compact irises, single sharp glints, lower brows closer to the eyes, firm un-glossed lips.
+10. **`2.x.9: Pose LERP Cross-Fade Interpolation`**:
+    - `0.08s` (3–5 frames) smooth transition interpolation between animation states (`pose_lerp_crossfade`), eliminating abrupt T-pose snapping between locomotion, attacks, recovery, and idle.
+11. **`2.x.10: Realistic Material Palettes`**:
+    - Rich physical material dictionaries (e.g. Chirimen silk, indigo linen, tamahagane steel, polished lacquer, aged wood, ray skin samegawa, antique brass).
+    - **Preserve Legacy Materials**: Always export `LEGACY_MATERIALS` alongside the overhauled material dictionary so that `legacy_mode=True` reliably renders the original model for direct side-by-side comparison.
+12. **`2.x.11: Model Inspector "De / Para" & Interactive Animation Panel`**:
+    - Synchronization in `tools/model_inspector.py`: `compare_mode` (`[D]`) side-by-side legacy vs overhaul, plus 12 interactive clickable buttons and hotkeys (`1`–`9`, `0`, `F1`, `F2`) triggering every animation in real time.
+
+### 13.2. Critical Pitfalls & Technical Invariants (Learned from Kenshi)
+- **Zero Ghost / Clone Duplicates in Previews**: Model inspector and preview pedestals must NEVER render static `IDLE` ghost models at ground level. Zanzou shadows are strictly gameplay after-images; in inspectors and pedestals, they must either be omitted or dynamically follow the transformed body and pitch rather than staying frozen in `IDLE`.
+- **Full 3D Pitch Camera for Somersaults & Aerial Flips**: Sagittal-plane rotations (`PARRY_AERIAL`, acrobatics) must use a dynamic pitch camera (`_SomersaultPitchCamera`) centered on the body's center of mass (`wz + 0.52`). When upside down (`cos(somersault_rad) < -0.15`), the painter's algorithm order must invert (`_render_lower_body` drawn after the cranium so the head is occluded behind the torso and legs).
+- **Continuous Limb Meshes vs Segmented Cubes**: Unbroken clothing (hakama, trousers, kunoichi leggings) must use 3D continuous ribbon meshes with tapered frustums, avoiding joint steps/shelves at knees and elbows.
+- **Clean State Transitions & Timer Guards**: Noto and recovery animations must smoothly transition to `IDLE` without prematurely clamping movement or freezing input. Ensure all temporary animation flags (`is_aerial_parry`, `somersault_angle`, `extra_props`) are cleanly cleared when actions complete.
+
 

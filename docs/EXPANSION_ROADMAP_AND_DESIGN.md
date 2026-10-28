@@ -51,7 +51,7 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente em **12 
 
 ---
 
-#### 🥋 Sub-fase 2.1: Kenshi (A Espadachim Errante — Hiten Mitsurugi-ryu) — **[DESIGN APROVADO EM /GRILL-ME]**
+#### 🥋 Sub-fase 2.1: Kenshi (A Espadachim Errante — Hiten Mitsurugi-ryu) — **[CONCLUÍDO ✅ — 12/12 ENTREGÁVEIS PASSANDO]**
 - **Perfil & Atributos Base:** Velocidade de corrida: 5.4 m/s | Esquiva: *Shukuchi Dash* ultra-veloz (0.15s a 28.0 m/s com rastros Zanzou) | Alcance: Médio/Longo com avanço Iai | Postura ágil Battoujutsu com centro de gravidade baixo.
 - **📦 Entregável 2.1.1: Golpe Primário — *Shukuchi Battoujutsu Slice***
   - *Animação & Startup Telegrafado:* **Startup de 0.10s (6f)** em postura Iai profunda com faísca dourada no polegar destravando a tsuba (`Koiguchi-kiri`) e som metálico `'chink'` antes da arrancada.
