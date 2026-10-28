@@ -59,6 +59,19 @@ def draw_voxel_box(
       - Face Esquerda (+Y): Iluminação intermediária difusa.
       - Face Direita (+X): Face sombreada.
     """
+    # Se a câmera estiver aplicando rotação 3D de mortal aéreo (somersault), delegar para caixa 3D orientada com culling 6-faces
+    if abs(getattr(camera, "somersault_rad", 0.0)) > 1e-3:
+        draw_oriented_voxel_box(
+            surface, camera,
+            wx, wy + dy * 0.5, wz + dz * 0.5,
+            1.0, 0.0, 0.0,
+            dx, dy, dz,
+            color,
+            up_x=0.0, up_y=0.0, up_z=1.0,
+            outline=outline, alpha=alpha, texture=texture,
+        )
+        return
+
     # 8 vértices projetados para a tela relativa à câmera
     def to_screen(x, y, z):
         return camera.apply(x, y, z)

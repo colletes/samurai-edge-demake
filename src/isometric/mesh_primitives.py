@@ -127,10 +127,13 @@ def draw_tapered_frustum_3d(
         face_defs.append(((0, 1, 2, 3), c_dark, "bottom", w_start, h_start))
 
     faces = []
+    has_xform = hasattr(camera, "transform_3d")
     for idxs, shade, kind, ulen, vlen in face_defs:
         cx = sum(verts_3d[i][0] for i in idxs) * 0.25
         cy = sum(verts_3d[i][1] for i in idxs) * 0.25
         cz = sum(verts_3d[i][2] for i in idxs) * 0.25
+        if has_xform:
+            cx, cy, cz = camera.transform_3d(cx, cy, cz)
         rx, ry = rotate_xy(cx, cy, azimuth)
         depth = (rx + ry) + cz * 0.45
         poly = [scr[i] for i in idxs]
@@ -206,10 +209,12 @@ def draw_ribbon_mesh_3d(
         rings_scr.append([camera.apply(v[0], v[1], v[2]) for v in r3d])
 
     azimuth = getattr(camera, "azimuth", 0.0)
-    nrx, nry = rotate_xy(nx, ny, azimuth)
-    front_faces_cam = (nrx + nry) >= 0.0
-    srx, sry = rotate_xy(sx, sy, azimuth)
-    right_faces_cam = (srx + sry) >= 0.0
+    tnx, tny, tnz = camera.transform_dir_3d(nx, ny, nz) if hasattr(camera, "transform_dir_3d") else (nx, ny, nz)
+    tsx, tsy, tsz = camera.transform_dir_3d(sx, sy, sz) if hasattr(camera, "transform_dir_3d") else (sx, sy, sz)
+    nrx, nry = rotate_xy(tnx, tny, azimuth)
+    front_faces_cam = ((nrx + nry) + tnz * 0.45) >= 0.0
+    srx, sry = rotate_xy(tsx, tsy, azimuth)
+    right_faces_cam = ((srx + sry) + tsz * 0.45) >= 0.0
 
     if alpha < 255:
         all_pts = [pt for r in rings_scr for pt in r]
@@ -387,47 +392,37 @@ def _draw_cranium_with_hair_facets(
     s_hl_mr = camera.apply(hl_mr[0], hl_mr[1], hl_mr[2])
 
     faces = []
+    has_xform = hasattr(camera, "transform_3d")
+    def _depth(p3d):
+        cx, cy, cz = p3d
+        if has_xform:
+            cx, cy, cz = camera.transform_3d(cx, cy, cz)
+        rx, ry = rotate_xy(cx, cy, azimuth)
+        return rx + ry + cz * 0.45
+
     # 1. Topo da cabeça (cabelo)
-    cx = sum(v3d[i][0] for i in (4, 5, 6, 7)) * 0.25
-    cy = sum(v3d[i][1] for i in (4, 5, 6, 7)) * 0.25
-    cz = sum(v3d[i][2] for i in (4, 5, 6, 7)) * 0.25
-    rx, ry = rotate_xy(cx, cy, azimuth)
-    faces.append((rx + ry + cz * 0.45, [scr[4], scr[5], scr[6], scr[7]], c_hair_top))
+    c1 = (sum(v3d[i][0] for i in (4, 5, 6, 7)) * 0.25, sum(v3d[i][1] for i in (4, 5, 6, 7)) * 0.25, sum(v3d[i][2] for i in (4, 5, 6, 7)) * 0.25)
+    faces.append((_depth(c1), [scr[4], scr[5], scr[6], scr[7]], c_hair_top))
 
     # 2. Nuca / Costas (cabelo)
-    cx = sum(v3d[i][0] for i in (0, 1, 5, 4)) * 0.25
-    cy = sum(v3d[i][1] for i in (0, 1, 5, 4)) * 0.25
-    cz = sum(v3d[i][2] for i in (0, 1, 5, 4)) * 0.25
-    rx, ry = rotate_xy(cx, cy, azimuth)
-    faces.append((rx + ry + cz * 0.45, [scr[0], scr[1], scr[5], scr[4]], c_hair_back))
+    c2 = (sum(v3d[i][0] for i in (0, 1, 5, 4)) * 0.25, sum(v3d[i][1] for i in (0, 1, 5, 4)) * 0.25, sum(v3d[i][2] for i in (0, 1, 5, 4)) * 0.25)
+    faces.append((_depth(c2), [scr[0], scr[1], scr[5], scr[4]], c_hair_back))
 
     # 3. Lado Direito (têmpora / orelha - cabelo)
-    cx = sum(v3d[i][0] for i in (1, 2, 6, 5)) * 0.25
-    cy = sum(v3d[i][1] for i in (1, 2, 6, 5)) * 0.25
-    cz = sum(v3d[i][2] for i in (1, 2, 6, 5)) * 0.25
-    rx, ry = rotate_xy(cx, cy, azimuth)
-    faces.append((rx + ry + cz * 0.45, [scr[1], scr[2], scr[6], scr[5]], c_hair_side))
+    c3 = (sum(v3d[i][0] for i in (1, 2, 6, 5)) * 0.25, sum(v3d[i][1] for i in (1, 2, 6, 5)) * 0.25, sum(v3d[i][2] for i in (1, 2, 6, 5)) * 0.25)
+    faces.append((_depth(c3), [scr[1], scr[2], scr[6], scr[5]], c_hair_side))
 
     # 4. Lado Esquerdo (têmpora / orelha - cabelo)
-    cx = sum(v3d[i][0] for i in (0, 3, 7, 4)) * 0.25
-    cy = sum(v3d[i][1] for i in (0, 3, 7, 4)) * 0.25
-    cz = sum(v3d[i][2] for i in (0, 3, 7, 4)) * 0.25
-    rx, ry = rotate_xy(cx, cy, azimuth)
-    faces.append((rx + ry + cz * 0.45, [scr[0], scr[3], scr[7], scr[4]], c_hair_side))
+    c4 = (sum(v3d[i][0] for i in (0, 3, 7, 4)) * 0.25, sum(v3d[i][1] for i in (0, 3, 7, 4)) * 0.25, sum(v3d[i][2] for i in (0, 3, 7, 4)) * 0.25)
+    faces.append((_depth(c4), [scr[0], scr[3], scr[7], scr[4]], c_hair_side))
 
     # 5. Fronte: Cabelo da Franja (topo da face anterior)
-    cx = (hl_m[0] + v_mid_top[0]) * 0.5
-    cy = (hl_m[1] + v_mid_top[1]) * 0.5
-    cz = (hl_m[2] + v_mid_top[2]) * 0.5
-    rx, ry = rotate_xy(cx, cy, azimuth)
-    faces.append((rx + ry + cz * 0.45, [s_hl_l, s_hl_ml, s_hl_m, s_hl_mr, s_hl_r, scr[6], scr[7]], c_hair_front))
+    c5 = ((hl_m[0] + v_mid_top[0]) * 0.5, (hl_m[1] + v_mid_top[1]) * 0.5, (hl_m[2] + v_mid_top[2]) * 0.5)
+    faces.append((_depth(c5), [s_hl_l, s_hl_ml, s_hl_m, s_hl_mr, s_hl_r, scr[6], scr[7]], c_hair_front))
 
     # 6. Fronte: Pele da Testa (abaixo da linha da franja)
-    cx = (hl_m[0] + v_mid_bot[0]) * 0.5
-    cy = (hl_m[1] + v_mid_bot[1]) * 0.5
-    cz = (hl_m[2] + v_mid_bot[2]) * 0.5
-    rx, ry = rotate_xy(cx, cy, azimuth)
-    faces.append((rx + ry + cz * 0.45, [scr[3], scr[2], s_hl_r, s_hl_mr, s_hl_m, s_hl_ml, s_hl_l], c_skin_front))
+    c6 = ((hl_m[0] + v_mid_bot[0]) * 0.5, (hl_m[1] + v_mid_bot[1]) * 0.5, (hl_m[2] + v_mid_bot[2]) * 0.5)
+    faces.append((_depth(c6), [scr[3], scr[2], s_hl_r, s_hl_mr, s_hl_m, s_hl_ml, s_hl_l], c_skin_front))
 
     faces.sort(key=lambda f: f[0])
     for _, poly, col in faces:
@@ -766,9 +761,16 @@ def draw_portrait_face_3d(
     """
     if getattr(c, "alpha", 255) < 80:
         return
-    rx, ry = rotate_xy(c.fx, c.fy, getattr(c, "azimuth", 0.0))
-    if rx + ry <= -0.10:
-        return
+    cam = getattr(c, "camera", None)
+    if cam is not None and hasattr(cam, "transform_dir_3d"):
+        tfx, tfy, tfz = cam.transform_dir_3d(c.fx, c.fy, 0.0)
+        rx, ry = rotate_xy(tfx, tfy, getattr(c, "azimuth", 0.0))
+        if rx + ry + tfz * 0.45 <= -0.10:
+            return
+    else:
+        rx, ry = rotate_xy(c.fx, c.fy, getattr(c, "azimuth", 0.0))
+        if rx + ry <= -0.10:
+            return
 
     bx, by, hz = c.base_x, c.base_y, c.head_z
     fx, fy, px, py = c.fx, c.fy, c.px, c.py

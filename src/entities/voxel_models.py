@@ -81,6 +81,75 @@ class _SSAASubCamera:
         return getattr(self._cam, name)
 
 
+class _SomersaultPitchCamera:
+    """
+    Entregável 2.1.2: Câmera de rotação 3D para o Mortal Aéreo 360° (Somersault Backflip).
+    Rotaciona todos os vértices 3D do personagem no plano sagital (frente/trás x altura Z)
+    em torno do centro de massa aéreo `(pivot_x, pivot_y, pivot_z)`.
+    """
+    def __init__(self, base_cam, pivot_x: float, pivot_y: float, pivot_z: float,
+                 fx: float, fy: float, px: float, py: float, angle_deg: float):
+        self._cam = base_cam
+        self.pivot_x = pivot_x
+        self.pivot_y = pivot_y
+        self.pivot_z = pivot_z
+        self.fx = fx
+        self.fy = fy
+        self.px = px
+        self.py = py
+        self.somersault_deg = angle_deg
+        self.somersault_rad = math.radians(angle_deg)
+        self._cos_a = math.cos(self.somersault_rad)
+        self._sin_a = math.sin(self.somersault_rad)
+        self.zoom = getattr(base_cam, "zoom", 1.0)
+        self.azimuth = getattr(base_cam, "azimuth", 0.0)
+        self.ground_z = getattr(base_cam, "ground_z", 0.0)
+
+    def transform_3d(self, wx: float, wy: float, wz: float = 0.0) -> tuple[float, float, float]:
+        dx = wx - self.pivot_x
+        dy = wy - self.pivot_y
+        dz = wz - self.pivot_z
+        f_comp = dx * self.fx + dy * self.fy
+        p_comp = dx * self.px + dy * self.py
+        # Backflip: cabeça (+dz) gira para trás (-f_comp) nos primeiros 90°, fica de cabeça para baixo em 180° e retorna em 360°
+        f_new = f_comp * self._cos_a - dz * self._sin_a
+        z_new = f_comp * self._sin_a + dz * self._cos_a
+        nx = self.pivot_x + self.fx * f_new + self.px * p_comp
+        ny = self.pivot_y + self.fy * f_new + self.py * p_comp
+        nz = self.pivot_z + z_new
+        if hasattr(self._cam, "transform_3d"):
+            return self._cam.transform_3d(nx, ny, nz)
+        return nx, ny, nz
+
+    def transform_dir_3d(self, dx: float, dy: float, dz: float = 0.0) -> tuple[float, float, float]:
+        f_comp = dx * self.fx + dy * self.fy
+        p_comp = dx * self.px + dy * self.py
+        f_new = f_comp * self._cos_a - dz * self._sin_a
+        z_new = f_comp * self._sin_a + dz * self._cos_a
+        nx = self.fx * f_new + self.px * p_comp
+        ny = self.fy * f_new + self.py * p_comp
+        nz = z_new
+        if hasattr(self._cam, "transform_dir_3d"):
+            return self._cam.transform_dir_3d(nx, ny, nz)
+        return nx, ny, nz
+
+    def apply(self, wx: float, wy: float, wz: float = 0.0) -> tuple[int, int]:
+        dx = wx - self.pivot_x
+        dy = wy - self.pivot_y
+        dz = wz - self.pivot_z
+        f_comp = dx * self.fx + dy * self.fy
+        p_comp = dx * self.px + dy * self.py
+        f_new = f_comp * self._cos_a - dz * self._sin_a
+        z_new = f_comp * self._sin_a + dz * self._cos_a
+        nx = self.pivot_x + self.fx * f_new + self.px * p_comp
+        ny = self.pivot_y + self.fy * f_new + self.py * p_comp
+        nz = self.pivot_z + z_new
+        return self._cam.apply(nx, ny, nz)
+
+    def __getattr__(self, name):
+        return getattr(self._cam, name)
+
+
 # Joe (American Ninja): paleta tirada do retrato (farda oliva, colete coiote, balaclava preta)
 JOE_BALACLAVA = (26, 27, 31)
 JOE_GLOVE = (28, 28, 30)
@@ -212,7 +281,7 @@ def render_voxel_humanoid(
             zoom = max(0.5, min(3.5, getattr(camera, "zoom", 1.0)))
             pad_x = int(95 * zoom) + 8
             pad_top = int(125 * zoom) + 8
-            pad_bot = int(52 * zoom) + 8
+            pad_bot = int(78 * zoom) + 8
             box_w = pad_x * 2
             box_h = pad_top + pad_bot
             cx, cy = camera.apply(wx, wy, wz)
@@ -335,6 +404,13 @@ def _render_voxel_humanoid(
         fx, fy = 1.0, 0.0
     px, py = -fy, fx
 
+    # Rotação 3D real de Mortal Aéreo 360° (Somersault Backflip — Entregável 2.1.2)
+    somersault_angle = float(extra_props.get("somersault_angle", 0.0)) if extra_props else 0.0
+    is_upside_down = False
+    if abs(somersault_angle) > 0.5:
+        camera = _SomersaultPitchCamera(camera, wx, wy, wz + 0.52, fx, fy, px, py, somersault_angle)
+        is_upside_down = math.cos(camera.somersault_rad) < -0.15
+
     # As costas do personagem estão voltadas para a câmera? (define se a mochila/katana vai antes ou depois do tronco)
     back_rx, back_ry = rotate_xy(-fx, -fy, getattr(camera, "azimuth", 0.0))
     back_to_camera = (back_rx + back_ry) > 0.0
@@ -437,6 +513,17 @@ def _render_voxel_humanoid(
         is_moving, walk_timer, is_melee, atk_progress,
         hip_w, is_female, char_type=char_type
     )
+    if abs(somersault_angle) > 0.5:
+        # Encolhimento acrobático dos joelhos/pés (Tuck) durante o mortal aéreo 360°
+        tuck = math.sin(math.radians(somersault_angle) * 0.5)
+        for _side in ("L", "R"):
+            _ld = legs_data[_side]
+            _th = _ld["thigh"]
+            _sh = _ld["shin"]
+            _ft = _ld["foot"]
+            _ld["thigh"] = (_th[0] + fx * 0.09 * tuck, _th[1] + fy * 0.09 * tuck, _th[2] + 0.06 * tuck)
+            _ld["shin"] = (_sh[0] - fx * 0.04 * tuck, _sh[1] - fy * 0.04 * tuck, _sh[2] + 0.16 * tuck)
+            _ld["foot"] = (_ft[0] - fx * 0.10 * tuck, _ft[1] - fy * 0.10 * tuck, _ft[2] + 0.20 * tuck)
 
     # Interpolação contínua de Pose (Pose LERP 0.08s — Entregável 2.1.9)
     pose_tracker = extra_props.get("pose_lerp_tracker") if extra_props else None
@@ -498,52 +585,56 @@ def _render_voxel_humanoid(
             char_type=char_type)
         if hasattr(model, "draw_behind") and state != "DYING_HEADLESS" and not (extra_props and extra_props.get("hide_head", False)):
             model.draw_behind(model_c)
-        if hasattr(model, "draw_legs"):
+
+    def _render_lower_body():
+        if model_c is not None and hasattr(model, "draw_legs"):
             model.draw_legs(model_c)
 
-    for side in (() if (model_c is not None and hasattr(model, "draw_legs")) else ("L", "R")):
-        ld = legs_data[side]
-        th_pos = ld["thigh"]
-        sh_pos = ld["shin"]
-        ft_pos = ld["foot"]
-        lift = ld["lift"]
+        for side in (() if (model_c is not None and hasattr(model, "draw_legs")) else ("L", "R")):
+            ld = legs_data[side]
+            th_pos = ld["thigh"]
+            sh_pos = ld["shin"]
+            ft_pos = ld["foot"]
 
-        # Coxa (Hakama superior / calça)
-        th_w = 0.10 if is_female else 0.12
-        draw_voxel_box(surface, camera, th_pos[0] - th_w/2, th_pos[1] - th_w/2, th_pos[2], th_w, th_w, 0.22, col_pants, outline=True, alpha=alpha)
+            # Coxa (Hakama superior / calça)
+            th_w = 0.10 if is_female else 0.12
+            draw_voxel_box(surface, camera, th_pos[0] - th_w/2, th_pos[1] - th_w/2, th_pos[2], th_w, th_w, 0.22, col_pants, outline=True, alpha=alpha)
 
-        # Joelho / Canela (Hakama afunilada ou bota alta)
-        sh_w = 0.09 if is_female else 0.11
-        shin_col = (95, 52, 28) if char_type == "musketeer" else col_pants
-        draw_voxel_box(surface, camera, sh_pos[0] - sh_w/2, sh_pos[1] - sh_w/2, sh_pos[2], sh_w, sh_w, 0.20, shin_col, outline=True, alpha=alpha)
+            # Joelho / Canela (Hakama afunilada ou bota alta)
+            sh_w = 0.09 if is_female else 0.11
+            shin_col = (95, 52, 28) if char_type == "musketeer" else col_pants
+            draw_voxel_box(surface, camera, sh_pos[0] - sh_w/2, sh_pos[1] - sh_w/2, sh_pos[2], sh_w, sh_w, 0.20, shin_col, outline=True, alpha=alpha)
 
-        # Tornozelo / Pele exposta
-        if (is_female and char_type != "musketeer") or char_type in ("ninja", "kenshin"):
-            draw_voxel_box(surface, camera, sh_pos[0] - 0.03, sh_pos[1] - 0.03, sh_pos[2] - 0.02, 0.06, 0.06, 0.04, skin_color, outline=False, alpha=alpha)
+            # Tornozelo / Pele exposta
+            if (is_female and char_type != "musketeer") or char_type in ("ninja", "kenshin"):
+                draw_voxel_box(surface, camera, sh_pos[0] - 0.03, sh_pos[1] - 0.03, sh_pos[2] - 0.02, 0.06, 0.06, 0.04, skin_color, outline=False, alpha=alpha)
 
-        # Pé com Sandália Waraji / Geta / Bota de couro
-        ft_w = 0.07 if is_female else 0.08
-        if char_type == "musketeer":
-            sandal_col = (85, 46, 24) # Bota de montaria de couro marrom rica
-        elif char_type == "american":
-            sandal_col = JOE_BOOT     # Bota de combate
-        elif char_type in ("saitou", "pirate"):
-            sandal_col = COLOR_BLACK
-        else:
-            sandal_col = COLOR_SANDAL
-        draw_voxel_box(surface, camera, ft_pos[0] - ft_w/2 + fx*0.02, ft_pos[1] - ft_w/2 + fy*0.02, ft_pos[2], ft_w, ft_w, 0.05, sandal_col, outline=True, alpha=alpha)
-        if char_type == "american" and model_c is None:
-            # Cano alto da bota e joelheira tática
-            draw_voxel_box(surface, camera, sh_pos[0] - sh_w/2 - 0.008, sh_pos[1] - sh_w/2 - 0.008, sh_pos[2] - 0.01, sh_w + 0.016, sh_w + 0.016, 0.11, JOE_BOOT, outline=True, alpha=alpha)
-            draw_voxel_box(surface, camera, sh_pos[0] - 0.055 + fx*0.035, sh_pos[1] - 0.055 + fy*0.035, sh_pos[2] + 0.13, 0.11, 0.11, 0.075, JOE_KNEE_PAD, outline=True, alpha=alpha)
-        # Tira frontal preta da sandália
-        if sandal_col == COLOR_SANDAL:
-            draw_voxel_box(surface, camera, ft_pos[0] - 0.02 + fx*0.03, ft_pos[1] - 0.02 + fy*0.03, ft_pos[2] + 0.03, 0.04, 0.04, 0.03, COLOR_BLACK, outline=False, alpha=alpha)
+            # Pé com Sandália Waraji / Geta / Bota de couro
+            ft_w = 0.07 if is_female else 0.08
+            if char_type == "musketeer":
+                sandal_col = (85, 46, 24) # Bota de montaria de couro marrom rica
+            elif char_type == "american":
+                sandal_col = JOE_BOOT     # Bota de combate
+            elif char_type in ("saitou", "pirate"):
+                sandal_col = COLOR_BLACK
+            else:
+                sandal_col = COLOR_SANDAL
+            draw_voxel_box(surface, camera, ft_pos[0] - ft_w/2 + fx*0.02, ft_pos[1] - ft_w/2 + fy*0.02, ft_pos[2], ft_w, ft_w, 0.05, sandal_col, outline=True, alpha=alpha)
+            if char_type == "american" and model_c is None:
+                # Cano alto da bota e joelheira tática
+                draw_voxel_box(surface, camera, sh_pos[0] - sh_w/2 - 0.008, sh_pos[1] - sh_w/2 - 0.008, sh_pos[2] - 0.01, sh_w + 0.016, sh_w + 0.016, 0.11, JOE_BOOT, outline=True, alpha=alpha)
+                draw_voxel_box(surface, camera, sh_pos[0] - 0.055 + fx*0.035, sh_pos[1] - 0.055 + fy*0.035, sh_pos[2] + 0.13, 0.11, 0.11, 0.075, JOE_KNEE_PAD, outline=True, alpha=alpha)
+            # Tira frontal preta da sandália
+            if sandal_col == COLOR_SANDAL:
+                draw_voxel_box(surface, camera, ft_pos[0] - 0.02 + fx*0.03, ft_pos[1] - 0.02 + fy*0.03, ft_pos[2] + 0.03, 0.04, 0.04, 0.03, COLOR_BLACK, outline=False, alpha=alpha)
 
-    # -------------------------------------------------------------
-    # 2. QUADRIL, FAIXA OBI E CINTURA FEMININA/MASCULINA
-    # -------------------------------------------------------------
-    draw_voxel_box(surface, camera, base_x - pelvis_w/2, base_y - pelvis_d/2, pelvis_z, pelvis_w, pelvis_d, 0.08, col_pants, outline=True, alpha=alpha, texture=_material(model_c, col_pants))
+        # -------------------------------------------------------------
+        # 2. QUADRIL, FAIXA OBI E CINTURA FEMININA/MASCULINA
+        # -------------------------------------------------------------
+        draw_voxel_box(surface, camera, base_x - pelvis_w/2, base_y - pelvis_d/2, pelvis_z, pelvis_w, pelvis_d, 0.08, col_pants, outline=True, alpha=alpha, texture=_material(model_c, col_pants))
+
+    if not is_upside_down:
+        _render_lower_body()
 
 
     # -------------------------------------------------------------
@@ -1119,6 +1210,9 @@ def _render_voxel_humanoid(
     # -------------------------------------------------------------
     # 6. ARMAS E ESPADAS JÁ ORDENADAS DINAMICAMENTE EM BACK/FRONT ITEMS
     # -------------------------------------------------------------
+    if is_upside_down:
+        # Quando de cabeça para baixo no mortal aéreo 360°, membros inferiores (pernas/quadril) ficam no topo e são desenhados por último
+        _render_lower_body()
 
 
 

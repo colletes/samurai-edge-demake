@@ -427,8 +427,8 @@ CHARACTER_ANIM_BUTTONS = {
         ("RYUU_TSUI_SEN", "4. Golpe 2: Ryuu Tsui Sen (3 Fases + Zanzou)", 0.65),
         ("SHUKUCHI", "5. Esquiva: Shukuchi Dash (Zanzou)", 0.48),
         ("SHUKUCHI_CANCEL", "6. Cancel: Shukuchi Battou-Giri (40% -> Iai)", 0.72),
-        ("PARRY_GROUND", "7. Parry Terrestre: Backhop + Noto", 0.68),
-        ("PARRY_AERIAL", "8. Parry Aéreo: Mortal 360° no Ar", 0.75),
+        ("PARRY_GROUND", "7. Parry Terrestre: Backhop + Noto", 0.85),
+        ("PARRY_AERIAL", "8. Parry Aéreo: Mortal 360° no Ar", 1.15),
         ("INTRO", "9. Intro: Meditação & Koiguchi-Kiri", 2.00),
         ("VICTORY", "0. Vitória: Chiburi Lateral & Noto", 2.20),
         ("FINISHER_1", "F1. Finisher 1: Ittou Ryoudan (5 Zanzou)", 1.25),
@@ -924,19 +924,19 @@ class ModelInspector:
                     extra_props["noto_prog"] = u
         elif act == "PARRY_AERIAL":
             # 2.1.2: Mortal 360° para trás no ar
-            if prog < 0.62:
-                u = prog / 0.62
+            if prog < 0.65:
+                u = prog / 0.65
                 state = "PARRY_BACKHOP"
-                wz = max(0.0, 0.85 * (1.0 - u) + math.sin(u * math.pi) * 0.35)
-                wx, wy = -0.28 * u, -0.28 * u
+                wz = math.sin(u * math.pi) * 0.95
+                wx, wy = -0.32 * u, -0.32 * u
                 if not is_legacy:
                     extra_props["is_aerial_parry"] = True
                     extra_props["somersault_angle"] = u * 360.0
-                ghosts.append((-0.10 * u, -0.10 * u, wz + 0.12, 140))
+                ghosts.append((-0.12 * u, -0.12 * u, wz + 0.12, 140))
             else:
-                u = (prog - 0.62) / 0.38
+                u = (prog - 0.65) / 0.35
                 state = "RECOVERY"
-                wx, wy = -0.28, -0.28
+                wx, wy = -0.32, -0.32
                 if not is_legacy:
                     extra_props["pose"] = "noto_sheath"
                     extra_props["noto_prog"] = u
