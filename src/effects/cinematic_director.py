@@ -110,6 +110,18 @@ class CinematicDirector:
         self.finisher_strike_duration: float = 0.52
         self.finisher_impact_played: bool = False
 
+        # Kenshi (2.1.4a & 2.1.4b): Ittou Ryoudan (Kenshin Split) & Amakakeru Ryuu Tsui Sen (Vertical Bisection)
+        self.kenshin_split_attacker = None
+        self.kenshin_split_victim = None
+        self.kenshin_split_timer: float = 0.0
+        self.kenshin_split_duration: float = 0.65
+        self.kenshin_noto_played: bool = False
+        self.ryuu_fatal_attacker = None
+        self.ryuu_fatal_victim = None
+        self.ryuu_fatal_timer: float = 0.0
+        self.ryuu_fatal_duration: float = 0.60
+        self.ryuu_fatal_impact_played: bool = False
+
         # Câmera 3-Fases e Enquadramento Anamórfico (CinemaScope 2.39:1)
         self.camera_focus_target: tuple[float, float] = (10.5, 10.5)
         self.cinematic_zoom: float = 1.0
@@ -190,7 +202,8 @@ class CinematicDirector:
             "WALL_SMASH_FATAL": ("気合衝撃", "KIAI SHOUGEKI — RUGIDO DE CHI"),
             "TRIPLE_SCISSOR_CLEAVE": ("双刃十字", "SOUJIN JUUJI — TESOURA CARMIM"),
             "MAI_X_CLEAVE": ("紅舞必殺", "BENIMAI HISSATSU — DANÇA DA MORTE"),
-            "VERTICAL_BISECTION": ("龍槌閃", "RYUU TSUI SEN — FENDA DO DRAGÃO"),
+            "KENSHIN_SPLIT": ("一刀両断", "ITTOU RYOUDAN — UM CORTE, DUAS PARTES"),
+            "VERTICAL_BISECTION": ("龍槌閃", "RYUU TSUI SEN — DIVISÃO CELESTIAL DE BAMBU"),
             "DUAL_IMPALE_X_SPREAD": ("二天一流", "NITEN ICHI-RYUU — DUAS LÂMINAS"),
             "ARMORED_HEART_IMPALE": ("金剛貫通", "KONGOU KANTSUU — EMPALAMENTO DE FERRO"),
             "NAGINATA_HOIST_SLAM": ("金剛叩落", "KONGOU TATAKI-OTOSHI — ESMAGAMENTO ADAMANTINO"),
@@ -361,6 +374,14 @@ class CinematicDirector:
         self.finisher_strike_timer = 0.0
         self.finisher_strike_duration = 0.0
         self.finisher_impact_played = False
+        self.kenshin_split_attacker = None
+        self.kenshin_split_victim = None
+        self.kenshin_split_timer = 0.0
+        self.kenshin_noto_played = False
+        self.ryuu_fatal_attacker = None
+        self.ryuu_fatal_victim = None
+        self.ryuu_fatal_timer = 0.0
+        self.ryuu_fatal_impact_played = False
 
         if death_style == "HYAKURETSU_BODY_EXPLOSION":
             self.hyakuretsu_attacker = attacker
@@ -548,19 +569,87 @@ class CinematicDirector:
                 attacker.state = "ATTACK"
                 attacker.state_timer = 0.40
 
-        elif death_style == "VERTICAL_BISECTION":
-            # Kenshi: Ryuu Tsui Sen — Queda cortante vertical cravando os pés no solo
-            if attacker is not None:
-                attacker.wz = 0.0
-                attacker.set_facing(victim.wx, victim.wy)
-                attacker.state = "ATTACK"
-                attacker.state_timer = 0.32
-            dur = 0.58
-            self.bw_flash_duration = dur + 0.10
+        elif death_style == "KENSHIN_SPLIT":
+            # Entregável 2.1.4a: Kenshi Primário — Ittou Ryoudan (Kenshin Split — 一刀両断)
+            # Zoom 2.2x, Kenshi atravessa o oponente deixando 5 sombras Zanzou, para de costas por 0.35s e clica a katana na bainha (Noto)
+            self.cinematic_zoom_target = 2.20
+            self.kenshin_split_attacker = attacker
+            self.kenshin_split_victim = victim
+            dur = 0.65
+            self.kenshin_split_duration = dur
+            self.kenshin_split_timer = dur
+            self.kenshin_noto_played = False
+            self.bw_flash_duration = dur + 0.15
             self.freeze_timer = dur
-            self.bw_flash_timer = dur + 0.10
+            self.bw_flash_timer = dur + 0.15
             self.delayed_death_timer = dur
-            self._arm_closeup_finisher_strike(attacker, victim, duration=dur)
+            if attacker is not None and victim is not None:
+                dx = victim.wx - attacker.wx
+                dy = victim.wy - attacker.wy
+                dist = math.hypot(dx, dy)
+                fx, fy = (dx / dist, dy / dist) if dist > 1e-4 else (attacker.facing_x, attacker.facing_y)
+                attacker.facing_x, attacker.facing_y = fx, fy
+                # Gerar 5 sombras Zanzou ao longo da trajetória atravessando o oponente
+                if not hasattr(attacker, "zanzou_ghosts"):
+                    attacker.zanzou_ghosts = []
+                attacker.zanzou_ghosts.clear()
+                start_x = victim.wx - fx * 1.10
+                start_y = victim.wy - fy * 1.10
+                end_x = victim.wx + fx * 1.05
+                end_y = victim.wy + fy * 1.05
+                for i in range(5):
+                    u = i / 4.0
+                    attacker.zanzou_ghosts.append({
+                        "wx": start_x + (end_x - start_x) * u,
+                        "wy": start_y + (end_y - start_y) * u,
+                        "wz": 0.0,
+                        "facing_x": fx,
+                        "facing_y": fy,
+                        "alpha": int(130 + 18 * i),
+                        "duration": 0.85,
+                    })
+                # Posicionar Kenshi além da vítima de costas para ela, iniciando o embainhamento (Noto)
+                attacker.wx = end_x
+                attacker.wy = end_y
+                attacker.wz = 0.0
+                attacker.state = "RECOVERY"
+                attacker.state_timer = 0.45
+
+        elif death_style == "VERTICAL_BISECTION":
+            # Entregável 2.1.4b: Kenshi Especial — Divisão Celestial de Bambu (Amakakeru Ryuu Tsui Sen — 龍槌閃)
+            # Fase 1 (0.25s): Salto vertical explosivo com 5 sombras Zanzou até o ápice (wz=2.5m), katana erguida com duas mãos + brilho dourado.
+            # Fase 2 (0.35s): Queda meteórica partindo o oponente verticalmente do crânio ao chão com cratera de faíscas.
+            self.cinematic_zoom_target = 1.95
+            self.ryuu_fatal_attacker = attacker
+            self.ryuu_fatal_victim = victim
+            dur = 0.60
+            self.ryuu_fatal_duration = dur
+            self.ryuu_fatal_timer = dur
+            self.ryuu_fatal_impact_played = False
+            self.bw_flash_duration = dur + 0.18
+            self.freeze_timer = dur
+            self.bw_flash_timer = dur + 0.18
+            self.delayed_death_timer = dur
+            if attacker is not None and victim is not None:
+                attacker.set_facing(victim.wx, victim.wy)
+                attacker.state = "RYUU_TSUI_SEN"
+                attacker.ryuu_phase = "APEX"
+                attacker.wz = 2.50
+                attacker.state_timer = dur
+                if not hasattr(attacker, "zanzou_ghosts"):
+                    attacker.zanzou_ghosts = []
+                attacker.zanzou_ghosts.clear()
+                for i in range(5):
+                    u = (i + 1) / 5.0
+                    attacker.zanzou_ghosts.append({
+                        "wx": attacker.wx - attacker.facing_x * (1.0 - u) * 0.45,
+                        "wy": attacker.wy - attacker.facing_y * (1.0 - u) * 0.45,
+                        "wz": 0.35 + 2.15 * u,
+                        "facing_x": attacker.facing_x,
+                        "facing_y": attacker.facing_y,
+                        "alpha": int(120 + 20 * i),
+                        "duration": 0.80,
+                    })
 
         elif death_style in ("TESSEN_DECAP", "THROAT_TEMPLE_CRUSH", "METEOR_STAFF_CRUSH", "SPEAR_HEART_SLIDE", "TRAP_AND_EXECUTE", "PINNED_TO_EARTH", "HAMAYA_HOLY_PIERCE", "DOKUKIRI_MELT", "TSUPPARI_SONIC_DECAP", "TACHIAI_SHATTER_SLAM", "STILETTO_CAROTID_VITRIOL", "ALCHEMIC_ACID_DISSOLVE", "ALCHEMIC_FIRE_ASH", "ALCHEMIC_ETHER_SUFFOCATION", "ALCHEMIC_FROST_SHATTER", "ALCHEMIC_MIASMA_MELT"):
             if attacker is not None and death_style == "METEOR_STAFF_CRUSH":
@@ -1161,6 +1250,92 @@ class CinematicDirector:
                         particles.append(SmokeParticle(vic.wx + random.uniform(-0.25, 0.25), vic.wy + random.uniform(-0.25, 0.25), wz=0.05, color=(35, 18, 45), radius=0.35))
                     if random.random() < 0.45:
                         particles.append(SparkParticle(vic.wx + random.uniform(-0.2, 0.2), vic.wy + random.uniform(-0.2, 0.2), 0.1, color=random.choice([(60, 240, 160), (140, 60, 210)])))
+
+        # 8a. Kenshi Finisher Primário: Ittou Ryoudan (Kenshin Split — 2.1.4a)
+        if self.kenshin_split_timer > 0:
+            self.kenshin_split_timer = max(0.0, self.kenshin_split_timer - effective_dt)
+            atk = self.kenshin_split_attacker
+            vic = self.kenshin_split_victim
+            if atk is not None and vic is not None:
+                prog = 1.0 - (self.kenshin_split_timer / max(0.001, self.kenshin_split_duration))
+                atk.state = "RECOVERY"
+                atk.state_timer = max(0.02, 0.45 * (1.0 - prog))
+                # No instante 0.35s após parar de costas, clica a katana na bainha (Noto)
+                if prog >= (0.35 / 0.65) and not self.kenshin_noto_played:
+                    self.kenshin_noto_played = True
+                    try:
+                        from src.audio.sound_manager import get_sound_manager
+                        from src.audio.sound_events import SoundEvent
+                        get_sound_manager().play(SoundEvent.PARRY, volume_scale=0.85)
+                    except Exception:
+                        pass
+                    if particles is not None:
+                        from src.effects.particles import SparkParticle
+                        for _ in range(6):
+                            particles.append(SparkParticle(atk.wx, atk.wy, 0.55, color=(255, 235, 130)))
+
+        # 8b. Kenshi Finisher Especial: Divisão Celestial de Bambu (Amakakeru Ryuu Tsui Sen — 2.1.4b)
+        if self.ryuu_fatal_timer > 0:
+            self.ryuu_fatal_timer = max(0.0, self.ryuu_fatal_timer - effective_dt)
+            atk = self.ryuu_fatal_attacker
+            vic = self.ryuu_fatal_victim
+            if atk is not None and vic is not None:
+                elapsed = self.ryuu_fatal_duration - self.ryuu_fatal_timer
+                atk.set_facing(vic.wx, vic.wy)
+                if elapsed < 0.25:
+                    # Fase 1 (0.25s): Salto vertical explosivo e suspensão no ápice (wz=2.5m) com katana erguida nas duas mãos
+                    u = elapsed / 0.25
+                    atk.state = "RYUU_TSUI_SEN"
+                    atk.ryuu_phase = "APEX"
+                    atk.wz = 2.50
+                    atk.state_timer = 0.25 - elapsed
+                    if particles is not None and random.random() < 0.55:
+                        from src.effects.particles import SparkParticle
+                        particles.append(SparkParticle(atk.wx, atk.wy, 2.75, color=(255, 230, 110)))
+                else:
+                    # Fase 2 (0.35s): Queda meteórica vertical partindo o oponente do crânio ao chão com cratera de faíscas
+                    d_u = min(1.0, (elapsed - 0.25) / 0.35)
+                    atk.state = "RYUU_TSUI_SEN"
+                    atk.ryuu_phase = "DESCEND"
+                    atk.wz = max(0.0, 2.50 * (1.0 - min(1.0, d_u * 1.45)))
+                    atk.state_timer = max(0.02, 0.35 * (1.0 - d_u))
+                    if d_u >= 0.55 and not self.ryuu_fatal_impact_played:
+                        self.ryuu_fatal_impact_played = True
+                        atk.wz = 0.0
+                        try:
+                            from src.audio.sound_manager import get_sound_manager
+                            from src.audio.sound_events import SoundEvent
+                            get_sound_manager().play(SoundEvent.SWORD_SLASH, volume_scale=1.0)
+                            get_sound_manager().play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
+                        except Exception:
+                            pass
+                        if particles is not None:
+                            from src.effects.particles import SparkParticle, SmokeParticle, BloodParticle
+                            for _ in range(18):
+                                particles.append(SparkParticle(
+                                    vic.wx + random.uniform(-0.30, 0.30),
+                                    vic.wy + random.uniform(-0.30, 0.30),
+                                    random.uniform(0.05, 0.90),
+                                    color=random.choice([(255, 225, 110), (255, 80, 70), (255, 250, 220)])
+                                ))
+                            for _ in range(10):
+                                particles.append(SmokeParticle(
+                                    vic.wx + random.uniform(-0.25, 0.25),
+                                    vic.wy + random.uniform(-0.25, 0.25),
+                                    wz=0.08,
+                                    color=(210, 200, 190),
+                                    radius=0.45
+                                ))
+                            for _ in range(18):
+                                particles.append(BloodParticle(
+                                    vic.wx + random.uniform(-0.12, 0.12),
+                                    vic.wy + random.uniform(-0.12, 0.12),
+                                    random.uniform(0.25, 0.95)
+                                ))
+                    if self.ryuu_fatal_timer <= 0.0:
+                        atk.wz = 0.0
+                        atk.state = "RECOVERY"
+                        atk.state_timer = 0.45
 
         # 8. Coreografia universal de golpe final no ângulo fechado (após descongelar o tempo)
         if self.finisher_strike_timer > 0:

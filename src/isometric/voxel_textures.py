@@ -467,12 +467,90 @@ def _lacquer(f: _Face):
     f.dot((255, 255, 255), 0.24, 0.32, size=2)
 
 
+def _chirimen_silk(f: _Face):
+    """
+    Crepe de Seda Carmesim Japonês (Chirimen / 縮緬):
+    - Micro-relevo granulado da trama de fios de seda torcida.
+    - Dobras diagonais acetinadas com brilho nacarado suave.
+    """
+    dark_weave = _tone(f.shade, 0.80)
+    light_sheen = _light(f.shade, 1.32, 14)
+    pearl_highlight = _light(f.shade, 1.62, 32)
+
+    # 1. Dobras acetinadas diagonais da seda Chirimen
+    n_folds = max(2, min(_count(f.ulen, 0.10, f.lu), 5))
+    for i in range(1, n_folds):
+        u = i / n_folds
+        f.line(dark_weave if i % 2 else light_sheen, u - 0.04, 0.02, u + 0.04, 0.98)
+        if i % 2:
+            f.line(pearl_highlight, u + 0.03, 0.08, u + 0.09, 0.92)
+
+    # 2. Micro-granulação orgânica característica do crepe Chirimen
+    n_grains = max(4, min(14, int(f.lu * f.lv / 95)))
+    for k in range(n_grains):
+        f.dot(pearl_highlight if k % 3 == 0 else dark_weave, f.random(), f.random(), 1)
+
+
+def _indigo_linen(f: _Face):
+    """
+    Linho Índigo Escuro Pregueado (Hakama Tradicional):
+    - Pregas verticais estruturadas (Hida) com vincos profundos e arestas iluminadas.
+    - Trama horizontal sutil de fibras de linho tingido em Aizome.
+    """
+    dark_pleat = _tone(f.shade, 0.68)
+    light_ridge = _tone(f.shade, 1.18)
+    weft_thread = _tone(f.shade, 0.88)
+
+    # 1. Pregas verticais nítidas (Hida)
+    n_pleats = min(_count(f.ulen, 0.045, f.lu), 12)
+    for i in range(1, n_pleats):
+        u = i / n_pleats
+        f.line(dark_pleat, u, 0.0, u, 1.0)
+        if i % 2 and f.lu / n_pleats > 4.0:
+            f.line(light_ridge, (i + 0.45) / n_pleats, 0.04, (i + 0.45) / n_pleats, 0.96)
+
+    # 2. Fios horizontais de linho rústico
+    n_weft = min(_count(f.vlen, 0.09, f.lv), 8)
+    for j in range(1, n_weft, 2):
+        f.line(weft_thread, 0.02, j / n_weft, 0.98, j / n_weft)
+
+
+def _urushi_lacquer(f: _Face):
+    """
+    Laca Urushi Negra/Carmesim de Alto Brilho (Bainha Saya):
+    - Reflexo especular espelhado longitudinal com transição de horizonte e ponto de luz puro.
+    """
+    _lacquer(f)
+    f.line((255, 245, 235), 0.24, 0.06, 0.25, 0.94, width=1)
+
+
+def _tamahagane_hamon(f: _Face):
+    """
+    Aço Tamahagane Japonês Forjado com Linha de Têmpera Hamon Ondulada (Katana):
+    - Dorso (Mune) em aço polido azulado-escuro e gume (Ha) espelhado prateado.
+    - Linha Hamon sinuosa (Notare/Gunome) correndo ao longo do comprimento da lâmina.
+    """
+    _metal(f)
+    hamon_glow = (242, 248, 255)
+    hamon_core = (255, 255, 255)
+    # Desenha a onda Hamon ao longo do eixo principal da lâmina
+    steps = 6
+    for s in range(steps):
+        t0 = s / steps
+        t1 = (s + 1) / steps
+        w0 = 0.56 + 0.14 * math.sin(t0 * math.pi * 4.0)
+        w1 = 0.56 + 0.14 * math.sin(t1 * math.pi * 4.0)
+        f.line(hamon_glow, w0 - 0.04, t0, w1 - 0.04, t1, width=1)
+        f.line(hamon_core, w0, t0, w1, t1, width=1)
+
+
 PATTERNS = {
     "planks": _planks, "stone": _stone, "roof_tile": _roof_tile, "thatch": _thatch, "bark": _bark,
     "cloth": _cloth, "plaster": _plaster, "foliage": _foliage, "marble": _marble, "stripes": _stripes,
     "pleats": _pleats, "weave": _weave, "gloss": _gloss,
     "silk": _silk, "latex": _latex, "leather": _leather, "velvet": _velvet, "brocade": _brocade, "canvas": _canvas, "knit": _knit,
     "brushed_metal": _brushed_metal, "metal": _metal, "chrome": _chrome, "steel": _steel, "gold": _gold, "lacquer": _lacquer,
+    "chirimen_silk": _chirimen_silk, "indigo_linen": _indigo_linen, "urushi_lacquer": _urushi_lacquer, "tamahagane_hamon": _tamahagane_hamon,
 }
 
 

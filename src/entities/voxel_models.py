@@ -30,7 +30,7 @@ from src.isometric.mesh_primitives import (
 )
 from src.isometric.iso_math import rotate_xy
 from src.entities import model_kit, okuni_model, kenshi_model, murasaki_model, musashi_model, hanzo_model, joe_model, saitou_model, teppo_model, kasumi_model, tomoe_model, anne_model, julie_model, ren_model, chiyo_model, benkei_model, orin_model, goro_model, ichi_model, valerius_model, seimei_model, daiki_model, aoi_model, raiden_model, hendrika_model, pose_scripts
-from src.isometric.voxel_rig import calc_leg_joints, calc_blade_slash_3d, calc_character_idle_pose, calc_spine_and_pelvis_rig
+from src.isometric.voxel_rig import calc_leg_joints, calc_blade_slash_3d, calc_character_idle_pose, calc_spine_and_pelvis_rig, blend_pose_snapshots_lerp
 from src.config import (
     COLOR_STEEL, COLOR_GOLD, COLOR_WHITE, COLOR_BLACK,
     COLOR_RED_KIMONO, COLOR_RED_HAIR, COLOR_RED_HAKAMA, COLOR_RED_AURA,
@@ -54,6 +54,32 @@ SKIN_SHADOW = (220, 180, 150)
 COLOR_SANDAL = (185, 155, 105)
 COLOR_SCABBARD_DARK = (32, 28, 32)
 _SHADOW_SURF_CACHE: dict[tuple[int, int, int], pygame.Surface] = {}
+_SSAA_CANVAS_POOL: dict[tuple[int, int], pygame.Surface] = {}
+
+
+class _SSAASubCamera:
+    """
+    Entregável 2.1.7: Câmera virtual para renderização Supersampling 2x Offscreen (SSAA).
+    Projeta coordenadas de mundo (wx, wy, wz) com o dobro da resolução (2x) dentro de um buffer
+    local centrado no combatente, permitindo reamostragem bilinear `smoothscale` sem serrilhado (anti-aliasing)
+    e sem tearing.
+    """
+    def __init__(self, base_cam, origin_sx: int, origin_sy: int, scale: int = 2):
+        self._cam = base_cam
+        self._ox = origin_sx
+        self._oy = origin_sy
+        self._scale = scale
+        self.zoom = getattr(base_cam, "zoom", 1.0) * scale
+        self.azimuth = getattr(base_cam, "azimuth", 0.0)
+        self.ground_z = getattr(base_cam, "ground_z", 0.0)
+
+    def apply(self, wx: float, wy: float, wz: float = 0.0) -> tuple[int, int]:
+        sx, sy = self._cam.apply(wx, wy, wz)
+        return int((sx - self._ox) * self._scale), int((sy - self._oy) * self._scale)
+
+    def __getattr__(self, name):
+        return getattr(self._cam, name)
+
 
 # Joe (American Ninja): paleta tirada do retrato (farda oliva, colete coiote, balaclava preta)
 JOE_BALACLAVA = (26, 27, 31)
@@ -178,6 +204,43 @@ def render_voxel_humanoid(
         state = frame.state
         extra_props = {**(extra_props or {}), **frame.extra}
         alpha = int(alpha * frame.alpha)
+
+    # Entregável 2.1.7: Supersampling 2x Offscreen (SSAA) & Anti-Aliasing Bilinear
+    if extra_props and extra_props.get("ssaa_2x", False) and is_alive and state not in ("CORPSE_SLICED", "DEAD", "PINNED_DOWN"):
+        from src.effects import quality
+        if quality.is_high():
+            zoom = max(0.5, min(3.5, getattr(camera, "zoom", 1.0)))
+            pad_x = int(95 * zoom) + 8
+            pad_top = int(125 * zoom) + 8
+            pad_bot = int(52 * zoom) + 8
+            box_w = pad_x * 2
+            box_h = pad_top + pad_bot
+            cx, cy = camera.apply(wx, wy, wz)
+            ox = cx - pad_x
+            oy = cy - pad_top
+            sw, sh = surface.get_size()
+            if ox + box_w > 0 and oy + box_h > 0 and ox < sw and oy < sh:
+                ss_w, ss_h = box_w * 2, box_h * 2
+                key = (ss_w, ss_h)
+                hi_surf = _SSAA_CANVAS_POOL.get(key)
+                if hi_surf is None:
+                    if len(_SSAA_CANVAS_POOL) > 8:
+                        _SSAA_CANVAS_POOL.clear()
+                    hi_surf = pygame.Surface((ss_w, ss_h), pygame.SRCALPHA)
+                    _SSAA_CANVAS_POOL[key] = hi_surf
+                hi_surf.fill((0, 0, 0, 0))
+                sub_cam = _SSAASubCamera(camera, ox, oy, scale=2)
+                inner_props = dict(extra_props)
+                inner_props["ssaa_2x"] = False
+                _render_voxel_humanoid(
+                    hi_surf, sub_cam, wx, wy, wz, facing_x, facing_y,
+                    state, state_timer, is_alive, char_type,
+                    walk_timer, alpha, is_moving, inner_props
+                )
+                lo_surf = pygame.transform.smoothscale(hi_surf, (box_w, box_h))
+                surface.blit(lo_surf, (ox, oy))
+                return
+
     _render_voxel_humanoid(surface, camera, wx, wy, wz, facing_x, facing_y, state, state_timer, is_alive, char_type,
                            walk_timer, alpha, is_moving, extra_props)
 
@@ -373,6 +436,44 @@ def _render_voxel_humanoid(
         hip_w, is_female, char_type=char_type
     )
 
+    # Interpolação contínua de Pose (Pose LERP 0.08s — Entregável 2.1.9)
+    pose_tracker = extra_props.get("pose_lerp_tracker") if extra_props else None
+    pose_lerp_alpha = 1.0
+    raw_local_legs = {}
+    for _side in ("L", "R"):
+        _ld = legs_data[_side]
+        raw_local_legs[_side] = {
+            "thigh": [_ld["thigh"][0] - base_x, _ld["thigh"][1] - base_y, _ld["thigh"][2] - base_z],
+            "shin": [_ld["shin"][0] - base_x, _ld["shin"][1] - base_y, _ld["shin"][2] - base_z],
+            "foot": [_ld["foot"][0] - base_x, _ld["foot"][1] - base_y, _ld["foot"][2] - base_z],
+            "lift": _ld.get("lift", 0.0),
+        }
+    if isinstance(pose_tracker, dict):
+        cur_pose_key = (state, bool(is_moving), extra_props.get("pose", ""), extra_props.get("ryuu_phase", ""))
+        prev_key = pose_tracker.get("pose_key")
+        lerp_dur = max(0.001, float(pose_tracker.get("lerp_duration", 0.08)))
+        if prev_key is not None and prev_key != cur_pose_key and pose_tracker.get("last_snap") is not None:
+            pose_tracker["prev_snap"] = pose_tracker["last_snap"]
+            pose_tracker["blend_timer"] = lerp_dur * 0.80  # Inicia em 20% da nova pose e interpola os 80% restantes em 0.08s
+            pose_tracker["transitions_count"] = pose_tracker.get("transitions_count", 0) + 1
+        pose_tracker["pose_key"] = cur_pose_key
+        bt = float(pose_tracker.get("blend_timer", 0.0))
+        if bt > 0.0 and pose_tracker.get("prev_snap") is not None:
+            pose_lerp_alpha = max(0.0, min(1.0, 1.0 - (bt / lerp_dur)))
+            blended_legs_snap = blend_pose_snapshots_lerp(
+                {"legs_data": pose_tracker["prev_snap"].get("legs_data", raw_local_legs)},
+                {"legs_data": raw_local_legs},
+                pose_lerp_alpha,
+            )["legs_data"]
+            for _side in ("L", "R"):
+                _bld = blended_legs_snap[_side]
+                legs_data[_side] = {
+                    "thigh": [_bld["thigh"][0] + base_x, _bld["thigh"][1] + base_y, _bld["thigh"][2] + base_z],
+                    "shin": [_bld["shin"][0] + base_x, _bld["shin"][1] + base_y, _bld["shin"][2] + base_z],
+                    "foot": [_bld["foot"][0] + base_x, _bld["foot"][1] + base_y, _bld["foot"][2] + base_z],
+                    "lift": _bld.get("lift", 0.0),
+                }
+
     pelvis_z = base_z + (0.48 if is_female else 0.46)
     pelvis_w = 0.35 if char_type in ("benkei", "raiden") else (0.27 if char_type == "kenshin" else (0.24 if is_female else 0.28))
     pelvis_d = 0.27 if char_type in ("benkei", "raiden") else (0.18 if is_female else 0.21)
@@ -526,6 +627,29 @@ def _render_voxel_humanoid(
             arm_r_x, arm_r_y, arm_r_z = arm_r_pose
             if model_c is not None and hasattr(model, "idle_arms"):
                 (arm_l_x, arm_l_y, arm_l_z), (arm_r_x, arm_r_y, arm_r_z) = model.idle_arms(model_c)
+
+    if isinstance(pose_tracker, dict):
+        raw_local_arm_l = (arm_l_x - base_x, arm_l_y - base_y, arm_l_z - base_z)
+        raw_local_arm_r = (arm_r_x - base_x, arm_r_y - base_y, arm_r_z - base_z)
+        cur_full_snap = {
+            "arm_l": raw_local_arm_l,
+            "arm_r": raw_local_arm_r,
+            "legs_data": raw_local_legs,
+        }
+        if pose_lerp_alpha < 1.0 and pose_tracker.get("prev_snap") is not None:
+            blended_full = blend_pose_snapshots_lerp(
+                pose_tracker["prev_snap"],
+                cur_full_snap,
+                pose_lerp_alpha,
+            )
+            bl_al = blended_full["arm_l"]
+            bl_ar = blended_full["arm_r"]
+            arm_l_x, arm_l_y, arm_l_z = base_x + bl_al[0], base_y + bl_al[1], base_z + bl_al[2]
+            arm_r_x, arm_r_y, arm_r_z = base_x + bl_ar[0], base_y + bl_ar[1], base_z + bl_ar[2]
+            pose_tracker["last_snap"] = blended_full
+        else:
+            pose_tracker["last_snap"] = cur_full_snap
+        pose_tracker["last_lerp_alpha"] = pose_lerp_alpha
 
     # Cálculo da profundidade da câmera (maior valor = mais perto da câmera)
     cam_az = getattr(camera, "azimuth", 0.0)

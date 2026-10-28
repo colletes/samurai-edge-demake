@@ -23,34 +23,61 @@ class RedSamurai(Samurai):
         self.char_type = "kenshin"
         self.speed = 5.4  # Agilidade máxima do retalhador
 
-        # Parâmetros do Iai-jutsu
-        self.dash_speed = 22.0
-        self.dash_duration = 0.16   # Avanço supersônico
-        self.recovery_duration = 0.60 # Rebalanceamento: era 0.80 (punição excessiva quando usado como engajamento à distância)
-        self.attack_range = 2.4
+        # Parâmetros do Iai-jutsu (Entregável 2.1.1: Shukuchi Battoujutsu Slice)
+        self.iai_startup_duration = 0.10  # 6 frames de postura Iai profunda com brilho na tsuba (Koiguchi-kiri)
+        self.iai_startup_timer = 0.0
+        self.is_shukuchi_cancel = False
+        self.base_dash_speed = 20.0
+        self.dash_speed = 20.0
+        self.dash_duration = 0.14         # Avanço supersônico (~2.8 tiles)
+        self.recovery_duration = 0.45     # Embainhamento (Noto) caminhando a 50% da velocidade
+        self.noto_walk_speed_mult = 0.50
+        self.attack_range = 2.6
 
-        # Ação Secundária: Ryuu Tsui Sen (竜槌閃 - Item 17)
+        # Ação Secundária: Ryuu Tsui Sen (龍槌閃 - Entregável 2.1.2)
         self.ryuu_cooldown = 3.5
         self.ryuu_timer = 0.0
+        self.ryuu_phase = "ASCEND"
+        self.ryuu_ascend_duration = 0.08
+        self.ryuu_apex_duration = 0.06
+        self.ryuu_descend_duration = 0.14
+        self.ryuu_phase_timer = 0.0
+        self.ryuu_start_wz = 0.35
+        self.ryuu_apex_wz = 2.60
 
         # Efeito visual de rastro de lâmina
         self.slash_trail_points: list[tuple[float, float]] = []
 
-        # Terceira Ação: Shukuchi Especial / Ágil
+        # Terceira Ação: Shukuchi Especial / Ágil (Entregável 2.1.3)
         self.is_agile_dodge = True
+        self.shukuchi_duration = 0.15
+        self.shukuchi_speed = 28.0
         self.roll_speed = 10.5
         self.roll_duration = 0.22
         self.roll_recovery_duration = 0.12
         self.roll_cooldown_duration = 0.35
         self.post_shukuchi_iframe_timer = 0.0
 
-        # Variáveis de deflexão e acrobacia pós-parry
+        # Variáveis de deflexão e acrobacia pós-parry (Backhop terrestre & Mortal aéreo)
         self.zanzou_spawn_timer = 0.0
         self.zanzou_ghosts = []
         self.is_aerial_parry = False
+        self.somersault_angle = 0.0
+        self.parry_hop_start_wz = 0.0
         self.parry_hop_dir = (0.0, 0.0)
-        self.parry_hop_speed = 7.5
-        self.parry_hop_duration = 0.28
+        self.parry_hop_speed = 9.0
+        self.parry_hop_duration = 0.30
+
+        # Qualidade Visual & Fluidez (Entregáveis 2.1.7 e 2.1.9)
+        self.ssaa_enabled = True
+        self._pose_lerp_tracker = {
+            "lerp_duration": 0.08,
+            "blend_timer": 0.0,
+            "pose_key": None,
+            "prev_snap": None,
+            "last_snap": None,
+            "transitions_count": 0,
+        }
 
     def take_hit(self, slash_dir: tuple[float, float], damage: int = 2) -> tuple[bool, bool]:
         """Aplica dano e limpa rastros e pós-imagens de Kenshi ao ser atingida ou morta."""
@@ -78,39 +105,75 @@ class RedSamurai(Samurai):
         return super().can_move()
 
     def apply_movement(self, move_x: float, move_y: float, dt: float, game_map):
-        """Aplica movimentação mantendo o estado de RECOVERY (embainhar/noto) se aplicável."""
+        """Aplica movimentação mantendo o estado de RECOVERY (embainhar/noto) a 50% da velocidade."""
         if self.state == STATE_RECOVERY:
             saved_state = self.state
-            super().apply_movement(move_x, move_y, dt, game_map)
-            self.state = saved_state
+            saved_speed = self.speed
+            self.speed = saved_speed * getattr(self, "noto_walk_speed_mult", 0.50)
+            try:
+                super().apply_movement(move_x, move_y, dt, game_map)
+            finally:
+                self.speed = saved_speed
+                self.state = saved_state
         else:
             super().apply_movement(move_x, move_y, dt, game_map)
 
-    def trigger_iai_attack(self, target_wx: float, target_wy: float):
-        """Inicia o golpe Iai-jutsu se puder agir."""
-        if not self.can_act():
+    def can_cancel_shukuchi(self) -> bool:
+        """
+        Entregável 2.1.3 (Shukuchi Battou-Giri):
+        Permite cancelar os últimos 40% do Shukuchi (state_timer <= 0.06s) diretamente no Iai Slice.
+        """
+        shukuchi_dur = getattr(self, "shukuchi_duration", 0.15)
+        return (
+            self.is_alive
+            and self.state == "SHUKUCHI"
+            and self.state_timer <= shukuchi_dur * 0.40 + 1e-5
+        )
+
+    def trigger_iai_attack(self, target_wx: float, target_wy: float, instant: bool = False):
+        """
+        Entregável 2.1.1 & 2.1.3: Shukuchi Battoujutsu Slice.
+        - Startup telegrafado de 0.10s (6f) em postura Iai profunda com brilho na tsuba (Koiguchi-kiri) e som metálico.
+        - Se acionado nos últimos 40% do Shukuchi (Shukuchi Battou-Giri), cancela a recuperação do dash,
+          herda o momentum e reduz o startup pela metade (0.05s / 3f).
+        """
+        is_cancel = self.can_cancel_shukuchi()
+        if not self.can_act() and not is_cancel:
             return
 
         self.set_facing(target_wx, target_wy)
+        self.is_shukuchi_cancel = is_cancel
         self.state = STATE_ATTACK
         self.state_timer = self.dash_duration
-        self.hitbox_active = True
-        self.hitbox_radius = 1.25  # Arco ampliado para 1.25 para consistência do corte
+        self.dash_speed = self.base_dash_speed * (1.15 if is_cancel else 1.0)
+        if instant:
+            self.iai_startup_timer = 0.0
+            self.hitbox_active = True
+        else:
+            self.iai_startup_timer = (self.iai_startup_duration * 0.5) if is_cancel else self.iai_startup_duration
+            self.hitbox_active = (self.iai_startup_timer <= 0.0)
+        self.is_invulnerable_dodge = False
+        self.hitbox_radius = 1.25  # Arco ampliado para 1.25m para consistência do corte
         self.slash_dir = (self.facing_x, self.facing_y)
         self.slash_trail_points = [(self.wx, self.wy)]
         self.hitbox_center = (self.wx + self.facing_x * 0.8, self.wy + self.facing_y * 0.8)
 
         try:
             from src.audio import play_sfx, SoundEvent
-            play_sfx(SoundEvent.SLASH_KATANA, volume_scale=0.92)
+            if self.iai_startup_timer > 0:
+                play_sfx(SoundEvent.PARRY, volume_scale=0.65)
+            else:
+                play_sfx(SoundEvent.SLASH_KATANA, volume_scale=0.92)
         except Exception:
             pass
 
     def trigger_ryuu_tsui_sen(self, target_wx: float, target_wy: float, particles: list = None, banners: list = None, opponent = None):
         """
-        Ação Secundária: Ryuu Tsui Sen (竜槌閃 - Item 17).
-        Kenshi desaparece com blur de velocidade, salta alto no ar acima de sua posição
-        e despenca com um devastador corte vertical descendente com a katana.
+        Entregável 2.1.2: Ação Secundária — Ryuu Tsui Sen (龍槌閃).
+        Salto parabólico ultra-veloz em 3 fases com sombras Zanzou:
+        1. ASCEND (0.08s): Subida explosiva estilo Shukuchi até wz=2.6m deixando pós-imagens Zanzou.
+        2. APEX (0.06s): Paira no ápice com katana erguida acima da cabeça com as duas mãos e brilho dourado.
+        3. DESCEND (0.14s): Queda meteórica vertical com corte de cima para baixo (raio 1.45m).
         """
         if not self.can_act() or self.ryuu_timer > 0:
             return
@@ -118,22 +181,27 @@ class RedSamurai(Samurai):
         self.set_facing(target_wx, target_wy)
         self.ryuu_timer = self.ryuu_cooldown
         self.state = "RYUU_TSUI_SEN"
-        self.state_timer = 0.36
-        self.wz = 2.6  # Aparece instantaneamente alto no ar acima de sua posição atual
+        self.ryuu_phase = "ASCEND"
+        self.ryuu_phase_timer = self.ryuu_ascend_duration
+        self.state_timer = self.ryuu_ascend_duration + self.ryuu_apex_duration + self.ryuu_descend_duration
+        self.wz = self.ryuu_start_wz  # Impulso inicial imediato do salto Shukuchi (wz > 0 no frame 0)
         self.is_invulnerable_dodge = True
         self.hitbox_active = False
+        self.slash_trail_points.clear()
+        self.zanzou_spawn_timer = 0.0
 
-        # Pós-imagem do desaparecimento súbito com efeito de vento
+        # Pós-imagem do impulso de subida com sombras Shukuchi
         if not hasattr(self, "zanzou_ghosts"):
             self.zanzou_ghosts = []
         self.zanzou_ghosts.append({
-            "wx": self.wx, "wy": self.wy,
+            "wx": self.wx, "wy": self.wy, "wz": 0.0,
             "facing_x": self.facing_x, "facing_y": self.facing_y,
-            "alpha": 200, "duration": 0.30
+            "alpha": 210, "duration": 0.30
         })
 
         try:
             from src.audio import play_sfx, SoundEvent
+            play_sfx(SoundEvent.SHUKUCHI, volume_scale=0.85)
             play_sfx(SoundEvent.RYUU_TSUI_SEN, volume_scale=1.0)
         except Exception:
             pass
@@ -141,8 +209,8 @@ class RedSamurai(Samurai):
         if particles is not None:
             from src.effects.particles import SmokeParticle, SparkParticle
             for _ in range(8):
-                particles.append(SmokeParticle(self.wx, self.wy, 0.4, color=(230, 235, 245), size=6))
-                particles.append(SparkParticle(self.wx, self.wy, 0.5, color=(240, 240, 255)))
+                particles.append(SmokeParticle(self.wx, self.wy, 0.25, color=(230, 235, 245), size=6))
+                particles.append(SparkParticle(self.wx, self.wy, 0.35, color=(255, 215, 110)))
 
     def trigger_tsuka_ate(self, target_wx: float, target_wy: float, particles: list = None, opponent = None, banners: list = None):
         """Compatibilidade: executa Tsuka-ate de quebra de guarda ou redireciona para Ryuu Tsui Sen."""
@@ -176,7 +244,7 @@ class RedSamurai(Samurai):
                 dir_y /= mag
 
         self.state = "SHUKUCHI"
-        self.state_timer = 0.15
+        self.state_timer = self.shukuchi_duration
         self.shukuchi_speed = 28.0
         self.facing_x = dir_x
         self.facing_y = dir_y
@@ -187,7 +255,7 @@ class RedSamurai(Samurai):
         if not hasattr(self, "zanzou_ghosts"):
             self.zanzou_ghosts = []
         self.zanzou_ghosts.append({
-            "wx": self.wx, "wy": self.wy,
+            "wx": self.wx, "wy": self.wy, "wz": self.wz,
             "facing_x": self.facing_x, "facing_y": self.facing_y,
             "alpha": 190, "duration": 0.28
         })
@@ -202,20 +270,20 @@ class RedSamurai(Samurai):
         """Atordoa Kenshi garantindo queda/aterrissagem física (wz = 0.0) sem flutuação."""
         super().stun(duration)
         self.wz = 0.0
+        self.iai_startup_timer = 0.0
 
     def on_parried(self, opponent, game_map=None, banners: list = None, particles: list = None):
         """
-        Mitigação e Acrobacia de Deflexão ao ser aparada:
+        Entregáveis 2.1.1 e 2.1.2 — Mitigação e Acrobacia de Deflexão ao ser aparada:
         1. Se for aparada durante o Ryuu Tsui Sen (ou no ar):
-           Kenshi é defletida para trás, a gravidade a traz rapidamente de volta ao solo (wz -> 0.0),
-           com i-frames aéreos, aterrissando em pose de recuperação a distância segura e nunca
-           ficando flutuando no ar.
+           Kenshi usa o impulso da colisão das lâminas para dar um MORTAL PARA TRÁS NO AR
+           (somersault 360°), recuando ~2.95 tiles e aterrissando fora do alcance de contra-ataque melee.
         2. Se for aparada em golpe terrestre (Iai):
-           Kenshi executa um salto acrobático de recuo (~2.0 tiles para trás) com i-frames,
-           aterrissando a distância segura para embainhar a katana (STATE_RECOVERY),
-           evitando ficar congelada à queima-roupa sofrendo punição letal trivial garantida.
+           Kenshi executa um salto acrobático animado para trás (~2.70 tiles, fora do alcance de
+           contra-ataque melee), e ao aterrissar faz o embainhamento (Noto / STATE_RECOVERY) podendo andar.
         """
         self.hitbox_active = False
+        self.iai_startup_timer = 0.0
         self.slash_trail_points.clear()
 
         # Calcular vetor de repulsão / recuo para longe do oponente
@@ -239,28 +307,32 @@ class RedSamurai(Samurai):
         self.is_invulnerable_dodge = True
         self.is_aerial_parry = is_aerial
         self.parry_hop_dir = (hop_dir_x, hop_dir_y)
+        self.somersault_angle = 0.0
 
         if is_aerial:
-            self.state_timer = 0.32
-            self.parry_hop_duration = 0.32
-            self.parry_hop_speed = 6.2
+            self.parry_hop_duration = 0.36
+            self.state_timer = self.parry_hop_duration
+            self.parry_hop_speed = 8.2  # ~2.95 tiles de recuo com mortal para trás
+            self.parry_hop_start_wz = max(0.85, self.wz)
+            self.wz = self.parry_hop_start_wz
             if banners is not None:
                 from src.effects.particles import FloatingBanner
-                banners.append(FloatingBanner("AERIAL DEFLECTION!", self.wx, self.wy, wz=self.wz + 0.3, color=(255, 210, 110)))
+                banners.append(FloatingBanner("AERIAL SOMERSAULT!", self.wx, self.wy, wz=self.wz + 0.3, color=(255, 210, 110)))
         else:
-            self.state_timer = 0.28
-            self.parry_hop_duration = 0.28
-            self.parry_hop_speed = 7.5
+            self.parry_hop_duration = 0.30
+            self.state_timer = self.parry_hop_duration
+            self.parry_hop_speed = 9.0  # ~2.70 tiles de salto para trás (fora do alcance melee)
+            self.parry_hop_start_wz = 0.05
             self.wz = 0.05
             if banners is not None:
                 from src.effects.particles import FloatingBanner
-                banners.append(FloatingBanner("ACROBATIC DEFLECTION!", self.wx, self.wy, wz=1.75, color=(255, 215, 120)))
+                banners.append(FloatingBanner("ACROBATIC BACKHOP!", self.wx, self.wy, wz=1.75, color=(255, 215, 120)))
 
         # Zanzou inicial do recuo
         if not hasattr(self, "zanzou_ghosts"):
             self.zanzou_ghosts = []
         self.zanzou_ghosts.append({
-            "wx": self.wx, "wy": self.wy,
+            "wx": self.wx, "wy": self.wy, "wz": self.wz,
             "facing_x": self.facing_x, "facing_y": self.facing_y,
             "alpha": 180, "duration": 0.25
         })
@@ -268,12 +340,16 @@ class RedSamurai(Samurai):
         if particles is not None:
             from src.effects.particles import SparkParticle
             for _ in range(6):
-                particles.append(SparkParticle(self.wx, self.wy, 0.45, color=(255, 220, 140)))
+                particles.append(SparkParticle(self.wx, self.wy, max(0.45, self.wz), color=(255, 220, 140)))
 
     def update(self, dt: float, game_map, particles: list = None):
         """Atualiza os estados e timings do Samurai Vermelho."""
         if not hasattr(self, "zanzou_ghosts"):
             self.zanzou_ghosts = []
+
+        # Atualizar interpolador de pose (Pose LERP 0.08s — Entregável 2.1.9)
+        if hasattr(self, "_pose_lerp_tracker") and self._pose_lerp_tracker["blend_timer"] > 0.0:
+            self._pose_lerp_tracker["blend_timer"] = max(0.0, self._pose_lerp_tracker["blend_timer"] - dt)
 
         # Atualizar e desvanecer pós-imagens zanzou
         for g in self.zanzou_ghosts:
@@ -290,14 +366,32 @@ class RedSamurai(Samurai):
             self.ryuu_timer -= dt
         if self.post_shukuchi_iframe_timer > 0:
             self.post_shukuchi_iframe_timer = max(0.0, self.post_shukuchi_iframe_timer - dt)
-            if self.post_shukuchi_iframe_timer <= 0 and self.state not in (STATE_ROLL, "SHUKUCHI", "RYUU_TSUI_SEN"):
+            if self.post_shukuchi_iframe_timer <= 0 and self.state not in (STATE_ROLL, "SHUKUCHI", "RYUU_TSUI_SEN", "PARRY_BACKHOP"):
                 self.is_invulnerable_dodge = False
         self.update_dodge_timers(dt)
         if self.state not in ("RYUU_TSUI_SEN", "PARRY_BACKHOP", "JUMP") and self.wz > 0.0:
             self.wz = max(0.0, self.wz - 16.0 * dt)
 
         if self.state == STATE_ATTACK:
-            # Avanço relâmpago Iai
+            # Fase 1 do Iai: Startup telegrafado Koiguchi-kiri (0.10s ou 0.05s no Shukuchi Cancel)
+            if self.iai_startup_timer > 0.0:
+                self.iai_startup_timer -= dt
+                if self.iai_startup_timer > 0.0:
+                    return
+                # Startup concluído: dispara o corte supersônico!
+                overflow_dt = -self.iai_startup_timer
+                self.iai_startup_timer = 0.0
+                self.hitbox_active = True
+                try:
+                    from src.audio import play_sfx, SoundEvent
+                    play_sfx(SoundEvent.SLASH_KATANA, volume_scale=0.95)
+                except Exception:
+                    pass
+                dt = overflow_dt
+                if dt <= 0.0:
+                    return
+
+            # Fase 2 do Iai: Avanço relâmpago Battoujutsu
             self.state_timer -= dt
             dash_dist = self.dash_speed * dt
             new_wx = self.wx + self.facing_x * dash_dist
@@ -328,14 +422,14 @@ class RedSamurai(Samurai):
             self.hitbox_center = (self.wx + self.facing_x * 0.8, self.wy + self.facing_y * 0.8)
 
             if self.state_timer <= 0:
-                # Fim do avanço: entra no LONGO RECOVERY embainhando a espada
+                # Fim do avanço: entra no RECOVERY embainhando a espada (Noto caminhando a 50%)
                 self.state = STATE_RECOVERY
                 self.state_timer = self.recovery_duration
                 self.hitbox_active = False
                 self.slash_trail_points.clear()
 
         elif self.state == STATE_RECOVERY:
-            # Samurai fica travado no cooldown vulnerável
+            # Kenshi embainha a katana (Noto) podendo caminhar a 50% da velocidade
             self.state_timer -= dt
             self.hitbox_active = False
             self.slash_trail_points.clear()
@@ -375,7 +469,7 @@ class RedSamurai(Samurai):
             if self.zanzou_spawn_timer >= 0.035:
                 self.zanzou_spawn_timer = 0.0
                 self.zanzou_ghosts.append({
-                    "wx": self.wx, "wy": self.wy,
+                    "wx": self.wx, "wy": self.wy, "wz": self.wz,
                     "facing_x": self.facing_x, "facing_y": self.facing_y,
                     "alpha": 180, "duration": 0.28
                 })
@@ -389,34 +483,79 @@ class RedSamurai(Samurai):
                 self.dash_recovery_timer = self.roll_recovery_duration
 
         elif self.state == "RYUU_TSUI_SEN":
+            # Entregável 2.1.2: Salto Parabólico em 3 fases (ASCEND -> APEX -> DESCEND) com sombras Shukuchi
             self.state_timer -= dt
-            # Queda vertical rápida partindo do ápice do ar em direção ao solo (Item 13)
-            self.wz = max(0.0, self.wz - 8.2 * dt)
+            self.ryuu_phase_timer -= dt
 
-            if self.wz > 1.8:
+            if self.ryuu_phase == "ASCEND":
+                prog = max(0.0, min(1.0, 1.0 - (self.ryuu_phase_timer / max(0.001, self.ryuu_ascend_duration))))
+                # Curva parabólica explosiva de subida até 2.6m
+                ease_out = 1.0 - (1.0 - prog) * (1.0 - prog)
+                self.wz = self.ryuu_start_wz + (self.ryuu_apex_wz - self.ryuu_start_wz) * ease_out
                 self.is_invulnerable_dodge = True
                 self.hitbox_active = False
-            else:
-                # Descendo com o corte vertical agressivo
-                self.is_invulnerable_dodge = False
-                self.hitbox_active = True
-                self.hitbox_radius = 1.45
-                self.slash_dir = (self.facing_x, self.facing_y)
-                self.hitbox_center = (self.wx + self.facing_x * 0.80, self.wy + self.facing_y * 0.80)
-                self.slash_trail_points.append((self.wx, self.wy))
 
-            if self.wz <= 0.0 or self.state_timer <= 0:
-                self.wz = 0.0
-                self.state = STATE_RECOVERY
-                self.state_timer = 0.22
+                # Leve avanço parabólico em direção ao alvo durante o salto
+                if game_map is not None:
+                    adv = 4.5 * dt
+                    nx, ny = slide_movement_against_obstacles(self.wx, self.wy, self.facing_x * adv, self.facing_y * adv, self.radius, game_map)
+                    min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
+                    self.wx = max(min_x, min(max_x, nx))
+                    self.wy = max(min_y, min(max_y, ny))
+
+                # Gerar sombras Zanzou estilo Shukuchi na subida aérea!
+                self.zanzou_spawn_timer += dt
+                if self.zanzou_spawn_timer >= 0.024:
+                    self.zanzou_spawn_timer = 0.0
+                    self.zanzou_ghosts.append({
+                        "wx": self.wx, "wy": self.wy, "wz": self.wz,
+                        "facing_x": self.facing_x, "facing_y": self.facing_y,
+                        "alpha": 195, "duration": 0.26
+                    })
+
+                if self.ryuu_phase_timer <= 0.0:
+                    self.ryuu_phase = "APEX"
+                    self.ryuu_phase_timer = self.ryuu_apex_duration
+                    self.wz = self.ryuu_apex_wz
+
+            elif self.ryuu_phase == "APEX":
+                # Paira no ápice com a katana erguida acima da cabeça com as duas mãos e brilho dourado
+                self.wz = self.ryuu_apex_wz
+                self.is_invulnerable_dodge = True
                 self.hitbox_active = False
-                self.is_invulnerable_dodge = False
-                if particles is not None:
-                    from src.effects.particles import SparkParticle, SmokeParticle
-                    for _ in range(16):
-                        particles.append(SparkParticle(self.wx + self.facing_x * 0.6, self.wy + self.facing_y * 0.6, 0.2))
-                    for _ in range(8):
-                        particles.append(SmokeParticle(self.wx, self.wy, 0.1, color=(240, 240, 250), size=6))
+                if self.ryuu_phase_timer <= 0.0:
+                    self.ryuu_phase = "DESCEND"
+                    self.ryuu_phase_timer = self.ryuu_descend_duration
+
+            else:
+                # DESCEND: Queda meteórica vertical com corte de cima para baixo
+                prog = max(0.0, min(1.0, 1.0 - (self.ryuu_phase_timer / max(0.001, self.ryuu_descend_duration))))
+                ease_in = prog * prog
+                self.wz = max(0.0, self.ryuu_apex_wz * (1.0 - ease_in))
+
+                if self.wz > 1.8:
+                    self.is_invulnerable_dodge = True
+                    self.hitbox_active = False
+                else:
+                    self.is_invulnerable_dodge = (self.wz > 1.2)
+                    self.hitbox_active = True
+                    self.hitbox_radius = 1.45
+                    self.slash_dir = (self.facing_x, self.facing_y)
+                    self.hitbox_center = (self.wx + self.facing_x * 0.80, self.wy + self.facing_y * 0.80)
+                    self.slash_trail_points.append((self.wx, self.wy))
+
+                if self.wz <= 0.0 or self.ryuu_phase_timer <= 0.0 or self.state_timer <= 0.0:
+                    self.wz = 0.0
+                    self.state = STATE_RECOVERY
+                    self.state_timer = 0.28
+                    self.hitbox_active = False
+                    self.is_invulnerable_dodge = False
+                    if particles is not None:
+                        from src.effects.particles import SparkParticle, SmokeParticle
+                        for _ in range(16):
+                            particles.append(SparkParticle(self.wx + self.facing_x * 0.6, self.wy + self.facing_y * 0.6, 0.2))
+                        for _ in range(8):
+                            particles.append(SmokeParticle(self.wx, self.wy, 0.1, color=(240, 240, 250), size=6))
 
         elif self.state == "TSUKA_ATE":
             self.state_timer -= dt
@@ -425,7 +564,7 @@ class RedSamurai(Samurai):
 
         elif self.state == STATE_DASH:
             self.state = "SHUKUCHI"
-            self.state_timer = 0.15
+            self.state_timer = self.shukuchi_duration
             self.is_invulnerable_dodge = True
 
         elif self.state == "PARRY_BACKHOP":
@@ -445,36 +584,42 @@ class RedSamurai(Samurai):
                 self.wx += dx
                 self.wy += dy
 
-            # Atualização da altura vertical (Z)
+            prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.parry_hop_duration))))
+            # Atualização da altura vertical (Z) e rotação acrobática
             if getattr(self, "is_aerial_parry", False):
-                # Deflexão aérea: gravidade rápida descendo ao solo
-                self.wz = max(0.0, self.wz - 9.5 * dt)
-                landed = (self.wz <= 0.0 and self.state_timer <= self.parry_hop_duration * 0.6)
+                # Deflexão aérea (Ryuu Tsui Sen): mortal para trás de 360° no ar usando o impulso da lâmina!
+                self.somersault_angle = prog * 360.0
+                start_z = getattr(self, "parry_hop_start_wz", 1.5)
+                arc_boost = math.sin(prog * math.pi) * 0.45
+                self.wz = max(0.0, start_z * (1.0 - prog) + arc_boost)
+                landed = (self.state_timer <= 0.0)
             else:
-                # Salto parabólico terrestre de recuo
-                prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.parry_hop_duration))))
-                self.wz = max(0.0, math.sin(prog * math.pi) * 0.40)
-                landed = (self.state_timer <= 0)
+                # Salto parabólico terrestre animado de recuo (~2.7 tiles para trás)
+                self.somersault_angle = 0.0
+                self.wz = max(0.0, math.sin(prog * math.pi) * 0.55)
+                landed = (self.state_timer <= 0.0)
 
             # Efeito de rastro zanzou suave
             self.zanzou_spawn_timer += dt
-            if self.zanzou_spawn_timer >= 0.05:
+            if self.zanzou_spawn_timer >= 0.045:
                 self.zanzou_spawn_timer = 0.0
                 self.zanzou_ghosts.append({
-                    "wx": self.wx, "wy": self.wy,
+                    "wx": self.wx, "wy": self.wy, "wz": self.wz,
                     "facing_x": self.facing_x, "facing_y": self.facing_y,
-                    "alpha": 140, "duration": 0.20
+                    "alpha": 145, "duration": 0.22
                 })
 
             if landed or self.state_timer <= 0:
                 self.wz = 0.0
+                self.somersault_angle = 0.0
                 self.state = STATE_RECOVERY
-                self.state_timer = self.recovery_duration * 0.55  # ~0.33s embainhando a distância segura
+                self.state_timer = self.recovery_duration * 0.70  # Embainhamento (Noto) ao aterrissar a distância segura
                 self.hitbox_active = False
                 self.is_invulnerable_dodge = False
-                self.roll_recovery_timer = self.roll_recovery_duration
+                # Permite caminhar imediatamente durante o embainhamento (Noto) pós-aterrissagem!
+                self.roll_recovery_timer = 0.0
                 self.roll_cooldown_timer = self.roll_cooldown_duration
-                self.dash_recovery_timer = self.roll_recovery_duration
+                self.dash_recovery_timer = 0.0
                 if particles is not None:
                     from src.effects.particles import SmokeParticle, SparkParticle
                     for _ in range(6):
@@ -491,7 +636,7 @@ class RedSamurai(Samurai):
                 self.wz = 0.0
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza o Samurai Vermelho e suas pós-imagens Shukuchi no estilo Voxel 3D."""
+        """Renderiza o Samurai Vermelho e suas pós-imagens Shukuchi no estilo Voxel 3D com SSAA 2x e Pose LERP."""
         # Renderizar rastro brilhante do corte do Iai no chão apenas durante o golpe e se estiver viva
         if self.is_alive and self.state in (STATE_ATTACK, "RYUU_TSUI_SEN") and len(self.slash_trail_points) >= 2:
             pts = [camera.apply(px, py, 0.05) for px, py in self.slash_trail_points]
@@ -499,13 +644,13 @@ class RedSamurai(Samurai):
                 pygame.draw.lines(surface, COLOR_RED_AURA, False, pts, 4)
                 pygame.draw.lines(surface, COLOR_WHITE, False, pts, 2)
 
-        # Renderizar pós-imagens zanzou translúcidas deixadas pelo Shukuchi
+        # Renderizar pós-imagens zanzou translúcidas deixadas pelo Shukuchi / Ryuu Tsui Sen
         if hasattr(self, "zanzou_ghosts"):
             for g in self.zanzou_ghosts:
                 if g["alpha"] > 20:
                     render_voxel_humanoid(
                         surface, camera,
-                        g["wx"], g["wy"], self.wz,
+                        g["wx"], g["wy"], g.get("wz", self.wz),
                         g["facing_x"], g["facing_y"],
                         "IDLE", 0.0, True,
                         char_type="kenshin",
@@ -517,6 +662,23 @@ class RedSamurai(Samurai):
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
+        # Determinar pose especial ativa (Koiguchi-kiri startup ou Noto sheathing)
+        active_pose = ""
+        if self.state == STATE_ATTACK and getattr(self, "iai_startup_timer", 0.0) > 0.0:
+            active_pose = "koiguchi_glint"
+        elif self.state == STATE_RECOVERY:
+            active_pose = "noto_sheath"
+
+        extra_props = {
+            "ssaa_2x": getattr(self, "ssaa_enabled", True),
+            "pose_lerp_tracker": getattr(self, "_pose_lerp_tracker", None),
+            "ryuu_phase": getattr(self, "ryuu_phase", "DESCEND"),
+            "is_aerial_parry": getattr(self, "is_aerial_parry", False),
+            "somersault_angle": getattr(self, "somersault_angle", 0.0),
+        }
+        if active_pose:
+            extra_props["pose"] = active_pose
+
         render_voxel_humanoid(
             surface, camera,
             self.wx, self.wy, self.wz,
@@ -525,5 +687,6 @@ class RedSamurai(Samurai):
             char_type="kenshin",
             walk_timer=self.walk_cycle,
             alpha=self.alpha,
-            is_moving=self.is_moving
+            is_moving=self.is_moving,
+            extra_props=extra_props,
         )

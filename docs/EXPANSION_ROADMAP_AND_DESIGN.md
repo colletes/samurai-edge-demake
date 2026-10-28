@@ -43,43 +43,49 @@ Foco: Trazer o jogador para a intimidade brutal do combate marcial (*Bushido Due
 
 ---
 
-### ⚔️ Fase 2: A Grande Reformulação dos 24 Guerreiros (Movesets, Atributos, Finishers, Fidelidade HD & Transições)
-Foco: Revisar, rebalancear e enriquecer cada combatente individualmente em 10 entregáveis atômicos por guerreiro: moveset completo, esquiva/defesa, finisher 3D bespoke, animações de intro/vitória, renderização supersampleada anti-aliasing/anti-tearing, texturas faciais em alta resolução, interpolação contínua de quadros (LERP Cross-fade) e biblioteca de materiais realistas.
+### ⚔️ Fase 2: A Grande Reformulação dos 24 Guerreiros (Movesets, Atributos, Finishers Duplos, Fidelidade HD & Transições)
+Foco: Revisar, rebalancear e enriquecer cada combatente individualmente em **11 entregáveis atômicos por guerreiro**: golpe primário, golpe secundário/especial, esquiva/defesa/reação a parry, **Finisher A (Golpe Primário)**, **Finisher B (Golpe Secundário/Especial)**, animação de intro, animação de vitória, renderização supersampleada 2x anti-aliasing/anti-tearing, texturas faciais em alta resolução, interpolação contínua de quadros (LERP Cross-fade) e biblioteca de materiais realistas.
+*(Regra Canônica de Finishers: Todo guerreiro possui 2 Finishers distintos — um acionado quando o golpe letal é o Ataque Primário e outro exclusivo quando o golpe letal é o Ataque Secundário/Especial).*
 
 ---
 
-#### 🥋 Sub-fase 2.1: Kenshi (O Espadachim Errante — Hiten Mitsurugi-ryu)
-- **Perfil & Atributos Base:** Velocidade de corrida: 3.65 m/s | Esquiva: Shukuchi Dash veloz (0.28s) | Alcance: Médio (Katana 1.65m) | HP: 100 | Postura ágil com centro de gravidade baixo.
+#### 🥋 Sub-fase 2.1: Kenshi (A Espadachim Errante — Hiten Mitsurugi-ryu) — **[DESIGN APROVADO EM /GRILL-ME]**
+- **Perfil & Atributos Base:** Velocidade de corrida: 5.4 m/s | Esquiva: *Shukuchi Dash* ultra-veloz (0.15s a 28.0 m/s com rastros Zanzou) | Alcance: Médio/Longo com avanço Iai | Postura ágil Battoujutsu com centro de gravidade baixo.
 - **📦 Entregável 2.1.1: Golpe Primário — *Shukuchi Battoujutsu Slice***
-  - *Animação:* Agachamento fulminante, puxada da bainha com clarão prateado e corte horizontal de 160°.
-  - *Frames:* Startup 9f (0.15s) | Active 4f (0.06s) | Recovery 16f (0.26s).
-  - *Hitbox 3D:* Raio 1.65m, largura 0.40m, altura `wz` 0.50m a 1.25m, arco frontal 160°.
-  - *Whiff:* Vulnerabilidade total por 0.26s sem cancelamento de esquiva.
-  - *Reação:* Corte diagonal no peito com espasmo e recuo de 0.85m; corte fatal bissecciona o tronco.
-  - *SFX:* Clarão de aço sibilante, impacto de corte úmido e kiai vocal seco.
-- **📦 Entregável 2.1.2: Golpe Secundário — *Ryuu Tsui Sen (Corte Descendente Aéreo)***
-  - *Animação:* Salto vertical de 2.6m com rotação de tronco e queda cravando a katana com as duas mãos.
-  - *Frames:* Startup 18f (0.30s salto) | Active 6f (0.10s descida) | Recovery 22f (0.36s impacto no piso).
-  - *Hitbox 3D:* Raio 1.40m, vertical `wz` 0.0m a 2.4m, dispersão circular de impacto no solo.
-  - *Whiff:* Pouso rígido no solo vulnerável a golpes laterais e projéteis por 0.36s.
-  - *Reação:* Oponente é cravado no chão com tremor de câmera; em fatalidade, bisseção vertical craniana.
-  - *SFX:* Assobio de ar cortado em altitude, estrondo de pedra rachada e kiai prolongado.
-- **📦 Entregável 2.1.3: Mobilidade & Defesa — *Shukuchi Dash & Noto Walk***
-  - *Propriedades:* Dash com 12 i-frames e imunidade a graze de projéteis cinéticos; caminhar embainhado recupera foco.
-- **📦 Entregável 2.1.4: Finisher Bespoke — *Kenshin Split (龍槌閃)***
-  - *Coreografia:* Freeze-frame no ponto de impacto ➔ Mergulho de câmera em 3/4 CinemaScope ➔ Bisseção vertical simétrica com tombo lateral do tronco e repuxo arterial Sumi-E.
-- **📦 Entregável 2.1.5: Animação de Intro — *Foco no Polegar e Estalo do Tsuba***
-  - *Coreografia:* Câmera em close no punho, polegar destravando a lâmina com faísca e olhar focado por sob a franja.
-- **📦 Entregável 2.1.6: Animação de Vitória — *Chiburi & Noto Cerimonial***
-  - *Coreografia:* Sacudida angular de sangue da lâmina, giro rápido sobre os dedos e estalo metálico ao embainhar.
-- **📦 Entregável 2.1.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
-  - *Especificações:* Canvas offscreen 2x renderizando o modelo e lâmina com reamostragem bilinear `smoothscale`, eliminando escadas de pixel e tearing em 60 FPS com double-buffering estrito.
+  - *Animação & Startup Telegrafado:* **Startup de 0.10s (6f)** em postura Iai profunda com faísca dourada no polegar destravando a tsuba (`Koiguchi-kiri`) e som metálico `'chink'` antes da arrancada.
+  - *Fase Ativa (Corte em Arrancada):* **Active de 0.14s** avançando a `20.0 m/s` (~2.8 tiles) com arco horizontal luminoso de 160° e `hitbox_radius = 1.25m` centrado a `+0.8m` à frente.
+  - *Recuperação & Whiff:* **Recovery de 0.45s** executando o embainhamento ceremonial (*Noto*) enquanto pode caminhar em velocidade reduzida (`50% speed`). Se colidir contra rocha/obstáculo durante a arrancada, sofre stun de `1.0s`.
+  - *Reação a Parry (Auto-Backhop Animado):* Caso sofra parry durante o corte Iai, Kenshi usa o choque elástico das lâminas para executar um **salto mortal/backhop animado para trás** (`wz` parabólico + recuo de ~2.6 tiles), aterrissando fora do alcance de contra-ataque melee inimigo; ao tocar o solo, inicia a animação de embainhamento (*Noto*) já podendo caminhar.
+- **📦 Entregável 2.1.2: Golpe Secundário / Especial — *Ryuu Tsui Sen (龍槌閃 — Corte Descendente do Dragão)***
+  - *Animação em 3 Fases com Subida Shukuchi:* Substitui o teletransporte seco do frame 1 por um salto parabólico ultra-veloz:
+    1. **Subida Relâmpago Shukuchi (0.09s):** Impulso quase instantâneo de `wz = 0.0m` até `2.5m` com avanço diagonal em direção ao alvo, giro de haori e **sombras Zanzou carmesins** idênticas ao Shukuchi; imune a ataques rasteiros e projéteis baixos enquanto `wz > 1.2m`.
+    2. **Ápice Aéreo (0.06s):** Paira no topo do arco segurando a katana com ambas as mãos erguidas acima da cabeça + clarão de luz no gume.
+    3. **Descida Meteórica (0.14s):** Mergulho vertical cortante cravando a lâmina no solo (`hitbox_radius = 1.45m` cilíndrico vertical), gerando onda de choque, partículas de poeira e tremor de câmera, seguido de `0.28s` de recuperação no pouso.
+  - *Reação a Parry Aéreo (Somersault Backflip):* Caso o *Ryuu Tsui Sen* sofra parry, Kenshi impulsiona-se na espada do oponente e executa um **somersault (mortal completo para trás no ar)** usando a energia do impacto das lâminas, aterrissando suavemente fora do alcance de um contra-ataque melee.
+- **📦 Entregável 2.1.3: Mobilidade & Defesa — *Shukuchi Dash & Cancelamento Ofensivo ('Shukuchi Battou-Giri')***
+  - *Propriedades do Shukuchi:* Duração `0.15s` a `28.0 m/s` (~4.2 tiles), postura inclinada a 45° com a mão na saya e 4 sombras Zanzou carmesins.
+  - *Graze Evasion Balística:* Projéteis (balas, flechas, kunais) atravessam seu vulto sem causar dano ou hitstop, gerando faísca azulada e som `'whoosh'`.
+  - *Cancelamento Ofensivo ('Shukuchi Battou-Giri'):* Pressionar Ataque Primário nos **últimos 40% do Shukuchi** (`t <= 0.06s` restantes) cancela a recuperação de frenagem e dispara o *Iai Slice* imediatamente herdando o momento cinético, com startup reduzido pela metade (`0.05s` / 3f).
+- **📦 Entregável 2.1.4a: Finisher A (Golpe Primário) — *Ittou Ryoudan / Kenshin Split (一刀両断)***
+  - *Fase 1 (Startup):* Câmera fecha a `2.2x` nas costas da Kenshi em postura Iai profunda; ela atravessa o oponente num flash carmesim deixando 5 sombras Zanzou.
+  - *Fase 2 (Clímax):* Pausa dramática de `0.35s` de costas para o inimigo; ela embainha a katana com um `'clink'` seco ➔ géiser arterial explode e o torso superior do oponente desliza diagonalmente a 45°.
+  - *Fase 3 (Aftermath):* Vinheta Sumi-E `'一刀両断'` (*Ittou Ryoudan* — Um Corte, Duas Partes) com pétalas de sakura.
+- **📦 Entregável 2.1.4b: Finisher B (Golpe Especial) — *Divisão Celestial de Bambu (天翔龍槌閃 — Amakakeru Ryuu Tsui Sen)***
+  - *Fase 1 (Startup 0.25s):* A câmera acompanha Kenshi num salto Shukuchi vertical explosivo com 5 sombras Zanzou até o topo do quadro; no ápice, contra a luz, ela gira o corpo e ergue a katana com as duas mãos acima da cabeça (brilho dourado intenso na lâmina).
+  - *Fase 2 (Clímax & Desmembramento Vertical 0.35s):* Desce como um raio carmesim cravando a lâmina do topo do crânio do oponente até o chão, abrindo uma cratera com poeira no piso. O corpo do inimigo se divide simetricamente ao meio na vertical (hemisfério esquerdo e direito tombando para lados opostos com géiser arterial central).
+  - *Fase 3 (Aftermath):* Kenshi pousa agachada com a espada cravada entre as duas metades, ergue o olhar âmbar para a câmera, levanta-se embainhando e surge o Kanji Sumi-E `'龍槌閃'` (*Ryuu Tsui Sen*).
+- **📦 Entregável 2.1.5: Animação de Intro — *Meditação & Koiguchi-Kiri***
+  - *Coreografia:* Caminhada serena segurando a saya com os olhos fechados em meditação ➔ abre os olhos âmbar com brilho intenso e empurra a tsuba com o polegar (`Koiguchi-kiri` clink metálico + faísca dourada).
+- **📦 Entregável 2.1.6: Animação de Vitória — *Chiburi Lateral & Noto Cerimonial***
+  - *Coreografia:* *Chiburi* lateral elegante (sacode o sangue da lâmina criando respingo real persistente no piso), gira a katana em *Noto* fluido para dentro da bainha com estalo metálico e faz uma leve reverência com o rabo de cavalo balançando ao vento.
+- **📦 Entregável 2.1.7: Fidelidade Gráfica — *Supersampling 2x Offscreen (SSAA) & V-Sync Anti-Tearing***
+  - *Especificações:* Renderizar Kenshi em buffer offscreen `2x` supersampled com downscale bilinear `smoothscale` + contorno de tinta nanquim anti-aliased nas silhuetas e na lâmina da katana (zero serrilhado mesmo em zoom `2.2x`).
 - **📦 Entregável 2.1.8: Texturas Faciais & Olhos Anime HD***
-  - *Especificações:* Íris castanho-âmbar em alta densidade com anel límbico nítido, duplo catchlight especular e lashlines resolutas visíveis em todos os ângulos da câmera.
-- **📦 Entregável 2.1.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
-  - *Especificações:* Blend contínuo de 0.08s entre Caminhada ➔ Ataque, Ataque ➔ Esquiva e Esquiva ➔ Idle, eliminando cortes secos de membros.
-- **📦 Entregável 2.1.10: Biblioteca de Materiais Realistas — *Seda Chirimen Carmim & Aço Tamahagane***
-  - *Especificações:* Mapeamento de textura de seda áspera japonesa Chirimen no quimono, laca negra Urushi na bainha Saya e padrão Hamon ondulado no gume da katana em `assets/textures/`.
+  - *Especificações:* Subdividir a geometria facial 3D para olhos anime âmbar-dourados de alta precisão (esclera marfim, íris em gradiente âmbar/mel, pupila nítida, duplo catchlight especular vivo, cílios alados e expressão dinâmica que alterna entre Calma, Fúria no ataque e Choque no hit).
+- **📦 Entregável 2.1.9: Interpolação de Animação — *Pose LERP Cross-Fade (0.08s)***
+  - *Especificações:* Interpolação vetorial contínua (`0.08s`) nos pivôs de ombros, cotovelos, quadris, joelhos, coluna, bainha e rabo de cavalo ao transicionar entre `Idle ↔ Walk ↔ Shukuchi ↔ Iai ↔ Ryuu Tsui Sen ↔ Parry Backflip/Somersault`.
+- **📦 Entregável 2.1.10: Biblioteca de Materiais Realistas — *Seda Chirimen Carmim, Linho Índigo & Aço Tamahagane***
+  - *Especificações:* Mapeamento procedural/tileable de Crepe de Seda Carmesim (*Chirimen*) no kimono, Linho Índigo Escuro no hakama, Laca *Urushi* com cordão *Sageo* na saya e Aço *Tamahagane* com linha *Hamon* ondulada na katana.
 
 ---
 

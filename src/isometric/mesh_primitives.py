@@ -504,16 +504,16 @@ def draw_sculpted_head_3d(
 # Paleta de feições faciais dos retratos por personagem
 PORTRAIT_FACE_STYLES = {
     "kenshin": {
-        "iris": (165, 82, 38), "iris_core": (228, 148, 62), "iris_limbal": (88, 40, 24),
-        "brow": (118, 54, 34), "lip": (204, 88, 96), "lip_lower": (226, 118, 126), "lip_shadow": (145, 52, 62),
-        "brow_tilt": 0.14, "lashes": True, "feminine_lips": True,
+        "iris": (198, 108, 36), "iris_core": (255, 198, 72), "iris_limbal": (96, 42, 18),
+        "brow": (118, 54, 34), "lip": (208, 86, 96), "lip_lower": (234, 118, 128), "lip_shadow": (145, 52, 62),
+        "brow_tilt": 0.14, "lashes": True, "feminine_lips": True, "hd_anime_eyes": True,
         "eye_z": 0.082, "brow_z": 0.106, "spacing": 0.033, "mouth_w": 0.024,
         "hairline_mid": 0.65, "hairline_lat": 0.48,
     },
     "kenshi": {
-        "iris": (165, 82, 38), "iris_core": (228, 148, 62), "iris_limbal": (88, 40, 24),
-        "brow": (118, 54, 34), "lip": (204, 88, 96), "lip_lower": (226, 118, 126), "lip_shadow": (145, 52, 62),
-        "brow_tilt": 0.14, "lashes": True, "feminine_lips": True,
+        "iris": (198, 108, 36), "iris_core": (255, 198, 72), "iris_limbal": (96, 42, 18),
+        "brow": (118, 54, 34), "lip": (208, 86, 96), "lip_lower": (234, 118, 128), "lip_shadow": (145, 52, 62),
+        "brow_tilt": 0.14, "lashes": True, "feminine_lips": True, "hd_anime_eyes": True,
         "eye_z": 0.082, "brow_z": 0.106, "spacing": 0.033, "mouth_w": 0.024,
         "hairline_mid": 0.65, "hairline_lat": 0.48,
     },
@@ -794,10 +794,19 @@ def draw_portrait_face_3d(
     mouth_w = style.get("mouth_w", mouth_w)
 
     state = getattr(c, "state", "IDLE")
-    if getattr(c, "is_melee", False) or state in ("ATTACK", "GATOTSU_CHARGE", "ZEROSHIKI"):
-        tilt += 0.14
-    elif state in ("DYING_FREEZE", "STUNNED"):
-        tilt -= 0.12
+    extra_props = getattr(c, "extra_props", None) or {}
+    pose_name = extra_props.get("pose", "")
+    eyes_closed = bool(extra_props.get("eyes_closed", False) or pose_name == "meditation_eyes_closed")
+    eye_glint_boost = float(extra_props.get("eye_glint_boost", 0.0))
+    if pose_name == "koiguchi_glint":
+        eye_glint_boost = max(eye_glint_boost, 1.0)
+
+    is_fierce = getattr(c, "is_melee", False) or state in ("ATTACK", "IAI_STARTUP", "RYUU_TSUI_SEN", "GATOTSU_CHARGE", "ZEROSHIKI")
+    is_shocked = state in ("DYING_FREEZE", "STUNNED")
+    if is_fierce:
+        tilt += 0.16
+    elif is_shocked:
+        tilt -= 0.14
 
     # Projeção 3D com profundidade lateral e saliência para frente
     def _p3(lat: float, z_off: float, fwd: float = 0.0) -> tuple[int, int]:
@@ -832,6 +841,24 @@ def draw_portrait_face_3d(
 
     # 1. Olhos Expressivos (Femininos: Luminosos e Abertos; Masculinos: Marciais, Focados e Penetráveis)
     for s in (-1.0, 1.0):
+        if eyes_closed:
+            # Olhos fechados em meditação serena (curva graciosa de cílios fechados)
+            p_cl_in = _p3(spacing * 0.48 * s, eye_z - 0.002, 0.003)
+            p_cl_mid = _p3(spacing * 1.05 * s, eye_z - 0.005, 0.004)
+            p_cl_out = _p3(spacing * 1.62 * s, eye_z - 0.001, 0.003)
+            lash_col = (24, 18, 22)
+            pygame.draw.lines(surface, lash_col, False, [p_cl_in, p_cl_mid, p_cl_out], max(1, lash_thick))
+            if not is_male:
+                p_wing = _p3(spacing * 1.70 * s, eye_z + 0.004, 0.003)
+                pygame.draw.line(surface, lash_col, p_cl_out, p_wing, max(1, lash_thick))
+            b_z_base = brow_z if brow_z is not None else (eye_z + (0.022 if is_male else 0.026))
+            b_z = max(b_z_base, eye_z + (0.020 if is_male else 0.025))
+            b_in = _p3(spacing * 0.48 * s, b_z - 0.002, 0.004)
+            b_mid = _p3(spacing * 1.00 * s, b_z + 0.003, 0.005)
+            b_out = _p3(spacing * 1.50 * s, b_z - 0.002, 0.003)
+            pygame.draw.lines(surface, brow_col, False, [b_in, b_mid, b_out], max(1, brow_thick) if is_male else 1)
+            continue
+
         if is_male:
             # Olhar masculino marcial: fenda nítida, mirada resoluta de guerreiro/atirador com esclera marfim visível
             p_in = _p3(spacing * 0.46 * s, eye_z - 0.001, 0.002)
@@ -846,16 +873,17 @@ def draw_portrait_face_3d(
             ir_h = 0.009
         else:
             # Vértices da esclera amendoada expressiva, ampla e aberta (feminina)
+            ap_top_mod = -0.002 if is_fierce else (0.003 if is_shocked else 0.0)
             p_in = _p3(spacing * 0.48 * s, eye_z - 0.001, 0.002)
-            p_top_in = _p3(spacing * 0.72 * s, eye_z + 0.012, 0.003)
-            p_top_mid = _p3(spacing * 1.05 * s, eye_z + 0.016, 0.003)
-            p_top_out = _p3(spacing * 1.36 * s, eye_z + 0.010, 0.003)
+            p_top_in = _p3(spacing * 0.72 * s, eye_z + 0.012 + ap_top_mod, 0.003)
+            p_top_mid = _p3(spacing * 1.05 * s, eye_z + 0.016 + ap_top_mod, 0.003)
+            p_top_out = _p3(spacing * 1.36 * s, eye_z + 0.010 + ap_top_mod * 0.5, 0.003)
             p_out = _p3(spacing * 1.62 * s, eye_z + 0.002, 0.002)
             p_bot_out = _p3(spacing * 1.36 * s, eye_z - 0.008, 0.002)
             p_bot_mid = _p3(spacing * 1.05 * s, eye_z - 0.010, 0.002)
             p_bot_in = _p3(spacing * 0.72 * s, eye_z - 0.007, 0.002)
-            ir_w = 0.0125
-            ir_h = 0.0135
+            ir_w = 0.0125 * (0.86 if is_shocked else 1.0)
+            ir_h = 0.0135 * (0.86 if is_shocked else 1.0)
 
         # Esclera límpida, marfim brilhante (sempre visível nas laterais do olho)
         sclera_poly = [p_in, p_top_in, p_top_mid, p_top_out, p_out, p_bot_out, p_bot_mid, p_bot_in]
@@ -864,6 +892,20 @@ def draw_portrait_face_3d(
         # Íris (Facetada, Proporcional e Radiante)
         ir_x = spacing * 1.05 * s
         ir_y = eye_z + (0.000 if is_male else 0.001)
+
+        # Anel límbico externo de alta definição (HD Anime Eye Ring)
+        if style.get("hd_anime_eyes", False):
+            limbal_col = style.get("iris_limbal", (88, 40, 24))
+            lw, lh = ir_w * 1.12, ir_h * 1.08
+            limbal_poly = [
+                _p3(ir_x - lw * 0.50, ir_y, 0.0026),
+                _p3(ir_x - lw * 0.38, ir_y + lh * 0.70, 0.0026),
+                _p3(ir_x + lw * 0.38, ir_y + lh * 0.70, 0.0026),
+                _p3(ir_x + lw * 0.50, ir_y, 0.0026),
+                _p3(ir_x + lw * 0.38, ir_y - lh * 0.70, 0.0026),
+                _p3(ir_x - lw * 0.38, ir_y - lh * 0.70, 0.0026),
+            ]
+            pygame.draw.polygon(surface, limbal_col, limbal_poly)
 
         # Corpo principal da íris (cor viva e translúcida)
         ir_p0 = _p3(ir_x - ir_w * 0.50, ir_y, 0.003)
@@ -875,8 +917,21 @@ def draw_portrait_face_3d(
         iris_poly = [ir_p0, ir_p1, ir_p2, ir_p3, ir_p4, ir_p5]
         pygame.draw.polygon(surface, iris_col, iris_poly)
 
+        # Gradiente âmbar/mel na meia-lua inferior da íris (HD Anime Eye)
+        if style.get("hd_anime_eyes", False):
+            honey_col = style.get("iris_core", (255, 198, 72))
+            crescent_poly = [
+                ir_p0,
+                _p3(ir_x, ir_y - ir_h * 0.15, 0.0035),
+                ir_p3,
+                ir_p4,
+                ir_p5,
+            ]
+            pygame.draw.polygon(surface, honey_col, crescent_poly)
+
         # Pupila central compacta
-        pupil_w, pupil_h = ir_w * 0.44, ir_h * 0.44
+        pupil_scale = 0.34 if is_shocked else (0.38 if is_fierce else 0.44)
+        pupil_w, pupil_h = ir_w * pupil_scale, ir_h * pupil_scale
         pupil_poly = [
             _p3(ir_x - pupil_w * 0.5, ir_y, 0.004),
             _p3(ir_x - pupil_w * 0.3, ir_y + pupil_h * 0.6, 0.004),
@@ -900,11 +955,12 @@ def draw_portrait_face_3d(
         pygame.draw.polygon(surface, core_col, core_poly)
 
         # Brilho Especular Principal (Glint / Catchlight no topo da íris)
+        glint_scale = 1.0 + 0.35 * eye_glint_boost
         sp_poly = [
             _p3(ir_x + ir_w * 0.08, ir_y + ir_h * (0.10 if is_male else 0.16), 0.006),
-            _p3(ir_x + ir_w * 0.38, ir_y + ir_h * (0.10 if is_male else 0.16), 0.006),
-            _p3(ir_x + ir_w * 0.38, ir_y + ir_h * (0.44 if is_male else 0.50), 0.006),
-            _p3(ir_x + ir_w * 0.08, ir_y + ir_h * (0.44 if is_male else 0.50), 0.006),
+            _p3(ir_x + ir_w * (0.38 * glint_scale), ir_y + ir_h * (0.10 if is_male else 0.16), 0.006),
+            _p3(ir_x + ir_w * (0.38 * glint_scale), ir_y + ir_h * ((0.44 if is_male else 0.50) * glint_scale), 0.006),
+            _p3(ir_x + ir_w * 0.08, ir_y + ir_h * ((0.44 if is_male else 0.50) * glint_scale), 0.006),
         ]
         pygame.draw.polygon(surface, (255, 255, 255), sp_poly)
 
@@ -912,11 +968,11 @@ def draw_portrait_face_3d(
         if not is_male:
             sp2_poly = [
                 _p3(ir_x - ir_w * 0.32, ir_y - ir_h * 0.38, 0.006),
-                _p3(ir_x - ir_w * 0.16, ir_y - ir_h * 0.38, 0.006),
-                _p3(ir_x - ir_w * 0.16, ir_y - ir_h * 0.22, 0.006),
-                _p3(ir_x - ir_w * 0.32, ir_y - ir_h * 0.22, 0.006),
+                _p3(ir_x - ir_w * 0.14, ir_y - ir_h * 0.38, 0.006),
+                _p3(ir_x - ir_w * 0.14, ir_y - ir_h * 0.20, 0.006),
+                _p3(ir_x - ir_w * 0.32, ir_y - ir_h * 0.20, 0.006),
             ]
-            pygame.draw.polygon(surface, (255, 255, 255), sp2_poly)
+            pygame.draw.polygon(surface, (255, 252, 235) if eye_glint_boost > 0 else (255, 255, 255), sp2_poly)
 
         # Delineador Superior Nítido (Lashline: reta e imponente para homens; alada graciosa para mulheres; borda inferior aberta)
         lash_col = (20, 16, 22)

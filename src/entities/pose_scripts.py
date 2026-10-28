@@ -89,8 +89,13 @@ def _idle(t0, t1, alpha=(1.0, 1.0), **extra):
 
 
 INTRO = {
-    # Iai: saque e corte, e a lâmina volta à saya
-    "kenshin": [_idle(0.0, 0.2), _seg(0.2, 0.7, "ATTACK", 0.0, 1.0), _idle(0.7, 1.0)],
+    # Kenshi (2.1.5): Meditação serena de olhos fechados -> abre os olhos âmbar com brilho intenso e destrava a tsuba com o polegar (Koiguchi-kiri clink + faísca dourada) -> saque relâmpago e retorno à guarda
+    "kenshin": [
+        _idle(0.0, 0.36, pose="meditation_eyes_closed", eyes_closed=True),
+        _idle(0.36, 0.66, pose="koiguchi_glint", eye_glint_boost=1.0),
+        _seg(0.66, 0.88, "ATTACK", 0.0, 1.0),
+        _idle(0.88, 1.0),
+    ],
     # Niten: dois cortes, aparada cruzada e guarda
     "musashi": [_idle(0.0, 0.15), _seg(0.15, 0.4, "ATTACK", 0.0, 1.0, combo_step=1),
                 _seg(0.4, 0.62, "ATTACK", 0.0, 1.0, combo_step=2), _seg(0.62, 0.82, "PARRY", 0.5, 0.5), _idle(0.82, 1.0)],
@@ -179,9 +184,13 @@ INTRO = {
 }
 
 VICTORY = {
-    # Saca e embainha devagar (o progresso do saque vai e volta)
-    "kenshin": [_idle(0.0, 0.15), _seg(0.15, 0.35, "ATTACK", 0.05, 0.33), _seg(0.35, 0.55, "ATTACK", 0.33, 0.33),
-                _seg(0.55, 0.8, "ATTACK", 0.33, 0.1), _idle(0.8, 1.0)],
+    # Kenshi (2.1.6): Chiburi lateral elegante (sacode o sangue da lâmina no piso) -> Noto fluido para dentro da bainha com estalo metálico -> reverência serena com pétalas
+    "kenshin": [
+        _seg(0.0, 0.25, "ATTACK", 0.35, 0.90),
+        _idle(0.25, 0.52, pose="chiburi_flick"),
+        _idle(0.52, 0.78, pose="noto_sheath", noto_prog=0.85),
+        _idle(0.78, 1.0, pose="victory_bow"),
+    ],
     "musashi": [_idle(0.0, 0.1), _seg(0.1, 0.4, "ATTACK", 0.0, 1.0, combo_step=1), _seg(0.4, 0.85, "PARRY", 0.15, 0.85), _idle(0.85, 1.0)],
     "ninja": [_idle(0.0, 0.1), _seg(0.1, 0.45, "ATTACK", 0.0, 1.0), _idle(0.45, 0.55), _seg(0.55, 0.9, "ATTACK", 0.0, 1.0), _idle(0.9, 1.0)],
     "american": [_idle(0.0, 0.1), _seg(0.1, 0.55, "ATTACK", 0.0, 1.0), _idle(0.55, 1.0)],
@@ -262,7 +271,7 @@ SCRIPTS = {"intro": INTRO, "victory": VICTORY}
 # (p, evento): "sfx:<nome do SoundEvent>" ou "fx:<smoke|petals|sparks>"
 BEATS = {
     "intro": {
-        "kenshin": [(0.22, "sfx:sword_slash")],
+        "kenshin": [(0.37, "sfx:parry"), (0.38, "fx:sparks"), (0.68, "sfx:sword_slash")],
         "musashi": [(0.16, "sfx:sword_slash"), (0.41, "sfx:sword_slash"), (0.64, "sfx:parry")],
         "ninja": [(0.22, "sfx:kunai_throw"), (0.62, "sfx:kunai_throw")],
         "american": [(0.12, "sfx:dog_bark"), (0.3, "sfx:shuriken_throw")],
@@ -286,7 +295,7 @@ BEATS = {
         "aoi": [(0.24, "sfx:sword_slash"), (0.52, "sfx:dodge_whoosh")],
     },
     "victory": {
-        "kenshin": [(0.17, "sfx:sword_slash"), (0.6, "sfx:sword_slash"), (0.4, "fx:petals")],
+        "kenshin": [(0.08, "sfx:sword_slash"), (0.28, "sfx:dodge_whoosh"), (0.30, "fx:blood"), (0.74, "sfx:parry"), (0.76, "fx:petals")],
         "musashi": [(0.12, "sfx:parry")],
         "ninja": [(0.12, "sfx:kunai_throw"), (0.57, "sfx:kunai_throw")],
         "american": [(0.1, "sfx:dog_bark"), (0.3, "sfx:shuriken_throw")],

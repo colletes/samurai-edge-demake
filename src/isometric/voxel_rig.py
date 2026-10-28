@@ -569,3 +569,52 @@ def calc_spine_and_pelvis_rig(
     }
 
 
+def _lerp3(a: tuple[float, float, float], b: tuple[float, float, float], t: float) -> tuple[float, float, float]:
+    return (
+        a[0] + (b[0] - a[0]) * t,
+        a[1] + (b[1] - a[1]) * t,
+        a[2] + (b[2] - a[2]) * t,
+    )
+
+
+def blend_pose_snapshots_lerp(prev_snap: dict | None, curr_snap: dict, alpha: float) -> dict:
+    """
+    Entregável 2.1.9: Pose LERP Cross-Fade (0.08s / 3 a 5 quadros).
+    Interpola suavemente os pivôs 3D locais (mãos/braços, juntas das pernas, inclinação da coluna,
+    bainha e rabo de cavalo) entre o estado anterior (`prev_snap`) e o estado atual (`curr_snap`).
+    `alpha` varia de 0.0 (início da transição = 100% prev) a 1.0 (fim da transição = 100% curr).
+    """
+    if prev_snap is None or alpha >= 0.999:
+        return curr_snap
+    t = max(0.0, min(1.0, alpha))
+    # Smoothstep hermite easing
+    t = t * t * (3.0 - 2.0 * t)
+
+    out = dict(curr_snap)
+    for k in ("arm_l_local", "arm_r_local", "chest_lean_local", "hip_sway_local", "saya_offset_local", "tail_offset_local"):
+        if k in prev_snap and k in curr_snap:
+            out[k] = _lerp3(prev_snap[k], curr_snap[k], t)
+
+    if "legs_local" in prev_snap and "legs_local" in curr_snap:
+        blended_legs = {}
+        for side in ("L", "R"):
+            pl = prev_snap["legs_local"].get(side)
+            cl = curr_snap["legs_local"].get(side)
+            if pl and cl:
+                blended_legs[side] = {
+                    "thigh": _lerp3(pl["thigh"], cl["thigh"], t),
+                    "shin": _lerp3(pl["shin"], cl["shin"], t),
+                    "foot": _lerp3(pl["foot"], cl["foot"], t),
+                    "lift": pl.get("lift", 0.0) + (cl.get("lift", 0.0) - pl.get("lift", 0.0)) * t,
+                }
+            elif cl:
+                blended_legs[side] = cl
+        out["legs_local"] = blended_legs
+
+    if "shoulder_yaw" in prev_snap and "shoulder_yaw" in curr_snap:
+        out["shoulder_yaw"] = prev_snap["shoulder_yaw"] + (curr_snap["shoulder_yaw"] - prev_snap["shoulder_yaw"]) * t
+
+    return out
+
+
+

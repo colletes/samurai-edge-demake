@@ -28,7 +28,20 @@ DETAILED = {
 }
 
 
-MATERIALS = {"kimono": "silk", "kimono_dark": "silk", "obi": "silk", "collar": "silk", "ribbon": "silk", "saya": "lacquer", "steel": "steel", "edge": "steel", "gold": "gold", "cuff": "gold", "hakama": "pleats"}  # chave da paleta -> textura de material (6.5.8)
+MATERIALS = {
+    "kimono": "chirimen_silk",
+    "kimono_dark": "chirimen_silk",
+    "obi": "chirimen_silk",
+    "collar": "silk",
+    "ribbon": "chirimen_silk",
+    "saya": "urushi_lacquer",
+    "steel": "tamahagane_hamon",
+    "edge": "steel",
+    "gold": "gold",
+    "cuff": "gold",
+    "hakama": "indigo_linen",
+    "hakama_dark": "indigo_linen",
+}  # chave da paleta -> textura de material (2.1.10)
 
 
 def pal() -> dict:
@@ -41,17 +54,99 @@ def _outward(c, side):
 
 def _sword_frame(c):
     """Ponto da boca da bainha (K), direção da bainha/lâmina (B) e do cabo (-B), na cintura esquerda."""
-    k = (c.base_x + c.px * 0.11 + c.fx * 0.075, c.base_y + c.py * 0.11 + c.fy * 0.075, c.pelvis_z + 0.07)
-    b = mk.norm((-c.fx * 0.80 + c.px * 0.40, -c.fy * 0.80 + c.py * 0.40, -0.32))
+    state = getattr(c, "state", "IDLE")
+    extra = getattr(c, "extra_props", None) or {}
+    pose = extra.get("pose", "")
+    # Em IAI_STARTUP ou SHUKUCHI, a bainha é puxada firmemente para trás/baixo em postura Battoujutsu
+    if state in ("IAI_STARTUP", "SHUKUCHI") or pose == "koiguchi_glint":
+        k = (c.base_x + c.px * 0.12 + c.fx * 0.05, c.base_y + c.py * 0.12 + c.fy * 0.05, c.pelvis_z + 0.05)
+        b = mk.norm((-c.fx * 0.86 + c.px * 0.34, -c.fy * 0.86 + c.py * 0.34, -0.24))
+    else:
+        k = (c.base_x + c.px * 0.11 + c.fx * 0.075, c.base_y + c.py * 0.11 + c.fy * 0.075, c.pelvis_z + 0.07)
+        b = mk.norm((-c.fx * 0.80 + c.px * 0.40, -c.fy * 0.80 + c.py * 0.40, -0.32))
     return k, b
 
 
 def idle_arms(c):
-    """Neutra: mão direita cruza a barriga e empunha o cabo, esquerda segura a boca da bainha."""
+    """
+    Poses de braços da Kenshi conforme o estado e roteiro cinematográfico:
+    - IAI_STARTUP / koiguchi_glint: polegar destravando a tsuba com tensão de saque Iai.
+    - SHUKUCHI: mão direita na tsuka, esquerda estabilizando a saya na corrida supersônica.
+    - RYUU_TSUI_SEN: katana empunhada com ambas as mãos acima da cabeça (ápice) ou cravando verticalmente.
+    - PARRY_BACKHOP: braços abertos para equilíbrio acrobático no salto mortal/backhop; na aterrissagem / RECOVERY faz Noto.
+    - chiburi_flick / noto_sheath / victory_bow: coreografia cerimonial de vitória.
+    """
+    state = getattr(c, "state", "IDLE")
+    extra = getattr(c, "extra_props", None) or {}
+    pose = extra.get("pose", "")
     k, b = _sword_frame(c)
+
+    if state == "RYUU_TSUI_SEN" or pose in ("ryuu_apex", "ryuu_cleave"):
+        ryuu_phase = extra.get("ryuu_phase", "DESCEND")
+        if ryuu_phase == "ASCEND":
+            # Subida Shukuchi veloz: katana cruzada preparando a elevação dupla
+            grip_r = (c.base_x + c.fx * 0.16 - c.px * 0.08, c.base_y + c.fy * 0.16 - c.py * 0.08, c.torso_z + 0.24)
+            grip_l = (c.base_x + c.fx * 0.14 + c.px * 0.08, c.base_y + c.fy * 0.14 + c.py * 0.08, c.torso_z + 0.22)
+            return grip_l, grip_r
+        elif ryuu_phase == "APEX" or pose == "ryuu_apex":
+            # Ápice aéreo: ambas as mãos erguidas acima da cabeça segurando o punho da katana
+            apex_r = (c.base_x + c.fx * 0.10 - c.px * 0.03, c.base_y + c.fy * 0.10 - c.py * 0.03, c.head_z + 0.22)
+            apex_l = (c.base_x + c.fx * 0.08 + c.px * 0.03, c.base_y + c.fy * 0.08 + c.py * 0.03, c.head_z + 0.25)
+            return apex_l, apex_r
+        else:
+            # Descida Meteórica: cravando a lâmina verticalmente com ambas as mãos à frente
+            cleave_r = (c.base_x + c.fx * 0.26 - c.px * 0.03, c.base_y + c.fy * 0.26 - c.py * 0.03, c.torso_z + 0.06)
+            cleave_l = (c.base_x + c.fx * 0.24 + c.px * 0.03, c.base_y + c.fy * 0.24 + c.py * 0.03, c.torso_z + 0.02)
+            return cleave_l, cleave_r
+
+    if state == "PARRY_BACKHOP":
+        # Braços em abertura acrobática durante o salto mortal (somersault 360°) ou backhop terrestre
+        somersault_deg = float(extra.get("somersault_angle", 0.0))
+        som_rad = math.radians(somersault_deg)
+        som_f = math.sin(som_rad) * 0.14 if somersault_deg > 0.0 else 0.0
+        som_z = math.cos(som_rad) * 0.12 if somersault_deg > 0.0 else 0.0
+        arm_l = (c.base_x - c.fx * (0.06 - som_f) + c.px * 0.22, c.base_y - c.fy * (0.06 - som_f) + c.py * 0.22, c.torso_z + 0.20 + som_z)
+        arm_r = (c.base_x + c.fx * (0.18 + som_f) - c.px * 0.20, c.base_y + c.fy * (0.18 + som_f) - c.py * 0.20, c.torso_z + 0.22 + som_z)
+        return arm_l, arm_r
+
+    if state == "RECOVERY" or pose == "noto_sheath":
+        # Animação de Noto (embainhamento fluido enquanto caminha ou após vitória)
+        dur = 0.45
+        prog = extra.get("noto_prog", max(0.0, min(1.0, 1.0 - (getattr(c, "state_timer", 0.0) / dur))))
+        left = mk.add(k, b, 0.06)
+        start_r = (c.base_x + c.fx * 0.20 - c.px * 0.18, c.base_y + c.fy * 0.20 - c.py * 0.18, c.torso_z + 0.16)
+        end_r = mk.add(k, b, -0.08)
+        hand_r = mk.lerp(start_r, (end_r[0], end_r[1], end_r[2] + 0.07), _smooth(prog))
+        return (left[0], left[1], left[2] + 0.07), hand_r
+
+    if pose == "chiburi_flick":
+        # Chiburi lateral elegante: braço direito estendido sacudindo o sangue da lâmina
+        left = mk.add(k, b, 0.08)
+        hand_r = (c.base_x + c.fx * 0.22 - c.px * 0.24, c.base_y + c.fy * 0.22 - c.py * 0.24, c.torso_z + 0.10)
+        return (left[0], left[1], left[2] + 0.07), hand_r
+
+    if pose == "victory_bow":
+        # Reverência serena com a mão esquerda na saya e direita relaxada no cabo
+        grip = mk.add(k, b, -0.07)
+        left = mk.add(k, b, 0.08)
+        return (left[0], left[1], left[2] + 0.06), (grip[0], grip[1], grip[2] + 0.06)
+
+    if state == "IAI_STARTUP" or pose == "koiguchi_glint":
+        # Postura Iai profunda com o polegar esquerdo destravando a tsuba (Koiguchi-kiri) e mão direita pronta para sacar
+        grip = mk.add(k, b, -0.04)
+        left = mk.add(k, b, 0.02)
+        return (left[0], left[1], left[2] + 0.07), (grip[0], grip[1], grip[2] + 0.07)
+
     grip = mk.add(k, b, -0.08)
     left = mk.add(k, b, 0.09)
     return (left[0], left[1], left[2] + 0.07), (grip[0], grip[1], grip[2] + 0.07)
+
+
+def walk_arms(c):
+    """Durante a caminhada ou embainhamento em movimento (RECOVERY), mantém as mãos na saya/katana."""
+    if getattr(c, "state", "IDLE") in ("RECOVERY", "IAI_STARTUP", "SHUKUCHI", "RYUU_TSUI_SEN", "PARRY_BACKHOP"):
+        return idle_arms(c)
+    return idle_arms(c)
 
 
 def _arc_hand(c, p):
@@ -68,6 +163,9 @@ def _smooth(x):
 
 def attack_arms(c):
     """Antecipação (mão no cabo, bainha presa), saque e corte em arco da esquerda para a direita, acompanhamento aberto."""
+    extra = getattr(c, "extra_props", None) or {}
+    if extra.get("pose", "") == "koiguchi_glint":
+        return idle_arms(c)
     p = c.atk_progress
     k, b = _sword_frame(c)
     grip = mk.add(mk.add(k, b, -0.08), (0.0, 0.0, 0.07))
@@ -452,33 +550,131 @@ def draw_head(c):
 
 
 def draw_front(c, arm_l, arm_r):
-    """Bainha (se estiver do lado da câmera), cabo e lâmina; no ataque a lâmina sai da bainha e deixa o rastro vermelho."""
+    """
+    Bainha (se estiver do lado da câmera), cabo e lâmina:
+    - Em IAI_STARTUP ou koiguchi_glint: polegar destravando a tsuba com 1cm de aço Tamahagane exposto e faísca dourada.
+    - Em RYUU_TSUI_SEN / ryuu_apex / ryuu_cleave: katana erguida nas duas mãos com clarão ou descendo verticalmente.
+    - Em RECOVERY / noto_sheath / chiburi_flick: lâmina girando e deslizando de volta para dentro da saya (Noto).
+    - Em ATTACK: a lâmina sai da bainha e deixa o rastro carmesim/branco quente.
+    """
+    import pygame
     P = pal()
     d_torso = mk.depth(c, c.base_x, c.base_y)
     k, b = _sword_frame(c)
     saya_mid = mk.add(k, b, 0.22)
     if mk.depth(c, saya_mid[0], saya_mid[1]) >= d_torso:
         _saya(c)
+
+    state = getattr(c, "state", "IDLE")
+    extra = getattr(c, "extra_props", None) or {}
+    pose = extra.get("pose", "")
+
+    # 1. Postura Koiguchi-kiri (Startup do Iai ou Intro): 2cm de lâmina reluzente destravada + faísca dourada na tsuba
+    if state == "IAI_STARTUP" or pose == "koiguchi_glint":
+        tsuka_pos = mk.add(k, b, -0.025)
+        if mk.depth(c, tsuka_pos[0], tsuka_pos[1]) >= d_torso - 0.05:
+            mk.obox(c, k, (-b[0], -b[1], -b[2]), 0.035, 0.046, 0.032, P["edge"], outline=False)
+            _tsuka(c, tsuka_pos, b)
+            # Faísca dourada em estrela na guarda Tsuba (Koiguchi-kiri glint)
+            sx, sy = c.camera.apply(k[0], k[1], k[2] + 0.02)
+            pulse = 1.0 + 0.35 * math.sin(getattr(c, "walk_timer", 0.0) * 28.0)
+            r_px = max(3, int(6 * pulse * getattr(c.camera, "zoom", 1.0)))
+            pygame.draw.line(c.surface, (255, 230, 95), (sx - r_px, sy), (sx + r_px, sy), 2)
+            pygame.draw.line(c.surface, (255, 230, 95), (sx, sy - r_px), (sx, sy + r_px), 2)
+            pygame.draw.circle(c.surface, (255, 255, 240), (sx, sy), max(2, r_px // 2))
+        return
+
+    # 2. Ryuu Tsui Sen (Aéreo em 3 Fases: Subida, Ápice com duas mãos acima da cabeça, Descida Meteórica)
+    if state == "RYUU_TSUI_SEN" or pose in ("ryuu_apex", "ryuu_cleave"):
+        ryuu_phase = extra.get("ryuu_phase", "APEX" if pose == "ryuu_apex" else "DESCEND")
+        hand = (arm_r[0], arm_r[1], arm_r[2] - 0.045)
+        if ryuu_phase == "ASCEND":
+            d = mk.norm((c.fx * 0.45 - c.px * 0.35, c.fy * 0.45 - c.py * 0.35, 0.82))
+        elif ryuu_phase == "APEX":
+            d = mk.norm((-c.fx * 0.25, -c.fy * 0.25, 0.96))
+        else:
+            d = mk.norm((c.fx * 0.55, c.fy * 0.55, -0.83))
+        length = 0.74
+        _tsuka(c, hand, d)
+        mk.obox(c, hand, d, length, 0.052, 0.036, P["steel"], up=(c.px, c.py, 0.0))
+        mk.obox(c, mk.add(hand, d, 0.02), d, length - 0.02, 0.020, 0.038, P["edge"], up=(c.px, c.py, 0.0), outline=False)
+        if ryuu_phase == "APEX":
+            # Brilho dourado intenso na ponta da lâmina no ápice do salto
+            tip = mk.add(hand, d, length * 0.85)
+            tx, ty = c.camera.apply(tip[0], tip[1], tip[2])
+            r_px = max(4, int(8 * getattr(c.camera, "zoom", 1.0)))
+            pygame.draw.line(c.surface, (255, 235, 110), (tx - r_px, ty), (tx + r_px, ty), 2)
+            pygame.draw.line(c.surface, (255, 235, 110), (tx, ty - r_px), (tx, ty + r_px), 2)
+        elif ryuu_phase == "DESCEND":
+            # Rastro vertical carmesim na descida meteórica
+            p_top = mk.add(hand, (0.0, 0.0, 0.55))
+            p_tip = mk.add(hand, d, length)
+            p_top_tip = mk.add(p_tip, (0.0, 0.0, 0.65))
+            mk.band(c, (hand, p_tip, p_top_tip, p_top), P["trail"] + (210,))
+            mk.band(c, (mk.lerp(hand, p_tip, 0.5), p_tip, p_top_tip, mk.lerp(p_top, p_top_tip, 0.5)), P["trail_core"] + (235,))
+        return
+
+    # 3. Chiburi (Sacudida lateral de sangue na Vitória)
+    if pose == "chiburi_flick":
+        hand = (arm_r[0], arm_r[1], arm_r[2] - 0.055)
+        d = mk.norm((c.fx * 0.55 - c.px * 0.72, c.fy * 0.55 - c.py * 0.72, -0.38))
+        length = 0.72
+        _tsuka(c, hand, d)
+        mk.obox(c, hand, d, length, 0.05, 0.034, P["steel"])
+        mk.obox(c, mk.add(hand, d, 0.02), d, length - 0.02, 0.018, 0.036, P["edge"], outline=False)
+        return
+
+    # 4. Embainhamento Cerimonial (Noto em RECOVERY ou Vitória)
+    if state == "RECOVERY" or pose == "noto_sheath":
+        dur = 0.45
+        prog = extra.get("noto_prog", max(0.0, min(1.0, 1.0 - (getattr(c, "state_timer", 0.0) / dur))))
+        rem = max(0.0, 1.0 - _smooth(prog))
+        if rem <= 0.05:
+            tsuka_mid = mk.add(k, b, -0.08)
+            if mk.depth(c, tsuka_mid[0], tsuka_mid[1]) >= d_torso:
+                _tsuka(c, k, b)
+                if rem > 0.001:
+                    # Estalo metálico final do Noto (clink glint)
+                    sx, sy = c.camera.apply(k[0], k[1], k[2] + 0.02)
+                    pygame.draw.circle(c.surface, (255, 245, 190), (sx, sy), 4)
+            return
+        hand = (arm_r[0], arm_r[1], arm_r[2] - 0.065)
+        d_sheath = (-b[0], -b[1], -b[2])
+        tsuba = mk.lerp(k, hand, rem)
+        length = 0.72 * rem
+        _tsuka(c, tsuba, d_sheath)
+        if length > 0.03:
+            mk.obox(c, tsuba, d_sheath, length, 0.048, 0.032, P["steel"])
+        return
+
+    # 5. Parry Backhop / Somersault (lâmina empunhada na mão direita durante o giro acrobático)
+    if state == "PARRY_BACKHOP":
+        hand = (arm_r[0], arm_r[1], arm_r[2] - 0.055)
+        d = mk.norm((c.fx * 0.65 - c.px * 0.55, c.fy * 0.65 - c.py * 0.55, 0.45))
+        _tsuka(c, hand, d)
+        mk.obox(c, hand, d, 0.70, 0.05, 0.034, P["steel"])
+        return
+
     if not c.is_melee:
         tsuka_mid = mk.add(k, b, -0.08)
         if mk.depth(c, tsuka_mid[0], tsuka_mid[1]) >= d_torso:
             _tsuka(c, k, b)
         return
     p = c.atk_progress
-    if p < 0.1:  # ainda embainhada, mão no cabo
+    if p < 0.06:  # início do saque relâmpago
         tsuka_mid = mk.add(k, b, -0.08)
         if mk.depth(c, tsuka_mid[0], tsuka_mid[1]) >= d_torso:
             _tsuka(c, k, b)
         return
     hand = (arm_r[0], arm_r[1], arm_r[2] - 0.065)
     d = _blade_dir(c, p)
-    s_draw = _smooth((p - 0.1) / 0.1)  # saque: a lâmina aparece conforme o cabo vem da cintura para a mão
+    s_draw = _smooth((p - 0.06) / 0.10)  # saque: a lâmina aparece conforme o cabo vem da cintura para a mão
     tsuba = mk.lerp(k, hand, s_draw)
     length = 0.72 * s_draw
     _tsuka(c, tsuba, d)
     mk.obox(c, tsuba, d, length, 0.05, 0.034, P["steel"])
     mk.obox(c, mk.add(tsuba, d, 0.02), d, max(0.0, length - 0.02), 0.018, 0.036, P["edge"], outline=False)  # fio
-    if p >= 0.34:
+    if p >= 0.24:
         _slash_trail(c, p, length)
 
 
