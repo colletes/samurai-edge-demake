@@ -237,7 +237,7 @@ class SeimeiOnmyoji(Samurai):
                     color=random.choice([(252, 250, 245), (140, 190, 255), (255, 240, 140)])
                 ))
 
-    def update(self, dt: float, game_map=None, particles: list = None, opponent=None, projectiles: list = None, banners: list = None):
+    def update(self, dt: float, game_map=None, particles: list = None, opponent=None, projectiles: list = None, banners: list = None, cinematic_director=None, **kwargs):
         """Atualiza a máquina de estados e tempos de recarga dos feitiços Onmyodo."""
         self.update_dodge_timers(dt)
 

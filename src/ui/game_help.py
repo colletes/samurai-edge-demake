@@ -1323,52 +1323,54 @@ FIGHTERS_GUIDE_DATA = [
         "pt": {
             "name": "RAIDEN",
             "title": "O Yokozuna dos Trovões",
-            "style": "Sumô Imperial, Tsuppari Rush & Tachiai Tackle",
+            "style": "Sumô Imperial Rikishi, Combo Tsuppari & Tachiai 3-Fases",
             "vel": "[2/5] Colossal e Inabalável (3 HP)",
-            "dano": "Palmas Pesadas e Tackle Devastador (1 a 2 HP)",
-            "especial": "Hiperarmadura no Avanço & Pushback Massivo",
-            "keys_p1": "[E] Tsuppari Rush | [R] Tachiai Tackle",
-            "keys_p2": "[U] Tsuppari Rush | [I] Tachiai Tackle",
+            "dano": "1 Dano (Harite), 1 Dano + Quebra de Guarda (Morote), 1 a 2 Danos (Tachiai)",
+            "especial": "Esquiva Shiko Slip-Step, Hiperarmadura & Guarda Gassho-hineri",
+            "keys_p1": "[E] Combo Tsuppari | [R] Tachiai Tackle",
+            "keys_p2": "[U] Combo Tsuppari | [I] Tachiai Tackle",
             "conceito": (
                 "Grande campeão Yokozuna do Bakumatsu. Um colosso de força pura e disciplina ritual inabalável, "
                 "que usa seus 3 HP e hiperarmadura para avançar sem recuar contra projéteis leves, "
                 "empurrando e arremessando adversários para fora do ringue e contra os abismos da arena."
             ),
             "habilidades": (
-                "• Tsuppari Rush [E]: Rajada rítmica de palmas pesadas com avanço contínuo, hiperarmadura e pushback progressivo massivo.\n"
-                "• Tachiai Tackle [R]: Investida de ombro semiteleguiada em alta velocidade causando 1 de dano e arremessando o oponente longe com impacto esmagador."
+                "• Combo Tsuppari [E]: Sequência de 2 golpes de sumô. Golpe 1: Harite (palma pesada de direita). Golpe 2: Morote-Tsuppari (dupla palma sônica frontal) que quebra parries e a guarda adversária com pushback massivo.\n"
+                "• Tachiai Tackle [R]: Investida autêntica de 3 fases (agachamento ritual -> aceleração contínua de 4.0 a 12.5 m/s com esteira de poeira -> choque sísmico). Causa 1 de dano no início e escala para 2 de dano fatal + projeção aérea de 5.2m se atingir na velocidade máxima!\n"
+                "• Shiko Slip-Step [Shift/Barra]: Deslize terrestre pesado de sumô (Suriashi) com pés plantados e 12 i-frames de imunidade sem rolar no chão."
             ),
             "estrategia_ofensiva": (
-                "• Use a hiperarmadura do Tsuppari para avançar através de shurikens e kunais, empurrando o rival até os limites da arena.\n"
-                "• Empregue o Tachiai Tackle para fechar distância rapidamente e jogar o adversário em fossos e abismos."
+                "• Conecte o Morote-Tsuppari para estilhaçar parries inimigos e abrir brechas indefensáveis.\n"
+                "• Inicie o Tachiai Tackle à meia distância para atingir aceleração máxima (>=10 m/s), desferindo o devastador impacto de 2 de dano que arremessa o oponente para fora dos limites."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Raiden: Não tente disputar trocas de golpes frontais diretas contra seu Tsuppari. Mantenha distância e use esquivas laterais para contra-atacar seus flancos após a investida."
+                "• Como vencer Raiden: Não tente aparar (parry) o segundo golpe do Tsuppari, pois ele quebra defesas! Esquive em diagonal quando vir Raiden agachar para o Tachiai, punindo sua desaceleração pelas costas."
             )
         },
         "en": {
             "name": "RAIDEN",
             "title": "The Thunder Yokozuna",
-            "style": "Imperial Sumo, Tsuppari Rush & Tachiai Tackle",
+            "style": "Imperial Rikishi Sumo, 2-Hit Tsuppari Combo & 3-Phase Tachiai",
             "vel": "[2/5] Colossal & Unyielding (3 HP)",
-            "dano": "Heavy Palms & Devastating Tackle (1-2 HP)",
-            "especial": "Super Armor Advance & Massive Pushback",
-            "keys_p1": "[E] Tsuppari Rush | [R] Tachiai Tackle",
-            "keys_p2": "[U] Tsuppari Rush | [I] Tachiai Tackle",
+            "dano": "1 Dmg (Harite), 1 Dmg + Guard Break (Morote), 1 to 2 Critical Dmg (Tachiai)",
+            "especial": "Shiko Slip-Step Dodge, Super Armor & Gassho-hineri Guard",
+            "keys_p1": "[E] Tsuppari Combo | [R] Tachiai Tackle",
+            "keys_p2": "[U] Tsuppari Combo | [I] Tachiai Tackle",
             "conceito": (
                 "Legendary Yokozuna champion of the Bakumatsu era. A colossal titan of raw power and ritual discipline, "
                 "utilizing 3 HP and advance super armor to ignore light projectiles while shoving rivals into pits and ring borders."
             ),
             "habilidades": (
-                "• Tsuppari Rush [E]: Rhythmic open-palm thrust barrage with forward momentum, super armor, and massive progressive pushback.\n"
-                "• Tachiai Tackle [R]: Semi-homing high-speed shoulder tackle dealing 1 damage and blasting the rival far away on impact."
+                "• Tsuppari Combo [E]: 2-hit sumo sequence. Hit 1: Harite (heavy right open-palm). Hit 2: Morote-Tsuppari (dual sonic palm strike) that shatters enemy parries and breaks guard with massive pushback.\n"
+                "• Tachiai Tackle [R]: Authentic 3-phase charge (crouch startup -> continuous acceleration from 4.0 to 12.5 m/s with dust trail -> seismic slam). Deals 1 damage early, scaling up to 2 lethal damage + 5.2m aerial launch if impacting at top speed!\n"
+                "• Shiko Slip-Step [Shift/Space]: Heavy clay slide (Suriashi) with low center of gravity and 12 i-frames without rolling."
             ),
             "estrategia_ofensiva": (
-                "• Exploit advance poise against light kunai and shuriken to push opponents toward stage hazards.\n"
-                "• Use Tachiai Tackle to quickly punish whiffed recoveries and send foes flying into open water pits."
+                "• Use Morote-Tsuppari to shatter defensive parries and leave rivals wide open.\n"
+                "• Initiate Tachiai Tackle from mid-range to build maximum momentum (>=10 m/s), unleashing the 2-damage critical impact that launches foes into hazards."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Raiden: Never trade blows head-on against his armored palm charges. Circle around with agile dashes and strike his flanks during tackle recovery."
+                "• How to defeat Raiden: Never try to parry the second hit of Tsuppari as it breaks guards! Dodge diagonally when Raiden crouches for Tachiai, then punish his deceleration from behind."
             )
         }
     },

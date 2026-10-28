@@ -434,6 +434,20 @@ CHARACTER_ANIM_BUTTONS = {
         ("FINISHER_1", "F1. Finisher 1: Ittou Ryoudan (5 Zanzou)", 1.25),
         ("FINISHER_2", "F2. Finisher 2: Divisão Celestial (Ryuu)", 1.35),
     ],
+    "raiden": [
+        ("IDLE", "1. Idle (Postura Kamae)", 0.0),
+        ("WALK", "2. Walk (Suriashi Yokozuna)", 0.0),
+        ("TSUPPARI_1", "3. Golpe 1: Harite (Palma Direita)", 0.60),
+        ("TSUPPARI_2", "4. Golpe 2: Morote-Tsuppari (Quebra Guarda)", 0.65),
+        ("TACHIAI_TACKLE", "5. Investida: Tachiai Tackle (3 Fases / Aceleração)", 0.75),
+        ("SHIKO_SLIP", "6. Esquiva: Shiko Slip-Step (Solo)", 0.45),
+        ("GASSHO_PARRY", "7. Guarda: Gassho-hineri (Braços Cruzados)", 0.50),
+        ("HATAKI_KOMI", "8. Contra-ataque: Hataki-komi Shove", 0.55),
+        ("INTRO", "9. Intro: Palmas Cerimoniais & Sonkyo", 2.00),
+        ("VICTORY", "0. Vitória: Shiko 90° & Rugido no Mawashi", 2.20),
+        ("FINISHER_1", "F1. Finisher 1: Tsuppari Sonic Decapitation", 1.25),
+        ("FINISHER_2", "F2. Finisher 2: Tachiai Cataclysmic Slam", 1.35),
+    ],
 }
 
 DEFAULT_ANIM_BUTTONS = [
@@ -451,6 +465,13 @@ OVERHAUL_DE_PARA_NOTES = {
         "Olhos Anime HD (Anel limbal, degradê mel, meditação)",
         "Materiais: Seda Chirimen, Linho Índigo, Laca Urushi, Hamon",
         "Pose LERP 0.08s + Koiguchi-kiri + Ryuu 3-Fases + Mortal 360°",
+    ],
+    "raiden": [
+        "SSAA 2x Offscreen (Zero serrilhado no porte colossal e cordas sagradas)",
+        "Olhos Anime Rikishi HD (Olhar marcial focado, sobrancelhas cerradas, coque Oicho em leque)",
+        "Materiais: Corda Sagrada Shimenawa, Serpentinas Gohei, Seda Carmesim, Ouro, Couro",
+        "Tachiai 3 Fases: Aceleração contínua (4.0 -> 12.5 m/s) + 2 de Dano em Velocidade Máxima",
+        "Combo Tsuppari: Harite + Morote Quebra-Guarda + Esquiva Shiko no Dohyo",
     ],
 }
 
@@ -577,12 +598,17 @@ class ModelInspector:
         self.action_duration = dur
         if action_id in POSES:
             self.current_pose_idx = POSES.index(action_id)
-        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "FINISHER_1", "FINISHER_2"):
+        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "FINISHER_1", "FINISHER_2"):
             self.current_pose_idx = POSES.index("ATTACK")
-        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL"):
+        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY"):
             self.current_pose_idx = POSES.index("RECOVERY")
 
-    def select_character(self, idx: int):
+    def select_character(self, idx: int | str):
+        if isinstance(idx, str):
+            if idx in self.char_keys:
+                idx = self.char_keys.index(idx)
+            else:
+                idx = 0
         prev_colossal = (self.char_keys[self.current_char_idx] == "gashadokuro")
         self.current_char_idx = idx % len(self.char_keys)
         now_colossal = (self.char_keys[self.current_char_idx] == "gashadokuro")
@@ -927,11 +953,75 @@ class ModelInspector:
                 if not is_legacy:
                     extra_props["pose"] = "noto_sheath"
                     extra_props["noto_prog"] = u
+        elif act == "TSUPPARI_1":
+            # Golpe 1: Harite (palma pesada de direita)
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.22)
+            if not is_legacy:
+                extra_props["tsuppari_hit"] = 1
+                wx = 0.08 * math.sin(prog * math.pi)
+                wy = 0.08 * math.sin(prog * math.pi)
+        elif act == "TSUPPARI_2":
+            # Golpe 2: Morote-Tsuppari (dupla palma sônica frontal, quebra guarda)
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.22)
+            if not is_legacy:
+                extra_props["tsuppari_hit"] = 2
+                wx = 0.14 * math.sin(prog * math.pi)
+                wy = 0.14 * math.sin(prog * math.pi)
+        elif act == "TACHIAI_TACKLE":
+            # Investida autêntica de 3 fases: Startup agachado -> Aceleração contínua -> Impacto
+            if is_legacy:
+                state = "IDLE"
+                wx = -0.30 + 0.60 * prog
+                wy = -0.30 + 0.60 * prog
+            else:
+                if prog < 0.25:
+                    state = "TACHIAI_TACKLE"
+                    extra_props["pose"] = "tachiai_crouch"
+                    extra_props["tachiai_phase"] = "STARTUP"
+                elif prog < 0.85:
+                    u = (prog - 0.25) / 0.60
+                    state = "TACHIAI_TACKLE"
+                    extra_props["pose"] = "tackle"
+                    extra_props["tachiai_phase"] = "DASH"
+                    shift = (u ** 1.6) * 0.85 - 0.42
+                    wx, wy = shift, shift
+                else:
+                    state = "RECOVERY"
+                    state_timer = 0.20
+                    wx, wy = 0.43, 0.43
+        elif act == "SHIKO_SLIP":
+            # Esquiva Shiko Slip-Step (Suriashi no solo com joelhos flexionados)
+            state = "DODGE"
+            if not is_legacy:
+                extra_props["pose"] = "shiko_slip"
+                shift = math.sin(prog * math.pi) * 0.42
+                wx, wy = shift, shift
+            else:
+                wx = math.sin(prog * math.pi) * 0.25
+                wy = math.sin(prog * math.pi) * 0.25
+        elif act == "GASSHO_PARRY":
+            # Bloqueio de ferro Gassho-hineri (antebraços maciços cruzados)
+            if is_legacy:
+                state = "PARRY_BACKHOP"
+                wx, wy = -0.15 * prog, -0.15 * prog
+            else:
+                state = "PARRY"
+                extra_props["pose"] = "gassho_parry"
+        elif act == "HATAKI_KOMI":
+            # Contra-ataque Hataki-komi (empurrão descendente esmagador)
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.22)
+            if not is_legacy:
+                extra_props["pose"] = "hataki_komi"
+                wx = 0.12 * math.sin(prog * math.pi)
+                wy = 0.12 * math.sin(prog * math.pi)
         elif act in ("INTRO", "VICTORY"):
             kind = "intro" if act == "INTRO" else "victory"
             p_sample = prog if dur > 0.0 else ((self.anim_time * 0.42) % 1.0)
-            if is_legacy and char_type == "kenshin":
-                # Roteiro legado pré-Fase 2 da Kenshi (apenas IDLE + ATTACK simples)
+            if is_legacy and char_type in ("kenshin", "raiden"):
+                # Roteiro legado pré-Fase 2 (apenas IDLE + ATTACK simples)
                 if p_sample < 0.25 or p_sample > 0.75:
                     state = "IDLE"
                 else:
@@ -943,26 +1033,47 @@ class ModelInspector:
                 state_timer = pose_scripts.state_timer_for(char_type, pf)
                 extra_props.update(pf.extra)
         elif act == "FINISHER_1":
-            # 2.1.4a: Ittou Ryoudan
-            state = "RECOVERY"
-            wx, wy = 0.28, 0.28
-            if not is_legacy:
-                extra_props["pose"] = "noto_sheath"
-                extra_props["noto_prog"] = min(1.0, prog * 1.25)
-        elif act == "FINISHER_2":
-            # 2.1.4b: Divisão Celestial de Bambu (Ápice + Queda Meteórica)
-            if prog < 0.42:
-                state = "RYUU_TSUI_SEN"
-                extra_props["ryuu_phase"] = "APEX"
-                wz = 0.95
+            if char_type == "raiden":
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - prog) * 0.22)
+                    extra_props["tsuppari_hit"] = 2
+                    extra_props["pose"] = "finisher_morote"
+                    wx, wy = 0.15 * prog, 0.15 * prog
             else:
-                u = (prog - 0.42) / 0.58
-                state = "RYUU_TSUI_SEN" if u < 0.65 else "RECOVERY"
-                extra_props["ryuu_phase"] = "DESCEND"
-                wz = max(0.0, 0.95 * (1.0 - min(1.0, u * 1.65) ** 2))
-                if state == "RECOVERY" and not is_legacy:
+                # 2.1.4a: Ittou Ryoudan
+                state = "RECOVERY"
+                wx, wy = 0.28, 0.28
+                if not is_legacy:
                     extra_props["pose"] = "noto_sheath"
-                    extra_props["noto_prog"] = (u - 0.65) / 0.35
+                    extra_props["noto_prog"] = min(1.0, prog * 1.25)
+        elif act == "FINISHER_2":
+            if char_type == "raiden":
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "TACHIAI_TACKLE"
+                    extra_props["pose"] = "tackle"
+                    extra_props["tachiai_phase"] = "DASH"
+                    wx, wy = (prog - 0.5) * 0.55, (prog - 0.5) * 0.55
+            else:
+                # 2.1.4b: Divisão Celestial de Bambu (Ápice + Queda Meteórica)
+                if prog < 0.42:
+                    state = "RYUU_TSUI_SEN"
+                    extra_props["ryuu_phase"] = "APEX"
+                    wz = 0.95
+                else:
+                    u = (prog - 0.42) / 0.58
+                    state = "RYUU_TSUI_SEN" if u < 0.65 else "RECOVERY"
+                    extra_props["ryuu_phase"] = "DESCEND"
+                    wz = max(0.0, 0.95 * (1.0 - min(1.0, u * 1.65) ** 2))
+                    if state == "RECOVERY" and not is_legacy:
+                        extra_props["pose"] = "noto_sheath"
+                        extra_props["noto_prog"] = (u - 0.65) / 0.35
 
         return wx, wy, wz, state, state_timer, is_moving, walk_timer, extra_props
 

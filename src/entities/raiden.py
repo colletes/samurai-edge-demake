@@ -1,16 +1,16 @@
 """
 Guerreiro Ciclo 6 — Raiden Tameemon (O Yokozuna Invicto / Tanque Juggernaut de Sumô).
 
-Características:
+Características (Fase 2 Overhaul):
 - Vida: 3 HP (pesado e inabalável).
-- Velocidade: 3.85 m/s (passada cerimonial de ringue).
+- Velocidade: 3.85 m/s (passada cerimonial de ringue Suriashi).
 - Poise / Super Armor: Hiperarmadura contínua no avanço contra shurikens e projéteis leves.
-- Ataque Primário: Tsuppari Rush (rajada rítmica de palmas com avanço, hiperarmadura e pushback massivo).
-- Ataque Secundário: Tachiai Tackle (investida de ombro semiteleguiada com velocidade 9.5, dano 1 e repulsão que joga o rival longe).
-- Defesa: Gassho-hineri (parry de braços cruzados anulando 100% de recuo).
-- Fatalidades:
-  - Primário (Tsuppari): Dupla palmada trovejante com onda de choque sônica que decapita o adversário.
-  - Secundário (Tackle): Impacto sísmico devastador de corpo inteiro que despedaça o rival e o projeta voando.
+- Ataque Primário: Combo de 2 Golpes Pesados (Harite -> Morote-Tsuppari que quebra guardas).
+- Ataque Secundário: Tachiai Tackle 3-Fases com Aceleração Realista (4.0 -> 12.5 m/s),
+  causando 1 de dano no arranque e 2 de dano em velocidade máxima com super repulsão!
+- Defesa: Gassho-hineri (parry de braços cruzados anulando 100% de recuo e refletindo projéteis).
+- Esquiva: Shiko Slip-Step (deslize baixo no dohyo com pisada firme sem rolamentos corporais).
+- SSAA 2x Offscreen Render nativo com antialiasing bilinear.
 """
 import math
 import random
@@ -24,6 +24,7 @@ from src.entities.voxel_models import render_voxel_humanoid
 from src.effects.particles import SparkParticle, BloodParticle, FloatingBanner
 
 COLOR_RAIDEN_AURA = (195, 45, 55)
+COLOR_SALT_BURST = (255, 250, 235)
 
 
 class RaidenSumo(Samurai):
@@ -40,33 +41,37 @@ class RaidenSumo(Samurai):
         self.combo_window_timer = 0.0
         self.tsuppari_strike1_duration = 0.22
         self.tsuppari_strike1_recovery = 0.22
-        self.tsuppari_strike2_duration = 0.28
-        self.tsuppari_strike2_recovery = 0.44  # Frenagem pesada pós-combo impedindo spam ininterrupto
-        self.tsuppari_combo_window = 0.36
+        self.tsuppari_strike2_duration = 0.30
+        self.tsuppari_strike2_recovery = 0.42  # Frenagem pós-combo impedindo spam ininterrupto
+        self.tsuppari_combo_window = 0.38
         self.strike2_hit_applied = False
 
         self.tsuppari_duration = self.tsuppari_strike1_duration
         self.tsuppari_recovery = self.tsuppari_strike1_recovery
         self.tsuppari_reach = 0.85
-        self.tsuppari_radius = 0.55
+        self.tsuppari_radius = 0.60
         self.tsuppari_pulses = 3
         self.tsuppari_pulse_timer = 0.0
 
-        # Ação Secundária: Tachiai Tackle (Investida Semiteleguiada com Dano 1 e Super Knockback)
-        self.tackle_cooldown = 5.0  # Cooldown calibrado
+        # Ação Secundária: Tachiai Tackle 3-Fases com Aceleração Realista
+        self.tackle_cooldown = 4.8
         self.tackle_timer = 0.0
-        self.tackle_duration = 0.30
-        self.tackle_speed = 9.5
+        self.tackle_duration = 0.52
+        self.tackle_speed = 9.5  # Velocidade nominal média
+        self.tackle_initial_speed = 3.8
+        self.tackle_max_speed = 12.5
+        self.current_tackle_speed = self.tackle_initial_speed
         self.tackle_dir_x = 1.0
         self.tackle_dir_y = 0.0
         self.tackle_hit_applied = False
+        self.tackle_phase = "IDLE"  # "CROUCH", "CHARGE", "IMPACT"
 
-        # Esquiva: Deslocamento Lateral Pesado de Sumô
+        # Esquiva: Shiko Slip-Step (Deslize baixo no dohyo com pisada firme)
         self.is_agile_dodge = False
-        self.roll_speed = 7.5
+        self.roll_speed = 7.8
         self.roll_duration = 0.20
-        self.roll_recovery_duration = 0.18
-        self.roll_cooldown_duration = 0.40
+        self.roll_recovery_duration = 0.16
+        self.roll_cooldown_duration = 0.38
         self.recovery_duration = self.tsuppari_recovery
 
     def can_act(self) -> bool:
@@ -89,6 +94,32 @@ class RaidenSumo(Samurai):
         self.state_timer = 0.40
         return True
 
+    def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None) -> bool:
+        """Esquiva Shiko Slip-Step: deslizamento baixo e potente na argila com pisada sólida."""
+        if not self.can_act() or self.roll_cooldown_timer > 0:
+            return False
+
+        length = math.hypot(dir_x, dir_y)
+        if length > 0.001:
+            self.roll_dir_x = dir_x / length
+            self.roll_dir_y = dir_y / length
+        else:
+            self.roll_dir_x = self.facing_x
+            self.roll_dir_y = self.facing_y
+
+        self.set_facing(self.wx + self.roll_dir_x, self.wy + self.roll_dir_y)
+        self.state = STATE_ROLL
+        self.state_timer = self.roll_duration
+        self.roll_cooldown_timer = self.roll_cooldown_duration
+        self.is_invulnerable_dodge = True
+
+        if particles is not None:
+            # Poeira de argila e sal espalhando no arranque do Shiko
+            for _ in range(8):
+                particles.append(SparkParticle(self.wx, self.wy, 0.22, color=(222, 198, 165)))
+
+        return True
+
     def trigger_tsuppari_rush(self, aim_x: float, aim_y: float, particles: list = None, banners: list = None) -> bool:
         """Ataque Primário: Combo de 2 Golpes Pesados (Harite -> Morote-Tsuppari)."""
         if not self.can_act():
@@ -96,7 +127,7 @@ class RaidenSumo(Samurai):
 
         self.set_facing(aim_x, aim_y)
 
-        # Se já desferiu o Golpe 1 e está dentro da janela de combo -> Golpe 2 (Morote-Tsuppari)
+        # Se já desferiu o Golpe 1 e está dentro da janela de combo -> Golpe 2 (Morote-Tsuppari quebra guardas)
         if self.combo_step == 1 and self.combo_window_timer > 0:
             self.combo_step = 2
             self.combo_window_timer = 0.0
@@ -104,13 +135,12 @@ class RaidenSumo(Samurai):
             self.state_timer = self.tsuppari_strike2_duration
             self.tsuppari_pulse_timer = 0.0
             self.strike2_hit_applied = False
-            # Hitbox inicia desligada durante o wind-up (0.07s) e ativa na fase de impacto
             self.hitbox_active = False
             self.hitbox_damage = 2
-            self.hitbox_radius = 0.60
+            self.hitbox_radius = 0.70
             self.hitbox_center = (
-                self.wx + self.facing_x * 0.70,
-                self.wy + self.facing_y * 0.70
+                self.wx + self.facing_x * 0.72,
+                self.wy + self.facing_y * 0.72
             )
             self.slash_dir = (self.facing_x, self.facing_y)
 
@@ -118,55 +148,58 @@ class RaidenSumo(Samurai):
                 banners.append(FloatingBanner("MOROTE-TSUPPARI!", self.wx, self.wy, wz=1.75, color=COLOR_RAIDEN_AURA, duration=0.75))
 
             if particles is not None:
-                for _ in range(12):
+                for _ in range(14):
                     particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.35, color=(255, 205, 110)))
 
             return True
 
-        # Golpe 1: Harite (Palma Simples com Avanço Físico)
+        # Golpe 1: Harite (Palma Direita com rotação de quadril)
         self.combo_step = 1
         self.combo_window_timer = 0.0
         self.state = "TSUPPARI_STRIKE_1"
         self.state_timer = self.tsuppari_strike1_duration
         self.tsuppari_pulse_timer = 0.0
-        # Hitbox inicia desligada durante o wind-up (0.05s) e ativa na fase de impacto
         self.hitbox_active = False
         self.hitbox_damage = 1
         self.hitbox_center = (
-            self.wx + self.facing_x * 0.65,
-            self.wy + self.facing_y * 0.65
+            self.wx + self.facing_x * 0.68,
+            self.wy + self.facing_y * 0.68
         )
-        self.hitbox_radius = 0.55
+        self.hitbox_radius = 0.60
         self.slash_dir = (self.facing_x, self.facing_y)
 
         if particles is not None:
-            for _ in range(6):
+            for _ in range(8):
                 particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.25, color=(240, 210, 160)))
 
         return True
 
-    def trigger_primary(self, aim_x: float, aim_y: float, particles: list = None) -> bool:
-        return self.trigger_tsuppari_rush(aim_x, aim_y, particles)
+    def trigger_primary(self, aim_x: float, aim_y: float, particles: list = None, banners: list = None, **kwargs) -> bool:
+        return self.trigger_tsuppari_rush(aim_x, aim_y, particles, banners)
 
     def trigger_tachiai_tackle(self, aim_x: float = None, aim_y: float = None, particles: list = None, banners: list = None, opponent=None, game_map=None) -> bool:
-        """Ação Secundária: Investida Tachiai semiteleguiada com 1 de dano e super repulsão."""
+        """
+        Ação Secundária: Tachiai Tackle 3-Fases com Aceleração Realista:
+        - Fase 1 (Kamae Crouch): Mãos na argila (0.0s a 0.14s) preparando a arremetida.
+        - Fase 2 (Aceleração Contínua): Rampa de 4.0 m/s até 12.5 m/s com inclinação frontal de 35°.
+        - Fase 3 (Impacto Devastador): Causa 1 de dano no arranque e 2 de dano em velocidade máxima!
+        """
         if not self.can_act() or self.tackle_timer > 0:
             return False
 
         if aim_x is not None and aim_y is not None:
             self.set_facing(aim_x, aim_y)
 
-        # Semiteleguiamento: ajusta levemente a direção em direção ao oponente se estiver no campo visual
+        # Semiteleguiamento: interpola suavemente em direção ao adversário
         if opponent and getattr(opponent, "is_alive", False):
             opp_dx = opponent.wx - self.wx
             opp_dy = opponent.wy - self.wy
             opp_dist = math.hypot(opp_dx, opp_dy)
-            if 0.5 < opp_dist <= 6.5:
-                # Interpola 40% em direção ao alvo
+            if 0.5 < opp_dist <= 7.0:
                 t_dx = opp_dx / opp_dist
                 t_dy = opp_dy / opp_dist
-                blend_x = self.facing_x * 0.60 + t_dx * 0.40
-                blend_y = self.facing_y * 0.60 + t_dy * 0.40
+                blend_x = self.facing_x * 0.65 + t_dx * 0.35
+                blend_y = self.facing_y * 0.65 + t_dy * 0.35
                 mag = math.hypot(blend_x, blend_y) or 1.0
                 self.set_facing(self.wx + blend_x / mag, self.wy + blend_y / mag)
 
@@ -176,18 +209,20 @@ class RaidenSumo(Samurai):
         self.state_timer = self.tackle_duration
         self.tackle_timer = self.tackle_cooldown
         self.tackle_hit_applied = False
-        self.hitbox_active = True
+        self.current_tackle_speed = self.tackle_initial_speed
+        self.tackle_phase = "CROUCH"
+        self.hitbox_active = False
         self.hitbox_damage = 1
 
         self.hitbox_center = (
-            self.wx + self.facing_x * 1.10,
-            self.wy + self.facing_y * 1.10
+            self.wx + self.facing_x * 0.90,
+            self.wy + self.facing_y * 0.90
         )
-        self.hitbox_radius = 1.30
+        self.hitbox_radius = 1.20
         self.slash_dir = (self.facing_x, self.facing_y)
 
         if particles is not None:
-            for _ in range(12):
+            for _ in range(10):
                 particles.append(SparkParticle(self.wx, self.wy, 0.25, color=(255, 185, 95)))
 
         if banners is not None:
@@ -206,7 +241,7 @@ class RaidenSumo(Samurai):
             self.is_alive = False
             return True, True
 
-        # Se estiver em Tsuppari ou Tackle, absorve o golpe com Poise inabalável sem stun
+        # Se estiver em Tsuppari ou Tackle acelerando, absorve com Poise inabalável sem stun
         if self.state in ("TSUPPARI_RUSH", "TSUPPARI_STRIKE_1", "TSUPPARI_STRIKE_2", "TACHIAI_TACKLE"):
             return True, False
 
@@ -240,18 +275,21 @@ class RaidenSumo(Samurai):
                 self.state = STATE_IDLE
             return
 
+        # -------------------------------------------------------------------------------------------------
+        # GOLPE 1: HARITE
+        # -------------------------------------------------------------------------------------------------
         if self.state in ("TSUPPARI_STRIKE_1", "TSUPPARI_RUSH"):
             self.state_timer -= dt
             self.tsuppari_pulse_timer += dt
             elapsed = self.tsuppari_strike1_duration - self.state_timer
 
-            # Wind-up de 0.05s (preparação) -> Fase ativa (0.05s a 0.18s) -> Follow-through
+            # Wind-up de 0.05s -> Fase ativa de impacto (0.05s a 0.18s)
             if 0.05 <= elapsed <= 0.18:
                 self.hitbox_active = True
             else:
                 self.hitbox_active = False
 
-            step_speed = 2.2
+            step_speed = 2.4
             new_wx = self.wx + self.facing_x * step_speed * dt
             new_wy = self.wy + self.facing_y * step_speed * dt
             if game_map is not None:
@@ -261,19 +299,18 @@ class RaidenSumo(Samurai):
             else:
                 self.wx, self.wy = new_wx, new_wy
 
-            # Alcance físico fiel ao modelo 3D (0.65m à frente, raio 0.55m)
             self.hitbox_center = (
-                self.wx + self.facing_x * 0.65,
-                self.wy + self.facing_y * 0.65
+                self.wx + self.facing_x * 0.68,
+                self.wy + self.facing_y * 0.68
             )
-            self.hitbox_radius = 0.55
+            self.hitbox_radius = 0.60
 
             # Empurrão físico progressivo de sumô no impacto
             if self.hitbox_active and opponent and getattr(opponent, "is_alive", False):
                 dist_opp = math.hypot(opponent.wx - self.hitbox_center[0], opponent.wy - self.hitbox_center[1])
                 if dist_opp <= self.hitbox_radius + getattr(opponent, "radius", 0.35):
-                    push_x = self.facing_x * 3.2 * dt
-                    push_y = self.facing_y * 3.2 * dt
+                    push_x = self.facing_x * 3.6 * dt
+                    push_y = self.facing_y * 3.6 * dt
                     opponent.wx += push_x
                     opponent.wy += push_y
                     if particles is not None and random.random() < 0.35:
@@ -286,19 +323,21 @@ class RaidenSumo(Samurai):
                 self.hitbox_active = False
             return
 
+        # -------------------------------------------------------------------------------------------------
+        # GOLPE 2: MOROTE-TSUPPARI (Quebra de Guarda)
+        # -------------------------------------------------------------------------------------------------
         if self.state == "TSUPPARI_STRIKE_2":
             self.state_timer -= dt
             self.tsuppari_pulse_timer += dt
             elapsed = self.tsuppari_strike2_duration - self.state_timer
 
-            # Wind-up de 0.07s (braços abrem) -> Fase ativa (0.07s a 0.23s) -> Follow-through
-            if 0.07 <= elapsed <= 0.23:
+            # Wind-up de 0.07s (braços abrem) -> Fase ativa (0.07s a 0.24s)
+            if 0.07 <= elapsed <= 0.24:
                 self.hitbox_active = True
             else:
                 self.hitbox_active = False
 
-            # Avanço de impacto curto e bofetada dupla estonteante nas têmporas
-            step_speed = 1.2
+            step_speed = 1.4
             new_wx = self.wx + self.facing_x * step_speed * dt
             new_wy = self.wy + self.facing_y * step_speed * dt
             if game_map is not None:
@@ -308,19 +347,27 @@ class RaidenSumo(Samurai):
             else:
                 self.wx, self.wy = new_wx, new_wy
 
-            # Alcance físico convergente (0.70m à frente, raio 0.60m)
             self.hitbox_center = (
-                self.wx + self.facing_x * 0.70,
-                self.wy + self.facing_y * 0.70
+                self.wx + self.facing_x * 0.72,
+                self.wy + self.facing_y * 0.72
             )
-            self.hitbox_radius = 0.60
+            self.hitbox_radius = 0.70
 
             if self.hitbox_active and opponent and getattr(opponent, "is_alive", False):
                 dist_opp = math.hypot(opponent.wx - self.hitbox_center[0], opponent.wy - self.hitbox_center[1])
                 if dist_opp <= self.hitbox_radius + getattr(opponent, "radius", 0.35):
-                    # Pushback maciço e congelamento de guarda / stun
-                    push_x = self.facing_x * 6.5 * dt
-                    push_y = self.facing_y * 6.5 * dt
+                    # Quebra de guarda: se oponente estiver em PARRY, estilhaça a defesa!
+                    if getattr(opponent, "state", "") == STATE_PARRY:
+                        opponent.state = STATE_STUNNED
+                        opponent.state_timer = 0.65
+                        if banners is not None:
+                            banners.append(FloatingBanner("GUARDA QUEBRADA!", opponent.wx, opponent.wy, wz=1.8, color=(255, 60, 60)))
+                        if particles is not None:
+                            for _ in range(12):
+                                particles.append(SparkParticle(opponent.wx, opponent.wy, 0.45, color=(255, 235, 140)))
+
+                    push_x = self.facing_x * 7.0 * dt
+                    push_y = self.facing_y * 7.0 * dt
                     opponent.wx += push_x
                     opponent.wy += push_y
                     if not self.strike2_hit_applied:
@@ -332,18 +379,52 @@ class RaidenSumo(Samurai):
 
             if self.state_timer <= 0:
                 self.state = STATE_RECOVERY
-                self.state_timer = self.tsuppari_strike2_recovery  # 0.44s de frenagem pesada impedindo spam!
+                self.state_timer = self.tsuppari_strike2_recovery
                 self.combo_step = 0
                 self.combo_window_timer = 0.0
                 self.hitbox_active = False
             return
 
+        # -------------------------------------------------------------------------------------------------
+        # INVESTIDA SECUNDÁRIA: TACHIAI TACKLE 3-FASES
+        # -------------------------------------------------------------------------------------------------
         if self.state == "TACHIAI_TACKLE":
             self.state_timer -= dt
+            elapsed = self.tackle_duration - self.state_timer
 
-            # Avanço retilíneo impetuoso em velocidade 9.5
-            new_wx = self.wx + self.tackle_dir_x * self.tackle_speed * dt
-            new_wy = self.wy + self.tackle_dir_y * self.tackle_speed * dt
+            # FASE 1: Kamae Crouch (mãos na argila nos primeiros 0.14s)
+            if elapsed < 0.14:
+                self.tackle_phase = "CROUCH"
+                self.hitbox_active = False
+                u = elapsed / 0.14
+                self.current_tackle_speed = self.tackle_initial_speed * (0.4 + 0.6 * u)
+                if particles is not None and random.random() < 0.40:
+                    particles.append(SparkParticle(self.wx, self.wy, 0.20, color=(222, 198, 165)))
+
+            # FASE 2: Aceleração Explosiva (0.14s até 0.44s) -> Rampa contínua até 12.5 m/s
+            elif elapsed < 0.44:
+                self.tackle_phase = "CHARGE"
+                self.hitbox_active = True
+                u = (elapsed - 0.14) / 0.30
+                self.current_tackle_speed = self.tackle_initial_speed + (self.tackle_max_speed - self.tackle_initial_speed) * (u ** 1.3)
+
+                # Dano escala para 2 se atingir velocidade máxima (>= 10.0 m/s)
+                self.hitbox_damage = 2 if self.current_tackle_speed >= 10.0 else 1
+
+                if particles is not None and random.random() < 0.70:
+                    trail_x = self.wx - self.facing_x * 0.35
+                    trail_y = self.wy - self.facing_y * 0.35
+                    particles.append(SparkParticle(trail_x, trail_y, 0.28, color=(225, 200, 160)))
+
+            # FASE 3: Frenagem de Desaceleração pós-carga
+            else:
+                self.tackle_phase = "IMPACT"
+                self.hitbox_active = False
+                self.current_tackle_speed = max(2.0, self.current_tackle_speed - 22.0 * dt)
+
+            # Movimento com velocidade acelerada contínua
+            new_wx = self.wx + self.tackle_dir_x * self.current_tackle_speed * dt
+            new_wy = self.wy + self.tackle_dir_y * self.current_tackle_speed * dt
             if game_map is not None:
                 min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
                 self.wx = max(min_x, min(max_x, new_wx))
@@ -352,34 +433,37 @@ class RaidenSumo(Samurai):
                 self.wx, self.wy = new_wx, new_wy
 
             self.hitbox_center = (
-                self.wx + self.facing_x * 1.10,
-                self.wy + self.facing_y * 1.10
+                self.wx + self.facing_x * 1.05,
+                self.wy + self.facing_y * 1.05
             )
 
-            # Impacto devastador com o oponente: 1 de dano e super repulsão (4.5 metros)
-            if opponent and getattr(opponent, "is_alive", False) and not self.tackle_hit_applied:
+            # Colisão corporal com o rival
+            if self.hitbox_active and opponent and getattr(opponent, "is_alive", False) and not self.tackle_hit_applied:
                 dist_opp = math.hypot(opponent.wx - self.hitbox_center[0], opponent.wy - self.hitbox_center[1])
                 if dist_opp <= self.hitbox_radius + getattr(opponent, "radius", 0.35):
                     self.tackle_hit_applied = True
-                    hit, dead = opponent.take_hit((self.facing_x, self.facing_y), damage=1)
-                    # Arremessa o rival longe
-                    opponent.wx += self.facing_x * 4.2
-                    opponent.wy += self.facing_y * 4.2
-                    opponent.stun(0.85)
+                    dmg = 2 if self.current_tackle_speed >= 10.0 else 1
+                    hit, dead = opponent.take_hit((self.facing_x, self.facing_y), damage=dmg)
+
+                    # Arremesso parabólico do rival
+                    launch_mult = 5.2 if dmg == 2 else 3.8
+                    opponent.wx += self.facing_x * launch_mult
+                    opponent.wy += self.facing_y * launch_mult
+                    opponent.stun(0.95 if dmg == 2 else 0.65)
 
                     if particles is not None:
-                        for _ in range(16):
+                        for _ in range(18 if dmg == 2 else 10):
                             particles.append(SparkParticle(opponent.wx, opponent.wy, 0.40, color=(255, 175, 60)))
-                        for _ in range(8):
-                            particles.append(BloodParticle(opponent.wx, opponent.wy, 0.30))
+                        for _ in range(10 if dmg == 2 else 5):
+                            particles.append(BloodParticle(opponent.wx, opponent.wy, 0.35))
 
                     if banners is not None:
-                        banners.append(FloatingBanner("SUMO SLAM!", opponent.wx, opponent.wy, wz=1.75, color=COLOR_RAIDEN_AURA))
+                        msg = "MAX TACHIAI SLAM! (2 DANO)" if dmg == 2 else "TACHIAI IMPACT!"
+                        banners.append(FloatingBanner(msg, opponent.wx, opponent.wy, wz=1.75, color=COLOR_RAIDEN_AURA))
 
             if self.state_timer <= 0:
                 self.hitbox_active = False
                 self.state = STATE_RECOVERY
-                # Se errou a investida (whiff), sofre leve frenagem extra permitindo punição
                 self.state_timer = 0.32 if not self.tackle_hit_applied else 0.20
             return
 
@@ -396,15 +480,21 @@ class RaidenSumo(Samurai):
             return
 
     def render(self, surface: pygame.Surface, camera):
-        extra = {}
+        extra = {"ssaa_2x": True}
+
         if self.state == "TSUPPARI_STRIKE_2":
-            extra = {"pose": "tsuppari_2"}
+            extra["pose"] = "tsuppari_2"
         elif self.state in ("TSUPPARI_RUSH", "TSUPPARI_STRIKE_1"):
-            extra = {"pose": "tsuppari"}
+            extra["pose"] = "tsuppari"
         elif self.state == "TACHIAI_TACKLE":
-            extra = {"pose": "tackle"}
+            if self.tackle_phase == "CROUCH":
+                extra["pose"] = "tachiai_crouch"
+            else:
+                extra["pose"] = "tackle"
+        elif self.state == STATE_ROLL:
+            extra["pose"] = "shiko_slip"
         elif self.state in ("DEFEND", "PARRY") or getattr(self, "is_parrying", False):
-            extra = {"pose": "sumo_guard"}
+            extra["pose"] = "sumo_guard"
 
         render_voxel_humanoid(
             surface=surface,

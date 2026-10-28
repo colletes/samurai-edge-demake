@@ -88,8 +88,11 @@ def test_raiden_combat_mechanics():
     assert raiden.state == "TACHIAI_TACKLE", "Estado deve ser TACHIAI_TACKLE"
     assert abs(raiden.tackle_speed - 9.5) < 0.01, "Velocidade do Tackle deve ser 9.5"
 
-    # Atualizar até o impacto
-    raiden.update(0.20, opponent=opponent, particles=particles)
+    # Atualizar até o impacto (3-fases com aceleração contínua)
+    for _ in range(5):
+        if opponent.hp < 2:
+            break
+        raiden.update(0.10, opponent=opponent, particles=particles)
     assert opponent.hp == 1, f"Tackle deve causar 1 de dano, HP do rival é {opponent.hp}"
     assert opponent.wx >= 15.0, f"Tackle deve arremessar o oponente para longe, x={opponent.wx}"
     print("  [OK] Tachiai Tackle semiteleguiado causa 1 de dano e super knockback")

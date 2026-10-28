@@ -16,10 +16,10 @@ VICTORY_RETURN = 0.6      # câmera volta à vista clássica depois da pose
 # Duração de cada estado de golpe no renderer (`atk_progress = 1 - state_timer / duração`).
 ATTACK_DURATION = {"kenshin": 0.16, "musashi": 0.18, "pirate": 0.22, "anne": 0.22, "musketeer": 0.24, "julie": 0.24,
                    "purple": 0.16, "ninja": 0.18, "saitou": 0.25, "ren": 0.14, "chiyo": 0.14, "benkei": 0.32, "orin": 0.20,
-                   "goro": 0.26, "ichi": 0.16, "valerius": 0.20, "seimei": 0.18, "daiki": 0.20, "aoi": 0.17}
+                   "goro": 0.26, "ichi": 0.16, "valerius": 0.20, "seimei": 0.18, "daiki": 0.20, "aoi": 0.17, "raiden": 0.22}
 DEFAULT_ATTACK_DURATION = 0.20
 STATE_DURATION = {"PARRY": 0.45, "CAPE_FLOURISH": 0.5, "KIAI": 0.35, "MAI_DANCE": 0.36}
-MELEE_STATES = ("ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE", "KIAI", "MAI_DANCE", "POLE_VAULT", "PLANT_TRAP")
+MELEE_STATES = ("ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE", "KIAI", "MAI_DANCE", "POLE_VAULT", "PLANT_TRAP", "TACHIAI_TACKLE", "TSUPPARI_RUSH", "TSUPPARI_STRIKE_1", "TSUPPARI_STRIKE_2")
 
 
 @dataclass
@@ -77,6 +77,8 @@ def canonical(char_type: str) -> str:
         return "daiki"
     if "aoi" in c or "ainu" in c or "huntress" in c:
         return "aoi"
+    if "raiden" in c or "sumo" in c or "rikishi" in c:
+        return "raiden"
     return c
 
 
@@ -181,6 +183,12 @@ INTRO = {
         _seg(0.22, 0.66, "ATTACK", 0.0, 1.0),
         _idle(0.66, 1.0),
     ],
+    # Raiden (2.23.5): Dupla palmada trovejante com sal ritual -> postura sagrada Sonkyo -> guarda Kamae
+    "raiden": [
+        _idle(0.0, 0.38, pose="ceremonial_clap", salt_flash=True),
+        _idle(0.38, 0.78, pose="sonkyo_squat"),
+        _idle(0.78, 1.0, pose="sumo_kamae"),
+    ],
 }
 
 VICTORY = {
@@ -264,6 +272,12 @@ VICTORY = {
         _seg(0.0, 0.45, "ATTACK", 0.0, 1.0),
         _idle(0.45, 1.0, pose="ainu_prayer"),
     ],
+    # Raiden (2.23.6): Elevação de perna a 90° em Shiko ritual -> queda telúrica no solo -> punhos no mawashi com rugido
+    "raiden": [
+        _idle(0.0, 0.44, pose="shiko_raise"),
+        _idle(0.44, 0.74, pose="shiko_stomp", seismic_dust=True),
+        _idle(0.74, 1.0, pose="mawashi_fists"),
+    ],
 }
 
 SCRIPTS = {"intro": INTRO, "victory": VICTORY}
@@ -293,6 +307,7 @@ BEATS = {
         "seimei": [(0.20, "sfx:kunai_throw"), (0.40, "fx:sparks"), (0.65, "fx:petals")],
         "daiki": [(0.25, "sfx:dodge_whoosh"), (0.48, "sfx:obstacle_hit")],
         "aoi": [(0.24, "sfx:sword_slash"), (0.52, "sfx:dodge_whoosh")],
+        "raiden": [(0.12, "sfx:parry"), (0.24, "sfx:parry"), (0.38, "fx:sparks"), (0.40, "sfx:dodge_whoosh")],
     },
     "victory": {
         "kenshin": [(0.08, "sfx:sword_slash"), (0.28, "sfx:dodge_whoosh"), (0.30, "fx:blood"), (0.74, "sfx:parry"), (0.76, "fx:petals")],
@@ -317,6 +332,7 @@ BEATS = {
         "seimei": [(0.15, "sfx:kunai_throw"), (0.35, "fx:sparks"), (0.70, "fx:petals")],
         "daiki": [(0.18, "sfx:dodge_whoosh"), (0.44, "sfx:obstacle_hit")],
         "aoi": [(0.16, "sfx:sword_slash"), (0.50, "fx:petals")],
+        "raiden": [(0.20, "sfx:dodge_whoosh"), (0.45, "sfx:obstacle_hit"), (0.46, "fx:smoke"), (0.76, "sfx:sword_slash")],
     },
 }
 
