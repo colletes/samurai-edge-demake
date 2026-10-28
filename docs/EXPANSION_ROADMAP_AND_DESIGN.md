@@ -1,6 +1,6 @@
 # Master Roadmap & Expansion Design: Samurai Edge Demake (Bakumatsu Edition)
 
-Este documento representa o plano diretor canônico de expansão, balanceamento e refinamento do jogo **Samurai Edge Demake**. Todas as mecânicas, parâmetros de golpes, atributos de combate, finalizações cinematográficas, apresentações e palcos são documentados aqui para guiar o desenvolvimento com rigor e rastreabilidade.
+Este documento representa o plano diretor canônico de expansão, balanceamento e refinamento do jogo **Samurai Edge Demake**. Todas as mecânicas, parâmetros de golpes, atributos de combate, finalizações cinematográficas, fidelidade gráfica, materiais realistas, interpolação de animações e palcos são documentados aqui para guiar o desenvolvimento com rigor e rastreabilidade.
 
 ```mermaid
 flowchart TD
@@ -43,8 +43,8 @@ Foco: Trazer o jogador para a intimidade brutal do combate marcial (*Bushido Due
 
 ---
 
-### ⚔️ Fase 2: A Grande Reformulação dos 24 Guerreiros (Movesets, Atributos, Finishers & Animações)
-Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada golpe, mobilidade, finalização e apresentação possui especificações rigorosas de frames, hitboxes tridimensionais, penalidades de whiff, reações de impacto e áudio foley.
+### ⚔️ Fase 2: A Grande Reformulação dos 24 Guerreiros (Movesets, Atributos, Finishers, Fidelidade HD & Transições)
+Foco: Revisar, rebalancear e enriquecer cada combatente individualmente em 10 entregáveis atômicos por guerreiro: moveset completo, esquiva/defesa, finisher 3D bespoke, animações de intro/vitória, renderização supersampleada anti-aliasing/anti-tearing, texturas faciais em alta resolução, interpolação contínua de quadros (LERP Cross-fade) e biblioteca de materiais realistas.
 
 ---
 
@@ -72,6 +72,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Câmera em close no punho, polegar destravando a lâmina com faísca e olhar focado por sob a franja.
 - **📦 Entregável 2.1.6: Animação de Vitória — *Chiburi & Noto Cerimonial***
   - *Coreografia:* Sacudida angular de sangue da lâmina, giro rápido sobre os dedos e estalo metálico ao embainhar.
+- **📦 Entregável 2.1.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Canvas offscreen 2x renderizando o modelo e lâmina com reamostragem bilinear `smoothscale`, eliminando escadas de pixel e tearing em 60 FPS com double-buffering estrito.
+- **📦 Entregável 2.1.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Íris castanho-âmbar em alta densidade com anel límbico nítido, duplo catchlight especular e lashlines resolutas visíveis em todos os ângulos da câmera.
+- **📦 Entregável 2.1.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Blend contínuo de 0.08s entre Caminhada ➔ Ataque, Ataque ➔ Esquiva e Esquiva ➔ Idle, eliminando cortes secos de membros.
+- **📦 Entregável 2.1.10: Biblioteca de Materiais Realistas — *Seda Chirimen Carmim & Aço Tamahagane***
+  - *Especificações:* Mapeamento de textura de seda áspera japonesa Chirimen no quimono, laca negra Urushi na bainha Saya e padrão Hamon ondulado no gume da katana em `assets/textures/`.
 
 ---
 
@@ -99,6 +107,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Musashi bate as lâminas em X gerando fagulhas reais e assume a postura aberta de duas espadas.
 - **📦 Entregável 2.2.6: Animação de Vitória — *Postura dos Dois Céus***
   - *Coreografia:* Lâmina principal erguida apontando para o céu, wakizashi horizontal protegendo o abdômen e respiração lenta.
+- **📦 Entregável 2.2.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Renderização 2x sem serrilhados nas lâminas duplas e contornos do hakama azul-marinho.
+- **📦 Entregável 2.2.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhar marcial veterano com cicatriz sutil na sobrancelha, íris escura intensa e barba por fazer modelada em micro-polígonos.
+- **📦 Entregável 2.2.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Transição fluida entre guarda alta Hyoho Niten e corridas ou deflexões em X.
+- **📦 Entregável 2.2.10: Biblioteca de Materiais Realistas — *Linho Rústico Índigo & Aço Antigo***
+  - *Especificações:* Padrão de linho grosso tingido em índigo natural tradicional, empunhaduras de couro de arraia (samegawa) e ito trançado desgastado.
 
 ---
 
@@ -126,6 +142,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Redemoinho de folhas no solo revela Hanzo agachado em guarda pronta, desembainhando a ninjato às costas.
 - **📦 Entregável 2.3.6: Animação de Vitória — *Selo Kuji-Kiri & Fumaça Negra***
   - *Coreografia:* Gesto com os dedos em selo ninja de concentração e desvanecimento total em fumaça de pólvora escura.
+- **📦 Entregável 2.3.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Eliminação de pixel-staircase nas faixas e fitas flutuantes da máscara ninja durante rotações.
+- **📦 Entregável 2.3.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhar gélido e penetrante de assassino entre a máscara e o capuz, com brilho metálico frio na íris.
+- **📦 Entregável 2.3.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Transição suave entre salto mortal, rolamento Kawarimi e agachamento neutro.
+- **📦 Entregável 2.3.10: Biblioteca de Materiais Realistas — *Tecido Negro Shinobi Shozoku & Lâmina Fosca***
+  - *Especificações:* Trama de algodão denso anti-reflexo no traje ninja e aço escurecido fosco sem brilho para lâminas furtivas.
 
 ---
 
@@ -153,6 +177,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Joe de costas passando a pedra na lâmina de titânio; Yamato late vigorosamente ao detectar o perigo e assume a dianteira.
 - **📦 Entregável 2.4.6: Animação de Vitória — *Recompensa a Yamato & Guarda Alta***
   - *Coreografia:* Joe ajoelha, afaga a cabeça de Yamato que balança a cauda, e recolhe a adaga no coldre tático com clique audível.
+- **📦 Entregável 2.4.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing preciso na pelagem negra e acessórios táticos de Yamato e na mochila de assalto de Joe.
+- **📦 Entregável 2.4.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhos resolutos de soldado com bandana camuflada e textura vívida dos olhos caninos alertas de Yamato.
+- **📦 Entregável 2.4.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Transições perfeitas entre comando de apito, corrida tática e postura de faca pronta.
+- **📦 Entregável 2.4.10: Biblioteca de Materiais Realistas — *Cordura Tática, Kevlar & Aço Cirúrgico***
+  - *Especificações:* Tecido sintético militar de nylon balístico Cordura, colete de kevlar e titânio acetinado na faca de combate.
 
 ---
 
@@ -180,6 +212,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Saitou puxa a faixa branca da testa, ergue a ponta da lâmina na linha dos olhos e fixa o olhar frio no rival.
 - **📦 Entregável 2.5.6: Animação de Vitória — *Limpeza com Papel Kaishi & Bainha Fria***
   - *Coreografia:* Retira folha de papel kaishi da manga, limpa o sangue da lâmina em movimento preciso, solta o papel ao vento e embainha.
+- **📦 Entregável 2.5.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Suavização nos dentes de serra brancos da barra do haori do Shinsengumi durante estocadas supersônicas.
+- **📦 Entregável 2.5.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhar lupino implacável, sem pupilas dilatadas, olhos semicerrados de duelista mortal com precisão anatômica.
+- **📦 Entregável 2.5.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Blend de transição instantâneo entre investida do Gatotsu e recolhimento de postura de guarda lateral.
+- **📦 Entregável 2.5.10: Biblioteca de Materiais Realistas — *Tecido Asagi-iro & Laca Preta de Saya***
+  - *Especificações:* Trama de algodão azul-turquesa clássico Asagi-iro do Shinsengumi, com detalhes de zigue-zague branco nítidos e bainha com laca fosca.
 
 ---
 
@@ -207,6 +247,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Teppo sopra a mecha de corda embebida em salitre, que brilha em brasa viva, ajusta o cão do fuzil e aponta para frente.
 - **📦 Entregável 2.6.6: Animação de Vitória — *Cachimbo Kiseru & Fuzil no Ombro***
   - *Coreografia:* Apoia o fuzil ainda fumegante no ombro esquerdo, acende um pequeno cachimbo kiseru com a mecha e solta baforada relaxada.
+- **📦 Entregável 2.6.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing suave no longo cano octogonal de ferro do arcabuz e no chapéu cônico Jingasa de ferro.
+- **📦 Entregável 2.6.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olho direito focado na alça de mira com pupila contraída e marcas de queimadura de fuligem de pólvora na bochecha.
+- **📦 Entregável 2.6.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Suavização nos quadros de recarga com vareta de ferro (ramrod) conectando com corrida de fuga.
+- **📦 Entregável 2.6.10: Biblioteca de Materiais Realistas — *Carvalho Envelhecido & Ferro Fundido Rústico***
+  - *Especificações:* Madeira de carvalho escuro envernizado na coronha, ferro fundido rústico com pátina no cano e corda de cânhamo na mecha.
 
 ---
 
@@ -234,6 +282,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Murasaki gira o peso de ferro em órbita perfeita com apenas um dedo, parando-o de supetão na palma com olhar misterioso.
 - **📦 Entregável 2.7.6: Animação de Vitória — *Recolhimento Espiral da Corrente***
   - *Coreografia:* Com um puxão seco, a corrente enrola-se perfeitamente em torno de seu antebraço coberto de laca, com a foice em repouso pronto.
+- **📦 Entregável 2.7.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing dinâmico nos elos tridimensionais da corrente e na longa fita roxa do rabo de cavalo.
+- **📦 Entregável 2.7.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhos ametista profundos e misteriosos com traço gatinho fino e sombreamento suave de cílios femininos.
+- **📦 Entregável 2.7.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Interpolação fluida entre o recolhimento em espiral da corrente e passos de esquiva rápida.
+- **📦 Entregável 2.7.10: Biblioteca de Materiais Realistas — *Seda Púrpura de Quioto & Ferro Escuro***
+  - *Especificações:* Textura de seda roxa escura com padrões florais de ameixeira (*ume*), elos de ferro forjado e aço carbono na foice.
 
 ---
 
@@ -261,6 +317,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Salta do topo da tela aterrisando sem ruído agachada, abrindo ambos os leques com estalo sincronizado.
 - **📦 Entregável 2.8.6: Animação de Vitória — *Rosto Oculto & Risada Sinistra***
   - *Coreografia:* Fecha um dos leques e posiciona o outro ocultando a metade inferior do rosto, deixando transparecer apenas o olhar vitorioso.
+- **📦 Entregável 2.8.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Amostragem 2x sem serrilhado nas dobras de papel e varetas de aço dos leques tessen.
+- **📦 Entregável 2.8.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhos cor de avelã luminosos com delineado anime alado e esclera marfim pura em alta resolução.
+- **📦 Entregável 2.8.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Conexão fluida entre o arremesso parabólico da bomba cerâmica e a recuperação em esquiva de fumaça.
+- **📦 Entregável 2.8.10: Biblioteca de Materiais Realistas — *Cerâmica Vitrificada & Papel Washi Reforçado***
+  - *Especificações:* Textura de terracota esmaltada com verniz brilhante nas bombas Horoku e papel japonês Washi impermeável nos leques.
 
 ---
 
@@ -288,6 +352,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Okuni executa passos rítmicos tradicionais, bate os pés com força no tablado e abre os leques com estalo monumental.
 - **📦 Entregável 2.9.6: Animação de Vitória — *Mie Pose Tradicional do Kabuki***
   - *Coreografia:* Posição clássica estática do Kabuki (*Mie*), com a cabeça inclinada, olhos cruzados em expressão dramática e leque estendido.
+- **📦 Entregável 2.9.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Renderização 2x nítida das maquiagens faciais Kumadori sem sangramento de pixels em rotação de câmera.
+- **📦 Entregável 2.9.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Pintura branca Oshiroi com traços vermelhos e pretos Kumadori perfeitamente definidos e lábios de carmim brilhante.
+- **📦 Entregável 2.9.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Transições rítmicas de dança conectando passadas laterais de Kabuki com ataques de leque.
+- **📦 Entregável 2.9.10: Biblioteca de Materiais Realistas — *Brocado de Seda Dourado & Folha de Ouro***
+  - *Especificações:* Tecido pesado de brocado de seda de Quioto com fios de ouro reluzentes e laca vermelha cinnabar nas hastes dos leques.
 
 ---
 
@@ -315,6 +387,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Tomoe aponta o arco Yumi para o céu, puxa a corda sentindo a brisa e a solta com reverberação sonora impressionante.
 - **📦 Entregável 2.10.6: Animação de Vitória — *Oração Solene & Arco na Vertical***
   - *Coreografia:* Tomoe repousa a base do arco de bambu no chão, faz reverência solene de cabeça e agradece aos deuses da guerra.
+- **📦 Entregável 2.10.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Curvatura assimétrica do arco Yumi de 2.2m sem serrilhados diagonais em nenhuma orientação.
+- **📦 Entregável 2.10.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhar nobre e focado com íris azul-escura brilhante e sobrancelhas delgadas arqueadas de nobre guerreira.
+- **📦 Entregável 2.10.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Interpolação suave dos braços tensionando e soltando a corda do arco conectando com corrida.
+- **📦 Entregável 2.10.10: Biblioteca de Materiais Realistas — *Bambu Laminado, Madeira de Amoreira & Penas de Falcão***
+  - *Especificações:* Fibras naturais de bambu curvado com verniz fosco, corda de linho encerado e empenas de pena de falcão nas flechas.
 
 ---
 
@@ -342,6 +422,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Anne dá um gole no cantil de peltre, cospe o rum na lâmina do sabre e desfere um corte rápido no ar sorrindo desafiadoramente.
 - **📦 Entregável 2.11.6: Animação de Vitória — *Alfanje Cravado no Solo & Risada***
   - *Coreografia:* Crava o sabre com força na terra/madeira, apoia a bota na empunhadura e solta uma gargalhada de corsária triunfante.
+- **📦 Entregável 2.11.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing 2x na lâmina curvada pesada do cutlass e nas fivelas e cintos de couro cruzados.
+- **📦 Entregável 2.11.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhar felino esmeralda destemido com sardas delicadas nas bochechas e mechas ruivas soltas ao vento.
+- **📦 Entregável 2.11.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Transição suave entre rolamento de esquiva de convés e corte com momentum do sabre.
+- **📦 Entregável 2.11.10: Biblioteca de Materiais Realistas — *Couro Marinho Envelhecido & Latão Naval***
+  - *Especificações:* Couro castanho envelhecido com marcas de sal marinho nas botas e colete, e guarda de cesto de latão polido no cutlass.
 
 ---
 
@@ -369,6 +457,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Julie retira o chapéu cavalier emplumado, curva-se em nobre reverência, recoloca o chapéu e empunha o florete com floreio de capa.
 - **📦 Entregável 2.12.6: Animação de Vitória — *Bainha Graciosa & Ajuste de Luva***
   - *Coreografia:* Embainha o florete fino sem sequer olhar para a bainha com clique impecável, ajeita a luva de couro e sopra a fumaça da pistola.
+- **📦 Entregável 2.12.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing nítido no florete fino de esgrima e na aba dobrada do chapéu cavalier com pluma.
+- **📦 Entregável 2.12.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhos azul-safira aristocráticos de alta resolução, lábios delicadamente rosados e expressão de superioridade refinada.
+- **📦 Entregável 2.12.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Interpolação suave de esgrima clássica francesa entre estocada profunda, recuperação e guarda com floreio de capa.
+- **📦 Entregável 2.12.10: Biblioteca de Materiais Realistas — *Veludo Real Francês, Aço Toledo & Renda***
+  - *Especificações:* Textura de veludo azul-real na capa com forro de cetim dourado, lâmina de aço Toledo polido espelhado e babados de renda branca no punho.
 
 ---
 
@@ -396,6 +492,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Ren curva-se em respeito com as mãos postas, abre a base com estalo dos pés na terra e assume guarda Shaolin.
 - **📦 Entregável 2.13.6: Animação de Vitória — *Reverência Solene Gassho***
   - *Coreografia:* Junta as palmas em oração profunda, fecha os olhos e recita um mantra em honra à vida ceifada.
+- **📦 Entregável 2.13.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing suave no manto monástico alaranjado e nas contas de oração budistas (Juzu).
+- **📦 Entregável 2.13.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Cabeça raspada com 9 pontos rituais de queima de incenso (Jiedie) nítidos e olhos castanho-dourados serenos.
+- **📦 Entregável 2.13.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Transição suave entre oração de palmas postas e investidas de impacto marcial.
+- **📦 Entregável 2.13.10: Biblioteca de Materiais Realistas — *Linho Monástico Açafrão & Madeira de Sândalo***
+  - *Especificações:* Tecido de algodão cru tingido em açafrão, contas de sândalo polido e faixas de linho nos tornozelos.
 
 ---
 
@@ -423,6 +527,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Chiyo saca ambas as kodachi das costas num relance, gira as lâminas entre os dedos e assume guarda baixa felina.
 - **📦 Entregável 2.14.6: Animação de Vitória — *Giro Sincronizado & Bainha nas Costas***
   - *Coreografia:* Gira as lâminas em espiral sobre os pulsos e as embainha simultaneamente nas costas com estalo rítmico duplo.
+- **📦 Entregável 2.14.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing 2x nas lâminas duplas e na máscara leve de kunoichi sem tremores em movimento veloz.
+- **📦 Entregável 2.14.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhos carmim vívidos com delineador duplo alado e franja assimétrica sem serrilhado.
+- **📦 Entregável 2.14.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Transição acrobática sem quebras entre deslizamento no solo e tesoura aérea de lâminas.
+- **📦 Entregável 2.14.10: Biblioteca de Materiais Realistas — *Seda Escura de Iga & Aço Espelhado Dobrado***
+  - *Especificações:* Tecido elástico fosco de seda negra e carmesim com bainhas duplas de laca com acabamento acetinado.
 
 ---
 
@@ -450,6 +562,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Benkei crava a base da pesada naginata no chão de pedra rachando o piso, cruza os braços maciços e encara o rival.
 - **📦 Entregável 2.15.6: Animação de Vitória — *Postura Imóvel do Guardião***
   - *Coreografia:* Permanece imóvel como estátua ancestral de templo, com a lança erguida ao céu e respiração de montanha.
+- **📦 Entregável 2.15.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing 2x nas ombreiras de placas de ferro (ō-sode) e na longa haste da naginata.
+- **📦 Entregável 2.15.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Feições rudes e imponentes de guerreiro lendário com sobrancelhas grossas e queixo firme sombreado.
+- **📦 Entregável 2.15.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Conexão contínua da massa inercial da naginata entre golpe circular e guarda imóvel.
+- **📦 Entregável 2.15.10: Biblioteca de Materiais Realistas — *Placas de Ferro Escurecido & Carvalho Maciço***
+  - *Especificações:* Placas de ferro laqueado preto amarradas com cordões de seda vermelha (odoshi) e haste de carvalho negro reforçada com anéis de bronze.
 
 ---
 
@@ -477,6 +597,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* O-Rin inclina a cabeça escutando os passos do adversário, dedilha um acorde tenso no shamisen e ergue o plectro bachi.
 - **📦 Entregável 2.16.6: Animação de Vitória — *Afinação Serena & Pétalas de Cerejeira***
   - *Coreografia:* Ajusta suavemente as cravelhas do instrumento, toca uma melodia fúnebre delicada enquanto pétalas caem ao seu redor.
+- **📦 Entregável 2.16.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing 2x nas três finas cordas de seda do shamisen e na aba do chapéu de palha de peregrina.
+- **📦 Entregável 2.16.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhos leitosos vendados com expressão serena de escuta e mechas suaves que emolduram a face.
+- **📦 Entregável 2.16.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Transição suave entre palhetada com o bachi e deslizamento lateral evasivo.
+- **📦 Entregável 2.16.10: Biblioteca de Materiais Realistas — *Madeira Karin Vermelha, Pele de Gato & Marfim***
+  - *Especificações:* Madeira de lei vermelha Karin na caixa de ressonância do shamisen, tampo de couro autêntico e plectro bachi de marfim esculpido.
 
 ---
 
@@ -504,6 +632,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Goro apoia a enxada no ombro, cospe de lado, aperta a faixa tenugui na cabeça e assume postura desafiadora.
 - **📦 Entregável 2.17.6: Animação de Vitória — *Apoio na Enxada & Enxugamento de Suor***
   - *Coreografia:* Apoia ambas as mãos na enxada, enxuga o suor da testa com a toalha e solta um suspiro de trabalho cumprido.
+- **📦 Entregável 2.17.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing 2x nas vestes de camponês remendadas e no cabo rústico de madeira da enxada.
+- **📦 Entregável 2.17.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Rosto bronzeado pelo sol com rugas de determinação, sorriso teimoso e olhos castanhos vivos.
+- **📦 Entregável 2.17.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Blend de transição suave entre o recuo de enxada fincada no solo e passadas firmes de terra.
+- **📦 Entregável 2.17.10: Biblioteca de Materiais Realistas — *Cânhamo Rústico Remendado & Ferro Rústico Oxidado***
+  - *Especificações:* Tecido áspero de cânhamo cru com remendos visíveis, ferro batido à mão com oxidação natural e madeira áspera de freixo.
 
 ---
 
@@ -531,6 +667,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Toca o chão com a bengala de madeira, inclina o ouvido sentindo o ar e destrava a lâmina oculta em 2 centímetros.
 - **📦 Entregável 2.18.6: Animação de Vitória — *Trava da Lâmina & Caminhada Serena***
   - *Coreografia:* Empurra a lâmina até ouvir o clique de travamento completo e caminha lentamente tateando a terra em paz.
+- **📦 Entregável 2.18.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Resolução 2x cristalina na bengala cilíndrica de madeira de cerejeira e no quimono em movimento.
+- **📦 Entregável 2.18.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhos suavemente cerrados com cílios expressivos e aura de calma imperturbável.
+- **📦 Entregável 2.18.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Suavização nos quadros de saque e retração da lâmina oculta conectando com passos firmes.
+- **📦 Entregável 2.18.10: Biblioteca de Materiais Realistas — *Madeira de Cerejeira Polida & Aço Navalha***
+  - *Especificações:* Madeira de cerejeira polida com cera de abelha natural e lâmina de aço carbono finamente retificada.
 
 ---
 
@@ -558,6 +702,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Ergue a mão enluvada de negro, chamas azuis irrompem do chão ao seu redor e seu olhar gélido fixa-se na presa.
 - **📦 Entregável 2.19.6: Animação de Vitória — *Servo Esqueleto Recolhe o Cajado***
   - *Coreografia:* Um esqueleto emerge da terra, entrega o cajado cerimonial a Valerius que sorri satisfeito e desaparece no nevoeiro.
+- **📦 Entregável 2.19.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing suave na fumaça translúcida espectral e nos ossos 3D do servo esqueleto.
+- **📦 Entregável 2.19.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Tez pálida cadavérica, olhos cinzento-prateados incandescentes e mechas de cabelo platinado.
+- **📦 Entregável 2.19.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Transição suave entre gestos de conjuração de almas e postura aristocrática com cajado.
+- **📦 Entregável 2.19.10: Biblioteca de Materiais Realistas — *Lã Negra Prussiana, Prata Envelhecida & Fogo Azul***
+  - *Especificações:* Tecido pesado de lã preta de sobretudo militar gótico, prata de lei envelhecida nos anéis e crânio do cajado.
 
 ---
 
@@ -585,6 +737,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Seimei segura um talismã entre dois dedos, sopra suavemente fazendo-o explodir em partículas douradas e abre seu leque cerimonial.
 - **📦 Entregável 2.20.6: Animação de Vitória — *Traçado do Pentagrama Doman-Semman***
   - *Coreografia:* Traça o pentagrama Doman-Semman luminoso no ar com a ponta dos dedos, que brilha e se dissipa no éter enquanto Seimei sorri com serenidade.
+- **📦 Entregável 2.20.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing 2x nas bordas dos caracteres sânscritos dos talismãs e no chapéu cerimonial Eboshi.
+- **📦 Entregável 2.20.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhos de raposa místicos dourados com maquiagem cerimonial vermelha nos cantos dos olhos.
+- **📦 Entregável 2.20.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Blend contínuo entre gestos manuais com mudras e deslizamento de vestes talares Kariginu.
+- **📦 Entregável 2.20.10: Biblioteca de Materiais Realistas — *Seda Nobre Heian Branca & Papel Sagrado Washi***
+  - *Especificações:* Seda branca pura com motivos hexagonais de carapaça de tartaruga (kikkou) e papel Washi fibroso com escrita de tinta nanquim vermelha.
 
 ---
 
@@ -612,6 +772,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Daiki gira o bastão como hélice entre os dedos de ambas as mãos em velocidade estonteante, cravando-o no solo em guarda Zen.
 - **📦 Entregável 2.21.6: Animação de Vitória — *Equilíbrio Zen na Palma da Mão***
   - *Coreografia:* Equilibra a ponta do bastão perfeitamente na palma da mão estendida, fecha os olhos em meditação e faz reverência tranquila.
+- **📦 Entregável 2.21.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing 2x no bastão longo de 1.8m girando em 360° sem flicker nas extremidades.
+- **📦 Entregável 2.21.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Rosto jovem resoluto com olhar castanho determinado e pequenas marcas de orvalho da montanha.
+- **📦 Entregável 2.21.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Conexão fluida entre salto com vara, pouso no solo e transição para o giro de combate.
+- **📦 Entregável 2.21.10: Biblioteca de Materiais Realistas — *Carvalho Vermelho Maciço & Corda de Cânhamo***
+  - *Especificações:* Textura de carvalho vermelho denso envernizado com cera natural e pompons monásticos Yuigesa de lã branca no peito.
 
 ---
 
@@ -639,6 +807,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Aoi toca a ponta da lança no peito em saudação tradicional Ainu, ajusta o capuz de pele de lobo e assume postura de caçada.
 - **📦 Entregável 2.22.6: Animação de Vitória — *Elevação da Lança & Chamado da Taiga***
   - *Coreografia:* Ergue a lança com as duas mãos em direção ao céu do norte, solta o brado solene das caçadoras Ezo e contempla o horizonte.
+- **📦 Entregável 2.22.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing 2x na borda do capuz de pelos e nos intrincados padrões bordados do traje tradicional Ainu.
+- **📦 Entregável 2.22.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhos azul-ártico luminosos com tatuagem labial cerimonial Ainu nítida e bochechas coradas pelo frio.
+- **📦 Entregável 2.22.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Conexão contínua entre agachamento para colocação da armadilha e estocada veloz de lança.
+- **📦 Entregável 2.22.10: Biblioteca de Materiais Realistas — *Pele de Lobo Ártico, Osso Fóssil & Tecido Bordado Attush***
+  - *Especificações:* Pelagem de lobo cinzento com relevo, osso polido na ponta da lança e tecido tradicional de fibra de casca de árvore Attush com bordados geométricos.
 
 ---
 
@@ -666,6 +842,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Raiden bate as palmas duas vezes com som de trovão, agacha-se na postura sagrada Sonkyo e fixa os olhos incandescentes no adversário.
 - **📦 Entregável 2.23.6: Animação de Vitória — *Shiko Cerimonial & Punhos no Mawashi***
   - *Coreografia:* Ergue a perna direita a 90° e despenca o pé no solo com estrondo telúrico, apoia os punhos fechados na cintura e solta um rugido de vitória.
+- **📦 Entregável 2.23.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing 2x nas faixas sagradas Shimenawa e na grande silhueta corporal do lutador de sumô.
+- **📦 Entregável 2.23.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhos resolutos e ferozes com sobrancelhas grossas, topete Oicho tradicional perfeitamente esculpido e dentes cerrados.
+- **📦 Entregável 2.23.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Transição suave da enorme massa corporal entre investida de carga e batida de palmas.
+- **📦 Entregável 2.23.10: Biblioteca de Materiais Realistas — *Seda Densa do Mawashi & Corda Shinto Shimenawa***
+  - *Especificações:* Tecido denso de seda grossa do cinturão Mawashi azul-marinho e corda de palha de arroz Shinto trançada com ziguezagues de papel branco Shide.
 
 ---
 
@@ -693,6 +877,14 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente. Cada go
   - *Coreografia:* Hendrika ergue um frasco âmbar examinando o reagente contra a luz, goteja uma gota no estilete que chia com fumaça e sorri friamente.
 - **📦 Entregável 2.24.6: Animação de Vitória — *Registro em Caderno de Campo & Relógio de Bolso***
   - *Coreografia:* Abre um caderno de anotações com capa de couro, escreve rapidamente com pena os resultados do experimento e fecha o relógio de bolso com clique seco.
+- **📦 Entregável 2.24.7: Fidelidade Gráfica — *Supersampling 2x Offscreen & V-Sync Anti-Tearing***
+  - *Especificações:* Antialiasing 2x no estilete triangular delgado e na transparência dos frascos de vidro alquímicos.
+- **📦 Entregável 2.24.8: Texturas Faciais & Olhos Anime HD***
+  - *Especificações:* Olhos cinzento-aço analíticos com óculos de proteção de relojoeiro na testa e expressão meticulosa.
+- **📦 Entregável 2.24.9: Interpolação de Animação — *Pose LERP Cross-Fade (3 a 5 Quadros)***
+  - *Especificações:* Suavização nos movimentos de retirada e arremesso de frascos conectando com passos laterais.
+- **📦 Entregável 2.24.10: Biblioteca de Materiais Realistas — *Vidro Âmbar de Laboratório, Couro Encerado & Latão Holandês***
+  - *Especificações:* Vidro translúcido em frascos borossilicato, couro impermeabilizado com cera no avental de alquimia e latão de instrumentos de precisão.
 
 ---
 
