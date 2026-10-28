@@ -893,8 +893,9 @@ def draw_portrait_face_3d(
         ir_x = spacing * 1.05 * s
         ir_y = eye_z + (0.000 if is_male else 0.001)
 
+        is_legacy_eye = bool(extra_props.get("legacy_mode", False))
         # Anel límbico externo de alta definição (HD Anime Eye Ring)
-        if style.get("hd_anime_eyes", False):
+        if style.get("hd_anime_eyes", False) and not is_legacy_eye:
             limbal_col = style.get("iris_limbal", (88, 40, 24))
             lw, lh = ir_w * 1.12, ir_h * 1.08
             limbal_poly = [
@@ -918,7 +919,7 @@ def draw_portrait_face_3d(
         pygame.draw.polygon(surface, iris_col, iris_poly)
 
         # Gradiente âmbar/mel na meia-lua inferior da íris (HD Anime Eye)
-        if style.get("hd_anime_eyes", False):
+        if style.get("hd_anime_eyes", False) and not is_legacy_eye:
             honey_col = style.get("iris_core", (255, 198, 72))
             crescent_poly = [
                 ir_p0,

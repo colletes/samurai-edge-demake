@@ -245,8 +245,30 @@ def run_kenshi_overhaul_tests():
     assert 0.0 < kenshi_vis._pose_lerp_tracker["last_lerp_alpha"] < 1.0, "Pose LERP deve interpolar suavemente na transição de estado!"
     print("✓ Entregáveis 2.1.7 (SSAA 2x), 2.1.8 (Olhos Anime HD), 2.1.9 (Pose LERP 0.08s) e 2.1.10 (Materiais) OK!")
 
+    # =========================================================================
+    # 7. Entregável 2.1.11: Model Inspector — De/Para (Antigo vs Novo) & Botões Interativos de Animação
+    # =========================================================================
+    from tools.model_inspector import ModelInspector, CHARACTER_ANIM_BUTTONS, OVERHAUL_DE_PARA_NOTES
+    assert "kenshi" in CHARACTER_ANIM_BUTTONS
+    assert len(CHARACTER_ANIM_BUTTONS["kenshi"]) == 12, "Kenshi deve ter 12 botões interativos de animação/golpes no Model Inspector!"
+    assert "kenshi" in OVERHAUL_DE_PARA_NOTES
+    assert hasattr(kenshi_model, "LEGACY_MATERIALS")
+
+    inspector = ModelInspector(headless=True)
+    inspector.select_character(0)  # Kenshi
+    inspector.compare_mode = True
+    for btn in CHARACTER_ANIM_BUTTONS["kenshi"]:
+        act_id = btn[0]
+        inspector.trigger_action(act_id)
+        assert inspector.active_action == act_id
+        inspector.update(0.15)
+        inspector.render()
+    assert len(inspector.anim_action_btn_rects) == 12
+    assert inspector.compare_btn_rect is not None
+    print("✓ Entregável 2.1.11 (Model Inspector De/Para Antigo vs Novo & 12 Botões de Animação) OK!")
+
     print("\n=======================================================")
-    print("TODOS OS 11 ENTREGÁVEIS DA SUB-FASE 2.1 (KENSHI) PASSARAM COM 100% DE SUCESSO!")
+    print("TODOS OS 12 ENTREGÁVEIS DA SUB-FASE 2.1 (KENSHI) PASSARAM COM 100% DE SUCESSO!")
     print("=======================================================\n")
 
 

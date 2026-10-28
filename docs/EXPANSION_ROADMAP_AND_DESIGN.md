@@ -43,9 +43,11 @@ Foco: Trazer o jogador para a intimidade brutal do combate marcial (*Bushido Due
 
 ---
 
-### ⚔️ Fase 2: A Grande Reformulação dos 24 Guerreiros (Movesets, Atributos, Finishers Duplos, Fidelidade HD & Transições)
-Foco: Revisar, rebalancear e enriquecer cada combatente individualmente em **11 entregáveis atômicos por guerreiro**: golpe primário, golpe secundário/especial, esquiva/defesa/reação a parry, **Finisher A (Golpe Primário)**, **Finisher B (Golpe Secundário/Especial)**, animação de intro, animação de vitória, renderização supersampleada 2x anti-aliasing/anti-tearing, texturas faciais em alta resolução, interpolação contínua de quadros (LERP Cross-fade) e biblioteca de materiais realistas.
-*(Regra Canônica de Finishers: Todo guerreiro possui 2 Finishers distintos — um acionado quando o golpe letal é o Ataque Primário e outro exclusivo quando o golpe letal é o Ataque Secundário/Especial).*
+### ⚔️ Fase 2: A Grande Reformulação dos 24 Guerreiros (Movesets, Atributos, Finishers Duplos, Fidelidade HD, Transições & Model Inspector De/Para)
+Foco: Revisar, rebalancear e enriquecer cada combatente individualmente em **12 entregáveis atômicos por guerreiro** (`2.x.1` a `2.x.11`, sendo `2.x.4a` e `2.x.4b` os dois finishers): golpe primário, golpe secundário/especial, esquiva/defesa/reação a parry, **Finisher A (Golpe Primário)**, **Finisher B (Golpe Secundário/Especial)**, animação de intro, animação de vitória, renderização supersampleada 2x anti-aliasing/anti-tearing, texturas faciais em alta resolução, interpolação contínua de quadros (LERP Cross-fade), biblioteca de materiais realistas e **comparativo "De / Para" (Antigo vs Novo) + botões interativos de animação no Model Inspector (`tools/model_inspector.py`)**.
+*(Regras Canônicas da Fase 2:*
+*1. Todo guerreiro possui 2 Finishers distintos — um acionado quando o golpe letal é o Ataque Primário e outro exclusivo quando o golpe letal é o Ataque Secundário/Especial.*
+*2. Ao concluir a reformulação de cada personagem (`Sub-fase 2.x`), é obrigatório atualizar o `tools/model_inspector.py` com o modo comparativo lado a lado **"De / Para" (`[D]`)** entre o modelo legado e o novo overhaul, além de botões clicáveis para executar todas as suas animações e golpes — Entregável `2.x.11`).*
 
 ---
 
@@ -86,6 +88,8 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente em **11 
   - *Especificações:* Interpolação vetorial contínua (`0.08s`) nos pivôs de ombros, cotovelos, quadris, joelhos, coluna, bainha e rabo de cavalo ao transicionar entre `Idle ↔ Walk ↔ Shukuchi ↔ Iai ↔ Ryuu Tsui Sen ↔ Parry Backflip/Somersault`.
 - **📦 Entregável 2.1.10: Biblioteca de Materiais Realistas — *Seda Chirimen Carmim, Linho Índigo & Aço Tamahagane***
   - *Especificações:* Mapeamento procedural/tileable de Crepe de Seda Carmesim (*Chirimen*) no kimono, Linho Índigo Escuro no hakama, Laca *Urushi* com cordão *Sageo* na saya e Aço *Tamahagane* com linha *Hamon* ondulada na katana.
+- **📦 Entregável 2.1.11: Model Inspector — *Comparativo Lado a Lado "De / Para" (Antigo vs Novo) & Botões Interativos de Animação***
+  - *Especificações:* No `tools/model_inspector.py`, tecla/botão `[D]` (`--compare`) exibe dois pedestais sincronizados lado a lado (**ANTES: Modelo Legado Pré-Fase 2** à esquerda com `LEGACY_MATERIALS` e sem SSAA/HD Eyes vs **DEPOIS: Novo Overhaul 2.1** à direita com SSAA 2x, Olhos Anime HD, Seda Chirimen/Tamahagane e Pose LERP `0.08s`), acompanhado de painel interativo de 12 botões clicáveis (`1`–`9`, `0`, `F1`, `F2`) para disparar e inspecionar todas as animações da Kenshi (`Idle`, `Walk`, `Iai Slice`, `Ryuu Tsui Sen 3 Fases`, `Shukuchi Dash`, `Cancel Shukuchi Battou-Giri`, `Parry Terrestre Backhop + Noto`, `Parry Aéreo Mortal 360°`, `Intro Meditação & Koiguchi-kiri`, `Vitória Chiburi & Noto`, `Finisher 1 Ittou Ryoudan`, `Finisher 2 Divisão Celestial`).
 
 ---
 

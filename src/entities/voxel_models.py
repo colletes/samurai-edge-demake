@@ -269,6 +269,8 @@ def _render_voxel_humanoid(
     if extra_props is None:
         extra_props = {}
 
+    alpha = max(0, min(255, int(alpha)))
+
     char_type = _canonical_char_type(char_type)
 
     # Morte com desmembramento ativo
@@ -312,7 +314,7 @@ def _render_voxel_humanoid(
     sx, sy = camera.apply(wx, wy, getattr(camera, "ground_z", 0.0))
     shadow_w = 42 if not is_female else 38
     shadow_h = 18 if not is_female else 16
-    shadow_alpha = int(125 * (alpha / 255.0))
+    shadow_alpha = max(0, min(255, int(125 * (alpha / 255.0))))
     if shadow_alpha > 0:
         sh_key = (shadow_w, shadow_h, shadow_alpha)
         shadow_surf = _SHADOW_SURF_CACHE.get(sh_key)
@@ -483,11 +485,13 @@ def _render_voxel_humanoid(
     model_c = None
     if model is not None:
         torso_z0 = pelvis_z + 0.13
+        use_legacy_mat = bool(extra_props and extra_props.get("legacy_mode", False))
+        mat_dict = getattr(model, "LEGACY_MATERIALS", getattr(model, "MATERIALS", {})) if use_legacy_mat else getattr(model, "MATERIALS", {})
         model_c = SimpleNamespace(
             surface=surface, camera=camera, alpha=alpha, azimuth=getattr(camera, "azimuth", 0.0), base_x=base_x, base_y=base_y, base_z=base_z,
             fx=fx, fy=fy, px=px, py=py, pelvis_z=pelvis_z, pelvis_w=pelvis_w, walk_timer=walk_timer, is_moving=is_moving, is_melee=is_melee,
             atk_progress=atk_progress, lunge_curve=lunge_curve, legs_data=legs_data, state=state, state_timer=state_timer, extra_props=extra_props,
-            materials=model_kit.material_map(model.pal(), getattr(model, "MATERIALS", {})), torso_z=torso_z0, neck_z=torso_z0 + 0.26, head_z=torso_z0 + 0.31,
+            materials=model_kit.material_map(model.pal(), mat_dict), torso_z=torso_z0, neck_z=torso_z0 + 0.26, head_z=torso_z0 + 0.31,
             torso_w=0.36 if char_type in ("benkei", "raiden") else (0.23 if is_female else 0.29),
             head_w=0.165 if char_type in ("benkei", "raiden") else (0.155 if char_type == "goro" else (0.13 if is_female else 0.15)),
             sh_span=0.22 if char_type in ("benkei", "raiden") else (0.185 if char_type == "goro" else (0.14 if is_female else 0.17)),

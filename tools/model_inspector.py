@@ -417,6 +417,42 @@ CHARACTERS = {
 
 POSES = ["IDLE", "WALK", "ATTACK", "RECOVERY", "INTRO", "VICTORY"]
 
+# Catálogo de botões de animação e golpes dedicados por personagem (Fase 2 Overhaul)
+CHARACTER_ANIM_BUTTONS = {
+    "kenshi": [
+        ("IDLE", "1. Idle (Postura Iai)", 0.0),
+        ("WALK", "2. Walk (Passada)", 0.0),
+        ("IAI_SLICE", "3. Golpe 1: Iai Slice (Koiguchi + Dash + Noto)", 0.72),
+        ("RYUU_TSUI_SEN", "4. Golpe 2: Ryuu Tsui Sen (3 Fases + Zanzou)", 0.65),
+        ("SHUKUCHI", "5. Esquiva: Shukuchi Dash (Zanzou)", 0.48),
+        ("SHUKUCHI_CANCEL", "6. Cancel: Shukuchi Battou-Giri (40% -> Iai)", 0.72),
+        ("PARRY_GROUND", "7. Parry Terrestre: Backhop + Noto", 0.68),
+        ("PARRY_AERIAL", "8. Parry Aéreo: Mortal 360° no Ar", 0.75),
+        ("INTRO", "9. Intro: Meditação & Koiguchi-Kiri", 2.00),
+        ("VICTORY", "0. Vitória: Chiburi Lateral & Noto", 2.20),
+        ("FINISHER_1", "F1. Finisher 1: Ittou Ryoudan (5 Zanzou)", 1.25),
+        ("FINISHER_2", "F2. Finisher 2: Divisão Celestial (Ryuu)", 1.35),
+    ],
+}
+
+DEFAULT_ANIM_BUTTONS = [
+    ("IDLE", "1. Idle (Respiração)", 0.0),
+    ("WALK", "2. Walk (Caminhada)", 0.0),
+    ("ATTACK", "3. Golpe Primário (Attack)", 0.60),
+    ("RECOVERY", "4. Recuperação (Recovery)", 0.60),
+    ("INTRO", "5. Animação de Intro", 2.00),
+    ("VICTORY", "6. Animação de Vitória", 2.20),
+]
+
+OVERHAUL_DE_PARA_NOTES = {
+    "kenshi": [
+        "SSAA 2x Offscreen (Zero serrilhado na lâmina/silhueta)",
+        "Olhos Anime HD (Anel limbal, degradê mel, meditação)",
+        "Materiais: Seda Chirimen, Linho Índigo, Laca Urushi, Hamon",
+        "Pose LERP 0.08s + Koiguchi-kiri + Ryuu 3-Fases + Mortal 360°",
+    ],
+}
+
 
 # =============================================================================
 # MODEL INSPECTOR CORE
@@ -445,6 +481,20 @@ class ModelInspector:
         self.current_char_idx = 0
         self.current_pose_idx = 0
         self.macro_focus = "body"  # "body", "head", "hands", "feet"
+
+        # Modo De / Para (Comparação Lado a Lado: Modelo Antigo vs Modelo Novo Overhaul)
+        self.compare_mode = False
+        self.active_action = "IDLE"
+        self.action_timer = 0.0
+        self.action_duration = 0.0
+        self._inspector_lerp_tracker = {
+            "lerp_duration": 0.08,
+            "blend_timer": 0.0,
+            "pose_key": None,
+            "prev_snap": None,
+            "last_snap": None,
+            "transitions_count": 0,
+        }
 
         # Interatividade do mouse
         self.is_dragging_orbit = False
@@ -475,8 +525,10 @@ class ModelInspector:
         self.sidebar_target_scroll_y = 0.0
         self.sidebar_max_scroll = 0.0
         self.pose_btn_rects: list[tuple[str, pygame.Rect]] = []
+        self.anim_action_btn_rects: list[tuple[str, pygame.Rect]] = []
         self.reload_btn_rect = pygame.Rect(0, 0, 0, 0)
         self.reset_cam_btn_rect = pygame.Rect(0, 0, 0, 0)
+        self.compare_btn_rect = pygame.Rect(0, 0, 0, 0)
 
         # Joystick / Fightstick support
         if not pygame.joystick.get_init():
@@ -496,6 +548,10 @@ class ModelInspector:
         self.status_is_error = False
 
     @property
+    def current_char_key(self) -> str:
+        return self.char_keys[self.current_char_idx]
+
+    @property
     def current_char_info(self) -> dict:
         return CHARACTERS[self.char_keys[self.current_char_idx]]
 
@@ -503,12 +559,33 @@ class ModelInspector:
     def current_pose(self) -> str:
         return POSES[self.current_pose_idx]
 
+    def get_anim_buttons(self) -> list[tuple[str, str, float]]:
+        return CHARACTER_ANIM_BUTTONS.get(self.current_char_key, DEFAULT_ANIM_BUTTONS)
+
+    def trigger_action(self, action_id: str):
+        """Dispara uma animação interativa (golpe, esquiva, parry, intro, vitória ou finisher) no pedestal."""
+        self.active_action = action_id
+        self.action_timer = 0.0
+        dur = 0.0
+        for aid, _lbl, adur in self.get_anim_buttons():
+            if aid == action_id:
+                dur = adur
+                break
+        self.action_duration = dur
+        if action_id in POSES:
+            self.current_pose_idx = POSES.index(action_id)
+        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "FINISHER_1", "FINISHER_2"):
+            self.current_pose_idx = POSES.index("ATTACK")
+        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL"):
+            self.current_pose_idx = POSES.index("RECOVERY")
+
     def select_character(self, idx: int):
         prev_colossal = (self.char_keys[self.current_char_idx] == "gashadokuro")
         self.current_char_idx = idx % len(self.char_keys)
         now_colossal = (self.char_keys[self.current_char_idx] == "gashadokuro")
         if prev_colossal != now_colossal:
             self.camera.reset(self.macro_focus, is_colossal=now_colossal)
+        self.trigger_action("IDLE")
         self.ensure_char_visible(self.current_char_idx)
 
     def ensure_char_visible(self, idx: int):
@@ -531,10 +608,12 @@ class ModelInspector:
 
     def next_pose(self):
         self.current_pose_idx = (self.current_pose_idx + 1) % len(POSES)
+        self.trigger_action(POSES[self.current_pose_idx])
 
     def set_pose_by_name(self, pose: str):
         if pose in POSES:
             self.current_pose_idx = POSES.index(pose)
+            self.trigger_action(pose)
 
     def toggle_focus_target(self):
         targets = ["body", "head", "hands", "feet"]
@@ -619,17 +698,27 @@ class ModelInspector:
         except Exception:
             return None
 
-    def draw_pedestal(self, surface: pygame.Surface):
-        """Desenha a plataforma circular de madeira nobre e anel dourado sob o modelo."""
-        # Sombra de oclusão de contato no chão
-        sx0, sy0 = self.camera.apply(0.0, 0.0, 0.0)
-        shadow_w = int(68 * self.camera.zoom)
-        shadow_h = int(32 * self.camera.zoom * (math.sin(self.camera.elevation) / 0.5))
+    def _make_sub_camera(self, dx_screen: int, zoom_scale: float = 1.0) -> InspectorCamera:
+        sub = InspectorCamera(self.width, self.height)
+        sub.screen_x = self.camera.screen_x + dx_screen
+        sub.screen_y = self.camera.screen_y
+        sub.wx = self.camera.wx
+        sub.wy = self.camera.wy
+        sub.target_z = self.camera.target_z
+        sub.azimuth = self.camera.azimuth
+        sub.elevation = self.camera.elevation
+        sub.zoom = self.camera.zoom * zoom_scale
+        return sub
+
+    def _draw_single_pedestal(self, surface: pygame.Surface, cam: InspectorCamera, border_col=(140, 110, 60)):
+        sx0, sy0 = cam.apply(0.0, 0.0, 0.0)
+        shadow_w = max(8, int(68 * cam.zoom))
+        shadow_h = max(4, int(32 * cam.zoom * (math.sin(cam.elevation) / 0.5)))
         shadow_surf = pygame.Surface((shadow_w * 2, shadow_h * 2), pygame.SRCALPHA)
+        shadow_surf.fill((0, 0, 0, 0))
         pygame.draw.ellipse(shadow_surf, (8, 10, 14, 185), (0, 0, shadow_w * 2, shadow_h * 2))
         surface.blit(shadow_surf, (sx0 - shadow_w, sy0 - shadow_h // 2))
 
-        # Pedestal cilíndrico de madeira tradicional com anéis concêntricos
         char_info = self.current_char_info
         is_colossal = (char_info["char_type"] == "gashadokuro")
         num_segments = 32 if is_colossal else 28
@@ -639,20 +728,30 @@ class ModelInspector:
             angle = (i / num_segments) * math.pi * 2.0
             px = math.cos(angle) * radius
             py = math.sin(angle) * radius
-            top_points.append(self.camera.apply(px, py, 0.0))
+            top_points.append(cam.apply(px, py, 0.0))
 
         if len(top_points) >= 3:
             pygame.draw.polygon(surface, (38, 34, 30), top_points)
-            pygame.draw.polygon(surface, (140, 110, 60), top_points, max(1, int(1.5 * self.camera.zoom)))
+            pygame.draw.polygon(surface, border_col, top_points, max(1, int(1.5 * cam.zoom)))
 
             inner_points = []
             for i in range(num_segments):
                 angle = (i / num_segments) * math.pi * 2.0
                 px = math.cos(angle) * (radius * 0.78)
                 py = math.sin(angle) * (radius * 0.78)
-                inner_points.append(self.camera.apply(px, py, 0.002))
+                inner_points.append(cam.apply(px, py, 0.002))
             pygame.draw.polygon(surface, (48, 42, 36), inner_points)
             pygame.draw.polygon(surface, (85, 72, 55), inner_points, 1)
+
+    def draw_pedestal(self, surface: pygame.Surface):
+        """Desenha a plataforma circular (ou duas plataformas lado a lado no modo De/Para)."""
+        if self.compare_mode and self.current_char_info["char_type"] != "gashadokuro":
+            cam_l = self._make_sub_camera(-175, zoom_scale=0.88)
+            cam_r = self._make_sub_camera(+115, zoom_scale=0.88)
+            self._draw_single_pedestal(surface, cam_l, border_col=(135, 115, 95))
+            self._draw_single_pedestal(surface, cam_r, border_col=(90, 225, 165))
+        else:
+            self._draw_single_pedestal(surface, self.camera)
 
     def draw_boss(self, surface: pygame.Surface):
         """Renderiza o Oni Gashadokuro com suas 5 formas transmórficas no estúdio 3D."""
@@ -694,8 +793,233 @@ class ModelInspector:
 
         boss.render(surface, self.camera, self.anim_time)
 
+    def _eval_action_frame(self, char_type: str, is_legacy: bool = False):
+        """
+        Calcula (wx, wy, wz, state, state_timer, is_moving, walk_timer, extra_props, ghosts)
+        para a animação ativa no Model Inspector.
+        """
+        from src.entities import pose_scripts
+        act = self.active_action
+        dur = self.action_duration
+        t = self.action_timer if dur > 0.0 else self.anim_time
+        prog = max(0.0, min(1.0, t / max(0.001, dur))) if dur > 0.0 else 0.0
+
+        wx, wy, wz = 0.0, 0.0, 0.0
+        state = "IDLE"
+        state_timer = 0.0
+        is_moving = False
+        walk_timer = self.anim_time
+        extra_props = {
+            "legacy_mode": is_legacy,
+            "ssaa_2x": not is_legacy,
+            "pose_lerp_tracker": None if is_legacy else self._inspector_lerp_tracker,
+        }
+        ghosts = []
+
+        if act == "IDLE":
+            state = "IDLE"
+        elif act == "WALK":
+            state = "WALK"
+            is_moving = True
+            walk_timer = self.anim_time * 2.6
+        elif act == "ATTACK":
+            state = "ATTACK"
+            state_timer = 0.08 + (math.sin(self.anim_time * 4.0) * 0.5 + 0.5) * 0.12
+        elif act == "RECOVERY":
+            state = "RECOVERY"
+            state_timer = 0.35
+            if not is_legacy and char_type == "kenshin":
+                extra_props["pose"] = "noto_sheath"
+                extra_props["noto_prog"] = (self.anim_time * 1.4) % 1.0
+        elif act == "IAI_SLICE":
+            # 2.1.1: Startup Koiguchi-kiri (0..0.22) -> Dash Iai (0.22..0.55) -> Noto caminhando (0.55..1.0)
+            if is_legacy:
+                state = "ATTACK"
+                state_timer = max(0.01, (1.0 - min(1.0, prog * 1.4)) * 0.16)
+            else:
+                if prog < 0.22:
+                    state = "ATTACK"
+                    state_timer = 0.14
+                    extra_props["pose"] = "koiguchi_glint"
+                elif prog < 0.56:
+                    u = (prog - 0.22) / 0.34
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - u) * 0.14)
+                    wx = (u - 0.5) * 0.38
+                    wy = (u - 0.5) * 0.38
+                else:
+                    u = (prog - 0.56) / 0.44
+                    state = "RECOVERY"
+                    state_timer = max(0.01, (1.0 - u) * 0.45)
+                    extra_props["pose"] = "noto_sheath"
+                    extra_props["noto_prog"] = u
+                    is_moving = True
+                    walk_timer = self.anim_time * 1.6
+        elif act == "RYUU_TSUI_SEN":
+            # 2.1.2: ASCEND com Zanzou (0..0.28) -> APEX duas mãos (0.28..0.52) -> DESCEND meteórico (0.52..1.0)
+            if is_legacy:
+                state = "ATTACK"
+                wz = max(0.0, 0.95 * (1.0 - prog))
+                state_timer = max(0.01, (1.0 - prog) * 0.16)
+            else:
+                state = "RYUU_TSUI_SEN"
+                if prog < 0.28:
+                    u = prog / 0.28
+                    extra_props["ryuu_phase"] = "ASCEND"
+                    wz = 0.15 + 0.85 * (1.0 - (1.0 - u) ** 2)
+                    for gi in range(2):
+                        gu = max(0.0, u - (gi + 1) * 0.25)
+                        ghosts.append((0.0, 0.0, 0.10 + 0.80 * gu, 140 - gi * 45))
+                elif prog < 0.52:
+                    extra_props["ryuu_phase"] = "APEX"
+                    wz = 1.00
+                    ghosts.append((0.0, 0.0, 0.55, 110))
+                else:
+                    u = (prog - 0.52) / 0.48
+                    extra_props["ryuu_phase"] = "DESCEND"
+                    wz = max(0.0, 1.00 * (1.0 - min(1.0, u * 1.35) ** 2))
+        elif act == "SHUKUCHI":
+            state = "SHUKUCHI" if not is_legacy else "IDLE"
+            shift = math.sin(prog * math.pi) * 0.34
+            wx, wy = shift, shift
+            for gi in range(3):
+                g_shift = max(0.0, shift - (gi + 1) * 0.11)
+                ghosts.append((g_shift, g_shift, 0.0, 165 - gi * 45))
+        elif act == "SHUKUCHI_CANCEL":
+            # 2.1.3: Shukuchi (0..0.38) -> Cancelamento nos últimos 40% direto para Iai Slice!
+            if prog < 0.38:
+                u = prog / 0.38
+                state = "SHUKUCHI"
+                wx, wy = -0.25 + 0.25 * u, -0.25 + 0.25 * u
+                ghosts.append((-0.25, -0.25, 0.0, 160))
+                ghosts.append((-0.12, -0.12, 0.0, 120))
+            elif prog < 0.50 and not is_legacy:
+                state = "ATTACK"
+                extra_props["pose"] = "koiguchi_glint"
+            else:
+                u = (prog - 0.50) / 0.50
+                state = "ATTACK"
+                state_timer = max(0.01, (1.0 - u) * 0.14)
+                wx, wy = 0.22 * u, 0.22 * u
+                ghosts.append((-0.05, -0.05, 0.0, 130))
+        elif act == "PARRY_GROUND":
+            # 2.1.1: Salto parabático para trás + Noto andando ao pousar
+            if prog < 0.52:
+                u = prog / 0.52
+                state = "PARRY_BACKHOP"
+                wz = math.sin(u * math.pi) * 0.48
+                wx, wy = -0.26 * u, -0.26 * u
+                ghosts.append((0.0, 0.0, 0.05, 135))
+            else:
+                u = (prog - 0.52) / 0.48
+                state = "RECOVERY"
+                wx, wy = -0.26 + 0.14 * u, -0.26 + 0.14 * u
+                is_moving = True
+                walk_timer = self.anim_time * 1.6
+                if not is_legacy:
+                    extra_props["pose"] = "noto_sheath"
+                    extra_props["noto_prog"] = u
+        elif act == "PARRY_AERIAL":
+            # 2.1.2: Mortal 360° para trás no ar
+            if prog < 0.62:
+                u = prog / 0.62
+                state = "PARRY_BACKHOP"
+                wz = max(0.0, 0.85 * (1.0 - u) + math.sin(u * math.pi) * 0.35)
+                wx, wy = -0.28 * u, -0.28 * u
+                if not is_legacy:
+                    extra_props["is_aerial_parry"] = True
+                    extra_props["somersault_angle"] = u * 360.0
+                ghosts.append((-0.10 * u, -0.10 * u, wz + 0.12, 140))
+            else:
+                u = (prog - 0.62) / 0.38
+                state = "RECOVERY"
+                wx, wy = -0.28, -0.28
+                if not is_legacy:
+                    extra_props["pose"] = "noto_sheath"
+                    extra_props["noto_prog"] = u
+        elif act in ("INTRO", "VICTORY"):
+            kind = "intro" if act == "INTRO" else "victory"
+            p_sample = prog if dur > 0.0 else ((self.anim_time * 0.42) % 1.0)
+            if is_legacy and char_type == "kenshin":
+                # Roteiro legado pré-Fase 2 da Kenshi (apenas IDLE + ATTACK simples)
+                if p_sample < 0.25 or p_sample > 0.75:
+                    state = "IDLE"
+                else:
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - (p_sample - 0.25) / 0.50) * 0.16)
+            else:
+                pf = pose_scripts.sample(char_type, kind, p_sample)
+                state = pf.state
+                state_timer = pose_scripts.state_timer_for(char_type, pf)
+                extra_props.update(pf.extra)
+        elif act == "FINISHER_1":
+            # 2.1.4a: Ittou Ryoudan (5 sombras Zanzou + Noto de costas)
+            for gi in range(5):
+                gu = (gi - 2) * 0.16
+                ghosts.append((gu, gu, 0.0, 115 + gi * 18))
+            state = "RECOVERY"
+            wx, wy = 0.28, 0.28
+            if not is_legacy:
+                extra_props["pose"] = "noto_sheath"
+                extra_props["noto_prog"] = min(1.0, prog * 1.25)
+        elif act == "FINISHER_2":
+            # 2.1.4b: Divisão Celestial de Bambu (5 Zanzou verticais + Ápice + Queda Meteórica)
+            if prog < 0.42:
+                state = "RYUU_TSUI_SEN"
+                extra_props["ryuu_phase"] = "APEX"
+                wz = 0.95
+                for gi in range(5):
+                    gz = 0.15 + gi * 0.18
+                    ghosts.append((0.0, 0.0, gz, 110 + gi * 18))
+            else:
+                u = (prog - 0.42) / 0.58
+                state = "RYUU_TSUI_SEN" if u < 0.65 else "RECOVERY"
+                extra_props["ryuu_phase"] = "DESCEND"
+                wz = max(0.0, 0.95 * (1.0 - min(1.0, u * 1.65) ** 2))
+                if state == "RECOVERY" and not is_legacy:
+                    extra_props["pose"] = "noto_sheath"
+                    extra_props["noto_prog"] = (u - 0.65) / 0.35
+
+        return wx, wy, wz, state, state_timer, is_moving, walk_timer, extra_props, ghosts
+
+    def _draw_single_character(self, surface: pygame.Surface, cam: InspectorCamera, is_legacy: bool = False):
+        char_info = self.current_char_info
+        char_type = char_info["char_type"]
+        facing_x, facing_y = 1.0, 1.0
+
+        wx, wy, wz, state, state_timer, is_moving, walk_timer, extra_props, ghosts = self._eval_action_frame(char_type, is_legacy=is_legacy)
+
+        # Renderizar sombras Zanzou (quando presentes no golpe/esquiva/finisher)
+        if not is_legacy:
+            for gx, gy, gz, g_alpha in ghosts:
+                render_voxel_humanoid(
+                    surface, cam,
+                    gx, gy, gz,
+                    facing_x, facing_y,
+                    "IDLE", 0.0,
+                    is_alive=True,
+                    char_type=char_type,
+                    walk_timer=walk_timer,
+                    alpha=max(25, min(220, int(g_alpha))),
+                    is_moving=False,
+                    extra_props={"legacy_mode": False, "ssaa_2x": False},
+                )
+
+        render_voxel_humanoid(
+            surface, cam,
+            wx, wy, wz,
+            facing_x, facing_y,
+            state, state_timer,
+            is_alive=True,
+            char_type=char_type,
+            walk_timer=walk_timer,
+            alpha=255,
+            is_moving=is_moving,
+            extra_props=extra_props,
+        )
+
     def draw_character(self, surface: pygame.Surface):
-        """Renderiza o combatente selecionado utilizando o motor oficial de modelos do jogo."""
+        """Renderiza o combatente selecionado (ou o comparativo De/Para Antigo vs Novo)."""
         char_info = self.current_char_info
         char_type = char_info["char_type"]
 
@@ -703,55 +1027,36 @@ class ModelInspector:
             self.draw_boss(surface)
             return
 
-        # Orientação do guerreiro (vetor frontal padrão: 1.0, 1.0)
-        facing_x, facing_y = 1.0, 1.0
+        if self.compare_mode:
+            cam_l = self._make_sub_camera(-175, zoom_scale=0.88)
+            cam_r = self._make_sub_camera(+115, zoom_scale=0.88)
+            self._draw_single_character(surface, cam_l, is_legacy=True)
+            self._draw_single_character(surface, cam_r, is_legacy=False)
 
-        # Animação e parâmetros baseados na pose selecionada
-        state = "IDLE"
-        state_timer = 0.0
-        is_moving = False
-        walk_timer = self.anim_time
+            # Linha divisória e badges De / Para acima de cada pedestal
+            mid_x = (cam_l.screen_x + cam_r.screen_x) // 2
+            pygame.draw.line(surface, (70, 80, 100), (mid_x, 195), (mid_x, self.height - 86), 1)
 
-        if self.current_pose == "IDLE":
-            state = "IDLE"
-            is_moving = False
-            walk_timer = self.anim_time
-        elif self.current_pose == "WALK":
-            state = "WALK"
-            is_moving = True
-            walk_timer = self.anim_time * 2.6
-        elif self.current_pose == "ATTACK":
-            state = "ATTACK"
-            is_moving = False
-            # Ciclo oscilante de golpe 3D para examinar antecipação, corte e lâmina
-            state_timer = 0.08 + (math.sin(self.anim_time * 4.0) * 0.5 + 0.5) * 0.12
-            walk_timer = self.anim_time
-        elif self.current_pose == "RECOVERY":
-            state = "RECOVERY"
-            state_timer = 0.35
-            is_moving = False
-            walk_timer = self.anim_time
-        elif self.current_pose == "INTRO":
-            state = "INTRO"
-            state_timer = (self.anim_time * 0.35) % 1.0
-            walk_timer = self.anim_time
-        elif self.current_pose == "VICTORY":
-            state = "VICTORY"
-            state_timer = (self.anim_time * 0.35) % 1.0
-            walk_timer = self.anim_time
+            lbl_old = self.font_body.render("ANTES (MODELO LEGADO)", True, (225, 175, 130))
+            lbl_new = self.font_body.render("DEPOIS (NOVO OVERHAUL)", True, (95, 245, 175))
+            surface.blit(lbl_old, (cam_l.screen_x - lbl_old.get_width() // 2, 198))
+            surface.blit(lbl_new, (cam_r.screen_x - lbl_new.get_width() // 2, 198))
 
-        # Renderização oficial do modelo 3D do jogo
-        render_voxel_humanoid(
-            surface, self.camera,
-            0.0, 0.0, 0.0,
-            facing_x, facing_y,
-            state, state_timer,
-            is_alive=True,
-            char_type=char_type,
-            walk_timer=walk_timer,
-            alpha=255,
-            is_moving=is_moving
-        )
+            notes = OVERHAUL_DE_PARA_NOTES.get(self.current_char_key, [])
+            if notes:
+                note_box_x, note_box_y = 258, 64
+                note_box_w, note_box_h = 560, 24 + len(notes) * 16
+                note_bg = pygame.Surface((note_box_w, note_box_h), pygame.SRCALPHA)
+                note_bg.fill((16, 22, 28, 215))
+                surface.blit(note_bg, (note_box_x, note_box_y))
+                pygame.draw.rect(surface, (65, 145, 110), (note_box_x, note_box_y, note_box_w, note_box_h), 1, border_radius=5)
+                hdr_n = self.font_small.render("MELHORIAS DO OVERHAUL (ESQUERDA = LEGADO  |  DIREITA = NOVO):", True, (115, 245, 180))
+                surface.blit(hdr_n, (note_box_x + 10, note_box_y + 5))
+                for ni, note_txt in enumerate(notes):
+                    ns = self.font_small.render(f"• {note_txt}", True, (205, 235, 220))
+                    surface.blit(ns, (note_box_x + 12, note_box_y + 22 + ni * 15))
+        else:
+            self._draw_single_character(surface, self.camera, is_legacy=False)
 
         # Marcador de juntas / wireframe (se ativo)
         if self.show_wireframe_marker:
@@ -891,6 +1196,24 @@ class ModelInspector:
         cam_label_s = self.font_body.render("RESET CÂMERA", True, cam_label_col)
         surface.blit(cam_label_s, (cam_btn_x + 30, reload_btn_y + 10))
 
+        # Botão DE / PARA (Comparativo Lado a Lado: Antigo vs Novo Overhaul)
+        cmp_btn_x = cam_btn_x + cam_btn_w + 10
+        cmp_btn_w = 225
+        self.compare_btn_rect = pygame.Rect(cmp_btn_x, reload_btn_y, cmp_btn_w, reload_btn_h)
+        is_hover_cmp = self.compare_btn_rect.collidepoint(mouse_pos)
+        cmp_bg = (28, 72, 54) if self.compare_mode else ((42, 48, 62) if is_hover_cmp else (22, 28, 38))
+        cmp_border = (95, 245, 175) if (self.compare_mode or is_hover_cmp) else (65, 85, 105)
+
+        cmp_btn_surf = pygame.Surface((cmp_btn_w, reload_btn_h), pygame.SRCALPHA)
+        cmp_btn_surf.fill((*cmp_bg, 238))
+        surface.blit(cmp_btn_surf, (cmp_btn_x, reload_btn_y))
+        pygame.draw.rect(surface, cmp_border, self.compare_btn_rect, width=2 if (self.compare_mode or is_hover_cmp) else 1, border_radius=6)
+
+        cmp_txt_col = (120, 255, 190) if self.compare_mode else ((240, 225, 140) if is_hover_cmp else (200, 210, 225))
+        cmp_label_str = "DE / PARA: ATIVO [D]" if self.compare_mode else "DE / PARA: ANTIGO vs NOVO [D]"
+        cmp_label_s = self.font_body.render(cmp_label_str, True, cmp_txt_col)
+        surface.blit(cmp_label_s, (cmp_btn_x + (cmp_btn_w - cmp_label_s.get_width()) // 2, reload_btn_y + 10))
+
         # Notificação Toast de status do reload
         if self.status_message_timer > 0.0:
             toast_text = self.status_message
@@ -963,6 +1286,46 @@ class ModelInspector:
             dy += 16
 
         # -------------------------------------------------------------
+        # 2.5 Painel Direito: Botões Interativos de Animações & Golpes
+        # -------------------------------------------------------------
+        anim_btns = self.get_anim_buttons()
+        self.anim_action_btn_rects.clear()
+        panel_w = 278
+        panel_x = self.width - panel_w - 18
+        panel_y = card_y + card_h + 10
+        row_h = 26
+        row_gap = 3
+        panel_h = 34 + len(anim_btns) * (row_h + row_gap) + 6
+
+        panel_surf = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
+        panel_surf.fill((16, 18, 24, 232))
+        surface.blit(panel_surf, (panel_x, panel_y))
+        pygame.draw.rect(surface, (65, 75, 95), (panel_x, panel_y, panel_w, panel_h), 1, border_radius=6)
+
+        hdr_s = self.font_body.render("ANIMAÇÕES & GOLPES (CLIQUE)", True, (240, 215, 120))
+        surface.blit(hdr_s, (panel_x + 12, panel_y + 8))
+
+        for b_idx, (act_id, act_label, _act_dur) in enumerate(anim_btns):
+            by = panel_y + 30 + b_idx * (row_h + row_gap)
+            b_rect = pygame.Rect(panel_x + 8, by, panel_w - 16, row_h)
+            self.anim_action_btn_rects.append((act_id, b_rect))
+            is_act = (self.active_action == act_id)
+            is_hov = b_rect.collidepoint(mouse_pos)
+            bg_c = (48, 56, 78) if is_act else ((34, 40, 56) if is_hov else (22, 26, 36))
+            bd_c = info["color_accent"] if is_act else ((140, 165, 210) if is_hov else (48, 54, 68))
+            pygame.draw.rect(surface, bg_c, b_rect, border_radius=4)
+            pygame.draw.rect(surface, bd_c, b_rect, 2 if is_act else 1, border_radius=4)
+
+            # Ícone de play [▶]
+            play_col = (110, 245, 175) if is_act else (180, 188, 205)
+            px0, py0 = b_rect.x + 8, b_rect.centery
+            pygame.draw.polygon(surface, play_col, [(px0, py0 - 4), (px0, py0 + 4), (px0 + 6, py0)])
+
+            txt_c = (255, 255, 255) if is_act else (185, 192, 208)
+            lbl_surf = self.font_small.render(act_label, True, txt_c)
+            surface.blit(lbl_surf, (b_rect.x + 18, b_rect.centery - lbl_surf.get_height() // 2))
+
+        # -------------------------------------------------------------
         # 3. Painel Inferior: Controles e Câmera
         # -------------------------------------------------------------
         hud_bar_w = self.width - sidebar_w - 36
@@ -977,12 +1340,12 @@ class ModelInspector:
         # Informações da Câmera
         deg_az = int(math.degrees(self.camera.azimuth))
         deg_el = int(math.degrees(self.camera.elevation))
-        cam_text = f"ÓRBITA: Azimute {deg_az}° | Inclinação {deg_el}° | Zoom {self.camera.zoom:.2f}x | Foco: {self.macro_focus.upper()}"
+        cam_text = f"Azimute {deg_az}° | Inclin. {deg_el}° | Zoom {self.camera.zoom:.2f}x | Foco: {self.macro_focus.upper()} | Ação: {self.active_action}"
         cam_s = self.font_body.render(cam_text, True, (240, 215, 120))
         surface.blit(cam_s, (hud_bar_x + 16, hud_bar_y + 10))
 
         # Controles
-        ctrl_text = "Mouse: Girar (Esq) | Pan (Dir) | Zoom  ||  [F] Foco  |  [P] Pose  |  [Espaço] Turntable"
+        ctrl_text = "Mouse: Girar (Esq) | Pan (Dir) | Zoom  ||  [D] De/Para  |  [F] Foco  |  [1-0] Golpes  |  [Espaço] Turntable"
         ctrl_s = self.font_small.render(ctrl_text, True, (170, 175, 190))
         surface.blit(ctrl_s, (hud_bar_x + 16, hud_bar_y + 32))
 
@@ -1062,13 +1425,23 @@ class ModelInspector:
                     elif self.show_hud and self.reset_cam_btn_rect.collidepoint(event.pos):
                         self.camera.reset(self.macro_focus)
                         clicked_btn = True
-                    # Verificar clique na lista lateral de personagens
+                    # Verificar clique no botão De / Para
+                    elif self.show_hud and self.compare_btn_rect.collidepoint(event.pos):
+                        self.compare_mode = not self.compare_mode
+                        clicked_btn = True
+                    # Verificar clique nos botões de animação/golpe ou lista lateral
                     elif self.show_hud:
-                        for p_name, p_rect in self.pose_btn_rects:
-                            if p_rect.collidepoint(event.pos):
-                                self.set_pose_by_name(p_name)
+                        for act_id, a_rect in self.anim_action_btn_rects:
+                            if a_rect.collidepoint(event.pos):
+                                self.trigger_action(act_id)
                                 clicked_btn = True
                                 break
+                        if not clicked_btn:
+                            for p_name, p_rect in self.pose_btn_rects:
+                                if p_rect.collidepoint(event.pos):
+                                    self.set_pose_by_name(p_name)
+                                    clicked_btn = True
+                                    break
                         if not clicked_btn:
                             for rect, idx in self.sidebar_rects:
                                 if rect.collidepoint(event.pos):
@@ -1122,21 +1495,27 @@ class ModelInspector:
                 elif event.key in (pygame.K_LEFT, pygame.K_UP, pygame.K_PAGEUP, pygame.K_LEFTBRACKET):
                     self.prev_character()
 
-                # Poses
+                # Alternar Modo Comparativo De / Para (Antigo vs Novo)
+                elif event.key == pygame.K_d:
+                    self.compare_mode = not self.compare_mode
+
+                # Poses / Animações (1..9, 0, F1, F2)
                 elif event.key in (pygame.K_p, pygame.K_TAB):
                     self.next_pose()
-                elif event.key == pygame.K_1:
-                    self.set_pose_by_name("IDLE")
-                elif event.key == pygame.K_2:
-                    self.set_pose_by_name("WALK")
-                elif event.key == pygame.K_3:
-                    self.set_pose_by_name("ATTACK")
-                elif event.key == pygame.K_4:
-                    self.set_pose_by_name("RECOVERY")
-                elif event.key == pygame.K_5:
-                    self.set_pose_by_name("INTRO")
-                elif event.key == pygame.K_6:
-                    self.set_pose_by_name("VICTORY")
+                elif event.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9, pygame.K_0):
+                    key_order = [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9, pygame.K_0]
+                    k_idx = key_order.index(event.key)
+                    btns = self.get_anim_buttons()
+                    if k_idx < len(btns):
+                        self.trigger_action(btns[k_idx][0])
+                elif event.key == pygame.K_F1:
+                    btns = self.get_anim_buttons()
+                    if len(btns) >= 11:
+                        self.trigger_action(btns[10][0])
+                elif event.key == pygame.K_F2:
+                    btns = self.get_anim_buttons()
+                    if len(btns) >= 12:
+                        self.trigger_action(btns[11][0])
 
                 # Foco Macro (Rosto / Cabeça)
                 elif event.key == pygame.K_f:
@@ -1201,6 +1580,10 @@ class ModelInspector:
 
     def update(self, dt: float):
         self.anim_time += dt
+        if self._inspector_lerp_tracker["blend_timer"] > 0.0:
+            self._inspector_lerp_tracker["blend_timer"] = max(0.0, self._inspector_lerp_tracker["blend_timer"] - dt)
+        if self.action_duration > 0.0:
+            self.action_timer = (self.action_timer + dt) % self.action_duration
         if self.auto_rotate:
             self.camera.rotate_orbit(self.auto_rotate_speed * dt, 0.0)
         if self.status_message_timer > 0.0:
@@ -1260,6 +1643,8 @@ def main():
     parser = argparse.ArgumentParser(description="Model Inspector 3D — Samurai Edge (Roster Completo)")
     parser.add_argument("--char", choices=list(CHARACTERS.keys()), default="kenshi", help="Personagem inicial")
     parser.add_argument("--pose", choices=POSES, default="IDLE", help="Pose inicial")
+    parser.add_argument("--action", type=str, default=None, help="Ação/animação específica inicial (ex: IAI_SLICE, RYUU_TSUI_SEN)")
+    parser.add_argument("--compare", action="store_true", help="Inicia no modo comparativo De / Para (Antigo vs Novo)")
     parser.add_argument("--focus", choices=["body", "head", "hands", "feet"], default="body", help="Ponto de foco inicial")
     parser.add_argument("--azimuth", type=float, default=0.0, help="Azimute inicial em graus")
     parser.add_argument("--elevation", type=float, default=30.0, help="Elevação inicial em graus")
@@ -1302,6 +1687,11 @@ def main():
     char_idx = list(CHARACTERS.keys()).index(args.char)
     inspector.select_character(char_idx)
     inspector.set_pose_by_name(args.pose)
+    if args.action:
+        inspector.trigger_action(args.action)
+        if inspector.action_duration > 0.0:
+            inspector.action_timer = inspector.action_duration * 0.45
+    inspector.compare_mode = bool(args.compare)
     inspector.macro_focus = args.focus
     inspector.camera.set_focus_target(args.focus)
     inspector.camera.azimuth = math.radians(args.azimuth)

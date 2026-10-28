@@ -43,6 +43,21 @@ MATERIALS = {
     "hakama_dark": "indigo_linen",
 }  # chave da paleta -> textura de material (2.1.10)
 
+LEGACY_MATERIALS = {
+    "kimono": "silk",
+    "kimono_dark": "silk",
+    "obi": "silk",
+    "collar": "silk",
+    "ribbon": "silk",
+    "saya": "lacquer",
+    "steel": "chrome",
+    "edge": "chrome",
+    "gold": "gold",
+    "cuff": "gold",
+    "hakama": "pleats",
+    "hakama_dark": "pleats",
+}  # materiais legados pré-Fase 2 (para comparação De/Para no Model Inspector)
+
 
 def pal() -> dict:
     return DETAILED
