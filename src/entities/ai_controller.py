@@ -453,6 +453,13 @@ class SamuraiAI:
                 ai_fighter.apply_movement(self.move_dir_x, self.move_dir_y, dt, game_map)
                 return
 
+        # Cancelamento ofensivo do Shukuchi (Kenshi: Shukuchi Battou-Giri)
+        if hasattr(ai_fighter, "can_cancel_shukuchi") and ai_fighter.can_cancel_shukuchi():
+            aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+            if dist <= 3.2 and random.random() < 0.85:
+                ai_fighter.trigger_iai_attack(aim_x, aim_y)
+                return
+
         # -------------------------------------------------------------
         # 3. REAÇÃO DEFENSIVA HUMANIZADA (Com Reaction Delay)
         # -------------------------------------------------------------
@@ -513,28 +520,65 @@ class SamuraiAI:
             threat_y = urgent_proj.wy if (is_proj and urgent_proj) else opponent.wy
             is_unparriable = is_proj and urgent_proj and self._is_bomb_or_hazard_projectile(urgent_proj, ai_fighter)
 
+            # Vetores direcionais em relação ao oponente (fechar distância)
+            to_opp_x = opponent.wx - ai_fighter.wx
+            to_opp_y = opponent.wy - ai_fighter.wy
+            opp_dist = math.hypot(to_opp_x, to_opp_y)
+            fwd_x = (to_opp_x / opp_dist) if opp_dist > 0.001 else 1.0
+            fwd_y = (to_opp_y / opp_dist) if opp_dist > 0.001 else 0.0
+
+            # Vetores perpendiculares à trajetória retilínea do projétil
+            pvx = getattr(urgent_proj, "vx", 0.0) if urgent_proj else 0.0
+            pvy = getattr(urgent_proj, "vy", 0.0) if urgent_proj else 0.0
+            plen = math.hypot(pvx, pvy)
+            if plen > 0.05:
+                p_perp_x1 = -pvy / plen
+                p_perp_y1 = pvx / plen
+                p_perp_x2 = pvy / plen
+                p_perp_y2 = -pvx / plen
+            else:
+                p_perp_x1 = -fwd_y
+                p_perp_y1 = fwd_x
+                p_perp_x2 = fwd_y
+                p_perp_y2 = -fwd_x
+
+            # Candidatos diagonais agressivos para fechar distância (~45° para frente, saindo da rota de tiro)
+            diag1_x = fwd_x * 0.70 + p_perp_x1 * 0.70
+            diag1_y = fwd_y * 0.70 + p_perp_y1 * 0.70
+            m1 = math.hypot(diag1_x, diag1_y)
+            if m1 > 0.001:
+                diag1_x /= m1
+                diag1_y /= m1
+
+            diag2_x = fwd_x * 0.70 + p_perp_x2 * 0.70
+            diag2_y = fwd_y * 0.70 + p_perp_y2 * 0.70
+            m2 = math.hypot(diag2_x, diag2_y)
+            if m2 > 0.001:
+                diag2_x /= m2
+                diag2_y /= m2
+
             # Se a ameaça NÃO for explosiva/imparável, tenta habilidades de parry ou reflexão
             if not is_unparriable:
                 # Musashi (BlueSamurai): Parry mestre de duas lâminas (reflete projéteis e apara melee)
                 if ai_fighter.__class__.__name__ == "BlueSamurai" and hasattr(ai_fighter, "trigger_parry"):
-                    if ai_fighter.can_move() and ai_fighter.dash_recovery_timer <= 0:
+                    if ai_fighter.can_move() and getattr(ai_fighter, "dash_recovery_timer", 0) <= 0:
                         ai_fighter.set_facing(threat_x, threat_y)
-                        ai_fighter.trigger_parry()
-                        return True
+                        if ai_fighter.trigger_parry():
+                            return True
 
                 # Julie (Musketeer): Floreio de Capa / Riposte de esgrima (desvia projéteis e contra-ataca melee)
                 if ai_fighter.__class__.__name__ == "Musketeer":
                     ai_fighter.set_facing(threat_x, threat_y)
                     if getattr(ai_fighter, "cape_timer", 0.0) <= 0:
                         if hasattr(ai_fighter, "trigger_cloak_riposte"):
-                            ai_fighter.trigger_cloak_riposte(threat_x, threat_y, opponent=opponent, projectiles=projectiles)
-                            return True
+                            if ai_fighter.trigger_cloak_riposte(threat_x, threat_y, opponent=opponent, projectiles=projectiles):
+                                return True
                         elif hasattr(ai_fighter, "trigger_parry"):
-                            ai_fighter.trigger_parry(threat_x, threat_y, opponent=opponent)
-                            return True
+                            if ai_fighter.trigger_parry(threat_x, threat_y, opponent=opponent):
+                                return True
                     elif hasattr(ai_fighter, "trigger_parry"):
-                        ai_fighter.trigger_parry(threat_x, threat_y, opponent=opponent)
-                        return True
+                        if ai_fighter.trigger_parry(threat_x, threat_y, opponent=opponent):
+                            return True
 
                 # Ren (Shaolin Monk): Grito Kiai de 360° repele projéteis e atordoa
                 if hasattr(ai_fighter, "trigger_kiai_shout") and getattr(ai_fighter, "kiai_timer", 0.0) <= 0:
@@ -561,12 +605,25 @@ class SamuraiAI:
                 # Demais combatentes com trigger_parry genérico (exceto contra bombas/explosivos!)
                 if hasattr(ai_fighter, "trigger_parry") and ai_fighter.can_move():
                     ai_fighter.set_facing(threat_x, threat_y)
-                    ai_fighter.trigger_parry()
-                    return True
+                    if ai_fighter.trigger_parry():
+                        return True
 
-            # Kenshin: Dash evasivo (afastando-se ou perpendicular)
-            if hasattr(ai_fighter, "trigger_dash"):
+            # Kenshin: Dash evasivo (com esquiva diagonal agressiva fechando distância se for projétil)
+            if hasattr(ai_fighter, "trigger_dash") and ai_fighter.can_act():
                 dash_reach = getattr(ai_fighter, "dash_speed", 22.0) * getattr(ai_fighter, "dash_duration", 0.16)
+                if is_proj and not is_unparriable and opp_dist >= 1.2:
+                    d_cands = [(diag1_x, diag1_y), (diag2_x, diag2_y)]
+                    random.shuffle(d_cands)
+                    for cx, cy in d_cands:
+                        if self._landing_ok(ai_fighter, game_map, cx, cy, dash_reach):
+                            ai_fighter.trigger_dash(cx, cy)
+                            return True
+                    for px, py in [(p_perp_x1, p_perp_y1), (p_perp_x2, p_perp_y2)]:
+                        if self._landing_ok(ai_fighter, game_map, px, py, dash_reach):
+                            ai_fighter.trigger_dash(px, py)
+                            return True
+
+                # Recuo ou perpendicular se for explosivo, golpe corpo a corpo ou se as diagonais estiverem bloqueadas
                 dx = ai_fighter.wx - threat_x
                 dy = ai_fighter.wy - threat_y
                 length = math.hypot(dx, dy)
@@ -615,28 +672,28 @@ class SamuraiAI:
             if hasattr(ai_fighter, "trigger_roll") and ai_fighter.can_act():
                 reach = self._roll_reach(ai_fighter)
 
-                # Esquiva inteligente lateral (sidestep 90°) se for projétil com velocidade no ar
-                if is_proj and urgent_proj:
-                    pvx = getattr(urgent_proj, "vx", 0.0)
-                    pvy = getattr(urgent_proj, "vy", 0.0)
-                    plen = math.hypot(pvx, pvy)
-                    if plen > 0.05:
-                        cand1 = (-pvy / plen, pvx / plen)
-                        cand2 = (pvy / plen, -pvx / plen)
-                        ok1 = self._landing_ok(ai_fighter, game_map, cand1[0], cand1[1], reach)
-                        ok2 = self._landing_ok(ai_fighter, game_map, cand2[0], cand2[1], reach)
-                        if ok1 and not ok2:
-                            ai_fighter.trigger_roll(cand1[0], cand1[1])
+                # Esquiva inteligente diagonal e lateral se for projétil no ar
+                if is_proj and not is_unparriable and opp_dist >= 1.2:
+                    # 1. Esquiva agressiva diagonal frontal para fechar distância contra zoner/atirador
+                    d_cands = [(diag1_x, diag1_y), (diag2_x, diag2_y)]
+                    random.shuffle(d_cands)
+                    for cx, cy in d_cands:
+                        if self._landing_ok(ai_fighter, game_map, cx, cy, reach):
+                            ai_fighter.trigger_roll(cx, cy)
                             return True
-                        elif ok2 and not ok1:
-                            ai_fighter.trigger_roll(cand2[0], cand2[1])
+                    # 2. Sidestep lateral puro (90°) se diagonal frontal estiver bloqueada
+                    for px, py in [(p_perp_x1, p_perp_y1), (p_perp_x2, p_perp_y2)]:
+                        if self._landing_ok(ai_fighter, game_map, px, py, reach):
+                            ai_fighter.trigger_roll(px, py)
                             return True
-                        elif ok1 and ok2:
-                            r_dx, r_dy = random.choice([cand1, cand2])
-                            ai_fighter.trigger_roll(r_dx, r_dy)
+                elif is_proj and urgent_proj:
+                    # Projétil que não pode avançar frontalmente (ex: à queima-roupa < 1.2m ou explosivo)
+                    for px, py in [(p_perp_x1, p_perp_y1), (p_perp_x2, p_perp_y2)]:
+                        if self._landing_ok(ai_fighter, game_map, px, py, reach):
+                            ai_fighter.trigger_roll(px, py)
                             return True
 
-                # Rolamento padrão afastando-se da ameaça
+                # Rolamento padrão afastando-se da ameaça (para melee threat ou bombas)
                 dx = ai_fighter.wx - threat_x
                 dy = ai_fighter.wy - threat_y
                 length = math.hypot(dx, dy)
@@ -644,7 +701,6 @@ class SamuraiAI:
                     if self._landing_ok(ai_fighter, game_map, dx / length, dy / length, reach):
                         ai_fighter.trigger_roll(dx / length, dy / length)
                         return True
-                    # Se para trás estiver bloqueado, tenta esquiva lateral (90° / -90°)
                     cand1 = (-dy / length, dx / length)
                     cand2 = (dy / length, -dx / length)
                     ok1 = self._landing_ok(ai_fighter, game_map, cand1[0], cand1[1], reach)
@@ -1134,12 +1190,19 @@ class SamuraiAI:
                         self.move_dir_x = -1.0
                         self.move_dir_y = 0.0
             else:
-                # Circunavegar lateralmente
+                # Aproximação agressiva em arco fechando a meia-distância (1.45m a 3.0m)
                 dx = opponent.wx - ai_fighter.wx
                 dy = opponent.wy - ai_fighter.wy
                 if dist > 0.001:
-                    self.move_dir_x = -dy / dist
-                    self.move_dir_y = dx / dist
+                    dir_x = dx / dist
+                    dir_y = dy / dist
+                    perp_x = -dir_y * self.flank_sign
+                    perp_y = dir_x * self.flank_sign
+                    final_x = dir_x * 0.70 + perp_x * 0.40
+                    final_y = dir_y * 0.70 + perp_y * 0.40
+                    f_len = math.hypot(final_x, final_y)
+                    self.move_dir_x = final_x / f_len
+                    self.move_dir_y = final_y / f_len
                 else:
                     self.move_dir_x = 1.0
                     self.move_dir_y = 0.0

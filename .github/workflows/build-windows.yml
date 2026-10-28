@@ -1,0 +1,47 @@
+name: Build Windows Release (Standalone)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag Name'
+        required: false
+        default: 'v-windows-temp'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build with PyInstaller (Windows)
+        run: |
+          pyinstaller --clean -y samurai_edge.spec
+
+      - name: Package Release (Windows)
+        run: |
+          Compress-Archive -Path dist\SamuraiEdge -DestinationPath Samurai-Edge-Demake-Windows.zip
+
+      - name: Create GitHub Release (Windows only, NO itch.io)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag_name }}
+          name: Samurai Edge Demake Windows (${{ github.event.inputs.tag_name }})
+          draft: false
+          prerelease: true
+          files: Samurai-Edge-Demake-Windows.zip
