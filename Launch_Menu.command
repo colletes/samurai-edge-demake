@@ -7,6 +7,9 @@
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
+export SDL_JOYSTICK_IOKIT=0
+export SDL_JOYSTICK_MFI=1
+
 if [ -f "./venv/bin/python" ]; then
     PYTHON_EXEC="./venv/bin/python"
 else

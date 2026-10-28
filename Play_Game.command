@@ -7,6 +7,9 @@
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
+export SDL_JOYSTICK_IOKIT=0
+export SDL_JOYSTICK_MFI=1
+
 echo "========================================================"
 echo "  SAMURAI EDGE - BAKUMATSU (Game Launcher)"
 echo "========================================================"

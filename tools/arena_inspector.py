@@ -34,6 +34,10 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
+if sys.platform == "darwin":
+    os.environ.setdefault("SDL_JOYSTICK_IOKIT", "0")
+    os.environ.setdefault("SDL_JOYSTICK_MFI", "1")
+
 import pygame
 
 from src.config import HALF_TILE_W, HALF_TILE_H, MAP_COLS, MAP_ROWS
@@ -222,7 +226,8 @@ class ArenaInspector:
             os.environ["SDL_VIDEODRIVER"] = "dummy"
             os.environ["SDL_AUDIODRIVER"] = "dummy"
 
-        pygame.init()
+        pygame.display.init()
+        pygame.font.init()
         pygame.display.set_caption("Samurai Edge — Arena Free-Cam Inspector 3D")
 
         flags = pygame.DOUBLEBUF | pygame.RESIZABLE if not headless else 0

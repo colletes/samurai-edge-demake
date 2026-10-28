@@ -23,10 +23,11 @@ def _is_running_on_ios() -> bool:
         return True
     return False
 
-# No macOS desktop, desativar MFi do SDL para permitir detecção direta de arcade sticks USB / HID (ex: Hori Fighting Stick).
-# No iOS, NUNCA desativar MFi pois é o único subsistema de gamepads bluetooth/USB-C (GameSir, Backbone, etc.)
+# No macOS 26+, desativar o driver legado IOKit (DARWIN_JoystickInit) que sofre crash no __IOHIDManagerInitialEnumCallback
+# e habilitar GCController/MFi + HIDAPI. No iOS, NUNCA desativar MFi.
 if sys.platform == "darwin" and not _is_running_on_ios():
-    os.environ.setdefault("SDL_JOYSTICK_MFI", "0")
+    os.environ.setdefault("SDL_JOYSTICK_IOKIT", "0")
+    os.environ.setdefault("SDL_JOYSTICK_MFI", "1")
 elif _is_running_on_ios():
     os.environ["SDL_JOYSTICK_MFI"] = "1"
 

@@ -21,7 +21,8 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 if sys.platform == "darwin":
-    os.environ.setdefault("SDL_JOYSTICK_MFI", "0")
+    os.environ.setdefault("SDL_JOYSTICK_IOKIT", "0")
+    os.environ.setdefault("SDL_JOYSTICK_MFI", "1")
 
 if "--headless" in sys.argv or "--snapshot" in sys.argv:
     os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -58,7 +59,8 @@ class StudioInspector:
             os.environ["SDL_VIDEODRIVER"] = "dummy"
             os.environ["SDL_AUDIODRIVER"] = "dummy"
 
-        pygame.init()
+        pygame.display.init()
+        pygame.font.init()
         pygame.display.set_caption("Samurai Edge — Studio 3D Unificado [F1 Modelos | F2 Arenas | F3 Staging]")
 
         flags = pygame.DOUBLEBUF | pygame.RESIZABLE if not headless else 0

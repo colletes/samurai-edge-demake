@@ -26,7 +26,8 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 if sys.platform == "darwin":
-    os.environ.setdefault("SDL_JOYSTICK_MFI", "0")
+    os.environ.setdefault("SDL_JOYSTICK_IOKIT", "0")
+    os.environ.setdefault("SDL_JOYSTICK_MFI", "1")
 
 if "--headless" in sys.argv or "--snapshot" in sys.argv or "--save-all" in sys.argv:
     os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -467,7 +468,8 @@ class ModelInspector:
             os.environ["SDL_VIDEODRIVER"] = "dummy"
             os.environ["SDL_AUDIODRIVER"] = "dummy"
 
-        pygame.init()
+        pygame.display.init()
+        pygame.font.init()
         pygame.display.set_caption("Samurai Edge — Model Inspector 3D (Roster Completo)")
 
         flags = pygame.DOUBLEBUF | pygame.RESIZABLE if not headless else 0
@@ -530,17 +532,18 @@ class ModelInspector:
         self.reset_cam_btn_rect = pygame.Rect(0, 0, 0, 0)
         self.compare_btn_rect = pygame.Rect(0, 0, 0, 0)
 
-        # Joystick / Fightstick support
-        if not pygame.joystick.get_init():
-            try:
-                pygame.joystick.init()
-            except Exception:
-                pass
-        for i in range(pygame.joystick.get_count()):
-            try:
-                joy = pygame.joystick.Joystick(i)
-            except Exception:
-                pass
+        # Joystick / Fightstick support (opcional no Inspector para evitar crash IOHIDManager no macOS 26)
+        if os.environ.get("SAMURAI_INSPECTOR_JOYSTICK") == "1":
+            if not pygame.joystick.get_init():
+                try:
+                    pygame.joystick.init()
+                except Exception:
+                    pass
+            for i in range(pygame.joystick.get_count()):
+                try:
+                    joy = pygame.joystick.Joystick(i)
+                except Exception:
+                    pass
 
         # Mensagem toast de status do reload
         self.status_message = ""
