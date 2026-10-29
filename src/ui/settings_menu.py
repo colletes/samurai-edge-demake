@@ -52,6 +52,7 @@ class SettingsMenu:
         # Subtelas do Hub: "HUB", "AUDIOVISUAL", "GAMEPLAY", "CONTROLS"
         self.current_subscreen = "HUB"
         self.hub_selected_index = 0
+        self.sub_row_index = 0
         self.request_gallery = False
 
         # Definição dos itens remapeáveis (7 ações por jogador)
@@ -284,6 +285,7 @@ class SettingsMenu:
         self.is_open = True
         self.current_subscreen = subscreen
         self.hub_selected_index = 0
+        self.sub_row_index = 0
         self.waiting_for_key_action = None
         self._init_geometry()
         if hasattr(self, "touch_editor"):
@@ -397,25 +399,60 @@ class SettingsMenu:
                 return True
             return True
 
+        # Extração de movimento direcional universal (D-Pad, Analógico, Teclado)
+        motion_x, motion_y = 0, 0
+        is_confirm = False
+        is_cancel = False
+
+        if event.type == pygame.JOYHATMOTION:
+            d_dir = get_dpad_motion_from_event(event)
+            if d_dir:
+                motion_x, motion_y = d_dir
+        elif event.type == pygame.JOYAXISMOTION:
+            if event.axis == 1:
+                val = -event.value if getattr(ctrl_mgr, "invert_y", False) else event.value
+                if val > 0.55 and not self._axis_y_held:
+                    motion_y = 1
+                    self._axis_y_held = True
+                elif val < -0.55 and not self._axis_y_held:
+                    motion_y = -1
+                    self._axis_y_held = True
+                elif abs(val) < 0.25:
+                    self._axis_y_held = False
+            elif event.axis == 0:
+                val = event.value
+                if val > 0.55 and not self._axis_x_held:
+                    motion_x = 1
+                    self._axis_x_held = True
+                elif val < -0.55 and not self._axis_x_held:
+                    motion_x = -1
+                    self._axis_x_held = True
+                elif abs(val) < 0.25:
+                    self._axis_x_held = False
+        elif event.type == pygame.JOYBUTTONDOWN:
+            d_dir = get_dpad_motion_from_event(event)
+            if d_dir:
+                motion_x, motion_y = d_dir
+            if ctrl_mgr.is_event_menu_confirm(event) or event.button in (0, 2):
+                is_confirm = True
+            elif ctrl_mgr.is_event_menu_cancel(event) or event.button == 1:
+                is_cancel = True
+
         # 2. Navegação no HUB CENTRAL
         if self.current_subscreen == "HUB":
-            # Gamepad D-Pad
-            if event.type == pygame.JOYBUTTONDOWN:
-                d_dir = get_dpad_motion_from_event(event)
-                if d_dir:
-                    dx, dy = d_dir
-                    if dy != 0:
-                        self.hub_selected_index ^= 2
-                    elif dx != 0:
-                        self.hub_selected_index ^= 1
-                    return True
+            if motion_y != 0:
+                self.hub_selected_index ^= 2
+                return True
+            elif motion_x != 0:
+                self.hub_selected_index ^= 1
+                return True
 
-                if ctrl_mgr.is_event_menu_confirm(event) or event.button in (0, 2):
-                    self._activate_hub_index(self.hub_selected_index)
-                    return True
-                elif ctrl_mgr.is_event_menu_cancel(event) or event.button == 1:
-                    self.close()
-                    return True
+            if is_confirm:
+                self._activate_hub_index(self.hub_selected_index)
+                return True
+            elif is_cancel:
+                self.close()
+                return True
 
             # Teclado no HUB
             elif event.type == pygame.KEYDOWN:
@@ -454,34 +491,63 @@ class SettingsMenu:
 
         # 3. Subtela AUDIOVISUAL
         elif self.current_subscreen == "AUDIOVISUAL":
+            if is_cancel:
+                self.current_subscreen = "HUB"
+                return True
+
+            # Navegação vertical por linhas: 0: SFX, 1: BGM, 2: Qualidade, 3: Modo UI
+            if motion_y != 0:
+                self.sub_row_index = (self.sub_row_index + motion_y) % 4
+                return True
+
+            if motion_x < 0:
+                if self.sub_row_index == 0: self.adjust_sfx_volume(-0.1)
+                elif self.sub_row_index == 1: self.adjust_bgm_volume(-0.1)
+                elif self.sub_row_index == 2: self.cycle_effects_quality()
+                elif self.sub_row_index == 3: self.cycle_ui_mode()
+                return True
+            elif motion_x > 0:
+                if self.sub_row_index == 0: self.adjust_sfx_volume(+0.1)
+                elif self.sub_row_index == 1: self.adjust_bgm_volume(+0.1)
+                elif self.sub_row_index == 2: self.cycle_effects_quality()
+                elif self.sub_row_index == 3: self.cycle_ui_mode()
+                return True
+
+            if is_confirm:
+                if self.sub_row_index == 0: self.adjust_sfx_volume(+0.1)
+                elif self.sub_row_index == 1: self.adjust_bgm_volume(+0.1)
+                elif self.sub_row_index == 2: self.cycle_effects_quality()
+                elif self.sub_row_index == 3: self.cycle_ui_mode()
+                return True
+
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_ESCAPE, pygame.K_c):
                     self.current_subscreen = "HUB"
                     return True
-                elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
-                    self.adjust_sfx_volume(-0.1); return True
-                elif event.key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
-                    self.adjust_sfx_volume(+0.1); return True
-                elif event.key == pygame.K_LEFTBRACKET:
-                    self.adjust_bgm_volume(-0.1); return True
-                elif event.key == pygame.K_RIGHTBRACKET:
-                    self.adjust_bgm_volume(+0.1); return True
+                elif event.key in (pygame.K_UP, pygame.K_w):
+                    self.sub_row_index = (self.sub_row_index - 1) % 4; return True
+                elif event.key in (pygame.K_DOWN, pygame.K_s):
+                    self.sub_row_index = (self.sub_row_index + 1) % 4; return True
+                elif event.key in (pygame.K_LEFT, pygame.K_a, pygame.K_MINUS, pygame.K_KP_MINUS, pygame.K_LEFTBRACKET):
+                    if self.sub_row_index == 0: self.adjust_sfx_volume(-0.1)
+                    elif self.sub_row_index == 1: self.adjust_bgm_volume(-0.1)
+                    elif self.sub_row_index == 2: self.cycle_effects_quality()
+                    elif self.sub_row_index == 3: self.cycle_ui_mode()
+                    return True
+                elif event.key in (pygame.K_RIGHT, pygame.K_d, pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS, pygame.K_RIGHTBRACKET):
+                    if self.sub_row_index == 0: self.adjust_sfx_volume(+0.1)
+                    elif self.sub_row_index == 1: self.adjust_bgm_volume(+0.1)
+                    elif self.sub_row_index == 2: self.cycle_effects_quality()
+                    elif self.sub_row_index == 3: self.cycle_ui_mode()
+                    return True
+                elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    if self.sub_row_index == 2: self.cycle_effects_quality()
+                    elif self.sub_row_index == 3: self.cycle_ui_mode()
+                    return True
                 elif event.key == pygame.K_e:
                     self.cycle_effects_quality(); return True
                 elif event.key == pygame.K_u:
                     self.cycle_ui_mode(); return True
-
-            elif event.type == pygame.JOYBUTTONDOWN:
-                if ctrl_mgr.is_event_menu_cancel(event) or event.button == 1:
-                    self.current_subscreen = "HUB"
-                    return True
-                d_dir = get_dpad_motion_from_event(event)
-                if d_dir:
-                    dx, dy = d_dir
-                    if dx < 0:
-                        self.adjust_bgm_volume(-0.1); return True
-                    elif dx > 0:
-                        self.adjust_bgm_volume(+0.1); return True
 
             elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.FINGERDOWN):
                 pos = (event.x * SCREEN_WIDTH, event.y * SCREEN_HEIGHT) if event.type == pygame.FINGERDOWN else event.pos
@@ -490,12 +556,15 @@ class SettingsMenu:
                     self.current_subscreen = "HUB"
                     return True
                 elif self.sfx_minus_rect.collidepoint(mx, my):
+                    self.sub_row_index = 0
                     self.adjust_sfx_volume(-0.1)
                     return True
                 elif self.sfx_plus_rect.collidepoint(mx, my):
+                    self.sub_row_index = 0
                     self.adjust_sfx_volume(+0.1)
                     return True
                 elif self.sfx_bar_rect.collidepoint(mx, my):
+                    self.sub_row_index = 0
                     pct = max(0.0, min(1.0, (mx - self.sfx_bar_rect.x) / max(1, self.sfx_bar_rect.width)))
                     from src.audio.sound_manager import SoundManager
                     from src.audio.sound_events import SoundEvent
@@ -505,12 +574,15 @@ class SettingsMenu:
                     self.save_settings()
                     return True
                 elif self.bgm_minus_rect.collidepoint(mx, my):
+                    self.sub_row_index = 1
                     self.adjust_bgm_volume(-0.1)
                     return True
                 elif self.bgm_plus_rect.collidepoint(mx, my):
+                    self.sub_row_index = 1
                     self.adjust_bgm_volume(+0.1)
                     return True
                 elif self.bgm_bar_rect.collidepoint(mx, my):
+                    self.sub_row_index = 1
                     pct = max(0.0, min(1.0, (mx - self.bgm_bar_rect.x) / max(1, self.bgm_bar_rect.width)))
                     from src.audio.sound_manager import SoundManager
                     mgr = SoundManager.get_instance()
@@ -518,9 +590,11 @@ class SettingsMenu:
                     self.save_settings()
                     return True
                 elif self.quality_toggle_rect.collidepoint(mx, my):
+                    self.sub_row_index = 2
                     self.cycle_effects_quality()
                     return True
                 elif self.ui_mode_toggle_rect.collidepoint(mx, my):
+                    self.sub_row_index = 3
                     self.cycle_ui_mode()
                     return True
 
@@ -543,9 +617,37 @@ class SettingsMenu:
 
         # 4. Subtela GAMEPLAY
         elif self.current_subscreen == "GAMEPLAY":
+            if is_cancel:
+                self.current_subscreen = "HUB"
+                return True
+
+            # 5 Linhas: 0: Dificuldade IA, 1: Idioma, 2: Boost 60 FPS, 3: Inverter Y, 4: Controles de Toque
+            if motion_y != 0:
+                self.sub_row_index = (self.sub_row_index + motion_y) % 5
+                return True
+
+            if motion_x != 0 or is_confirm:
+                if self.sub_row_index == 0: self.cycle_ai_difficulty()
+                elif self.sub_row_index == 1: self.cycle_language()
+                elif self.sub_row_index == 2: self.toggle_game_boost()
+                elif self.sub_row_index == 3: self.toggle_invert_y()
+                elif self.sub_row_index == 4: self.cycle_touch_mode()
+                return True
+
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_ESCAPE, pygame.K_c):
                     self.current_subscreen = "HUB"
+                    return True
+                elif event.key in (pygame.K_UP, pygame.K_w):
+                    self.sub_row_index = (self.sub_row_index - 1) % 5; return True
+                elif event.key in (pygame.K_DOWN, pygame.K_s):
+                    self.sub_row_index = (self.sub_row_index + 1) % 5; return True
+                elif event.key in (pygame.K_LEFT, pygame.K_a, pygame.K_RIGHT, pygame.K_d, pygame.K_RETURN, pygame.K_SPACE):
+                    if self.sub_row_index == 0: self.cycle_ai_difficulty()
+                    elif self.sub_row_index == 1: self.cycle_language()
+                    elif self.sub_row_index == 2: self.toggle_game_boost()
+                    elif self.sub_row_index == 3: self.toggle_invert_y()
+                    elif self.sub_row_index == 4: self.cycle_touch_mode()
                     return True
                 elif event.key == pygame.K_g:
                     self.cycle_ai_difficulty(); return True
@@ -554,11 +656,6 @@ class SettingsMenu:
                 elif event.key == pygame.K_b:
                     self.toggle_game_boost(); return True
 
-            elif event.type == pygame.JOYBUTTONDOWN:
-                if ctrl_mgr.is_event_menu_cancel(event) or event.button == 1:
-                    self.current_subscreen = "HUB"
-                    return True
-
             elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.FINGERDOWN):
                 pos = (event.x * SCREEN_WIDTH, event.y * SCREEN_HEIGHT) if event.type == pygame.FINGERDOWN else event.pos
                 mx, my = pos
@@ -566,23 +663,47 @@ class SettingsMenu:
                     self.current_subscreen = "HUB"
                     return True
                 elif self.difficulty_toggle_rect.collidepoint(mx, my):
+                    self.sub_row_index = 0
                     self.cycle_ai_difficulty()
                     return True
                 elif self.language_toggle_rect.collidepoint(mx, my):
+                    self.sub_row_index = 1
                     self.cycle_language()
                     return True
                 elif self.game_boost_toggle_rect.collidepoint(mx, my):
+                    self.sub_row_index = 2
                     self.toggle_game_boost()
                     return True
                 elif self.invert_y_toggle_rect.collidepoint(mx, my):
+                    self.sub_row_index = 3
                     self.toggle_invert_y()
                     return True
                 elif self.touch_toggle_rect.collidepoint(mx, my):
+                    self.sub_row_index = 4
                     self.cycle_touch_mode()
                     return True
 
         # 5. Subtela CONTROLS
         elif self.current_subscreen == "CONTROLS":
+            if is_cancel:
+                self.current_subscreen = "HUB"
+                return True
+
+            if motion_y != 0:
+                self.selected_index = (self.selected_index + motion_y) % len(self.items)
+                return True
+            elif motion_x < 0 and self.selected_index >= 7:
+                self.selected_index -= 7
+                return True
+            elif motion_x > 0 and self.selected_index < 7:
+                self.selected_index += 7
+                return True
+
+            if is_confirm:
+                action_key, _, _ = self.items[self.selected_index]
+                self.waiting_for_key_action = action_key
+                return True
+
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_ESCAPE, pygame.K_c):
                     self.current_subscreen = "HUB"
@@ -606,25 +727,7 @@ class SettingsMenu:
                     self.waiting_for_key_action = action_key; return True
 
             elif event.type == pygame.JOYBUTTONDOWN:
-                if ctrl_mgr.is_event_menu_cancel(event) or event.button == 1:
-                    self.current_subscreen = "HUB"
-                    return True
-                d_dir = get_dpad_motion_from_event(event)
-                if d_dir:
-                    dx, dy = d_dir
-                    if dy < 0:
-                        self.selected_index = (self.selected_index - 1) % len(self.items); return True
-                    elif dy > 0:
-                        self.selected_index = (self.selected_index + 1) % len(self.items); return True
-                    elif dx < 0 and self.selected_index >= 7:
-                        self.selected_index -= 7; return True
-                    elif dx > 0 and self.selected_index < 7:
-                        self.selected_index += 7; return True
-                if ctrl_mgr.is_event_menu_confirm(event) or event.button in (0, 2):
-                    action_key, _, _ = self.items[self.selected_index]
-                    self.waiting_for_key_action = action_key
-                    return True
-                elif event.button == 4:
+                if event.button == 4:
                     self.cycle_p1_controller(+1); return True
                 elif event.button == 5:
                     self.cycle_p2_controller(+1); return True
@@ -813,28 +916,28 @@ class SettingsMenu:
         cards_data = [
             (
                 self.hub_audiovisual_rect,
-                "♫  " + t("settings_hub_audiovisual_title"),
+                t("settings_hub_audiovisual_title"),
                 t("settings_hub_audiovisual_desc"),
                 f"BGM: {int(mgr.bgm_volume * 100)}%   SFX: {int(mgr.sfx_volume * 100)}%   Qualidade: {q_str}",
                 True,
             ),
             (
                 self.hub_gameplay_rect,
-                "⚔  " + t("settings_hub_gameplay_title"),
+                t("settings_hub_gameplay_title"),
                 t("settings_hub_gameplay_desc"),
                 f"IA: {d_name}   Idioma: {lang_str}   Boost: {boost_str}",
                 True,
             ),
             (
                 self.hub_controls_rect,
-                "🎮  " + t("settings_hub_controls_title"),
+                t("settings_hub_controls_title"),
                 t("settings_hub_controls_desc"),
                 f"P1: {p1_name}   P2: {p2_name}",
                 True,
             ),
             (
                 self.gallery_btn_rect,
-                "🏛  " + t("settings_hub_gallery_title"),
+                t("settings_hub_gallery_title"),
                 t("settings_hub_gallery_desc"),
                 t("gallery_btn_label") if unlocked else t("gallery_locked_label"),
                 unlocked,
@@ -900,8 +1003,11 @@ class SettingsMenu:
         surface.blit(sub_surf, (panel_rect.centerx - sub_surf.get_width() // 2, panel_rect.y + 58))
 
         # 1. Slider SFX
-        sfx_lbl = font_mid.render(f"{t('sfx_volume_label')}: {int(mgr.sfx_volume * 100)}%", True, t_col)
+        sfx_lbl = font_mid.render(f"{t('sfx_volume_label')}: {int(mgr.sfx_volume * 100)}%", True, pm.SEAL_RED if (self.sub_row_index == 0 and is_parchment) else ((255, 225, 90) if self.sub_row_index == 0 else t_col))
         surface.blit(sfx_lbl, (self.sfx_minus_rect.x - 220, self.sfx_minus_rect.y + 4))
+        if self.sub_row_index == 0:
+            glow_r = self.sfx_bar_rect.inflate(8, 8)
+            pygame.draw.rect(surface, pm.SEAL_RED if is_parchment else (255, 215, 60), glow_r, 2, border_radius=6)
 
         for btn_r, symb in ((self.sfx_minus_rect, "-"), (self.sfx_plus_rect, "+")):
             pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (36, 42, 38), btn_r, border_radius=6)
@@ -916,8 +1022,11 @@ class SettingsMenu:
         pygame.draw.rect(surface, (140, 125, 105) if is_parchment else COLOR_GOLD, self.sfx_bar_rect, 1, border_radius=4)
 
         # 2. Slider BGM
-        bgm_lbl = font_mid.render(f"{t('bgm_volume_label')}: {int(mgr.bgm_volume * 100)}%", True, t_col)
+        bgm_lbl = font_mid.render(f"{t('bgm_volume_label')}: {int(mgr.bgm_volume * 100)}%", True, pm.SEAL_RED if (self.sub_row_index == 1 and is_parchment) else ((255, 225, 90) if self.sub_row_index == 1 else t_col))
         surface.blit(bgm_lbl, (self.bgm_minus_rect.x - 220, self.bgm_minus_rect.y + 4))
+        if self.sub_row_index == 1:
+            glow_r = self.bgm_bar_rect.inflate(8, 8)
+            pygame.draw.rect(surface, pm.SEAL_RED if is_parchment else (255, 215, 60), glow_r, 2, border_radius=6)
 
         for btn_r, symb in ((self.bgm_minus_rect, "-"), (self.bgm_plus_rect, "+")):
             pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (36, 42, 38), btn_r, border_radius=6)
@@ -936,8 +1045,9 @@ class SettingsMenu:
         q_label = t("effects_quality_label").format(q_name=t("quality_high") if high else t("quality_low"))
         q_sub = "Alta: SSAA 2x Voxel + Sombra Realista" if high else "Baixa: Renderização Otimizada 60 FPS"
         pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (38, 36, 34), self.quality_toggle_rect, border_radius=8)
-        pygame.draw.rect(surface, (170, 125, 45) if is_parchment else COLOR_GOLD, self.quality_toggle_rect, 2 if high else 1, border_radius=8)
-        ql = font_mid.render(q_label, True, pm.INK if is_parchment else COLOR_GOLD)
+        q_border = pm.SEAL_RED if (self.sub_row_index == 2 and is_parchment) else ((255, 215, 60) if self.sub_row_index == 2 else ((170, 125, 45) if is_parchment else COLOR_GOLD))
+        pygame.draw.rect(surface, q_border, self.quality_toggle_rect, 3 if self.sub_row_index == 2 else (2 if high else 1), border_radius=8)
+        ql = font_mid.render(q_label, True, pm.SEAL_RED if (self.sub_row_index == 2 and is_parchment) else (pm.INK if is_parchment else COLOR_GOLD))
         qs = font_small.render(q_sub, True, pm.INK_SOFT if is_parchment else (180, 175, 165))
         surface.blit(ql, (self.quality_toggle_rect.x + 24, self.quality_toggle_rect.y + 6))
         surface.blit(qs, (self.quality_toggle_rect.x + 24, self.quality_toggle_rect.y + 28))
@@ -947,8 +1057,9 @@ class SettingsMenu:
         ui_mode_names = {"auto": "AUTOMÁTICO", "mobile": "SMARTPHONE", "classic": "CLÁSSICO"}
         u_name = ui_mode_names.get(ui_mode, "AUTOMÁTICO")
         pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (38, 36, 34), self.ui_mode_toggle_rect, border_radius=8)
-        pygame.draw.rect(surface, (140, 125, 105) if is_parchment else (75, 70, 62), self.ui_mode_toggle_rect, 1, border_radius=8)
-        ul = font_mid.render(f"LAYOUT DA INTERFACE: [ {u_name} ]", True, pm.INK if is_parchment else COLOR_WHITE)
+        u_border = pm.SEAL_RED if (self.sub_row_index == 3 and is_parchment) else ((255, 215, 60) if self.sub_row_index == 3 else ((140, 125, 105) if is_parchment else (75, 70, 62)))
+        pygame.draw.rect(surface, u_border, self.ui_mode_toggle_rect, 3 if self.sub_row_index == 3 else 1, border_radius=8)
+        ul = font_mid.render(f"LAYOUT DA INTERFACE: [ {u_name} ]", True, pm.SEAL_RED if (self.sub_row_index == 3 and is_parchment) else (pm.INK if is_parchment else COLOR_WHITE))
         surface.blit(ul, ul.get_rect(center=self.ui_mode_toggle_rect.center))
 
         # Botão Voltar às Opções
@@ -980,8 +1091,9 @@ class SettingsMenu:
         )
 
         pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (38, 36, 34), self.difficulty_toggle_rect, border_radius=8)
-        pygame.draw.rect(surface, d_col, self.difficulty_toggle_rect, 2, border_radius=8)
-        dl = font_mid.render(t("ai_difficulty_label").format(d_name=d_name), True, d_col)
+        d_border = pm.SEAL_RED if (self.sub_row_index == 0 and is_parchment) else ((255, 215, 60) if self.sub_row_index == 0 else d_col)
+        pygame.draw.rect(surface, d_border, self.difficulty_toggle_rect, 3 if self.sub_row_index == 0 else 2, border_radius=8)
+        dl = font_mid.render(t("ai_difficulty_label").format(d_name=d_name), True, d_border if self.sub_row_index == 0 else d_col)
         ds = font_small.render(d_desc, True, pm.INK_SOFT if is_parchment else (180, 175, 165))
         surface.blit(dl, (self.difficulty_toggle_rect.x + 24, self.difficulty_toggle_rect.y + 8))
         surface.blit(ds, (self.difficulty_toggle_rect.x + 24, self.difficulty_toggle_rect.y + 32))
@@ -990,16 +1102,18 @@ class SettingsMenu:
         pref = get_saved_language_preference()
         lang_str = t("lang_auto") if pref == LANG_AUTO else (t("lang_pt") if pref == LANG_PT else t("lang_en"))
         pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (38, 36, 34), self.language_toggle_rect, border_radius=8)
-        pygame.draw.rect(surface, (140, 125, 105) if is_parchment else (75, 70, 62), self.language_toggle_rect, 1, border_radius=8)
-        ll = font_mid.render(t("language_toggle_label").format(lang_name=lang_str), True, pm.INK if is_parchment else COLOR_WHITE)
+        l_border = pm.SEAL_RED if (self.sub_row_index == 1 and is_parchment) else ((255, 215, 60) if self.sub_row_index == 1 else ((140, 125, 105) if is_parchment else (75, 70, 62)))
+        pygame.draw.rect(surface, l_border, self.language_toggle_rect, 3 if self.sub_row_index == 1 else 1, border_radius=8)
+        ll = font_mid.render(t("language_toggle_label").format(lang_name=lang_str), True, pm.SEAL_RED if (self.sub_row_index == 1 and is_parchment) else (pm.INK if is_parchment else COLOR_WHITE))
         surface.blit(ll, ll.get_rect(center=self.language_toggle_rect.center))
 
         # 3. Game Boost
         boost_on = quality.is_game_boost_enabled()
         b_label = t("game_boost_label").format(status=t("status_on") if boost_on else t("status_off"))
         pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (38, 36, 34), self.game_boost_toggle_rect, border_radius=8)
-        pygame.draw.rect(surface, (45, 140, 65) if boost_on else ((140, 125, 105) if is_parchment else (75, 70, 62)), self.game_boost_toggle_rect, 2 if boost_on else 1, border_radius=8)
-        bl = font_mid.render(b_label, True, (45, 140, 65) if boost_on else (pm.INK if is_parchment else COLOR_WHITE))
+        b_border = pm.SEAL_RED if (self.sub_row_index == 2 and is_parchment) else ((255, 215, 60) if self.sub_row_index == 2 else ((45, 140, 65) if boost_on else ((140, 125, 105) if is_parchment else (75, 70, 62))))
+        pygame.draw.rect(surface, b_border, self.game_boost_toggle_rect, 3 if self.sub_row_index == 2 else (2 if boost_on else 1), border_radius=8)
+        bl = font_mid.render(b_label, True, pm.SEAL_RED if (self.sub_row_index == 2 and is_parchment) else ((45, 140, 65) if boost_on else (pm.INK if is_parchment else COLOR_WHITE)))
         surface.blit(bl, bl.get_rect(center=self.game_boost_toggle_rect.center))
 
         # 4. Inverter Eixo Y
@@ -1007,8 +1121,9 @@ class SettingsMenu:
         inv_y = getattr(get_controller_manager(), "invert_y", False)
         y_txt = "Inverter Eixo Y do Analógico: [ ATIVADO ]" if inv_y else "Inverter Eixo Y do Analógico: [ DESATIVADO ]"
         pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (38, 36, 34), self.invert_y_toggle_rect, border_radius=8)
-        pygame.draw.rect(surface, (140, 125, 105) if is_parchment else (75, 70, 62), self.invert_y_toggle_rect, 1, border_radius=8)
-        yl = font_mid.render(y_txt, True, pm.INK if is_parchment else COLOR_WHITE)
+        y_border = pm.SEAL_RED if (self.sub_row_index == 3 and is_parchment) else ((255, 215, 60) if self.sub_row_index == 3 else ((140, 125, 105) if is_parchment else (75, 70, 62)))
+        pygame.draw.rect(surface, y_border, self.invert_y_toggle_rect, 3 if self.sub_row_index == 3 else 1, border_radius=8)
+        yl = font_mid.render(y_txt, True, pm.SEAL_RED if (self.sub_row_index == 3 and is_parchment) else (pm.INK if is_parchment else COLOR_WHITE))
         surface.blit(yl, yl.get_rect(center=self.invert_y_toggle_rect.center))
 
         # 5. Modo de Toque
@@ -1020,8 +1135,9 @@ class SettingsMenu:
             elif mode == "off":
                 touch_mode_str = t("touch_mode_disabled")
         pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (38, 36, 34), self.touch_toggle_rect, border_radius=8)
-        pygame.draw.rect(surface, (140, 125, 105) if is_parchment else (75, 70, 62), self.touch_toggle_rect, 1, border_radius=8)
-        tl = font_mid.render(t("touch_controls_label").format(touch_mode_str=touch_mode_str), True, pm.INK if is_parchment else COLOR_WHITE)
+        t_border = pm.SEAL_RED if (self.sub_row_index == 4 and is_parchment) else ((255, 215, 60) if self.sub_row_index == 4 else ((140, 125, 105) if is_parchment else (75, 70, 62)))
+        pygame.draw.rect(surface, t_border, self.touch_toggle_rect, 3 if self.sub_row_index == 4 else 1, border_radius=8)
+        tl = font_mid.render(t("touch_controls_label").format(touch_mode_str=touch_mode_str), True, pm.SEAL_RED if (self.sub_row_index == 4 and is_parchment) else (pm.INK if is_parchment else COLOR_WHITE))
         surface.blit(tl, tl.get_rect(center=self.touch_toggle_rect.center))
 
         # Botão Voltar às Opções
@@ -1208,9 +1324,9 @@ class SettingsMenu:
         c_mgr.poll_controllers()
         c1 = c_mgr.get_controller_for_player(0)
         if c1:
-            badge_txt = font_small.render(f"🎮 {c1.friendly_name} CONECTADO", True, (110, 245, 150))
+            badge_txt = font_small.render(f"[{c1.friendly_name.upper()}] CONECTADO", True, (110, 245, 150))
         else:
-            badge_txt = font_small.render("📱 MODO TOUCH SCREEN (Nenhum controle físico conectado)", True, (150, 165, 175))
+            badge_txt = font_small.render("[MODO TOUCH SCREEN] Nenhum controle físico conectado", True, (150, 165, 175))
         surface.blit(badge_txt, (panel_rect.centerx - badge_txt.get_width() // 2, panel_y + 78))
 
         draw_brush_divider(surface, panel_x + 40, panel_y + 102, panel_x + panel_w - 40)

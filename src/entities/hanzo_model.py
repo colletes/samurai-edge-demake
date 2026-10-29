@@ -146,23 +146,60 @@ def idle_arms(c):
 
 def _current_hands(c):
     pose = (c.extra_props or {}).get("pose", "")
+    p = float((c.extra_props or {}).get("p", 0.0))
+    finisher_style = (c.extra_props or {}).get("finisher_style", "")
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
 
-    # 1. Poses específicas de Intro, Vitória e Finishers
+    # 1. Finishers Cinematográficos
+    if finisher_style == "FOREHEAD_PIN" or pose == "finisher_2":
+        # Arremesso/fincada precisa de kunai na testa
+        prog = _smooth(p)
+        rx = bx + fx * (0.16 + 0.28 * prog) - px * 0.06
+        ry = by + fy * (0.16 + 0.28 * prog) - py * 0.06
+        rz = tz + 0.12 + 0.12 * math.sin(prog * math.pi)
+        left = (bx + fx * 0.14 + px * 0.10, by + fy * 0.14 + py * 0.10, tz + 0.10)
+        return left, (rx, ry, rz)
+
+    elif finisher_style == "HEART_THROAT_STAB" or pose == "finisher_1":
+        # Estocada fulminante no coração e transversal na garganta
+        prog = _smooth(p)
+        rx = bx + fx * (0.18 + 0.28 * prog) - px * 0.04
+        ry = by + fy * (0.18 + 0.28 * prog) - py * 0.04
+        rz = tz + 0.14 + 0.04 * math.sin(prog * math.pi)
+        left = (bx + fx * 0.16 + px * 0.12, by + fy * 0.16 + py * 0.12, tz + 0.10)
+        return left, (rx, ry, rz)
+
+    # 2. Poses específicas de Intro e Vitória
     if pose == "leaf_crouch":
-        right = (bx + fx * 0.12 - px * 0.14, by + fy * 0.12 - py * 0.14, tz - 0.04)
-        left = (bx + fx * 0.12 + px * 0.14, by + fy * 0.12 + py * 0.14, tz - 0.04)
-        return left, right
+        crouch = _smooth(min(1.0, p * 2.0))
+        rx = bx + fx * (0.14 * (1.0 - crouch) + 0.12 * crouch) - px * (0.10 * (1.0 - crouch) + 0.14 * crouch)
+        ry = by + fy * (0.14 * (1.0 - crouch) + 0.12 * crouch) - py * (0.10 * (1.0 - crouch) + 0.14 * crouch)
+        rz = tz + 0.12 * (1.0 - crouch) - 0.04 * crouch
+        lx = bx + fx * (0.08 * (1.0 - crouch) + 0.12 * crouch) + px * (0.12 * (1.0 - crouch) + 0.14 * crouch)
+        ly = by + fy * (0.08 * (1.0 - crouch) + 0.12 * crouch) + py * (0.12 * (1.0 - crouch) + 0.14 * crouch)
+        lz = tz + 0.08 * (1.0 - crouch) - 0.04 * crouch
+        return (lx, ly, lz), (rx, ry, rz)
 
     elif pose == "ninjato_draw":
-        # Mão direita alcança o hilt da Ninjato sobre o ombro direito atrás da cabeça
-        right = (bx - fx * 0.06 - px * 0.05, by - fy * 0.06 - py * 0.05, tz + 0.32)
-        left = (bx + fx * 0.04 + px * 0.10, by + fy * 0.04 + py * 0.10, tz + 0.04)
-        return left, right
+        # Mão direita sobe para as costas e saca a ninjato num relâmpago
+        draw_prog = _smooth(p)
+        if draw_prog < 0.45:
+            sp = draw_prog / 0.45
+            rx = bx - fx * (0.02 + 0.06 * sp) - px * (0.10 * (1.0 - sp) + 0.05 * sp)
+            ry = by - fy * (0.02 + 0.06 * sp) - py * (0.10 * (1.0 - sp) + 0.05 * sp)
+            rz = tz + 0.08 + 0.26 * sp
+        else:
+            sp = (draw_prog - 0.45) / 0.55
+            rx = bx + fx * (-0.08 * (1.0 - sp) + 0.18 * sp) - px * (0.05 * (1.0 - sp) + 0.14 * sp)
+            ry = by + fy * (-0.08 * (1.0 - sp) + 0.18 * sp) - py * (0.05 * (1.0 - sp) + 0.14 * sp)
+            rz = tz + 0.34 * (1.0 - sp) + 0.12 * sp
+        left = (bx + fx * 0.06 + px * 0.12, by + fy * 0.06 + py * 0.12, tz + 0.06)
+        return left, (rx, ry, rz)
 
     elif pose == "shinobi_stance":
-        right = (bx + fx * 0.08 - px * 0.12, by + fy * 0.08 - py * 0.12, tz + 0.10)
-        left = (bx + fx * 0.20 + px * 0.08, by + fy * 0.20 + py * 0.08, tz + 0.12)
+        sw = math.sin(c.walk_timer * 2.8) * 0.010
+        right = (bx + fx * 0.08 - px * 0.12, by + fy * 0.08 - py * 0.12, tz + 0.10 + sw)
+        left = (bx + fx * 0.20 + px * 0.08, by + fy * 0.20 + py * 0.08, tz + 0.12 + sw)
         return left, right
 
     elif pose == "reverse_slash":
@@ -172,33 +209,34 @@ def _current_hands(c):
         return attack_arms(c, progress=0.75)
 
     elif pose == "kuji_kiri":
-        # Mãos unidas em selo místico Kuji-Kiri na altura do coração
-        right = (bx + fx * 0.16 - px * 0.02, by + fy * 0.16 - py * 0.02, tz + 0.18)
-        left = (bx + fx * 0.16 + px * 0.02, by + fy * 0.16 + py * 0.02, tz + 0.18)
-        return left, right
+        # Mãos sobem suavemente e tecem os 9 selos sagrados (Kuji-Kiri) na altura do coração
+        prog = _smooth(min(1.0, p * 2.2))
+        weave_x = math.sin(p * 20.0) * 0.015
+        weave_z = math.cos(p * 16.0) * 0.012
+        rx = bx + fx * (0.12 + 0.05 * prog) - px * (0.08 * (1.0 - prog) + 0.02 * prog) + px * weave_x
+        ry = by + fy * (0.12 + 0.05 * prog) - py * (0.08 * (1.0 - prog) + 0.02 * prog) + py * weave_x
+        rz = tz + 0.08 + 0.12 * prog + weave_z
+        lx = bx + fx * (0.12 + 0.05 * prog) + px * (0.08 * (1.0 - prog) + 0.02 * prog) - px * weave_x
+        ly = by + fy * (0.12 + 0.05 * prog) + py * (0.08 * (1.0 - prog) + 0.02 * prog) - py * weave_x
+        lz = tz + 0.08 + 0.12 * prog + weave_z
+        return (lx, ly, lz), (rx, ry, rz)
 
     elif pose == "smoke_vanish":
-        right = (bx - fx * 0.06 - px * 0.22, by - fy * 0.06 - py * 0.22, tz + 0.04)
-        left = (bx - fx * 0.06 + px * 0.22, by - fy * 0.06 + py * 0.22, tz + 0.04)
-        return left, right
+        # Mãos se separam vigorosamente para baixo e para trás em dispersão ninja
+        snap = _smooth(min(1.0, p * 3.0))
+        rx = bx + fx * (0.17 * (1.0 - snap) - 0.08 * snap) - px * (0.02 * (1.0 - snap) + 0.22 * snap)
+        ry = by + fy * (0.17 * (1.0 - snap) - 0.08 * snap) - py * (0.02 * (1.0 - snap) + 0.22 * snap)
+        rz = tz + 0.20 * (1.0 - snap) + 0.02 * snap
+        lx = bx + fx * (0.17 * (1.0 - snap) - 0.08 * snap) + px * (0.02 * (1.0 - snap) + 0.22 * snap)
+        ly = by + fy * (0.17 * (1.0 - snap) - 0.08 * snap) + py * (0.02 * (1.0 - snap) + 0.22 * snap)
+        lz = tz + 0.20 * (1.0 - snap) + 0.02 * snap
+        return (lx, ly, lz), (rx, ry, rz)
 
-    elif pose == "finisher_1":
-        # Estocada penetrante atravessando a garganta/coração
-        right = (bx + fx * 0.44 - px * 0.04, by + fy * 0.44 - py * 0.04, tz + 0.16)
-        left = (bx + fx * 0.24 + px * 0.12, by + fy * 0.24 + py * 0.12, tz + 0.12)
-        return left, right
-
-    elif pose == "finisher_2":
-        # Arremesso/fincada de kunai na testa
-        right = (bx + fx * 0.36 - px * 0.06, by + fy * 0.36 - py * 0.06, tz + 0.22)
-        left = (bx + fx * 0.16 + px * 0.10, by + fy * 0.16 + py * 0.10, tz + 0.14)
-        return left, right
-
-    # 2. Ataque Melee
+    # 3. Ataque Melee
     if c.is_melee and c.atk_progress is not None:
         return attack_arms(c)
 
-    # 3. Caminhada
+    # 4. Caminhada
     if c.is_moving and hasattr(c, "walk_timer"):
         sw = math.sin(c.walk_timer * 8.0) * 0.04
         right = (bx + fx * 0.10 - px * 0.12 + fx * sw, by + fy * 0.10 - py * 0.12 + fy * sw, tz + 0.10)
@@ -206,6 +244,10 @@ def _current_hands(c):
         return left, right
 
     return idle_arms(c)
+
+
+def get_arms(c):
+    return _current_hands(c)
 
 
 def _kunai_dirs(c):
@@ -249,6 +291,11 @@ def _draw_ninjato_in_hand(c, hand, d, reverse=True):
 
 
 def _render_weapons_and_hands(c, arm_l, arm_r):
+    pose = (c.extra_props or {}).get("pose", "")
+    if pose in ("kuji_kiri", "smoke_vanish"):
+        # Em selos sagrados Kuji-Kiri ou dispersão ninja, mãos nuas formando mudras sem armas empunhadas
+        return
+
     hand_l = (arm_l[0], arm_l[1], arm_l[2] - 0.065)
     hand_r = (arm_r[0], arm_r[1], arm_r[2] - 0.065)
 
@@ -575,9 +622,7 @@ def draw_front(c, arm_l, arm_r):
     if mk.depth(c, mid_sword[0], mid_sword[1]) >= d_torso:
         _draw_back_sword(c)
 
-    hand_l = (arm_l[0], arm_l[1], arm_l[2] - 0.065)
-    hand_r = (arm_r[0], arm_r[1], arm_r[2] - 0.065)
-    w_mid = ((hand_l[0] + hand_r[0]) * 0.5, (hand_l[1] + hand_r[1]) * 0.5)
+    w_mid = ((arm_l[0] + arm_r[0]) * 0.5, (arm_l[1] + arm_r[1]) * 0.5)
 
     if mk.depth(c, w_mid[0], w_mid[1]) >= d_torso:
-        _render_weapons_and_hands(c, hand_l, hand_r)
+        _render_weapons_and_hands(c, arm_l, arm_r)

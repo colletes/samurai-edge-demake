@@ -522,6 +522,7 @@ class BlueSamurai(Samurai):
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
+        roll_prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration)))) if self.state == STATE_ROLL else 0.0
         extra = {
             "combo_step": self.combo_step,
             "ssaa_2x": getattr(self, "ssaa_enabled", True),
@@ -529,6 +530,7 @@ class BlueSamurai(Samurai):
             "pose": getattr(self, "current_pose", ""),
             "cross_shockwave": (self.state == "CROSS_SHOCKWAVE"),
             "is_roll": (self.state == STATE_ROLL),
+            "somersault_angle": (360.0 * roll_prog) if self.state == STATE_ROLL else 0.0,
         }
 
         render_voxel_humanoid(

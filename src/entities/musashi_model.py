@@ -233,6 +233,11 @@ def _hands_at(c, p, step):
     return left, right
 
 
+def get_arms(c):
+    """Retorna as posições 3D articuladas dos punhos com suporte a todos os estados e LERP."""
+    return _hands(c)
+
+
 def attack_arms(c):
     return _hands_at(c, c.atk_progress, _step(c))
 
@@ -260,24 +265,26 @@ def _hands(c):
     """Posição atual das mãos com suporte a todos os estados, poses e LERP."""
     extra = getattr(c, "extra_props", None) or {}
     pose = extra.get("pose", "")
+    eff_state = extra.get("intro_victory_state", getattr(c, "state", "IDLE"))
     p = extra.get("p", c.state_timer if hasattr(c, "state_timer") else 0.0)
+    f_style = extra.get("finisher_style", "")
 
     # 1. Finalizadores Cinemáticos
-    if pose in ("finisher_1", "niten_impale", "finisher_2", "cross_slicer") or c.state in ("FINISHER_1", "FINISHER_2"):
-        return finisher_arms(c, p, pose or c.state)
+    if f_style in ("DUAL_IMPALE_X_SPREAD", "CROSS_VACUUM_SLICER") or pose in ("finisher_1", "niten_impale", "finisher_2", "cross_slicer") or eff_state in ("FINISHER_1", "FINISHER_2"):
+        return finisher_arms(c, p, f_style or pose or eff_state)
 
     # 2. Intro e Vitória
-    if c.state == "INTRO" or pose in ("dual_draw", "cross_blade_clash", "two_heavens_guard"):
+    if eff_state == "INTRO" or pose in ("dual_draw", "cross_blade_clash", "two_heavens_guard"):
         return intro_arms(c, p, pose)
-    if c.state == "VICTORY" or pose in ("double_chiburi", "two_heavens_victory"):
+    if eff_state == "VICTORY" or pose in ("double_chiburi", "two_heavens_victory"):
         return victory_arms(c, p, pose)
 
     # 3. Rolamento Tático
-    if c.state == "ROLL" or extra.get("is_roll", False) or pose == "tactical_roll":
+    if eff_state == "ROLL" or extra.get("is_roll", False) or pose == "tactical_roll":
         return roll_arms(c)
 
     # 4. Cross Shockwave
-    if c.state == "CROSS_SHOCKWAVE" or extra.get("cross_shockwave", False):
+    if eff_state == "CROSS_SHOCKWAVE" or extra.get("cross_shockwave", False):
         return cross_shockwave_arms(c)
 
     # 5. Cross Guard Parry
@@ -341,27 +348,42 @@ def _render_weapons_and_hands(c, arm_l, arm_r):
     hand_r = (arm_r[0], arm_r[1], arm_r[2] - 0.065)
     extra = getattr(c, "extra_props", None) or {}
     pose = extra.get("pose", "")
+    eff_state = extra.get("intro_victory_state", getattr(c, "state", "IDLE"))
     p = extra.get("p", c.state_timer if hasattr(c, "state_timer") else 0.0)
+    f_style = extra.get("finisher_style", "")
 
     fx, fy, px, py = c.fx, c.fy, c.px, c.py
 
+    # 0. Finalizadores Cinemáticos
+    if f_style in ("DUAL_IMPALE_X_SPREAD", "CROSS_VACUUM_SLICER") or pose in ("finisher_1", "niten_impale", "finisher_2", "cross_slicer") or eff_state in ("FINISHER_1", "FINISHER_2"):
+        if f_style == "CROSS_VACUUM_SLICER" or pose in ("finisher_2", "cross_slicer"):
+            _blade(c, hand_r, mk.norm((fx * 0.70 + px * 0.40, fy * 0.70 + py * 0.40, -0.30)), 0.68)
+            _blade(c, hand_l, mk.norm((fx * 0.70 - px * 0.40, fy * 0.70 - py * 0.40, 0.30)), 0.52, short=True)
+        else:
+            if p < 0.65:
+                _blade(c, hand_r, mk.norm((fx * 0.88 - px * 0.12, fy * 0.88 - py * 0.12, -0.05)), 0.66)
+                _blade(c, hand_l, mk.norm((fx * 0.88 + px * 0.12, fy * 0.88 + py * 0.12, -0.05)), 0.50, short=True)
+            else:
+                _blade(c, hand_r, mk.norm((fx * 0.30 - px * 0.88, fy * 0.30 - py * 0.88, 0.10)), 0.66)
+                _blade(c, hand_l, mk.norm((fx * 0.30 + px * 0.88, fy * 0.30 + py * 0.88, 0.10)), 0.50, short=True)
+
     # 1. Cross Guard Parry
-    if c.state == "PARRY" or pose == "cross_guard":
+    elif eff_state == "PARRY" or pose == "cross_guard":
         _blade(c, hand_r, mk.norm((fx * 0.35 + px * 0.55, fy * 0.35 + py * 0.55, 0.70)), 0.64)
         _blade(c, hand_l, mk.norm((fx * 0.35 - px * 0.55, fy * 0.35 - py * 0.55, 0.70)), 0.48, short=True)
 
     # 2. Cross Shockwave
-    elif c.state == "CROSS_SHOCKWAVE" or extra.get("cross_shockwave", False):
+    elif eff_state == "CROSS_SHOCKWAVE" or extra.get("cross_shockwave", False):
         _blade(c, hand_r, mk.norm((fx * 0.75 + px * 0.45, fy * 0.75 + py * 0.45, -0.20)), 0.66)
         _blade(c, hand_l, mk.norm((fx * 0.75 - px * 0.45, fy * 0.75 - py * 0.45, 0.20)), 0.50, short=True)
 
     # 3. Rolamento Tático
-    elif c.state == "ROLL" or extra.get("is_roll", False) or pose == "tactical_roll":
+    elif eff_state == "ROLL" or extra.get("is_roll", False) or pose == "tactical_roll":
         _blade(c, hand_r, mk.norm((-fx * 0.40 + px * 0.60, -fy * 0.40 + py * 0.60, -0.60)), 0.62)
         _blade(c, hand_l, mk.norm((-fx * 0.40 - px * 0.60, -fy * 0.40 - py * 0.60, -0.60)), 0.46, short=True)
 
     # 4. Intro (Saque e Faíscas em X)
-    elif c.state == "INTRO" or pose in ("dual_draw", "cross_blade_clash", "two_heavens_guard"):
+    elif eff_state == "INTRO" or pose in ("dual_draw", "cross_blade_clash", "two_heavens_guard"):
         if pose == "cross_blade_clash" or (0.30 <= p < 0.65):
             _blade(c, hand_r, mk.norm((fx * 0.30 + px * 0.65, fy * 0.30 + py * 0.65, 0.68)), 0.64)
             _blade(c, hand_l, mk.norm((fx * 0.30 - px * 0.65, fy * 0.30 - py * 0.65, 0.68)), 0.48, short=True)
@@ -380,7 +402,7 @@ def _render_weapons_and_hands(c, arm_l, arm_r):
             _blade(c, hand_l, dw, lw, short=True)
 
     # 5. Vitória (Duplo Chiburi e Postura dos Dois Céus)
-    elif c.state == "VICTORY" or pose in ("double_chiburi", "two_heavens_victory"):
+    elif eff_state == "VICTORY" or pose in ("double_chiburi", "two_heavens_victory"):
         if pose == "double_chiburi" or p < 0.45:
             _blade(c, hand_r, mk.norm((fx * 0.20 - px * 0.85, fy * 0.20 - py * 0.85, -0.45)), 0.66)
             _blade(c, hand_l, mk.norm((fx * 0.20 + px * 0.85, fy * 0.20 + py * 0.85, -0.45)), 0.50, short=True)
@@ -784,8 +806,7 @@ def draw_front(c, arm_l, arm_r):
     if mk.depth(c, mid_saya[0], mid_saya[1]) >= d_torso - 0.02:
         _sheaths(c)
 
-    hand_l = (arm_l[0], arm_l[1], arm_l[2] - 0.065)
-    hand_r = (arm_r[0], arm_r[1], arm_r[2] - 0.065)
+    hand_l, hand_r = _hands(c)
     w_mid = ((hand_l[0] + hand_r[0]) * 0.5, (hand_l[1] + hand_r[1]) * 0.5)
 
     if mk.depth(c, w_mid[0], w_mid[1]) >= d_torso:

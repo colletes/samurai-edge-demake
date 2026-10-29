@@ -35,7 +35,7 @@ class KunaiProjectile:
         self.pickup_delay = 0.25 # Pequeno delay antes de poder pegar para evitar auto-pegar no mesmo frame
         self.has_been_reflected = False  # Anti-spam: previne reflexão infinita
 
-    def update(self, dt: float, game_map, particles: list) -> bool:
+    def update(self, dt: float, game_map, particles: list, opponent=None, **kwargs) -> bool:
         """Atualiza a posição da kunai. Retorna False se deve ser removida."""
         if not self.is_active:
             return False
@@ -97,43 +97,89 @@ class KunaiProjectile:
             if self.pickup_delay > 0:
                 self.pickup_delay -= dt
             else:
-                # Verificar se o dono (Ninja) passou por cima para recuperar a arma (Entregável 4.4: 0.85m de raio fluido)
-                if self.owner and self.owner.is_alive and not getattr(self.owner, "has_kunai", True):
-                    if world_distance(self.wx, self.wy, self.owner.wx, self.owner.wy) < 0.85:
-                        self.owner.has_kunai = True
-                        self.is_active = False
-                        # Efeito visual de coleta
-                        for _ in range(8):
-                            particles.append(SparkParticle(self.wx, self.wy, 0.4))
-                        return False
+                # Se o dono (Hanzo/Ninja) passar por perto (raio 0.95m), chuta/re-arremessa a kunai automaticamente contra o rival!
+                if self.owner and getattr(self.owner, "is_alive", True):
+                    if world_distance(self.wx, self.wy, self.owner.wx, self.owner.wy) < 0.95:
+                        tgt = opponent
+                        if tgt is None and hasattr(self.owner, "opponent"):
+                            tgt = self.owner.opponent
+                        if tgt and getattr(tgt, "is_alive", True):
+                            dx = tgt.wx - self.wx
+                            dy = tgt.wy - self.wy
+                            dist = math.hypot(dx, dy) or 1.0
+                            self.dir_x = dx / dist
+                            self.dir_y = dy / dist
+                        else:
+                            self.dir_x = getattr(self.owner, "facing_x", 1.0)
+                            self.dir_y = getattr(self.owner, "facing_y", 0.0)
+
+                        speed = 26.0
+                        self.vx = self.dir_x * speed
+                        self.vy = self.dir_y * speed
+                        self.angle = math.atan2(self.dir_y, self.dir_x)
+                        self.wz = 0.35
+                        self.vz = 0.15
+                        self.state = "FLYING"
+                        self.dist_traveled = 0.0
+                        self.pickup_delay = 0.40
+                        self.has_been_reflected = False
+                        try:
+                            from src.audio.sound_effects import play_sound
+                            play_sound("sword_slash", volume=0.90)
+                        except Exception:
+                            pass
+                        for _ in range(10):
+                            particles.append(SparkParticle(self.wx, self.wy, 0.35, color=(255, 230, 80)))
 
         return True
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza a kunai no ar ou cravada no chão com indicador pulsante."""
+        """Renderiza a kunai no ar com brilho luminoso, rastro e glint estelar ou cravada no chão."""
         if not self.is_active:
             return
 
         from src.isometric.voxel_renderer import draw_voxel_box
 
         if self.state == "FLYING":
-            # Lâmina voxel em voo orientada
+            sx, sy = camera.apply(self.wx, self.wy, self.wz)
+
+            # 1. Rastro de velocidade luminoso (3 pontos em leque)
+            for i in (1, 2, 3):
+                trail_wx = self.wx - self.dir_x * (0.08 * i)
+                trail_wy = self.wy - self.dir_y * (0.08 * i)
+                tsx, tsy = camera.apply(trail_wx, trail_wy, self.wz)
+                alpha_t = int(140 / i)
+                radius_t = max(1, int(3 - i * 0.7))
+                t_surf = pygame.Surface((radius_t * 4, radius_t * 4), pygame.SRCALPHA)
+                pygame.draw.circle(t_surf, (255, 220, 60, alpha_t), (radius_t * 2, radius_t * 2), radius_t)
+                surface.blit(t_surf, (tsx - radius_t * 2, tsy - radius_t * 2))
+
+            # 2. Lâmina voxel em voo orientada
             draw_voxel_box(surface, camera, self.wx - 0.06, self.wy - 0.06, self.wz, 0.12, 0.12, 0.12, COLOR_STEEL)
             draw_voxel_box(surface, camera, self.wx - self.dir_x * 0.12 - 0.04, self.wy - self.dir_y * 0.12 - 0.04, self.wz + 0.02, 0.08, 0.08, 0.08, COLOR_GOLD)
-            # Rastro de energia
-            sx, sy = camera.apply(self.wx, self.wy, self.wz)
-            pygame.draw.circle(surface, COLOR_YELLOW_AURA, (sx, sy), 3)
+
+            # 3. Aura e corona de luz dourada/esmeralda no projétil
+            glow_surf = pygame.Surface((28, 28), pygame.SRCALPHA)
+            pygame.draw.circle(glow_surf, (255, 230, 90, 85), (14, 14), 13)
+            pygame.draw.circle(glow_surf, (255, 255, 200, 160), (14, 14), 7)
+            surface.blit(glow_surf, (sx - 14, sy - 14))
+
+            # 4. Glint estelar em cruz (+) e x na ponta da kunai
+            pygame.draw.line(surface, (255, 255, 255), (sx - 5, sy), (sx + 5, sy), 2)
+            pygame.draw.line(surface, (255, 255, 255), (sx, sy - 5), (sx, sy + 5), 2)
+            pygame.draw.circle(surface, (255, 255, 240), (sx, sy), 2)
 
         else:
             # Cravada no solo em ângulo
             base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
 
-            # Indicador visual pulsante no piso (Item 2)
+            # Indicador visual pulsante no piso com aura expandida
             ticks = pygame.time.get_ticks()
             pulse = 0.5 + 0.5 * math.sin(ticks * 0.007)
-            glow_rad = int(12 + pulse * 6)
+            glow_rad = int(14 + pulse * 8)
             glow_surf = pygame.Surface((glow_rad * 2, glow_rad * 2), pygame.SRCALPHA)
-            pygame.draw.ellipse(glow_surf, (255, 215, 50, int(45 + pulse * 45)), (0, glow_rad // 2, glow_rad * 2, glow_rad))
+            pygame.draw.ellipse(glow_surf, (255, 220, 60, int(55 + pulse * 55)), (0, glow_rad // 2, glow_rad * 2, glow_rad))
+            pygame.draw.ellipse(glow_surf, (255, 255, 180, int(90 + pulse * 70)), (glow_rad // 2, glow_rad * 3 // 4, glow_rad, glow_rad // 2))
             surface.blit(glow_surf, (base_sx - glow_rad, base_sy - glow_rad // 2))
 
             # Sombra e haste cravada
@@ -141,12 +187,13 @@ class KunaiProjectile:
             draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.05, 0.02, 0.10, 0.10, 0.16, COLOR_STEEL)
             draw_voxel_box(surface, camera, self.wx - 0.04, self.wy - 0.04, 0.18, 0.08, 0.08, 0.08, COLOR_GOLD)
 
-            # Marcador vertical flutuante (Bobbing marker)
+            # Marcador vertical flutuante (Bobbing marker com brilho)
             bob = math.sin(ticks * 0.009) * 4.0
             arrow_sx, arrow_sy = camera.apply(self.wx, self.wy, 0.65)
             tip_y = arrow_sy + bob
-            pts = [(arrow_sx, tip_y), (arrow_sx - 5, tip_y - 8), (arrow_sx + 5, tip_y - 8)]
-            pygame.draw.polygon(surface, (255, 225, 50), pts)
+            pts = [(arrow_sx, tip_y), (arrow_sx - 6, tip_y - 9), (arrow_sx + 6, tip_y - 9)]
+            pygame.draw.polygon(surface, (255, 235, 60), pts)
+            pygame.draw.polygon(surface, (255, 255, 220), [(arrow_sx, tip_y), (arrow_sx - 3, tip_y - 5), (arrow_sx + 3, tip_y - 5)])
             pygame.draw.polygon(surface, (180, 140, 20), pts, 1)
 
 

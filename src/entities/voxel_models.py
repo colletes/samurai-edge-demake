@@ -268,10 +268,12 @@ def render_voxel_humanoid(
 ):
     """Desenha o lutador no estilo voxel detalhado; `INTRO` e `VICTORY` usam o roteiro de `pose_scripts` (o `state_timer` é o progresso 0..1)."""
     if state in ("INTRO", "VICTORY"):
+        orig_state = state
+        orig_timer = state_timer
         frame = pose_scripts.sample(char_type, state.lower(), state_timer)
         state_timer = pose_scripts.state_timer_for(char_type, frame)
         state = frame.state
-        extra_props = {**(extra_props or {}), **frame.extra}
+        extra_props = {**(extra_props or {}), **frame.extra, "p": orig_timer, "intro_victory_state": orig_state}
         alpha = int(alpha * frame.alpha)
 
     # Entregável 2.1.7: Supersampling 2x Offscreen (SSAA) & Anti-Aliasing Bilinear
@@ -728,6 +730,9 @@ def _render_voxel_humanoid(
             arm_r_x, arm_r_y, arm_r_z = arm_r_pose
             if model_c is not None and hasattr(model, "idle_arms"):
                 (arm_l_x, arm_l_y, arm_l_z), (arm_r_x, arm_r_y, arm_r_z) = model.idle_arms(model_c)
+
+    if model_c is not None and hasattr(model, "get_arms"):
+        (arm_l_x, arm_l_y, arm_l_z), (arm_r_x, arm_r_y, arm_r_z) = model.get_arms(model_c)
 
     if isinstance(pose_tracker, dict):
         raw_local_arm_l = (arm_l_x - base_x, arm_l_y - base_y, arm_l_z - base_z)

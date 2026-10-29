@@ -436,6 +436,8 @@ class CombatSystem:
                     self._play_sound("fatal_strike")
             elif isinstance(proj, HamayaArrowProjectile) or getattr(proj, "__class__", None).__name__ == "EarthStompShockwave":
                 still_valid = proj.update(dt, game_map, particles, projectiles=projectiles)
+            elif isinstance(proj, KunaiProjectile):
+                still_valid = proj.update(dt, game_map, particles, opponent=(p2 if getattr(proj, "owner", None) == p1 else p1))
             else:
                 still_valid = proj.update(dt, game_map, particles)
             if not still_valid:

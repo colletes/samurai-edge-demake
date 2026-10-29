@@ -803,8 +803,8 @@ I18N = {
         "arcade_development_notice": "MODO ARCADE EM DESENVOLVIMENTO (EM BREVE!)",
         
         # ===== SETTINGS MENU LABELS =====
-        "sfx_volume_label": "Efeitos (SFX): {sfx_pct}%",
-        "bgm_volume_label": "Música (BGM): {bgm_pct}%",
+        "sfx_volume_label": "Efeitos sonoros (SFX)",
+        "bgm_volume_label": "Música de fundo (BGM)",
         "gamepad_not_detected_p1": "Nenhum detectado (Teclado)",
         "gamepad_not_detected_p2": "Nenhum detectado",
         "touch_mode_auto": "AUTOMÁTICO",
@@ -1533,8 +1533,8 @@ I18N = {
         "arcade_development_notice": "ARCADE MODE IN DEVELOPMENT (COMING SOON!)",
         
         # ===== SETTINGS MENU LABELS =====
-        "sfx_volume_label": "Effects (SFX): {sfx_pct}%",
-        "bgm_volume_label": "Music (BGM): {bgm_pct}%",
+        "sfx_volume_label": "Sound Effects (SFX)",
+        "bgm_volume_label": "Background Music (BGM)",
         "gamepad_not_detected_p1": "Not Detected (Keyboard)",
         "gamepad_not_detected_p2": "Not Detected",
         "touch_mode_auto": "AUTOMATIC",

@@ -478,6 +478,16 @@ class CinematicDirector:
             self.delayed_death_timer = 1.10
             self._arm_closeup_finisher_strike(attacker, victim, duration=1.10)
 
+        elif death_style == "FOREHEAD_PIN":
+            # Hanzo Secundário Ranged: Kunai arremessada atinge a testa entre os olhos; fonte arterial jorra e o corpo tomba de costas
+            self.freeze_timer = 1.15
+            self.bw_flash_duration = 1.55
+            self.bw_flash_timer = 1.55
+            self.delayed_death_timer = 1.15
+            if attacker is not None:
+                attacker.set_facing(victim.wx, victim.wy)
+                attacker.state = "IDLE"
+
         elif death_style == "KUWA_SKULL_CLEAVE":
             # Goro: Avanço pesado, elevação colossal da Kuwa e clivagem partindo o crânio da vítima
             self.goro_attacker = attacker
@@ -1364,6 +1374,10 @@ class CinematicDirector:
             if atk is not None and vic is not None:
                 prog = 1.0 - (self.finisher_strike_timer / max(0.001, self.finisher_strike_duration))
                 atk.set_facing(vic.wx, vic.wy)
+                if not hasattr(atk, "extra_props") or atk.extra_props is None:
+                    atk.extra_props = {}
+                atk.extra_props["finisher_style"] = self.finisher_style
+                atk.extra_props["p"] = prog
                 dist = math.hypot(vic.wx - atk.wx, vic.wy - atk.wy)
                 if dist < 2.8 and self.finisher_style != "HEADSHOT_EXPLODE":
                     atk_dur = getattr(atk, "attack_duration", 0.25) or 0.25

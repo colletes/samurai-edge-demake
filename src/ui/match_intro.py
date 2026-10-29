@@ -242,16 +242,21 @@ class MatchIntro:
         return 1.0
 
     def _fade_from_black(self) -> float:
-        """0..1 de opacidade do preto: abertura lenta e cortes rápidos entre os atos."""
+        """0..1 de opacidade do preto: abertura lenta no início da cena (PHASE_TITLE)."""
         phase, lt = self.phase()
         if phase == PHASE_TITLE:
             return 1.0 - _smooth(lt / 0.8)
-        if phase in (PHASE_P1, PHASE_P2):
-            return 1.0 - _smooth(lt / 0.3)
         return 0.0
 
     def render_overlay(self, surface: pygame.Surface):
         phase, lt = self.phase()
+
+        fade = self._fade_from_black()
+        if fade > 0.01:
+            black = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+            black.fill((0, 0, 0))
+            black.set_alpha(int(255 * fade))
+            surface.blit(black, (0, 0))
 
         bar = int(LETTERBOX_H * self._letterbox_amount())
         if bar > 0:
@@ -262,13 +267,6 @@ class MatchIntro:
             self._render_title(surface, lt)
         elif phase in (PHASE_P1, PHASE_P2):
             self._render_fighter_banner(surface, 0 if phase == PHASE_P1 else 1, lt)
-
-        fade = self._fade_from_black()
-        if fade > 0.01:
-            black = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-            black.fill((0, 0, 0))
-            black.set_alpha(int(255 * fade))
-            surface.blit(black, (0, 0))
 
     def _cached(self, key, builder):
         if key not in self._cache:

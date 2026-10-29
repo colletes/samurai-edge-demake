@@ -459,6 +459,15 @@ class YellowNinja(Samurai):
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
+        jump_prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.jump_duration)))) if self.state == "JUMP" else 0.0
+        somersault_angle = 0.0
+        if self.state == "JUMP":
+            somersault_angle = 360.0 * jump_prog
+        elif self.state == STATE_ROLL:
+            roll_dur = max(0.001, getattr(self, "roll_duration", 0.40))
+            roll_prog = max(0.0, min(1.0, 1.0 - (self.state_timer / roll_dur)))
+            somersault_angle = 360.0 * roll_prog
+
         extra = {
             "has_kunai": self.has_kunai,
             "combo_step": self.combo_step,
@@ -467,6 +476,7 @@ class YellowNinja(Samurai):
             "pose_lerp_tracker": getattr(self, "_pose_lerp_tracker", None),
             "pose": getattr(self, "current_pose", ""),
             "is_jumping": (self.state == "JUMP"),
+            "somersault_angle": somersault_angle,
         }
 
         render_voxel_humanoid(

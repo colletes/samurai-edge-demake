@@ -153,6 +153,16 @@ def align_finisher_pair(attacker, victim, game_map=None) -> None:
         # Não reposiciona abates à distância (projéteis/tiros)
         return
 
+    # Garante que lutadores aéreos aterrissem com firmeza no chão para a execução do finisher
+    if getattr(attacker, "wz", 0.0) > 0.0:
+        attacker.wz = 0.0
+        if hasattr(attacker, "vz"):
+            attacker.vz = 0.0
+    if getattr(victim, "wz", 0.0) > 0.0:
+        victim.wz = 0.0
+        if hasattr(victim, "vz"):
+            victim.vz = 0.0
+
     ux, uy = dx / dist, dy / dist
     char_type = getattr(attacker, "char_type", "").lower()
     ideal_dist = 1.32 if char_type in ("benkei", "goro", "saitou", "musketeer", "julie") else 1.08

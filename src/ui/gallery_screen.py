@@ -292,10 +292,34 @@ class GalleryScreen:
             delta = -1 if event.button == 4 else 1
             self.current_tab = (self.current_tab + delta) % 3
 
+        # Extração de movimento direcional do Gamepad (D-pad e Analógico)
+        joy_dx, joy_dy = 0, 0
+        if event.type == pygame.JOYHATMOTION:
+            from src.input.controller_manager import get_dpad_motion_from_event
+            d_dir = get_dpad_motion_from_event(event)
+            if d_dir:
+                joy_dx, joy_dy = d_dir
+        elif event.type == pygame.JOYBUTTONDOWN:
+            from src.input.controller_manager import get_dpad_motion_from_event
+            d_dir = get_dpad_motion_from_event(event)
+            if d_dir:
+                joy_dx, joy_dy = d_dir
+
         # Navegação específica por aba
         if self.current_tab == TAB_IMAGES:
             items = self.get_current_items()
             num_items = len(items)
+            if joy_dx < 0 and num_items > 0:
+                self.image_index = (self.image_index - 1) % num_items
+            elif joy_dx > 0 and num_items > 0:
+                self.image_index = (self.image_index + 1) % num_items
+            elif joy_dy < 0:
+                cur_f_idx = FILTER_KEYS.index(self.current_filter) if self.current_filter in FILTER_KEYS else 0
+                self.set_filter(FILTER_KEYS[(cur_f_idx - 1) % len(FILTER_KEYS)])
+            elif joy_dy > 0:
+                cur_f_idx = FILTER_KEYS.index(self.current_filter) if self.current_filter in FILTER_KEYS else 0
+                self.set_filter(FILTER_KEYS[(cur_f_idx + 1) % len(FILTER_KEYS)])
+
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_LEFT, pygame.K_a) and num_items > 0:
                     self.image_index = (self.image_index - 1) % num_items
@@ -694,27 +718,37 @@ class GalleryScreen:
         prev_hover = self.prev_btn_rect.collidepoint(mouse_pos)
         next_hover = self.next_btn_rect.collidepoint(mouse_pos)
 
-        # Botão Anterior (Triângulo para a Esquerda)
-        pygame.draw.rect(surface, (235, 222, 196) if prev_hover else (226, 212, 185), self.prev_btn_rect, border_radius=6)
+        # Botão Anterior (Seta Clara para a Esquerda)
+        pygame.draw.rect(surface, (238, 226, 202) if prev_hover else (226, 212, 185), self.prev_btn_rect, border_radius=6)
         pygame.draw.rect(surface, pm.SEAL_RED if prev_hover else (140, 125, 105), self.prev_btn_rect, 2 if prev_hover else 1, border_radius=6)
         tri_prev_c = pm.SEAL_RED if prev_hover else pm.INK
         p_prev = [
+            (self.prev_btn_rect.centerx + 8, self.prev_btn_rect.centery - 14),
+            (self.prev_btn_rect.centerx - 10, self.prev_btn_rect.centery),
+            (self.prev_btn_rect.centerx + 8, self.prev_btn_rect.centery + 14),
+        ]
+        pygame.draw.polygon(surface, tri_prev_c, p_prev)
+        pygame.draw.polygon(surface, (255, 255, 255) if prev_hover else (240, 230, 210), [
             (self.prev_btn_rect.centerx + 6, self.prev_btn_rect.centery - 10),
             (self.prev_btn_rect.centerx - 7, self.prev_btn_rect.centery),
             (self.prev_btn_rect.centerx + 6, self.prev_btn_rect.centery + 10),
-        ]
-        pygame.draw.polygon(surface, tri_prev_c, p_prev)
+        ])
 
-        # Botão Próximo (Triângulo para a Direita)
-        pygame.draw.rect(surface, (235, 222, 196) if next_hover else (226, 212, 185), self.next_btn_rect, border_radius=6)
+        # Botão Próximo (Seta Clara para a Direita)
+        pygame.draw.rect(surface, (238, 226, 202) if next_hover else (226, 212, 185), self.next_btn_rect, border_radius=6)
         pygame.draw.rect(surface, pm.SEAL_RED if next_hover else (140, 125, 105), self.next_btn_rect, 2 if next_hover else 1, border_radius=6)
         tri_next_c = pm.SEAL_RED if next_hover else pm.INK
         p_next = [
+            (self.next_btn_rect.centerx - 8, self.next_btn_rect.centery - 14),
+            (self.next_btn_rect.centerx + 10, self.next_btn_rect.centery),
+            (self.next_btn_rect.centerx - 8, self.next_btn_rect.centery + 14),
+        ]
+        pygame.draw.polygon(surface, tri_next_c, p_next)
+        pygame.draw.polygon(surface, (255, 255, 255) if next_hover else (240, 230, 210), [
             (self.next_btn_rect.centerx - 6, self.next_btn_rect.centery - 10),
             (self.next_btn_rect.centerx + 7, self.next_btn_rect.centery),
             (self.next_btn_rect.centerx - 6, self.next_btn_rect.centery + 10),
-        ]
-        pygame.draw.polygon(surface, tri_next_c, p_next)
+        ])
 
         # 4. Legenda e contador no rodapé da arte
         count_str = f"[{self.image_index + 1:02d} / {len(items):02d}]  ―  {entry['title']}"

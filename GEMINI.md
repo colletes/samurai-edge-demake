@@ -91,6 +91,17 @@ Utility, generation, and inspection scripts:
   - **Mandatory Per-Character Overhaul "De / Para" & Interactive Animation Buttons (`tools/model_inspector.py`)**: Whenever finishing the overhaul of ANY character (`Sub-fase 2.x`), ALWAYS implement and register in `tools/model_inspector.py`:
     1. **"De / Para" Side-by-Side Comparison (`compare_mode` / `[D]`)**: Preserve the character's pre-overhaul legacy materials (`LEGACY_MATERIALS` in `<char>_model.py`) and pre-HD face flags (`legacy_mode=True`) so the Left Pedestal renders the **Before (Legacy Model)** while the Right Pedestal renders the **After (New Overhaul: SSAA 2x + HD Face/Eyes + Realistic Materials + Pose LERP)** in synchronized rotation and zoom, accompanied by an entry in `OVERHAUL_DE_PARA_NOTES["<char>"]`.
     2. **Interactive Animation & Moveset Buttons (`CHARACTER_ANIM_BUTTONS["<char>"]`)**: Register clickable UI buttons and keyboard shortcuts (`1`–`9`, `0`, `F1`, `F2`) in the right-hand panel of `tools/model_inspector.py` to trigger and preview every animation of that character in real time (`Idle`, `Walk`, `Primary Attack`, `Secondary/Special Attack`, `Dodge/Dash`, `Offensive Cancel`, `Ground Parry Reaction`, `Aerial Parry Reaction`, `Intro`, `Victory`, `Finisher A`, `Finisher B`).
+  - **Single-Pass Weapon Rendering & Empty Scabbards in Victory/Cinematics**:
+    - Whenever weapons (such as katanas, ninjatos, wakizashis) are drawn in hand during combat, intro, victory, or finishers, scabbards on the waist/back MUST be rendered empty (`sheathed=False` or `is_drawn=True`). Never draw swords in hand while simultaneously rendering hilted blades in scabbards (the "4 swords bug").
+    - Single-Pass Rendering: In modular humanoid rendering pipelines (`draw_behind` and `draw_front`), weapon rendering logic must be strictly partitioned by depth relative to `d_torso` (`< d_torso` for behind, `>= d_torso` for front). Every fighter model module MUST expose `get_arms(c)` returning dynamic articulated arm positions, preventing default fallback rigs from injecting duplicate hands and weapons.
+  - **Dynamic Intro, Victory & Finisher Animations (Zero Static Freeze Policy)**:
+    - Intros, victories, and cinematic finishers MUST NEVER be static frozen poses. They must continuously interpolate with time parameter `p` (`progress` 0..1 from `pose_scripts.py` or cinematic director), featuring fluid breathing, animated weapon draws, dynamic Kuji-Kiri mudra finger weaving, and clean somersaults.
+  - **Somersault & Roll Dynamics (`somersault_angle`)**:
+    - Acrobatics, ninja jumps, and tactical ground rolls must pass `"somersault_angle": 360.0 * progress` in `extra_props` to drive 3D pitch cameras (`_SomersaultPitchCamera`), ensuring fluid 360° flips and natural body tucking instead of sliding boxes.
+  - **Corpse Physics & Mid-Air Decapitation/Gravity Directives**:
+    - **Negative Rotation Targets**: In `VoxelCorpsePiece.update()`, rotation towards `rot_target` must support negative angles (e.g. falling backwards `rot_target = -FALL_DEG`), updating via `max(rot_target, rot_angle - speed * dt)` when `rot_target < 0`. If checked only with `< rot_target`, backwards-falling corpses freeze upright at 0°.
+    - **Mid-Air Corpse Gravity**: When a character is executed mid-air (`victim.wz > 0.0`), all corpse pieces must initialize with `p.wz += victim_wz` and `p.rest = (p.wx, p.wy, p.rest[2] + victim_wz)` with `p.is_grounded = False`. Gravity (`vz -= 14.0 * dt`) pulls all severed parts down to `floor_z = 0.02` with ground bounces, preventing severed heads or bisected halves from floating indefinitely in mid-air.
+    - **Finisher Grounding**: In `align_finisher_pair()`, airborne attackers and victims must be grounded (`wz = 0.0, vz = 0.0`) unless explicitly designed as an aerial finisher dive.
 
 ## 9. 2D Rendering, UI, Text & Font Transparency Directives (Zero Artifacts Policy)
 Whenever implementing UI elements, banners, floating combat callouts, or cinematic overlays with text:
@@ -120,6 +131,14 @@ Whenever implementing UI elements, banners, floating combat callouts, or cinemat
   - Any media player or jukebox screen must provide complete transport primitives: Previous (`|<<`), Play/Pause (`▶ / ❚❚`), Stop (`■`), Next (`>>|`), Loop mode (`🔁`), alongside active progress indicators (`⏱ MM:SS` and seekbar).
   - List views must provide full visibility into all assets: scroll up/down buttons, draggable thumb, mousewheel support (`MOUSEWHEEL` / buttons 4 & 5), and direct click-to-play on list rows.
   - Interactive feature toggles (such as Karaoke) must never be static non-functional labels; they must be actionable buttons with real-time synchronized playback (cyan sweep progress and bilingual verse display).
+- **Universal Gamepad & Joystick Navigation (Menus & Gallery)**:
+  - Every UI hub, settings screen, submenu, and gallery MUST support 100% full gamepad control: D-Pad (`JOYHATMOTION`), Left Analog Stick (`JOYAXISMOTION` with deadzone 0.55 and debouncing timer), and buttons (`JOYBUTTONDOWN`: Confirm `A/Cross`, Cancel `B/Circle`, Navigation `LB/RB`).
+- **Zero Raw Unicode Emojis in UI**:
+  - Submenu buttons, headers, and tabs MUST NEVER use raw emoji characters (`♫`, `⚔`, `🎮`, `🏛`, `📱`) which render as missing glyph tofu boxes on various platforms or clash with the classical Sumi-e aesthetic.
+- **Zero Raw Variable Placeholders in UI Strings**:
+  - User-facing strings must NEVER leave unformatted `{sfx_pct}` or `{bgm_pct}` placeholder tokens exposed to players.
+- **Match Intro Banner Clean Cut (No Black Fade Box Overlays)**:
+  - In `match_intro.py`, screen fades (`_fade_from_black()`) must ONLY apply during `PHASE_TITLE`. Never overlay a 0.3s black box during fighter banners (`PHASE_P1`, `PHASE_P2`), which causes black rectangular flashes over character portraits.
 - **Automated Verification**:
   - Keep `tests/test_font_transparency.py`, `tests/test_settings_hub.py`, and `tests/test_gallery_screen.py` passing 100% to ensure no text bounding boxes, phantom collisions, or transport regressions recur.
 

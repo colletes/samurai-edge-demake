@@ -127,6 +127,7 @@ NINJA_CHALLENGE_BGM = "bgm_ninja_challenge"
 from src.arcade.arcade_screens import ArcadeDifficultyScreen, ArcadeBracketScreen, ArcadeResultScreen
 from src.arcade.arcade_credits import ArcadeCreditsScreen
 from src.ui.settings_menu import SettingsMenu, format_key_name
+from src.ui.gallery_screen import GalleryScreen
 from src.ui.character_select import CharacterSelectScreen
 from src.ui.title_screen import SumieTitleScreen
 from src.ui.opening_video import OpeningVideoScreen
@@ -900,6 +901,7 @@ def run_game():
 
     ai_difficulty = saved_cfg.get("ai_difficulty", "normal")
     settings_menu = SettingsMenu(controls, touch_controls=touch_controls, ai_difficulty=ai_difficulty)
+    gallery_screen = GalleryScreen()
     pause_menu = PauseMenu()
     match_intro = MatchIntro()
 
@@ -1321,6 +1323,26 @@ def run_game():
         # TELA DE TÍTULO SUMI-E & SELETOR DE MODOS
         # -------------------------------------------------------------
         if game_state == STATE_TITLE:
+            if gallery_screen.is_open:
+                for event in pygame.event.get():
+                    ctrl_mgr.handle_event(event)
+                    if event.type == pygame.QUIT:
+                        running = False
+                    else:
+                        g_act = gallery_screen.handle_event(event)
+                        if g_act == "BACK" or not gallery_screen.is_open:
+                            gallery_screen.close()
+                            settings_menu.open(subscreen="HUB")
+                        elif g_act == "OPEN_OPENING_VIDEO":
+                            opening_video.play(screen)
+                        elif g_act == "OPEN_CREDITS_SLIDESHOW":
+                            arcade_credits.play_video(screen)
+                gallery_screen.update(dt)
+                title_screen.render(screen, font_large, font_mid, font_small)
+                gallery_screen.render(screen, font_large, font_mid, font_small)
+                pygame.display.flip()
+                continue
+
             if settings_menu.is_open:
                 for event in pygame.event.get():
                     ctrl_mgr.handle_event(event)
@@ -1329,11 +1351,16 @@ def run_game():
                     else:
                         settings_menu.handle_event(event)
                 settings_menu.update(dt)
-                if not settings_menu.is_open:
+                if getattr(settings_menu, "request_gallery", False):
+                    settings_menu.request_gallery = False
+                    settings_menu.close()
+                    gallery_screen.open()
+                elif not settings_menu.is_open:
                     char_select_screen.ai_difficulty = settings_menu.ai_difficulty
                     ai.set_difficulty(settings_menu.ai_difficulty)
                 title_screen.render(screen, font_large, font_mid, font_small)
-                settings_menu.render(screen, font_large, font_mid, font_small)
+                if settings_menu.is_open:
+                    settings_menu.render(screen, font_large, font_mid, font_small)
                 pygame.display.flip()
                 continue
 
@@ -1578,6 +1605,25 @@ def run_game():
         # -------------------------------------------------------------
         # TELA DE CONFIGURAÇÕES DE CONTROLES (OVERLAY)
         # -------------------------------------------------------------
+        if gallery_screen.is_open:
+            for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
+                if event.type == pygame.QUIT:
+                    running = False
+                else:
+                    g_act = gallery_screen.handle_event(event)
+                    if g_act == "BACK" or not gallery_screen.is_open:
+                        gallery_screen.close()
+                        settings_menu.open(subscreen="HUB")
+                    elif g_act == "OPEN_OPENING_VIDEO":
+                        opening_video.play(screen)
+                    elif g_act == "OPEN_CREDITS_SLIDESHOW":
+                        arcade_credits.play_video(screen)
+            gallery_screen.update(dt)
+            gallery_screen.render(screen, font_large, font_mid, font_small)
+            pygame.display.flip()
+            continue
+
         if settings_menu.is_open:
             for event in pygame.event.get():
                 ctrl_mgr.handle_event(event)
@@ -1587,10 +1633,15 @@ def run_game():
                     settings_menu.handle_event(event)
 
             settings_menu.update(dt)
-            if not settings_menu.is_open:
+            if getattr(settings_menu, "request_gallery", False):
+                settings_menu.request_gallery = False
+                settings_menu.close()
+                gallery_screen.open()
+            elif not settings_menu.is_open:
                 char_select_screen.ai_difficulty = settings_menu.ai_difficulty
                 ai.set_difficulty(arcade_run.difficulty_name if arcade_run is not None else settings_menu.ai_difficulty)
-            settings_menu.render(screen, font_large, font_mid, font_small)
+            if settings_menu.is_open:
+                settings_menu.render(screen, font_large, font_mid, font_small)
             pygame.display.flip()
             continue
 

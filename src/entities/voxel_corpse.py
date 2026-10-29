@@ -223,8 +223,13 @@ class VoxelCorpsePiece:
         if self.rot_target is not None:
             if self.rot_delay > 0:
                 self.rot_delay -= dt
-            elif self.rot_angle < self.rot_target:
-                self.rot_angle = min(self.rot_target, self.rot_angle + abs(self.rot_speed) * dt)
+            else:
+                if self.rot_target >= 0:
+                    if self.rot_angle < self.rot_target:
+                        self.rot_angle = min(self.rot_target, self.rot_angle + abs(self.rot_speed) * dt)
+                else:
+                    if self.rot_angle > self.rot_target:
+                        self.rot_angle = max(self.rot_target, self.rot_angle - abs(self.rot_speed) * dt)
         if not self.is_grounded:
             self.wx += self.vx * dt
             self.wy += self.vy * dt
@@ -269,7 +274,8 @@ class VoxelCorpse:
         self.victim = victim
         self.wx = victim.wx
         self.wy = victim.wy
-        self.wz = victim.wz
+        victim_wz = max(0.0, float(getattr(victim, "wz", 0.0)))
+        self.wz = victim_wz
         self.death_style = death_style
         self.slash_dir = slash_dir
         self.char_type = getattr(victim, "char_type", "kenshin")
@@ -304,6 +310,11 @@ class VoxelCorpse:
         self.col_hair = _get_char_hair_color(canonical)
 
         self._initialize_death_pieces()
+        if victim_wz > 0.0:
+            for p in self.pieces:
+                p.wz += victim_wz
+                p.rest = (p.wx, p.wy, p.rest[2] + victim_wz)
+                p.is_grounded = False
 
     # ------------------------------------------------------------------ construção das peças
     def _initialize_death_pieces(self):
@@ -961,16 +972,25 @@ class VoxelCorpse:
         self.timer += dt
 
         # Spawn de geiser de sangue contínuo nos primeiros momentos da morte
-        if self.timer < 1.2 and particles is not None:
+        geyser_limit = 2.4 if self.death_style in ("FOREHEAD_PIN", "HEART_THROAT_STAB") else 1.2
+        if self.timer < geyser_limit and particles is not None:
             self.geyser_timer += dt
-            if self.geyser_timer > 0.04:
+            interval = 0.03 if self.death_style == "FOREHEAD_PIN" else 0.04
+            if self.geyser_timer > interval:
                 self.geyser_timer = 0.0
                 from src.effects.particles import BloodParticle
-                for _ in range(4):
-                    bx = self.wx + random.uniform(-0.15, 0.15)
-                    by = self.wy + random.uniform(-0.15, 0.15)
-                    bz = 0.5 + random.uniform(0.0, 0.4)
-                    particles.append(BloodParticle(bx, by, bz))
+                count = 6 if self.death_style == "FOREHEAD_PIN" else 4
+                for _ in range(count):
+                    bx = self.wx + random.uniform(-0.12, 0.12)
+                    by = self.wy + random.uniform(-0.12, 0.12)
+                    bz = (0.75 + random.uniform(0.1, 0.35)) if self.death_style == "FOREHEAD_PIN" else (0.5 + random.uniform(0.0, 0.4))
+                    bp = BloodParticle(bx, by, bz)
+                    if self.death_style == "FOREHEAD_PIN":
+                        # Jato arterial projetado para cima e para trás com o impacto da kunai na testa
+                        bp.vz = random.uniform(2.4, 4.2)
+                        bp.vx = -self.dx * random.uniform(1.2, 2.8) + random.uniform(-0.5, 0.5)
+                        bp.vy = -self.dy * random.uniform(1.2, 2.8) + random.uniform(-0.5, 0.5)
+                    particles.append(bp)
 
         # Atualizar física das peças individuais
         for p in self.pieces:
