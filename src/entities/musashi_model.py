@@ -115,11 +115,13 @@ def walk_arms(c):
 
 
 def roll_arms(c):
-    """Rolamento Tático (Entregável 2.2.3): braços colados ao peito com as lâminas alinhadas ao tronco."""
-    tz = c.torso_z - 0.08
+    """Rolamento Marcial no Solo (Mae Ukemi): braço direito forma arco/roda pelo ombro, braço esquerdo acolhe na inércia."""
+    tz = c.torso_z - 0.06
     bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
-    left = (bx + fx * 0.06 + px * 0.08, by + fy * 0.06 + py * 0.08, tz + 0.02)
-    right = (bx + fx * 0.06 - px * 0.08, by + fy * 0.06 - py * 0.08, tz + 0.04)
+    roll_p = (c.extra_props or {}).get("roll_prog", 0.5)
+    lead_x = math.sin(roll_p * math.pi) * 0.12
+    right = (bx + fx * (0.14 + lead_x) - px * 0.08, by + fy * (0.14 + lead_x) - py * 0.08, tz - 0.04 + lead_x * 0.5)
+    left = (bx + fx * (0.08 - lead_x * 0.5) + px * 0.08, by + fy * (0.08 - lead_x * 0.5) + py * 0.08, tz + 0.02)
     return left, right
 
 
@@ -142,26 +144,27 @@ def cross_shockwave_arms(c):
 
 
 def intro_arms(c, p, pose):
-    """Coreografia de Intro: Saque duplo -> atrito em X com faíscas metálicas -> postura de duelo."""
+    """Coreografia de Intro: Saque duplo fluido -> atrito em X com faíscas metálicas -> postura de duelo dos Dois Céus."""
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
-    if pose == "dual_draw" or p < 0.30:
-        u = p / 0.30 if p < 0.30 else 1.0
-        # Mãos saindo das bainhas na cintura esquerda em direção ao peito
-        left = (bx + px * (0.15 - u * 0.03) + fx * 0.04, by + py * (0.15 - u * 0.03) + fy * 0.04, tz + 0.04 + u * 0.04)
-        right = (bx + px * (0.10 - u * 0.16) + fx * (0.02 + u * 0.12), by + py * (0.10 - u * 0.16) + fy * (0.02 + u * 0.12), tz + 0.08 + u * 0.06)
+    if p < 0.35:
+        u = _smooth(p / 0.35)
+        # Mãos partem das bainhas na cintura esquerda e sobem sacando em arco
+        left = (bx + px * (0.16 - u * 0.06) + fx * (0.02 + u * 0.12), by + py * (0.16 - u * 0.06) + fy * (0.02 + u * 0.12), tz + 0.02 + u * 0.10)
+        right = (bx + px * (0.12 - u * 0.22) + fx * (0.02 + u * 0.14), by + py * (0.12 - u * 0.22) + fy * (0.02 + u * 0.14), tz + 0.06 + u * 0.08)
         return left, right
-    elif pose == "cross_blade_clash" or p < 0.65:
-        # Lâminas atritando em 'X' diante do peito/queixo com faísca metálica
-        shake = math.sin(p * 45.0) * 0.008
-        left = (bx + fx * 0.16 + px * 0.08 + shake, by + fy * 0.16 + py * 0.08, tz + 0.14)
-        right = (bx + fx * 0.16 - px * 0.08 - shake, by + fy * 0.16 - py * 0.08, tz + 0.14)
-        return left, right
+    elif p < 0.70:
+        u = _smooth((p - 0.35) / 0.35)
+        # Lâminas se cruzam em 'X' diante do peito e deslizam com atrito
+        shake = math.sin(p * 35.0) * 0.006
+        mid_l = (bx + fx * 0.16 + px * 0.08 + shake, by + fy * 0.16 + py * 0.08, tz + 0.12 + u * 0.04)
+        mid_r = (bx + fx * 0.16 - px * 0.08 - shake, by + fy * 0.16 - py * 0.08, tz + 0.14 - u * 0.02)
+        return mid_l, mid_r
     else:
-        # Transição contínua para a guarda dos Dois Céus
-        u = min(1.0, (p - 0.65) / 0.35)
+        # Transição suave para a postura dos Dois Céus (Niten Ichi-ryu)
+        u = _smooth((p - 0.70) / 0.30)
         l_idle, r_idle = idle_arms(c)
-        l_clash = (bx + fx * 0.16 + px * 0.08, by + fy * 0.16 + py * 0.08, tz + 0.14)
-        r_clash = (bx + fx * 0.16 - px * 0.08, by + fy * 0.16 - py * 0.08, tz + 0.14)
+        l_clash = (bx + fx * 0.16 + px * 0.08, by + fy * 0.16 + py * 0.08, tz + 0.16)
+        r_clash = (bx + fx * 0.16 - px * 0.08, by + fy * 0.16 - py * 0.08, tz + 0.12)
         return mk.lerp(l_clash, l_idle, u), mk.lerp(r_clash, r_idle, u)
 
 
@@ -184,25 +187,24 @@ def victory_arms(c, p, pose):
 
 
 def finisher_arms(c, p, style):
-    """Poses dos Finishers de Musashi (Entregáveis 2.2.4a e 2.2.4b)."""
+    """Poses dos Finishers de Musashi: Finisher 1 em 3 Atos Viscerais (Katana -> Wakizashi -> Rasgo em X)."""
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
     if style in ("DUAL_IMPALE_X_SPREAD", "FINISHER_1", "niten_impale"):
-        # Finisher 1: Katana empala -> Wakizashi empala -> abertura em leque rasgando em 3 partes
         if p < 0.35:
-            # Empalamento 1: Katana penetra o torso
             u = p / 0.35
-            right = (bx + fx * (0.18 + u * 0.28) - px * 0.06, by + fy * (0.18 + u * 0.28) - py * 0.06, tz + 0.14)
-            left = (bx + px * 0.14 + fx * 0.04, by + py * 0.14 + fy * 0.04, tz + 0.04)
-        elif p < 0.65:
-            # Empalamento 2: Wakizashi penetra ao lado da Katana
-            u = (p - 0.35) / 0.30
-            right = (bx + fx * 0.46 - px * 0.06, by + fy * 0.46 - py * 0.06, tz + 0.14)
-            left = (bx + fx * (0.18 + u * 0.26) + px * 0.06, by + fy * (0.18 + u * 0.26) + py * 0.06, tz + 0.12)
+            # Ato a: Katana empala o peito do alvo; Wakizashi aguarda engatilhada na cintura
+            right = (bx + fx * (0.16 + u * 0.36) - px * 0.04, by + fy * (0.16 + u * 0.36) - py * 0.04, tz + 0.14 - u * 0.02)
+            left = (bx + px * 0.15 - fx * 0.02, by + py * 0.15 - fy * 0.02, tz + 0.04)
+        elif p < 0.70:
+            u = (p - 0.35) / 0.35
+            # Ato b: Wakizashi desfere segunda estocada cruzada, cravando ambas as espadas no peito
+            right = (bx + fx * 0.52 - px * 0.04, by + fy * 0.52 - py * 0.04, tz + 0.12)
+            left = (bx + fx * (0.16 + u * 0.34) + px * (0.15 - u * 0.10), by + fy * (0.16 + u * 0.34) + py * (0.15 - u * 0.10), tz + 0.04 + u * 0.08)
         else:
-            # Rasgo em Leque (X-Spread): Braços abrem violentamente para os lados
-            u = (p - 0.65) / 0.35
-            right = (bx + fx * (0.46 - u * 0.15) - px * (0.06 + u * 0.35), by + fy * (0.46 - u * 0.15) - py * (0.06 + u * 0.35), tz + 0.14 + u * 0.06)
-            left = (bx + fx * (0.44 - u * 0.15) + px * (0.06 + u * 0.35), by + fy * (0.44 - u * 0.15) + py * (0.06 + u * 0.35), tz + 0.12 + u * 0.06)
+            u = (p - 0.70) / 0.30
+            # Ato c: Musashi abre os braços violentamente em 'X', rasgando o torso do oponente em 3 partes!
+            right = (bx + fx * (0.52 - u * 0.22) - px * (0.04 + u * 0.42), by + fy * (0.52 - u * 0.22) - py * (0.04 + u * 0.42), tz + 0.12 + u * 0.10)
+            left = (bx + fx * (0.50 - u * 0.22) + px * (0.05 + u * 0.42), by + fy * (0.50 - u * 0.22) + py * (0.05 + u * 0.42), tz + 0.12 + u * 0.10)
         return left, right
     else:
         # Finisher 2: Cross Vacuum Slicer em 4 Quadrantes
@@ -360,12 +362,27 @@ def _render_weapons_and_hands(c, arm_l, arm_r):
             _blade(c, hand_r, mk.norm((fx * 0.70 + px * 0.40, fy * 0.70 + py * 0.40, -0.30)), 0.68)
             _blade(c, hand_l, mk.norm((fx * 0.70 - px * 0.40, fy * 0.70 - py * 0.40, 0.30)), 0.52, short=True)
         else:
-            if p < 0.65:
-                _blade(c, hand_r, mk.norm((fx * 0.88 - px * 0.12, fy * 0.88 - py * 0.12, -0.05)), 0.66)
-                _blade(c, hand_l, mk.norm((fx * 0.88 + px * 0.12, fy * 0.88 + py * 0.12, -0.05)), 0.50, short=True)
+            # DUAL_IMPALE_X_SPREAD em 3 Atos Viscerais
+            if p < 0.35:
+                # Ato a: Katana empala à frente; Wakizashi na cintura aguardando
+                _blade(c, hand_r, mk.norm((fx * 0.98 - px * 0.04, fy * 0.98 - py * 0.04, -0.05)), 0.68)
+                _blade(c, hand_l, mk.norm((fx * 0.30 + px * 0.80, fy * 0.30 + py * 0.80, -0.35)), 0.48, short=True)
+            elif p < 0.70:
+                # Ato b: Wakizashi também empala cruzada no peito
+                u = (p - 0.35) / 0.35
+                w_dir = mk.lerp((fx * 0.30 + px * 0.80, fy * 0.30 + py * 0.80, -0.35),
+                                (fx * 0.95 + px * 0.14, fy * 0.95 + py * 0.14, -0.05), u)
+                _blade(c, hand_r, mk.norm((fx * 0.98 - px * 0.04, fy * 0.98 - py * 0.04, -0.05)), 0.68)
+                _blade(c, hand_l, mk.norm(w_dir), 0.50, short=True)
             else:
-                _blade(c, hand_r, mk.norm((fx * 0.30 - px * 0.88, fy * 0.30 - py * 0.88, 0.10)), 0.66)
-                _blade(c, hand_l, mk.norm((fx * 0.30 + px * 0.88, fy * 0.30 + py * 0.88, 0.10)), 0.50, short=True)
+                # Ato c: Ruptura e abertura violenta dos braços em 'X'
+                u = (p - 0.70) / 0.30
+                r_dir = mk.lerp((fx * 0.98 - px * 0.04, fy * 0.98 - py * 0.04, -0.05),
+                                (fx * 0.25 - px * 0.92, fy * 0.25 - py * 0.92, 0.15), u)
+                l_dir = mk.lerp((fx * 0.95 + px * 0.14, fy * 0.95 + py * 0.14, -0.05),
+                                (fx * 0.25 + px * 0.92, fy * 0.25 + py * 0.92, 0.15), u)
+                _blade(c, hand_r, mk.norm(r_dir), 0.68)
+                _blade(c, hand_l, mk.norm(l_dir), 0.50, short=True)
 
     # 1. Cross Guard Parry
     elif eff_state == "PARRY" or pose == "cross_guard":
@@ -377,14 +394,23 @@ def _render_weapons_and_hands(c, arm_l, arm_r):
         _blade(c, hand_r, mk.norm((fx * 0.75 + px * 0.45, fy * 0.75 + py * 0.45, -0.20)), 0.66)
         _blade(c, hand_l, mk.norm((fx * 0.75 - px * 0.45, fy * 0.75 - py * 0.45, 0.20)), 0.50, short=True)
 
-    # 3. Rolamento Tático
+    # 3. Rolamento Tático (Mae Ukemi)
     elif eff_state == "ROLL" or extra.get("is_roll", False) or pose == "tactical_roll":
-        _blade(c, hand_r, mk.norm((-fx * 0.40 + px * 0.60, -fy * 0.40 + py * 0.60, -0.60)), 0.62)
-        _blade(c, hand_l, mk.norm((-fx * 0.40 - px * 0.60, -fy * 0.40 - py * 0.60, -0.60)), 0.46, short=True)
+        r_dir = mk.norm((-fx * 0.60 + px * 0.40, -fy * 0.60 + py * 0.40, -0.40))
+        l_dir = mk.norm((-fx * 0.60 - px * 0.40, -fy * 0.60 - py * 0.40, -0.40))
+        _blade(c, hand_r, r_dir, 0.60)
+        _blade(c, hand_l, l_dir, 0.46, short=True)
 
-    # 4. Intro (Saque e Faíscas em X)
+    # 4. Intro (Saque fluido contínuo -> atrito em X com faíscas -> guarda Dois Céus)
     elif eff_state == "INTRO" or pose in ("dual_draw", "cross_blade_clash", "two_heavens_guard"):
-        if pose == "cross_blade_clash" or (0.30 <= p < 0.65):
+        if p < 0.35:
+            u = _smooth(p / 0.35)
+            (k, b1), (k2, b2) = _scabbards(c)
+            r_dir = mk.lerp(b1, (fx * 0.30 + px * 0.65, fy * 0.30 + py * 0.65, 0.68), u)
+            l_dir = mk.lerp(b2, (fx * 0.30 - px * 0.65, fy * 0.30 - py * 0.65, 0.68), u)
+            _blade(c, hand_r, mk.norm(r_dir), 0.64)
+            _blade(c, hand_l, mk.norm(l_dir), 0.48, short=True)
+        elif p < 0.70:
             _blade(c, hand_r, mk.norm((fx * 0.30 + px * 0.65, fy * 0.30 + py * 0.65, 0.68)), 0.64)
             _blade(c, hand_l, mk.norm((fx * 0.30 - px * 0.65, fy * 0.30 - py * 0.65, 0.68)), 0.48, short=True)
             # Faíscas metálicas no ponto de contato das lâminas
@@ -392,14 +418,13 @@ def _render_weapons_and_hands(c, arm_l, arm_r):
             sx, sy = c.camera.apply(clash_pt[0], clash_pt[1], clash_pt[2])
             pygame.draw.circle(c.surface, (255, 235, 120), (sx, sy), 3)
             pygame.draw.circle(c.surface, (255, 255, 255), (sx, sy), 1)
-        elif pose == "dual_draw" or p < 0.30:
-            (k, b1), (k2, b2) = _scabbards(c)
-            _blade(c, hand_r, b1, 0.64)
-            _blade(c, hand_l, b2, 0.48, short=True)
         else:
+            u = _smooth((p - 0.70) / 0.30)
             dk, lk, dw, lw = _drawn_dirs(c)
-            _blade(c, hand_r, dk, lk)
-            _blade(c, hand_l, dw, lw, short=True)
+            r_dir = mk.lerp((fx * 0.30 + px * 0.65, fy * 0.30 + py * 0.65, 0.68), dk, u)
+            l_dir = mk.lerp((fx * 0.30 - px * 0.65, fy * 0.30 - py * 0.65, 0.68), dw, u)
+            _blade(c, hand_r, mk.norm(r_dir), lk)
+            _blade(c, hand_l, mk.norm(l_dir), lw, short=True)
 
     # 5. Vitória (Duplo Chiburi e Postura dos Dois Céus)
     elif eff_state == "VICTORY" or pose in ("double_chiburi", "two_heavens_victory"):

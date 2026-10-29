@@ -980,16 +980,38 @@ class VoxelCorpse:
                 self.geyser_timer = 0.0
                 from src.effects.particles import BloodParticle
                 count = 6 if self.death_style == "FOREHEAD_PIN" else 4
+
+                # Origem dinâmica do sangue acompanhando a cabeça/peito durante a rotação da queda
+                if self.death_style == "FOREHEAD_PIN" and self.pieces:
+                    p_body = self.pieces[0]
+                    rad = math.radians(abs(p_body.rot_angle))
+                    head_dist = 0.76
+                    bx_base = p_body.wx - self.dx * math.sin(rad) * head_dist
+                    by_base = p_body.wy - self.dy * math.sin(rad) * head_dist
+                    bz_base = max(0.06, p_body.wz + math.cos(rad) * head_dist)
+                elif self.death_style == "HEART_THROAT_STAB" and self.pieces:
+                    p_body = self.pieces[0]
+                    rad = math.radians(abs(p_body.rot_angle))
+                    throat_dist = 0.65
+                    bx_base = p_body.wx + self.dx * math.sin(rad) * throat_dist
+                    by_base = p_body.wy + self.dy * math.sin(rad) * throat_dist
+                    bz_base = max(0.06, p_body.wz + math.cos(rad) * throat_dist)
+                else:
+                    bx_base = self.wx
+                    by_base = self.wy
+                    bz_base = 0.5 + random.uniform(0.0, 0.4)
+
                 for _ in range(count):
-                    bx = self.wx + random.uniform(-0.12, 0.12)
-                    by = self.wy + random.uniform(-0.12, 0.12)
-                    bz = (0.75 + random.uniform(0.1, 0.35)) if self.death_style == "FOREHEAD_PIN" else (0.5 + random.uniform(0.0, 0.4))
+                    bx = bx_base + random.uniform(-0.06, 0.06)
+                    by = by_base + random.uniform(-0.06, 0.06)
+                    bz = bz_base + random.uniform(0.0, 0.05)
                     bp = BloodParticle(bx, by, bz)
                     if self.death_style == "FOREHEAD_PIN":
-                        # Jato arterial projetado para cima e para trás com o impacto da kunai na testa
-                        bp.vz = random.uniform(2.4, 4.2)
-                        bp.vx = -self.dx * random.uniform(1.2, 2.8) + random.uniform(-0.5, 0.5)
-                        bp.vy = -self.dy * random.uniform(1.2, 2.8) + random.uniform(-0.5, 0.5)
+                        # Jato arterial projetado acompanhando o impacto e a queda da cabeça
+                        rad = math.radians(abs(self.pieces[0].rot_angle)) if self.pieces else 0.0
+                        bp.vz = random.uniform(2.0, 3.8) * max(0.35, math.cos(rad))
+                        bp.vx = -self.dx * random.uniform(0.8, 2.2) + random.uniform(-0.4, 0.4)
+                        bp.vy = -self.dy * random.uniform(0.8, 2.2) + random.uniform(-0.4, 0.4)
                     particles.append(bp)
 
         # Atualizar física das peças individuais

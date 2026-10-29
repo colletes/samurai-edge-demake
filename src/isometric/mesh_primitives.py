@@ -424,9 +424,26 @@ def _draw_cranium_with_hair_facets(
     c6 = ((hl_m[0] + v_mid_bot[0]) * 0.5, (hl_m[1] + v_mid_bot[1]) * 0.5, (hl_m[2] + v_mid_bot[2]) * 0.5)
     faces.append((_depth(c6), [scr[3], scr[2], s_hl_r, s_hl_mr, s_hl_m, s_hl_ml, s_hl_l], c_skin_front))
 
+    if alpha <= 0:
+        return
+
     faces.sort(key=lambda f: f[0])
-    for _, poly, col in faces:
-        pygame.draw.polygon(surface, col, poly)
+    if alpha < 255:
+        xs = [p[0] for _, poly, _ in faces for p in poly]
+        ys = [p[1] for _, poly, _ in faces for p in poly]
+        if not xs or not ys:
+            return
+        min_x, max_x = min(xs) - 2, max(xs) + 2
+        min_y, max_y = min(ys) - 2, max(ys) + 2
+        bw, bh = max(1, max_x - min_x), max(1, max_y - min_y)
+        temp, sub_rect = _get_alpha_scratch(bw, bh)
+        for _, poly, col in faces:
+            loc = [(p[0] - min_x, p[1] - min_y) for p in poly]
+            pygame.draw.polygon(temp, (*col, alpha), loc)
+        surface.blit(temp, (min_x, min_y), sub_rect)
+    else:
+        for _, poly, col in faces:
+            pygame.draw.polygon(surface, col, poly)
 
 
 def draw_sculpted_head_3d(

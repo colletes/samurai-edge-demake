@@ -471,12 +471,15 @@ class CinematicDirector:
                 attacker.state_timer = 0.85
 
         elif death_style in ("DUAL_IMPALE_X_SPREAD", "CROSS_VACUUM_SLICER", "REFLECTED_TORSO_CLEAVE"):
-            # Musashi: Niten Ichi-ryuu - Duas espadas cruzadas rasgam o torso em 'X' com corte duplo simultâneo
-            self.freeze_timer = 1.10
-            self.bw_flash_duration = 1.50
-            self.bw_flash_timer = 1.50
-            self.delayed_death_timer = 1.10
-            self._arm_closeup_finisher_strike(attacker, victim, duration=1.10)
+            # Musashi: Niten Ichi-ryuu - 3 Atos Viscerais (Katana -> Wakizashi -> Rasgo em 'X' e desmembramento)
+            self.freeze_timer = 1.25
+            self.bw_flash_duration = 1.65
+            self.bw_flash_timer = 1.65
+            self.delayed_death_timer = 1.25
+            self.musashi_impale_1_played = False
+            self.musashi_impale_2_played = False
+            self.musashi_x_spread_played = False
+            self._arm_closeup_finisher_strike(attacker, victim, duration=1.25)
 
         elif death_style == "FOREHEAD_PIN":
             # Hanzo Secundário Ranged: Kunai arremessada atinge a testa entre os olhos; fonte arterial jorra e o corpo tomba de costas
@@ -1388,7 +1391,49 @@ class CinematicDirector:
                         target_y = vic.wy - atk.facing_y * 0.82
                         atk.wx += (target_x - atk.wx) * min(1.0, effective_dt * 9.0)
                         atk.wy += (target_y - atk.wy) * min(1.0, effective_dt * 9.0)
-                    if prog < 0.28:
+                    if self.finisher_style == "DUAL_IMPALE_X_SPREAD":
+                        # Musashi: 3 Atos Viscerais (1ª estocada -> 2ª estocada cruzada -> rasgo em leque em 'X')
+                        anim_p = prog
+                        try:
+                            from src.audio.sound_manager import get_sound_manager
+                            from src.audio.sound_events import SoundEvent
+                            sm = get_sound_manager()
+                        except Exception:
+                            sm = None
+
+                        # Ato a: Katana empala o peito do alvo
+                        if prog >= 0.20 and not getattr(self, "musashi_impale_1_played", False):
+                            self.musashi_impale_1_played = True
+                            if sm: sm.play(SoundEvent.SWORD_SLASH, volume_scale=1.0)
+                            if particles is not None:
+                                from src.effects.particles import SparkParticle, BloodParticle
+                                for _ in range(8):
+                                    particles.append(SparkParticle(vic.wx, vic.wy, 0.70, color=(255, 235, 180)))
+                                for _ in range(12):
+                                    particles.append(BloodParticle(vic.wx, vic.wy, 0.70))
+
+                        # Ato b: Wakizashi desfere segunda estocada cruzada
+                        elif prog >= 0.52 and not getattr(self, "musashi_impale_2_played", False):
+                            self.musashi_impale_2_played = True
+                            if sm: sm.play(SoundEvent.SWORD_SLASH, volume_scale=1.05)
+                            if particles is not None:
+                                from src.effects.particles import SparkParticle, BloodParticle
+                                for _ in range(12):
+                                    particles.append(SparkParticle(vic.wx, vic.wy, 0.68, color=(255, 245, 140)))
+                                for _ in range(18):
+                                    particles.append(BloodParticle(vic.wx, vic.wy, 0.68))
+
+                        # Ato c: Ruptura em X rasgando o torso em 3 pedaços
+                        elif prog >= 0.85 and not getattr(self, "musashi_x_spread_played", False):
+                            self.musashi_x_spread_played = True
+                            if sm: sm.play(SoundEvent.FATAL_STRIKE, volume_scale=1.1)
+                            if particles is not None:
+                                from src.effects.particles import SparkParticle, BloodParticle
+                                for _ in range(18):
+                                    particles.append(SparkParticle(vic.wx, vic.wy, 0.65, color=(255, 255, 220)))
+                                for _ in range(28):
+                                    particles.append(BloodParticle(vic.wx, vic.wy, 0.65))
+                    elif prog < 0.28:
                         # Fase A: Tensão e preparação da lâmina no close-up (atk_progress: 0.10 -> 0.22)
                         u = prog / 0.28
                         anim_p = 0.10 + 0.12 * (u * u)

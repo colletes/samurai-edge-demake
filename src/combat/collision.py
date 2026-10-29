@@ -172,10 +172,14 @@ def _is_vertical_hit(attacker, defender) -> bool:
     Checagem de altura 3D para combate melee:
     Golpes executados no solo (att_wz < 0.30m) NÃO acertam alvos no ar (def_wz >= 0.40m),
     passando por baixo do salto acrobático do ninja.
+    Se o defensor estiver em salto acrobático ('JUMP'), apenas ataques aéreos
+    (Ryuu Tsui Sen, Pole Vault ou atacante no ar com wz >= 0.40m) conseguem atingi-lo.
     """
     att_wz = getattr(attacker, "wz", 0.0)
     def_wz = getattr(defender, "wz", 0.0)
     is_aerial_atk = getattr(attacker, "state", "") in ("RYUU_TSUI_SEN", "POLE_VAULT") or getattr(attacker, "is_aerial_attack", False)
+    if getattr(defender, "state", "") == "JUMP":
+        return bool(is_aerial_atk or att_wz >= 0.40)
     if att_wz < 0.30 and not is_aerial_atk:
         return def_wz < 0.40
     return abs(att_wz - def_wz) < 0.65

@@ -407,11 +407,12 @@ def _render_voxel_humanoid(
         fx, fy = 1.0, 0.0
     px, py = -fy, fx
 
-    # Rotação 3D real de Mortal Aéreo 360° (Somersault Backflip — Entregável 2.1.2)
+    # Rotação 3D real de Mortal Aéreo / Rolamento Frontal 360° (Somersault / Mae Ukemi)
     somersault_angle = float(extra_props.get("somersault_angle", 0.0)) if extra_props else 0.0
     is_upside_down = False
     if abs(somersault_angle) > 0.5:
-        camera = _SomersaultPitchCamera(camera, wx, wy, wz + 0.52, fx, fy, px, py, somersault_angle)
+        p_z = float(extra_props.get("somersault_pivot_z", wz + 0.52)) if extra_props else (wz + 0.52)
+        camera = _SomersaultPitchCamera(camera, wx, wy, p_z, fx, fy, px, py, somersault_angle)
         is_upside_down = math.cos(camera.somersault_rad) < -0.15
 
     # As costas do personagem estão voltadas para a câmera? (define se a mochila/katana vai antes ou depois do tronco)

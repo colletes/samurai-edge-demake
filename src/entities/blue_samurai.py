@@ -523,6 +523,20 @@ class BlueSamurai(Samurai):
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
         roll_prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration)))) if self.state == STATE_ROLL else 0.0
+        # Rolamento frontal de arte marcial (Mae Ukemi): gira para frente (-360°) rente ao solo
+        somersault_angle = (-360.0 * roll_prog) if self.state == STATE_ROLL else 0.0
+        somersault_pivot_z = (self.wz + 0.22) if self.state == STATE_ROLL else (self.wz + 0.52)
+        render_wz = self.wz
+        if self.state == STATE_ROLL:
+            # Centro de massa abaixa no início, rola rente ao solo e ergue suavemente com inércia
+            if roll_prog < 0.25:
+                dip = (roll_prog / 0.25) * 0.12
+            elif roll_prog < 0.75:
+                dip = 0.12
+            else:
+                dip = (1.0 - (roll_prog - 0.75) / 0.25) * 0.12
+            render_wz = max(0.0, self.wz - dip)
+
         extra = {
             "combo_step": self.combo_step,
             "ssaa_2x": getattr(self, "ssaa_enabled", True),
@@ -530,12 +544,14 @@ class BlueSamurai(Samurai):
             "pose": getattr(self, "current_pose", ""),
             "cross_shockwave": (self.state == "CROSS_SHOCKWAVE"),
             "is_roll": (self.state == STATE_ROLL),
-            "somersault_angle": (360.0 * roll_prog) if self.state == STATE_ROLL else 0.0,
+            "somersault_angle": somersault_angle,
+            "somersault_pivot_z": somersault_pivot_z,
+            "roll_prog": roll_prog,
         }
 
         render_voxel_humanoid(
             surface, camera,
-            self.wx, self.wy, self.wz,
+            self.wx, self.wy, render_wz,
             self.facing_x, self.facing_y,
             self.state, self.state_timer, self.is_alive,
             char_type="musashi",

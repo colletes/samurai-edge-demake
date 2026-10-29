@@ -139,8 +139,13 @@ def test_hanzo_shinobi_jump_and_vertical_evasion():
     hit_connects = _is_vertical_hit(musashi, hanzo)
     assert hit_connects is False, "Golpe no solo não deve atingir ninja no ar durante o salto!"
 
-    # Quando Hanzo toca o chão (wz = 0.15), o golpe conecta normalmente
+    # Durante todo o JUMP, golpes terrestres não conectam
     hanzo.wz = 0.15
+    assert _is_vertical_hit(musashi, hanzo) is False, "Em estado JUMP, golpes no solo não devem conectar!"
+
+    # Quando Hanzo aterrissa (sai de JUMP para RECOVERY/IDLE no solo), o golpe conecta normalmente
+    hanzo.state = "RECOVERY"
+    hanzo.wz = 0.0
     assert _is_vertical_hit(musashi, hanzo) is True
 
 
