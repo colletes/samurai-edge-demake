@@ -290,6 +290,55 @@ def test_musashi_game_help_manual():
     assert "Cross Vacuum Slicer" in musashi_entry["en"]["habilidades"]
 
 
+def test_musashi_3hp_survives_single_kunai():
+    """Testa que Musashi com 3 HP sobrevive a 1 kunai com 1 HP restante sem sofrer multi-hit em frames subsequentes."""
+    from src.entities.yellow_ninja import YellowNinja
+    from src.entities.projectile import KunaiProjectile
+    from src.combat.collision import CombatSystem
+    from src.world.map_data import GameMap
+
+    cs = CombatSystem()
+    cam = Camera(960, 540)
+    gm = GameMap()
+
+    hanzo = YellowNinja(5.0, 5.0)
+    musashi = BlueSamurai(6.0, 5.0)
+    assert musashi.hp == 3, f"Musashi deve iniciar com 3 HP, obteve {musashi.hp}"
+
+    kunai1 = KunaiProjectile(5.0, 5.0, 0.5, 1.0, 0.0, owner=hanzo)
+    kunai1.wx = 6.0
+    kunai1.wy = 5.0
+    projectiles = [kunai1]
+
+    # Processa múltiplos frames
+    winner = None
+    for _ in range(15):
+        w = cs.process_combat(hanzo, musashi, gm, [], [], cam, projectiles, dt=1/60.0)
+        if w:
+            winner = w
+            break
+
+    assert musashi.is_alive is True, "Musashi com 3 HP NÃO deve morrer com 1 acerto de kunai!"
+    assert musashi.hp == 1, f"Musashi deveria ter ficado com 1 HP, obteve {musashi.hp}"
+    assert winner is None, "Nenhum vencedor deve ser declarado enquanto Musashi tiver 1 HP"
+    assert kunai1.state == "ON_GROUND", "A kunai deve desativar o vôo e ficar no solo após o primeiro acerto"
+
+    # Segundo golpe de kunai deve finalizar Musashi (1 - 2 <= 0)
+    kunai2 = KunaiProjectile(5.0, 5.0, 0.5, 1.0, 0.0, owner=hanzo)
+    kunai2.wx = 6.0
+    kunai2.wy = 5.0
+    projectiles.append(kunai2)
+
+    for _ in range(15):
+        w = cs.process_combat(hanzo, musashi, gm, [], [], cam, projectiles, dt=1/60.0)
+        if w:
+            winner = w
+            break
+
+    assert musashi.is_alive is False, "Musashi deve morrer após o segundo acerto de kunai"
+    assert winner == "P1_WINS", "Hanzo deve vencer após o segundo acerto"
+
+
 if __name__ == "__main__":
     print("=== Executando Testes do Overhaul de Musashi (Sub-fase 2.2) ===")
     test_musashi_initialization()
@@ -310,6 +359,8 @@ if __name__ == "__main__":
     print("✓ test_musashi_rendering_ssaa_and_lerp passou!")
     test_musashi_game_help_manual()
     print("✓ test_musashi_game_help_manual passou!")
+    test_musashi_3hp_survives_single_kunai()
+    print("✓ test_musashi_3hp_survives_single_kunai passou!")
     print("\n=======================================================")
     print("TODOS OS TESTES DO OVERHAUL DE MUSASHI PASSARAM 100%!")
     print("=======================================================")

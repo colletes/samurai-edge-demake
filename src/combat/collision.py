@@ -551,6 +551,13 @@ class CombatSystem:
                                 proj.wz = 0.05
                         else:
                             hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=2)
+                            # Interrompe o vôo imediatamente para não perfurar o alvo repetidamente em múltiplos frames
+                            proj.state = "ON_GROUND"
+                            proj.wz = 0.05
+                            proj.vx = 0.0
+                            proj.vy = 0.0
+                            proj.vz = 0.0
+                            proj.pickup_delay = 0.8
                             if dead:
                                 camera.add_shake(15.0)
                                 for _ in range(25):
@@ -562,6 +569,13 @@ class CombatSystem:
                                 if cinematic_director:
                                     death_style = _get_death_style_for_attacker(proj.owner, weapon="kunai")
                                     cinematic_director.trigger_fatal_strike(proj.owner, target, death_style, (proj.dir_x, proj.dir_y))
+                            else:
+                                camera.add_shake(6.0)
+                                for _ in range(12):
+                                    particles.append(BloodParticle(target.wx, target.wy, 0.4))
+                                self._play_sound("flesh_cleave")
+                                if banners is not None:
+                                    banners.append(FloatingBanner("-2 HP", target.wx, target.wy, wz=1.7, color=(255, 60, 60)))
 
             # Se for SHURIKEN (Não mata! Apenas aplica stun!)
             elif isinstance(proj, ShurikenProjectile) and proj.is_active:
