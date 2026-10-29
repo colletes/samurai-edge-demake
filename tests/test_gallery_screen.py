@@ -81,7 +81,7 @@ def test_gallery_music_player_and_karaoke_badge():
     g.open()
     g.current_tab = TAB_MUSIC
 
-    # Encontra faixa com karaokê e verifica suporte
+    # Encontra faixa com letra e verifica suporte
     opening_idx = g.music_tracks.index("Samurai Edge- Opening Theme")
     assert "Samurai Edge- Opening Theme" in KARAOKE_TRACKS
     g.music_index = opening_idx
@@ -96,14 +96,28 @@ def test_gallery_music_player_and_karaoke_badge():
     assert g.stop_btn_rect.width > 0, "Botão Stop deve existir"
     assert g.next_track_btn_rect.width > 0, "Botão Next deve existir"
     assert g.loop_btn_rect.width > 0, "Botão Loop deve existir"
-    assert g.karaoke_btn_rect.width > 0, "Botão Karaokê deve existir"
+    assert g.time_bar_rect.width > 0, "Barra de busca / tempo deve existir e ser clicável"
+    assert g.lyrics_display_rect.width > 0, "Área de letras/informações deve existir"
     assert len(g.music_item_rects) == 7, "Deve renderizar 7 faixas na lista"
 
-    # Testa toggle do botão de Karaokê
-    init_k = g.karaoke_enabled
-    ev_k_click = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=g.karaoke_btn_rect.center)
-    g.handle_event(ev_k_click)
-    assert g.karaoke_enabled == (not init_k), "Clicar no botão de karaokê deve alternar o estado!"
+    # Testa clique na barra de tempo (seek)
+    seek_x = g.time_bar_rect.x + int(g.time_bar_rect.width * 0.5)
+    seek_y = g.time_bar_rect.centery
+    ev_seek = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(seek_x, seek_y))
+    g.handle_event(ev_seek)
+    assert g.music_playback_time > 10.0, f"Clique no meio da barra deve avançar para posição > 10s: {g.music_playback_time}"
+    assert g.is_playing_music is True, "Seek deve iniciar a música na nova posição"
+
+    # Testa Play / Pause toggle
+    ev_pause = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=g.play_btn_rect.center)
+    g.handle_event(ev_pause)
+    assert g.is_playing_music is False, "Botão Play/Pause deve pausar quando estava tocando"
+    assert g.is_paused is True, "Estado deve ser pausado"
+
+    ev_unpause = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=g.play_btn_rect.center)
+    g.handle_event(ev_unpause)
+    assert g.is_playing_music is True, "Botão Play/Pause deve retomar reprodução"
+    assert g.is_paused is False
 
     # Testa avanço de faixa via Next e retorno via Prev
     cur_idx = g.music_index
@@ -119,6 +133,7 @@ def test_gallery_music_player_and_karaoke_badge():
     ev_stop_click = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=g.stop_btn_rect.center)
     g.handle_event(ev_stop_click)
     assert g.is_playing_music is False, "Botão Stop deve parar reprodução!"
+    assert g.music_playback_time == 0.0, "Botão Stop deve resetar o tempo para 0"
 
     # Testa Loop toggle
     init_loop = g.is_looping

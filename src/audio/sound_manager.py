@@ -214,7 +214,7 @@ class SoundManager:
 
         return channels
 
-    def _play_music_file(self, track_key: str, loops: int = -1, fade_in_ms: int = 0) -> bool:
+    def _play_music_file(self, track_key: str, loops: int = -1, fade_in_ms: int = 0, start_pos: float = 0.0) -> bool:
         """Carrega e inicia a reprodução do arquivo de música especificado."""
         if not self.is_audio_available:
             return False
@@ -228,16 +228,22 @@ class SoundManager:
                 try:
                     pygame.mixer.music.load(file_path)
                     pygame.mixer.music.set_volume(eff_vol)
-                    if fade_in_ms > 0:
-                        pygame.mixer.music.play(loops=loops, fade_ms=fade_in_ms)
+                    if start_pos > 0.0:
+                        if fade_in_ms > 0:
+                            pygame.mixer.music.play(loops=loops, fade_ms=fade_in_ms, start=start_pos)
+                        else:
+                            pygame.mixer.music.play(loops=loops, start=start_pos)
                     else:
-                        pygame.mixer.music.play(loops=loops)
+                        if fade_in_ms > 0:
+                            pygame.mixer.music.play(loops=loops, fade_ms=fade_in_ms)
+                        else:
+                            pygame.mixer.music.play(loops=loops)
                     return True
                 except Exception:
                     pass
         return False
 
-    def play_music(self, track: MusicTrack | str, fade_ms: int = 800, loops: int = -1, force_restart: bool = False):
+    def play_music(self, track: MusicTrack | str, fade_ms: int = 800, loops: int = -1, force_restart: bool = False, start_pos: float = 0.0):
         """
         Inicia ou transiciona suavemente a música de fundo (BGM) em loop contínuo.
         Se `force_restart=False` e a mesma faixa já estiver tocando, mantém o loop contínuo sem reiniciar entre rounds.
@@ -247,7 +253,7 @@ class SoundManager:
             return
 
         track_key = track.value if isinstance(track, MusicTrack) else str(track)
-        if not force_restart:
+        if not force_restart and start_pos <= 0.0:
             if self.current_music_track == track_key and self.is_music_busy():
                 return
             if self._pending_music and self._pending_music[0] == track_key:
@@ -257,7 +263,7 @@ class SoundManager:
         self._pending_music_timer = 0.0
         self._pending_music_deadline = 0
 
-        if self.is_music_busy() and fade_ms > 0:
+        if self.is_music_busy() and fade_ms > 0 and start_pos <= 0.0:
             fadeout_dur = min(350, fade_ms // 2)
             try:
                 pygame.mixer.music.fadeout(fadeout_dur)
@@ -270,7 +276,7 @@ class SoundManager:
             else:
                 self._pending_music_deadline = 0
         else:
-            self._play_music_file(track_key, loops=loops, fade_in_ms=fade_ms)
+            self._play_music_file(track_key, loops=loops, fade_in_ms=fade_ms, start_pos=start_pos)
 
 
     def play_death_music(self, fadeout_ms: int = 350):
@@ -326,6 +332,38 @@ class SoundManager:
                 self._play_music_file(track_key, loops=loops, fade_in_ms=fade_in_ms)
             except Exception:
                 pass
+
+    def pause_music(self):
+        """Pausa a música BGM em reprodução."""
+        if not self.ensure_mixer_ready():
+            return
+        try:
+            pygame.mixer.music.pause()
+        except Exception:
+            pass
+
+    def unpause_music(self):
+        """Despausa a música BGM."""
+        if not self.ensure_mixer_ready():
+            return
+        try:
+            pygame.mixer.music.unpause()
+        except Exception:
+            pass
+
+    def seek_music(self, pos_seconds: float, loops: int = -1) -> bool:
+        """Avança ou retrocede para a posição indicada em segundos na faixa BGM ativa."""
+        if not self.ensure_mixer_ready():
+            return False
+        pos_seconds = max(0.0, float(pos_seconds))
+        try:
+            pygame.mixer.music.set_pos(pos_seconds)
+            return True
+        except Exception:
+            pass
+        if self.current_music_track:
+            return self._play_music_file(self.current_music_track, loops=loops, start_pos=pos_seconds)
+        return False
 
     def stop_music(self, fade_ms: int = 500):
         """Para a música com fadeout suave."""

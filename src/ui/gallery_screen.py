@@ -28,17 +28,12 @@ CAT_ARENAS = "ARENAS"
 CAT_ENDING = "ENDING_SLIDES"
 FILTER_KEYS = [CAT_ALL, CAT_CHARACTERS, CAT_ARENAS, CAT_ENDING]
 
-# Faixas que contêm vocais cantados com suporte a Karaokê
-KARAOKE_TRACKS = {
+# Faixas que contêm vocais cantados com letras completas
+VOCAL_TRACKS = {
     "Samurai Edge- Opening Theme",
     "Samurai Edge - Closing Theme",
-    "bgm_ninja_challenge",
-    "bgm_shadow_cave",
-    "bgm_mist_temple",
-    "bgm_pirate_deck",
-    "bgm_baroque_court",
-    "bgm_rice_paddies",
 }
+KARAOKE_TRACKS = VOCAL_TRACKS  # Retrocompatibilidade com testes e módulos legados
 
 # Letras oficiais sincronizadas para o tema de abertura
 OPENING_THEME_LYRICS = [
@@ -140,8 +135,13 @@ class GalleryScreen:
         self.music_tracks: list[str] = []
 
         self.is_playing_music = False
+        self.is_paused = False
         self.current_playing_track: str | None = None
         self.music_playback_time = 0.0
+        self.is_dragging_seekbar = False
+        self.lyrics_scroll_offset = 0
+        self.max_lyrics_scroll = 0
+        self._track_durations: dict[str, float] = {}
 
         self.karaoke_enabled = True
         self.is_looping = True
@@ -156,7 +156,9 @@ class GalleryScreen:
         self.prev_track_btn_rect = pygame.Rect(0, 0, 0, 0)
         self.next_track_btn_rect = pygame.Rect(0, 0, 0, 0)
         self.loop_btn_rect = pygame.Rect(0, 0, 0, 0)
-        self.karaoke_btn_rect = pygame.Rect(0, 0, 0, 0)
+        self.time_bar_rect = pygame.Rect(0, 0, 0, 0)
+        self.lyrics_display_rect = pygame.Rect(0, 0, 0, 0)
+        self.karaoke_btn_rect = pygame.Rect(0, 0, 10, 10)  # Retrocompatibilidade
         self.music_scroll_up_rect = pygame.Rect(0, 0, 0, 0)
         self.music_scroll_down_rect = pygame.Rect(0, 0, 0, 0)
         self.music_item_rects: list[tuple[pygame.Rect, int]] = []
@@ -164,6 +166,26 @@ class GalleryScreen:
         self.video_cards_rects: list[pygame.Rect] = []
 
         self._scan_assets()
+
+    def get_track_duration(self, track_key: str) -> float:
+        """Retorna a duração exata da faixa em segundos via áudio em disco com cache."""
+        if not track_key:
+            return 180.0
+        if track_key in self._track_durations:
+            return self._track_durations[track_key]
+        dur = 180.0
+        music_dir = get_asset_path("assets/sounds/music")
+        for ext in (".mp3", ".ogg", ".wav"):
+            fp = os.path.join(music_dir, f"{track_key}{ext}")
+            if os.path.isfile(fp):
+                try:
+                    snd = pygame.mixer.Sound(fp)
+                    dur = max(5.0, float(snd.get_length()))
+                    break
+                except Exception:
+                    pass
+        self._track_durations[track_key] = dur
+        return dur
 
     def get_current_items(self) -> list[dict]:
         """Retorna as imagens filtradas pela categoria ativa."""
@@ -396,17 +418,14 @@ class GalleryScreen:
                     event.key in (pygame.K_RETURN, pygame.K_SPACE)
                     and self.music_tracks
                 ):
-                    self._play_track(self.music_tracks[self.music_index])
-                elif event.key == pygame.K_k:
-                    self.karaoke_enabled = not self.karaoke_enabled
+                    self._toggle_play_pause()
                 elif event.key == pygame.K_l:
                     self.is_looping = not self.is_looping
             elif event.type == pygame.JOYBUTTONDOWN:
-                if ctrl_mgr and ctrl_mgr.is_event_menu_confirm(event) or event.button in (0, 2):
-                    if self.music_tracks:
-                        self._play_track(self.music_tracks[self.music_index])
+                if (ctrl_mgr and ctrl_mgr.is_event_menu_confirm(event)) or event.button in (0, 2):
+                    self._toggle_play_pause()
                 elif event.button == 3:  # Quadrado / X
-                    self.karaoke_enabled = not self.karaoke_enabled
+                    self._stop_track()
                 elif event.button == 4:  # L1
                     self._prev_track()
                 elif event.button == 5:  # R1
@@ -424,21 +443,41 @@ class GalleryScreen:
                     elif dx > 0 and self.music_tracks:
                         self._next_track()
             elif event.type == pygame.MOUSEWHEEL:
-                if self.music_tracks:
-                    self.music_index = max(0, min(len(self.music_tracks) - 1, self.music_index - event.y))
+                # Se o cursor estiver sobre a caixa de texto/letras, rola o conteúdo da letra
+                mpos = pygame.mouse.get_pos()
+                if self.lyrics_display_rect.collidepoint(mpos):
+                    self.lyrics_scroll_offset = max(
+                        0,
+                        min(self.max_lyrics_scroll, self.lyrics_scroll_offset - event.y * 24),
+                    )
+                elif self.music_tracks:
+                    self.music_index = max(
+                        0,
+                        min(len(self.music_tracks) - 1, self.music_index - event.y),
+                    )
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button in (4, 5):
                     delta = -1 if event.button == 4 else 1
                     if self.music_tracks:
                         self.music_index = max(0, min(len(self.music_tracks) - 1, self.music_index + delta))
                 elif event.button == 1:
+                    # Clique na barra de tempo / seekbar
+                    if self.time_bar_rect.collidepoint(event.pos):
+                        self.is_dragging_seekbar = True
+                        cur_key = self.current_playing_track or (self.music_tracks[self.music_index] if self.music_tracks else None)
+                        if cur_key:
+                            tot = self.get_track_duration(cur_key)
+                            pct = max(0.0, min(1.0, (event.pos[0] - self.time_bar_rect.x) / max(1, self.time_bar_rect.width)))
+                            self._seek_to(pct * tot)
+                        return None
+
                     for item_r, idx in self.music_item_rects:
                         if item_r.collidepoint(event.pos):
-                            if self.music_index == idx:
-                                self._play_track(self.music_tracks[idx])
+                            if self.music_index == idx and self.is_playing_music:
+                                self._toggle_play_pause()
                             else:
                                 self.music_index = idx
-                                self._play_track(self.music_tracks[idx])
+                                self._play_track(self.music_tracks[idx], restart=True)
                             return None
 
                     if self.music_scroll_up_rect.collidepoint(event.pos) and self.music_tracks:
@@ -448,8 +487,7 @@ class GalleryScreen:
                     elif self.prev_track_btn_rect.collidepoint(event.pos):
                         self._prev_track()
                     elif self.play_btn_rect.collidepoint(event.pos):
-                        if self.music_tracks:
-                            self._play_track(self.music_tracks[self.music_index])
+                        self._toggle_play_pause()
                     elif self.stop_btn_rect.collidepoint(event.pos):
                         self._stop_track()
                     elif self.next_track_btn_rect.collidepoint(event.pos):
@@ -458,6 +496,15 @@ class GalleryScreen:
                         self.is_looping = not self.is_looping
                     elif self.karaoke_btn_rect.collidepoint(event.pos):
                         self.karaoke_enabled = not self.karaoke_enabled
+            elif event.type == pygame.MOUSEMOTION:
+                if self.is_dragging_seekbar:
+                    cur_key = self.current_playing_track or (self.music_tracks[self.music_index] if self.music_tracks else None)
+                    if cur_key:
+                        tot = self.get_track_duration(cur_key)
+                        pct = max(0.0, min(1.0, (event.pos[0] - self.time_bar_rect.x) / max(1, self.time_bar_rect.width)))
+                        self._seek_to(pct * tot)
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                self.is_dragging_seekbar = False
 
         # Cliques em abas e botão voltar
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -474,37 +521,97 @@ class GalleryScreen:
         if not self.music_tracks:
             return
         self.music_index = (self.music_index - 1) % len(self.music_tracks)
-        self._play_track(self.music_tracks[self.music_index])
+        self.music_playback_time = 0.0
+        self.lyrics_scroll_offset = 0
+        self._play_track(self.music_tracks[self.music_index], restart=True)
 
     def _next_track(self):
         if not self.music_tracks:
             return
         self.music_index = (self.music_index + 1) % len(self.music_tracks)
-        self._play_track(self.music_tracks[self.music_index])
+        self.music_playback_time = 0.0
+        self.lyrics_scroll_offset = 0
+        self._play_track(self.music_tracks[self.music_index], restart=True)
+
+    def _toggle_play_pause(self):
+        if not self.music_tracks:
+            return
+        cur_track_key = self.current_playing_track or self.music_tracks[self.music_index]
+        from src.audio.sound_manager import SoundManager
+        mgr = SoundManager.get_instance()
+
+        if self.is_playing_music:
+            mgr.pause_music()
+            self.is_playing_music = False
+            self.is_paused = True
+        elif self.is_paused and self.current_playing_track == cur_track_key:
+            mgr.unpause_music()
+            self.is_playing_music = True
+            self.is_paused = False
+        else:
+            self._play_track(cur_track_key, restart=True)
 
     def _stop_track(self):
         from src.audio.sound_manager import SoundManager
         SoundManager.get_instance().stop_music()
         self.is_playing_music = False
+        self.is_paused = False
         self.music_playback_time = 0.0
 
-    def _play_track(self, track_key: str):
+    def _seek_to(self, new_pos: float):
+        from src.audio.sound_manager import SoundManager
+        mgr = SoundManager.get_instance()
+        cur_track_key = self.current_playing_track or (self.music_tracks[self.music_index] if self.music_tracks else None)
+        if not cur_track_key:
+            return
+        total_dur = self.get_track_duration(cur_track_key)
+        new_pos = max(0.0, min(total_dur, float(new_pos)))
+        self.music_playback_time = new_pos
+
+        loops = -1 if self.is_looping else 0
+        if self.is_playing_music:
+            mgr.seek_music(new_pos, loops=loops)
+        elif self.is_paused:
+            mgr.seek_music(new_pos, loops=loops)
+        else:
+            mgr.play_music(cur_track_key, fade_ms=200, loops=loops, force_restart=True, start_pos=new_pos)
+            self.current_playing_track = cur_track_key
+            self.is_playing_music = True
+            self.is_paused = False
+
+    def _play_track(self, track_key: str, restart: bool = False):
         from src.audio.sound_manager import SoundManager
 
         mgr = SoundManager.get_instance()
-        if self.current_playing_track == track_key and self.is_playing_music:
-            mgr.stop_music()
+        if not restart and self.current_playing_track == track_key and self.is_playing_music:
+            mgr.pause_music()
             self.is_playing_music = False
+            self.is_paused = True
+        elif not restart and self.current_playing_track == track_key and self.is_paused:
+            mgr.unpause_music()
+            self.is_playing_music = True
+            self.is_paused = False
         else:
             loops = -1 if self.is_looping else 0
-            mgr.play_music(track_key, fade_ms=500, loops=loops, force_restart=True)
+            mgr.play_music(track_key, fade_ms=300, loops=loops, force_restart=True)
             self.current_playing_track = track_key
             self.is_playing_music = True
+            self.is_paused = False
             self.music_playback_time = 0.0
+            self.lyrics_scroll_offset = 0
 
     def update(self, dt: float):
         if self.is_playing_music:
             self.music_playback_time += dt
+            cur_key = self.current_playing_track or (self.music_tracks[self.music_index] if self.music_tracks else None)
+            if cur_key:
+                total_dur = self.get_track_duration(cur_key)
+                if self.music_playback_time >= total_dur:
+                    if self.is_looping:
+                        self.music_playback_time = self.music_playback_time % total_dur
+                    else:
+                        self.is_playing_music = False
+                        self.music_playback_time = total_dur
 
     def render(self, surface: pygame.Surface, font_large=None, font_mid=None, font_small=None, *args, **kwargs):
         if not self.is_open:
@@ -911,15 +1018,15 @@ class GalleryScreen:
             title = FRIENDLY_NAMES.get(track_key, track_key.replace("_", " ").title())
             marker = "▶ " if is_curr_play else "  "
             t_col = pm.SEAL_RED if (is_sel or is_curr_play) else pm.INK
-            max_char = 24 if track_key in KARAOKE_TRACKS else 28
+            max_char = 24 if track_key in VOCAL_TRACKS else 28
             ts = font_sub.render(f"{marker}{idx + 1:02d}. {title[:max_char]}", True, t_col)
             surface.blit(ts, (item_r.x + 8, item_r.centery - ts.get_height() // 2))
 
-            if track_key in KARAOKE_TRACKS:
-                k_badge = font_sub.render("🎤", True, pm.SEAL_RED)
-                surface.blit(k_badge, (item_r.right - 24, item_r.centery - k_badge.get_height() // 2))
+            if track_key in VOCAL_TRACKS:
+                k_badge = font_sub.render("[VOCAL]", True, pm.SEAL_RED)
+                surface.blit(k_badge, (item_r.right - k_badge.get_width() - 8, item_r.centery - k_badge.get_height() // 2))
 
-        # 2. Painel Direito: Reprodutor Central com Karaokê e Transporte Completo
+        # 2. Painel Direito: Reprodutor Central com Letras Estilizadas e Transporte Vetorial
         player_x = rect.centerx + 6
         player_y = rect.y + 10
         player_w = rect.width // 2 - 10
@@ -947,140 +1054,158 @@ class GalleryScreen:
             title_s = font_sub.render(friendly, True, pm.INK)
         surface.blit(title_s, (player_r.x + 20, player_r.y + 38))
 
-        # Linha de Tempo / Duração
+        # Linha de Tempo / Duração e Barra de Busca (Seekbar Interativa)
         time_y = player_r.y + 68
-        mins = int(self.music_playback_time) // 60
-        secs = int(self.music_playback_time) % 60
-        t_surf = font_sub.render(f"⏱ {mins:02d}:{secs:02d}", True, pm.INK_SOFT)
+        total_dur = self.get_track_duration(cur_track_key)
+        cur_time = min(self.music_playback_time, total_dur)
+        mins = int(cur_time) // 60
+        secs = int(cur_time) % 60
+        tot_mins = int(total_dur) // 60
+        tot_secs = int(total_dur) % 60
+
+        t_surf = font_sub.render(f"⏱ {mins:02d}:{secs:02d} / {tot_mins:02d}:{tot_secs:02d}", True, pm.INK_SOFT)
         surface.blit(t_surf, (player_r.x + 20, time_y))
 
         bar_x = player_r.x + 24 + t_surf.get_width()
         bar_w = player_w - 44 - t_surf.get_width()
-        bar_r = pygame.Rect(bar_x, time_y + 4, bar_w, 8)
-        pygame.draw.rect(surface, (216, 202, 175), bar_r, border_radius=4)
-        pygame.draw.rect(surface, (160, 140, 115), bar_r, 1, border_radius=4)
+        bar_h = 8
+        self.time_bar_rect = pygame.Rect(bar_x, time_y - 4, bar_w, 20)
 
-        if self.is_playing_music:
-            loop_cycle = (self.music_playback_time % 180.0) / 180.0
-            fill_w = max(4, int(bar_w * loop_cycle))
-            pygame.draw.rect(surface, pm.SEAL_RED, (bar_x, time_y + 4, fill_w, 8), border_radius=4)
+        groove_r = pygame.Rect(bar_x, time_y + 4, bar_w, bar_h)
+        pygame.draw.rect(surface, (216, 202, 175), groove_r, border_radius=4)
+        pygame.draw.rect(surface, (160, 140, 115), groove_r, 1, border_radius=4)
 
-        # Botão Interativo de Karaokê
-        is_karaoke_avail = cur_track_key in KARAOKE_TRACKS
-        self.karaoke_btn_rect = pygame.Rect(player_r.x + 20, player_r.y + 92, player_w - 40, 32)
-        if is_karaoke_avail:
-            if self.karaoke_enabled:
-                pygame.draw.rect(surface, pm.SEAL_RED, self.karaoke_btn_rect, border_radius=6)
-                pygame.draw.rect(surface, (212, 175, 55), self.karaoke_btn_rect, 2, border_radius=6)
-                k_txt = font_sub.render("🎤 MODO KARAOKÊ: ATIVADO (Sincronizado)", True, COLOR_WHITE)
-            else:
-                pygame.draw.rect(surface, (224, 210, 182), self.karaoke_btn_rect, border_radius=6)
-                pygame.draw.rect(surface, (160, 140, 115), self.karaoke_btn_rect, 1, border_radius=6)
-                k_txt = font_sub.render("🎤 ATIVAR MODO KARAOKÊ", True, pm.INK)
-            surface.blit(k_txt, k_txt.get_rect(center=self.karaoke_btn_rect.center))
-        else:
-            pygame.draw.rect(surface, (226, 214, 188), self.karaoke_btn_rect, border_radius=6)
-            pygame.draw.rect(surface, (170, 155, 130), self.karaoke_btn_rect, 1, border_radius=6)
-            k_txt = font_sub.render("🎵 TEMA INSTRUMENTAL ORIGINAL BAKUMATSU", True, pm.INK_SOFT)
-            surface.blit(k_txt, k_txt.get_rect(center=self.karaoke_btn_rect.center))
+        prog = max(0.0, min(1.0, cur_time / total_dur))
+        fill_w = max(4, int(bar_w * prog))
+        pygame.draw.rect(surface, pm.SEAL_RED, (bar_x, time_y + 4, fill_w, bar_h), border_radius=4)
 
-        # Área de Letra Sincronizada / Informações da Trilha
-        display_box = pygame.Rect(player_r.x + 18, player_r.y + 132, player_w - 36, player_h - 192)
-        pygame.draw.rect(surface, (228, 214, 186), display_box, border_radius=6)
-        pygame.draw.rect(surface, (180, 160, 130), display_box, 1, border_radius=6)
+        # Indicador circular na ponta do progresso
+        thumb_cx = min(bar_x + bar_w, bar_x + fill_w)
+        thumb_cy = time_y + 4 + bar_h // 2
+        pygame.draw.circle(surface, (212, 175, 55), (thumb_cx, thumb_cy), 6)
+        pygame.draw.circle(surface, pm.SEAL_RED, (thumb_cx, thumb_cy), 4)
 
-        if is_karaoke_avail and self.karaoke_enabled:
-            lyrics_table = OPENING_THEME_LYRICS if "Opening" in cur_track_key else (CLOSING_THEME_LYRICS if "Closing" in cur_track_key else [])
-            active_lyric = None
-            t_cur = self.music_playback_time
+        # Área de Letra da Música ou Lore Instrumental
+        disp_y = time_y + 24
+        disp_h = player_h - (disp_y - player_r.y) - 56
+        display_box = pygame.Rect(player_r.x + 18, disp_y, player_w - 36, disp_h)
+        self.lyrics_display_rect = display_box
+
+        pygame.draw.rect(surface, (228, 214, 186), display_box, border_radius=8)
+        pygame.draw.rect(surface, (175, 155, 125), display_box, 1, border_radius=8)
+
+        is_vocal = cur_track_key in VOCAL_TRACKS
+        if is_vocal:
+            h_s = font_sub.render("📜 LETRA DA MÚSICA & TRADUÇÃO", True, pm.SEAL_RED)
+            surface.blit(h_s, (display_box.x + 14, display_box.y + 10))
+            pygame.draw.line(surface, (195, 175, 145), (display_box.x + 12, display_box.y + 28), (display_box.right - 12, display_box.y + 28), 1)
+
+            clip_r = pygame.Rect(display_box.x + 12, display_box.y + 32, display_box.width - 24, display_box.height - 38)
+            surface.set_clip(clip_r)
+
+            cur_y = clip_r.y - self.lyrics_scroll_offset
+            lyrics_table = OPENING_THEME_LYRICS if "Opening" in cur_track_key else CLOSING_THEME_LYRICS
+
             for lyr in lyrics_table:
-                if lyr["start"] <= t_cur <= lyr["end"] + 0.8:
-                    active_lyric = lyr
-                    break
+                # Tradução em inglês se houver
+                if "trans" in lyr:
+                    tr_s = font_sub.render(f'"{lyr["trans"]}"', True, (135, 75, 40))
+                    surface.blit(tr_s, (clip_r.x + 6, cur_y))
+                    cur_y += 18
+                # Letra cantada
+                sg_s = font_sub.render(lyr["sung"], True, pm.INK)
+                surface.blit(sg_s, (clip_r.x + 6, cur_y))
+                cur_y += 24
 
-            if active_lyric:
-                # Tradução em inglês no topo (se houver)
-                if "trans" in active_lyric:
-                    tr_s = font_sub.render(f'"{active_lyric["trans"]}"', True, (130, 80, 45))
-                    surface.blit(tr_s, (display_box.centerx - tr_s.get_width() // 2, display_box.centery - 24))
+            surface.set_clip(None)
 
-                # Letra cantada com varredura cyan (wipe progress)
-                sung_text = active_lyric["sung"]
-                dur = max(0.1, active_lyric["end"] - active_lyric["start"])
-                prog = max(0.0, min(1.0, (t_cur - active_lyric["start"]) / dur))
+            content_h = (cur_y + self.lyrics_scroll_offset) - clip_r.y
+            self.max_lyrics_scroll = max(0, content_h - clip_r.height + 16)
 
-                base_s = font_tab.render(sung_text, True, pm.INK)
-                cyan_s = font_tab.render(sung_text, True, (0, 150, 220))
-                bw, bh = base_s.get_size()
-                bx = display_box.centerx - bw // 2
-                by = display_box.centery + (4 if "trans" in active_lyric else -bh // 2)
-
-                comp = base_s.copy()
-                wipe_px = int(bw * prog)
-                if wipe_px > 0:
-                    comp.blit(cyan_s, (0, 0), area=pygame.Rect(0, 0, wipe_px, bh))
-                surface.blit(comp, (bx, by))
-            else:
-                if self.is_playing_music:
-                    pulse = abs(math.sin(self.music_playback_time * 2))
-                    p_col = (int(160 + 40 * pulse), int(100 + 30 * pulse), 60)
-                    msg = font_sub.render("♪ (Interlúdio Instrumental) ♪", True, p_col)
-                    surface.blit(msg, msg.get_rect(center=display_box.center))
-                else:
-                    msg = font_sub.render("Pressione ▶ PLAY para iniciar a faixa com Karaokê", True, pm.INK_SOFT)
-                    surface.blit(msg, msg.get_rect(center=display_box.center))
+            # Barra de rolagem sutil da letra
+            if self.max_lyrics_scroll > 0:
+                rail_h = clip_r.height
+                thumb_h = max(16, int(rail_h * (rail_h / (rail_h + self.max_lyrics_scroll))))
+                pct = self.lyrics_scroll_offset / self.max_lyrics_scroll
+                thumb_y = clip_r.y + int((rail_h - thumb_h) * pct)
+                pygame.draw.rect(surface, (205, 190, 165), (display_box.right - 8, clip_r.y, 4, rail_h), border_radius=2)
+                pygame.draw.rect(surface, pm.SEAL_RED, (display_box.right - 8, thumb_y, 4, thumb_h), border_radius=2)
         else:
+            h_s = font_sub.render("🎵 TEMA INSTRUMENTAL ORIGINAL", True, pm.SEAL_RED)
+            surface.blit(h_s, (display_box.x + 14, display_box.y + 10))
+            pygame.draw.line(surface, (195, 175, 145), (display_box.x + 12, display_box.y + 28), (display_box.right - 12, display_box.y + 28), 1)
+
             lines = [
-                "Trilha sonora orquestrada de Samurai Edge: Bakumatsu.",
-                "Instrumentação original com Taiko, Shamisen, Shakuhachi,",
-                "Koto, Biwa e ritmos marciais da era feudal.",
-                "",
-                f"Modo de Repetição: {'Repetição Contínua [Loop]' if self.is_looping else 'Tocar Uma Vez'}",
+                ("Composição orquestrada para duelos na era Bakumatsu.", pm.INK),
+                ("Instrumentação: Taiko, Shamisen, Shakuhachi, Biwa e Koto.", pm.INK_SOFT),
+                ("", pm.INK),
+                ("Dica: Clique na barra de tempo acima para pular na faixa.", (135, 75, 40)),
+                (f"Repetição: {'Loop Contínuo [LOOP]' if self.is_looping else 'Reprodução Única [1X]'}", pm.SEAL_RED),
             ]
-            for li, line in enumerate(lines):
-                ls = font_sub.render(line, True, pm.INK_SOFT if li < 4 else pm.SEAL_RED)
-                surface.blit(ls, (display_box.centerx - ls.get_width() // 2, display_box.y + 16 + li * 20))
+            ly = display_box.y + 40
+            for text, col in lines:
+                if text:
+                    ls = font_sub.render(text, True, col)
+                    surface.blit(ls, (display_box.x + 16, ly))
+                ly += 22
 
-        # 5 Botões de Transporte no Rodapé do Reprodutor
+        # 5 Botões de Transporte no Rodapé do Reprodutor (Geometria Vetorial Sem Overflow)
         cx_p = player_r.centerx
-        btn_y = player_r.bottom - 48
-        btn_h = 36
+        btn_y = player_r.bottom - 44
+        btn_h = 32
 
-        self.prev_track_btn_rect = pygame.Rect(cx_p - 150, btn_y, 50, btn_h)
-        self.play_btn_rect = pygame.Rect(cx_p - 90, btn_y, 70, btn_h)
-        self.stop_btn_rect = pygame.Rect(cx_p - 10, btn_y, 50, btn_h)
-        self.next_track_btn_rect = pygame.Rect(cx_p + 50, btn_y, 50, btn_h)
-        self.loop_btn_rect = pygame.Rect(cx_p + 110, btn_y, 70, btn_h)
+        # Dimensões simétricas centralizadas (largura total: 344px)
+        self.prev_track_btn_rect = pygame.Rect(cx_p - 172, btn_y, 54, btn_h)
+        self.play_btn_rect = pygame.Rect(cx_p - 108, btn_y, 70, btn_h)
+        self.stop_btn_rect = pygame.Rect(cx_p - 28, btn_y, 54, btn_h)
+        self.next_track_btn_rect = pygame.Rect(cx_p + 36, btn_y, 54, btn_h)
+        self.loop_btn_rect = pygame.Rect(cx_p + 100, btn_y, 72, btn_h)
 
-        # 1. Prev
-        pygame.draw.rect(surface, (222, 208, 180), self.prev_track_btn_rect, border_radius=6)
+        # 1. Prev (|◀◀)
+        pygame.draw.rect(surface, (224, 210, 184), self.prev_track_btn_rect, border_radius=6)
         pygame.draw.rect(surface, (160, 140, 115), self.prev_track_btn_rect, 1, border_radius=6)
-        pr_s = font_sub.render("|<<", True, pm.INK)
-        surface.blit(pr_s, pr_s.get_rect(center=self.prev_track_btn_rect.center))
+        cx, cy = self.prev_track_btn_rect.center
+        pygame.draw.line(surface, pm.INK, (cx - 10, cy - 7), (cx - 10, cy + 7), 2)
+        pygame.draw.polygon(surface, pm.INK, [(cx - 2, cy - 7), (cx - 10, cy), (cx - 2, cy + 7)])
+        pygame.draw.polygon(surface, pm.INK, [(cx + 6, cy - 7), (cx - 2, cy), (cx + 6, cy + 7)])
 
-        # 2. Play / Pause
-        pygame.draw.rect(surface, pm.SEAL_RED, self.play_btn_rect, border_radius=6)
-        pygame.draw.rect(surface, (212, 175, 55), self.play_btn_rect, 2, border_radius=6)
-        btn_txt = "❚❚ PAUSA" if self.is_playing_music else "▶ PLAY"
-        p_surf = font_sub.render(btn_txt, True, COLOR_WHITE)
-        surface.blit(p_surf, p_surf.get_rect(center=self.play_btn_rect.center))
+        # 2. Play / Pause (▶ / ❚❚)
+        is_active = self.is_playing_music
+        p_bg = pm.SEAL_RED if is_active else (232, 218, 192)
+        p_border = (212, 175, 55) if is_active else (160, 140, 115)
+        pygame.draw.rect(surface, p_bg, self.play_btn_rect, border_radius=6)
+        pygame.draw.rect(surface, p_border, self.play_btn_rect, 2 if is_active else 1, border_radius=6)
+        cx, cy = self.play_btn_rect.center
+        if is_active:
+            # Ícone Pause (duas barras verticais brancas)
+            pygame.draw.rect(surface, COLOR_WHITE, (cx - 6, cy - 7, 4, 14), border_radius=1)
+            pygame.draw.rect(surface, COLOR_WHITE, (cx + 2, cy - 7, 4, 14), border_radius=1)
+        else:
+            # Ícone Play (triângulo vermelho/tinta)
+            pygame.draw.polygon(surface, pm.SEAL_RED, [(cx - 5, cy - 8), (cx + 7, cy), (cx - 5, cy + 8)])
 
-        # 3. Stop
-        pygame.draw.rect(surface, (222, 208, 180), self.stop_btn_rect, border_radius=6)
+        # 3. Stop (■)
+        pygame.draw.rect(surface, (224, 210, 184), self.stop_btn_rect, border_radius=6)
         pygame.draw.rect(surface, (160, 140, 115), self.stop_btn_rect, 1, border_radius=6)
-        st_s = font_sub.render("■ STOP", True, pm.INK)
-        surface.blit(st_s, st_s.get_rect(center=self.stop_btn_rect.center))
+        cx, cy = self.stop_btn_rect.center
+        pygame.draw.rect(surface, pm.INK, (cx - 6, cy - 6, 12, 12), border_radius=2)
 
-        # 4. Next
-        pygame.draw.rect(surface, (222, 208, 180), self.next_track_btn_rect, border_radius=6)
+        # 4. Next (▶▶|)
+        pygame.draw.rect(surface, (224, 210, 184), self.next_track_btn_rect, border_radius=6)
         pygame.draw.rect(surface, (160, 140, 115), self.next_track_btn_rect, 1, border_radius=6)
-        nx_s = font_sub.render(">>|", True, pm.INK)
-        surface.blit(nx_s, nx_s.get_rect(center=self.next_track_btn_rect.center))
+        cx, cy = self.next_track_btn_rect.center
+        pygame.draw.polygon(surface, pm.INK, [(cx - 6, cy - 7), (cx + 2, cy), (cx - 6, cy + 7)])
+        pygame.draw.polygon(surface, pm.INK, [(cx + 2, cy - 7), (cx + 10, cy), (cx + 2, cy + 7)])
+        pygame.draw.line(surface, pm.INK, (cx + 10, cy - 7), (cx + 10, cy + 7), 2)
 
-        # 5. Loop
-        l_col = pm.SEAL_RED if self.is_looping else (222, 208, 180)
+        # 5. Loop (LOOP / 1X)
+        l_col = pm.SEAL_RED if self.is_looping else (224, 210, 184)
+        l_b_col = (212, 175, 55) if self.is_looping else (160, 140, 115)
         l_txt_col = COLOR_WHITE if self.is_looping else pm.INK
         pygame.draw.rect(surface, l_col, self.loop_btn_rect, border_radius=6)
-        pygame.draw.rect(surface, (212, 175, 55) if self.is_looping else (160, 140, 115), self.loop_btn_rect, 1, border_radius=6)
-        lp_s = font_sub.render("🔁 LOOP" if self.is_looping else "➡ 1X", True, l_txt_col)
-        surface.blit(lp_s, lp_s.get_rect(center=self.loop_btn_rect.center))
+        pygame.draw.rect(surface, l_b_col, self.loop_btn_rect, 2 if self.is_looping else 1, border_radius=6)
+        lp_s = font_sub.render("LOOP" if self.is_looping else "1X", True, l_txt_col)
+        surface.blit(lp_s, lp_s.get_rect(center=(self.loop_btn_rect.centerx + 4, self.loop_btn_rect.centery)))
+        # Ponto indicador
+        dot_col = (212, 175, 55) if self.is_looping else (160, 140, 115)
+        pygame.draw.circle(surface, dot_col, (self.loop_btn_rect.x + 12, self.loop_btn_rect.centery), 3)
