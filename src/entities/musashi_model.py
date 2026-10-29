@@ -1,12 +1,14 @@
 """
 Musashi, o espadachim lendário de duas lâminas (Niten Ichi-ryu):
-- Rosto marcial maduro e severo, barba por fazer (stubble), olhar focado e resoluto.
+- Rosto marcial maduro e severo Tekken 2/3, cicatriz na sobrancelha direita, barba por fazer (stubble), olhar resoluto.
 - Penteado samurai tradicional (motodori/chonmage) com topknot desgrenhado preso por cordão tasuki.
 - Quimono índigo desbotado com colarinho bege em V, cordão tasuki cruzado no peito e costas com nó no ombro direito.
 - Mangas soltas que cobrem os ombros e bíceps, antebraços fortes com bandagens e cicatriz.
 - Hakama escura pregueada contínua sem quebras ou degraus nas articulações, tabi preto e sandálias de palha (waraji).
 - Duas lâminas lendárias: Katana principal na mão direita e Wakizashi na esquerda; bainhas na cintura esquerda.
+- Musashi NUNCA embainha suas espadas durante combate ou vitória (sempre empunhadas em guarda alta/dois céus).
 - Ordenação dinâmica de profundidade 3D (Painter's Algorithm) para oclusão perfeita das lâminas e braços quando de costas.
+- Suporte a SSAA 2x offscreen buffer, materiais realistas e modo De/Para (legacy_mode).
 """
 import math
 import pygame
@@ -34,13 +36,13 @@ PALETTE = {
     "knot": (36, 32, 36),
     "skin": (216, 168, 130),
     "skin_shadow": (176, 130, 98),
-    "stubble": (120, 90, 72),
+    "stubble": (118, 92, 76),
     "hair": (38, 32, 32),
     "hair_light": (88, 72, 64),
     "hair_dark": (22, 18, 18),
     "eye": (34, 24, 20),
     "brow": (28, 22, 22),
-    "scar": (190, 120, 104),
+    "scar": (195, 115, 102),
     "tabi": (32, 30, 36),
     "straw": (182, 150, 94),
     "rope": (122, 92, 52),
@@ -56,11 +58,33 @@ PALETTE = {
     "trail_core": (232, 246, 255),
 }
 
+# Materiais realistas do Overhaul (Entregável 2.2.10)
 MATERIALS = {
-    "kimono": "canvas", "kimono_dark": "canvas", "kimono_light": "canvas",
-    "sash": "silk", "wrap": "canvas", "tabi": "canvas", "straw": "canvas",
-    "tasuki": "canvas", "collar": "canvas", "saya": "lacquer", "saya_short": "lacquer",
-    "steel": "steel", "edge": "steel", "tsuba": "metal", "gold": "gold"
+    "kimono": "indigo_canvas",
+    "kimono_dark": "indigo_canvas",
+    "kimono_light": "indigo_canvas",
+    "collar": "raw_linen",
+    "tasuki": "braided_cord",
+    "wrap": "canvas",
+    "hakama": "indigo_linen",
+    "hakama_dark": "indigo_linen",
+    "sash": "silk",
+    "saya": "urushi_lacquer",
+    "saya_short": "urushi_lacquer",
+    "steel": "tamahagane_hamon",
+    "edge": "steel",
+    "tsuba": "metal",
+    "gold": "gold",
+}
+
+# Materiais legados pré-Fase 2 (para comparação De/Para no Model Inspector)
+LEGACY_MATERIALS = {
+    "kimono": "canvas",
+    "kimono_dark": "canvas",
+    "sash": "canvas",
+    "saya": "lacquer",
+    "steel": "chrome",
+    "edge": "chrome",
 }
 
 
@@ -69,15 +93,123 @@ def pal() -> dict:
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# Cinemática dos Braços e Lâminas Gêmeas
+# Cinemática dos Braços e Lâminas Gêmeas (Niten Ichi-ryu)
 # ---------------------------------------------------------------------------------------------------------------------
 
 def idle_arms(c):
-    """Neutra: Katana adiante na direita (chūdan) e Wakizashi baixa e invertida na esquerda."""
+    """Postura Chūdan Niten: Katana à frente na direita e Wakizashi na cintura em guarda na esquerda."""
     tz = c.torso_z + math.sin(c.walk_timer * 2.8) * 0.015
     right = (c.base_x + c.fx * 0.20 - c.px * 0.08, c.base_y + c.fy * 0.20 - c.py * 0.08, tz + 0.12)
     left = (c.base_x + c.fx * 0.08 + c.px * 0.12, c.base_y + c.fy * 0.08 + c.py * 0.12, tz + 0.02)
     return left, right
+
+
+def walk_arms(c):
+    """Caminhada marcial: espadas sempre empunhadas em prontidão imediata (sem embainhar)."""
+    tz = c.torso_z
+    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
+    sw = math.sin(c.walk_timer * 7.5) * 0.045
+    left = (bx + fx * 0.10 + px * 0.12 - fx * sw, by + fy * 0.10 + py * 0.12 - fy * sw, tz + 0.06)
+    right = (bx + fx * 0.16 - px * 0.10 + fx * sw, by + fy * 0.16 - py * 0.10 + fy * sw, tz + 0.12)
+    return left, right
+
+
+def roll_arms(c):
+    """Rolamento Tático (Entregável 2.2.3): braços colados ao peito com as lâminas alinhadas ao tronco."""
+    tz = c.torso_z - 0.08
+    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
+    left = (bx + fx * 0.06 + px * 0.08, by + fy * 0.06 + py * 0.08, tz + 0.02)
+    right = (bx + fx * 0.06 - px * 0.08, by + fy * 0.06 - py * 0.08, tz + 0.04)
+    return left, right
+
+
+def cross_guard_arms(c):
+    """Cross Guard Parry: Lâminas cruzadas em 'X' frontal à altura do peito/ombros."""
+    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
+    z = c.torso_z + 0.06
+    left = (bx + fx * 0.15 + px * 0.10, by + fy * 0.15 + py * 0.10, z)
+    right = (bx + fx * 0.15 - px * 0.10, by + fy * 0.15 - py * 0.10, z)
+    return left, right
+
+
+def cross_shockwave_arms(c):
+    """Cross Shockwave: Braços cruzando em corte violento para frente."""
+    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
+    z = c.torso_z + 0.10
+    left = (bx + fx * 0.28 - px * 0.06, by + fy * 0.28 - py * 0.06, z)
+    right = (bx + fx * 0.28 + px * 0.06, by + fy * 0.28 + py * 0.06, z)
+    return left, right
+
+
+def intro_arms(c, p, pose):
+    """Coreografia de Intro: Saque duplo -> atrito em X com faíscas metálicas -> postura de duelo."""
+    bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
+    if pose == "dual_draw" or p < 0.30:
+        u = p / 0.30 if p < 0.30 else 1.0
+        # Mãos saindo das bainhas na cintura esquerda em direção ao peito
+        left = (bx + px * (0.15 - u * 0.03) + fx * 0.04, by + py * (0.15 - u * 0.03) + fy * 0.04, tz + 0.04 + u * 0.04)
+        right = (bx + px * (0.10 - u * 0.16) + fx * (0.02 + u * 0.12), by + py * (0.10 - u * 0.16) + fy * (0.02 + u * 0.12), tz + 0.08 + u * 0.06)
+        return left, right
+    elif pose == "cross_blade_clash" or p < 0.65:
+        # Lâminas atritando em 'X' diante do peito/queixo com faísca metálica
+        shake = math.sin(p * 45.0) * 0.008
+        left = (bx + fx * 0.16 + px * 0.08 + shake, by + fy * 0.16 + py * 0.08, tz + 0.14)
+        right = (bx + fx * 0.16 - px * 0.08 - shake, by + fy * 0.16 - py * 0.08, tz + 0.14)
+        return left, right
+    else:
+        # Transição contínua para a guarda dos Dois Céus
+        u = min(1.0, (p - 0.65) / 0.35)
+        l_idle, r_idle = idle_arms(c)
+        l_clash = (bx + fx * 0.16 + px * 0.08, by + fy * 0.16 + py * 0.08, tz + 0.14)
+        r_clash = (bx + fx * 0.16 - px * 0.08, by + fy * 0.16 - py * 0.08, tz + 0.14)
+        return mk.lerp(l_clash, l_idle, u), mk.lerp(r_clash, r_idle, u)
+
+
+def victory_arms(c, p, pose):
+    """Coreografia de Vitória: Duplo Chiburi simultâneo e Postura dos Dois Céus sem embainhar."""
+    bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
+    if pose == "double_chiburi" or p < 0.45:
+        u = p / 0.45 if p < 0.45 else 1.0
+        # Sacudida lateral rápida de ambas as lâminas em direção ao solo (esquerda e direita)
+        snap = math.sin(u * math.pi)
+        left = (bx + px * (0.14 + snap * 0.18) - fx * 0.04, by + py * (0.14 + snap * 0.18) - fy * 0.04, tz + 0.02 - snap * 0.12)
+        right = (bx - px * (0.14 + snap * 0.18) - fx * 0.04, by - py * (0.14 + snap * 0.18) - fy * 0.04, tz + 0.06 - snap * 0.12)
+        return left, right
+    else:
+        # Elevação na Postura dos Dois Céus: Katana apontada para o céu, Wakizashi na cintura
+        u = min(1.0, (p - 0.45) / 0.55)
+        left = (bx + fx * 0.10 + px * 0.14, by + fy * 0.10 + py * 0.14, tz + 0.02)
+        right = (bx + fx * (0.12 - u * 0.04) - px * (0.08 + u * 0.04), by + fy * (0.12 - u * 0.04) - py * (0.08 + u * 0.04), tz + 0.10 + u * 0.32)
+        return left, right
+
+
+def finisher_arms(c, p, style):
+    """Poses dos Finishers de Musashi (Entregáveis 2.2.4a e 2.2.4b)."""
+    bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
+    if style in ("DUAL_IMPALE_X_SPREAD", "FINISHER_1", "niten_impale"):
+        # Finisher 1: Katana empala -> Wakizashi empala -> abertura em leque rasgando em 3 partes
+        if p < 0.35:
+            # Empalamento 1: Katana penetra o torso
+            u = p / 0.35
+            right = (bx + fx * (0.18 + u * 0.28) - px * 0.06, by + fy * (0.18 + u * 0.28) - py * 0.06, tz + 0.14)
+            left = (bx + px * 0.14 + fx * 0.04, by + py * 0.14 + fy * 0.04, tz + 0.04)
+        elif p < 0.65:
+            # Empalamento 2: Wakizashi penetra ao lado da Katana
+            u = (p - 0.35) / 0.30
+            right = (bx + fx * 0.46 - px * 0.06, by + fy * 0.46 - py * 0.06, tz + 0.14)
+            left = (bx + fx * (0.18 + u * 0.26) + px * 0.06, by + fy * (0.18 + u * 0.26) + py * 0.06, tz + 0.12)
+        else:
+            # Rasgo em Leque (X-Spread): Braços abrem violentamente para os lados
+            u = (p - 0.65) / 0.35
+            right = (bx + fx * (0.46 - u * 0.15) - px * (0.06 + u * 0.35), by + fy * (0.46 - u * 0.15) - py * (0.06 + u * 0.35), tz + 0.14 + u * 0.06)
+            left = (bx + fx * (0.44 - u * 0.15) + px * (0.06 + u * 0.35), by + fy * (0.44 - u * 0.15) + py * (0.06 + u * 0.35), tz + 0.12 + u * 0.06)
+        return left, right
+    else:
+        # Finisher 2: Cross Vacuum Slicer em 4 Quadrantes
+        u = min(1.0, p * 1.5)
+        right = (bx + fx * (0.24 + u * 0.16) - px * (0.18 - u * 0.30), by + fy * (0.24 + u * 0.16) - py * (0.18 - u * 0.30), tz + 0.16)
+        left = (bx + fx * (0.24 + u * 0.16) + px * (0.18 - u * 0.30), by + fy * (0.24 + u * 0.16) + py * (0.18 - u * 0.30), tz + 0.16)
+        return left, right
 
 
 def _step(c):
@@ -125,16 +257,42 @@ def _drawn_dirs(c):
 
 
 def _hands(c):
-    """Posição atual das mãos para ordenação de profundidade 3D."""
+    """Posição atual das mãos com suporte a todos os estados, poses e LERP."""
+    extra = getattr(c, "extra_props", None) or {}
+    pose = extra.get("pose", "")
+    p = extra.get("p", c.state_timer if hasattr(c, "state_timer") else 0.0)
+
+    # 1. Finalizadores Cinemáticos
+    if pose in ("finisher_1", "niten_impale", "finisher_2", "cross_slicer") or c.state in ("FINISHER_1", "FINISHER_2"):
+        return finisher_arms(c, p, pose or c.state)
+
+    # 2. Intro e Vitória
+    if c.state == "INTRO" or pose in ("dual_draw", "cross_blade_clash", "two_heavens_guard"):
+        return intro_arms(c, p, pose)
+    if c.state == "VICTORY" or pose in ("double_chiburi", "two_heavens_victory"):
+        return victory_arms(c, p, pose)
+
+    # 3. Rolamento Tático
+    if c.state == "ROLL" or extra.get("is_roll", False) or pose == "tactical_roll":
+        return roll_arms(c)
+
+    # 4. Cross Shockwave
+    if c.state == "CROSS_SHOCKWAVE" or extra.get("cross_shockwave", False):
+        return cross_shockwave_arms(c)
+
+    # 5. Cross Guard Parry
+    if c.state == "PARRY" or pose == "cross_guard":
+        return cross_guard_arms(c)
+
+    # 6. Combo Melee
     if c.is_melee and c.atk_progress is not None:
         return attack_arms(c)
+
+    # 7. Caminhada (espadas sempre sacadas)
     if c.is_moving and hasattr(c, "walk_timer"):
-        tz = c.torso_z
-        bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
-        sw = math.sin(c.walk_timer * 8.0) * 0.04
-        left = (bx + fx * 0.05 + px * 0.14 - fx * sw, by + fy * 0.05 + py * 0.14 - fy * sw, tz + 0.08)
-        right = (bx + fx * 0.05 - px * 0.14 + fx * sw, by + fy * 0.05 - py * 0.14 + fy * sw, tz + 0.08)
-        return left, right
+        return walk_arms(c)
+
+    # 8. Neutra Chūdan
     return idle_arms(c)
 
 
@@ -177,35 +335,69 @@ def _blade(c, hand, d, length, short=False):
     mk.obox(c, mk.add(tsuba, d, 0.04), d, max(0.0, length - 0.02), 0.016, 0.034, P["edge"], outline=False)
 
 
-def _sheathed_hilts(c):
-    P = pal()
-    (k, b1), (k2, b2) = _scabbards(c)
-    for origin, b, length, w in ((k, b1, 0.17, 0.04), (k2, b2, 0.12, 0.036)):
-        h = (-b[0], -b[1], -b[2])
-        mk.obox(c, origin, h, length, w, w, P["ito"])
-        mk.obox(c, mk.add(origin, h, length - 0.01), h, 0.02, w + 0.006, w + 0.006, P["gold"], outline=False)
-        mk.obox(c, mk.add(origin, b, -0.008), b, 0.016, 0.08 if length > 0.15 else 0.065, 0.08 if length > 0.15 else 0.065, P["tsuba"])
-
-
 def _render_weapons_and_hands(c, arm_l, arm_r):
     """Renderiza as lâminas empunhadas e o rastro de corte."""
     hand_l = (arm_l[0], arm_l[1], arm_l[2] - 0.065)
     hand_r = (arm_r[0], arm_r[1], arm_r[2] - 0.065)
-    if c.state == "PARRY":
-        bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
-        z = c.torso_z + 0.05
-        left = (bx + fx * 0.15 + px * 0.12, by + fy * 0.15 + py * 0.12, z)
-        right = (bx + fx * 0.15 - px * 0.12, by + fy * 0.15 - py * 0.12, z)
-        _blade(c, right, mk.norm((fx * 0.3 + px * 0.6, fy * 0.3 + py * 0.6, 0.75)), 0.62)
-        _blade(c, left, mk.norm((fx * 0.3 - px * 0.6, fy * 0.3 - py * 0.6, 0.75)), 0.46, short=True)
+    extra = getattr(c, "extra_props", None) or {}
+    pose = extra.get("pose", "")
+    p = extra.get("p", c.state_timer if hasattr(c, "state_timer") else 0.0)
+
+    fx, fy, px, py = c.fx, c.fy, c.px, c.py
+
+    # 1. Cross Guard Parry
+    if c.state == "PARRY" or pose == "cross_guard":
+        _blade(c, hand_r, mk.norm((fx * 0.35 + px * 0.55, fy * 0.35 + py * 0.55, 0.70)), 0.64)
+        _blade(c, hand_l, mk.norm((fx * 0.35 - px * 0.55, fy * 0.35 - py * 0.55, 0.70)), 0.48, short=True)
+
+    # 2. Cross Shockwave
+    elif c.state == "CROSS_SHOCKWAVE" or extra.get("cross_shockwave", False):
+        _blade(c, hand_r, mk.norm((fx * 0.75 + px * 0.45, fy * 0.75 + py * 0.45, -0.20)), 0.66)
+        _blade(c, hand_l, mk.norm((fx * 0.75 - px * 0.45, fy * 0.75 - py * 0.45, 0.20)), 0.50, short=True)
+
+    # 3. Rolamento Tático
+    elif c.state == "ROLL" or extra.get("is_roll", False) or pose == "tactical_roll":
+        _blade(c, hand_r, mk.norm((-fx * 0.40 + px * 0.60, -fy * 0.40 + py * 0.60, -0.60)), 0.62)
+        _blade(c, hand_l, mk.norm((-fx * 0.40 - px * 0.60, -fy * 0.40 - py * 0.60, -0.60)), 0.46, short=True)
+
+    # 4. Intro (Saque e Faíscas em X)
+    elif c.state == "INTRO" or pose in ("dual_draw", "cross_blade_clash", "two_heavens_guard"):
+        if pose == "cross_blade_clash" or (0.30 <= p < 0.65):
+            _blade(c, hand_r, mk.norm((fx * 0.30 + px * 0.65, fy * 0.30 + py * 0.65, 0.68)), 0.64)
+            _blade(c, hand_l, mk.norm((fx * 0.30 - px * 0.65, fy * 0.30 - py * 0.65, 0.68)), 0.48, short=True)
+            # Faíscas metálicas no ponto de contato das lâminas
+            clash_pt = ((hand_l[0] + hand_r[0]) * 0.5 + fx * 0.12, (hand_l[1] + hand_r[1]) * 0.5 + fy * 0.12, hand_r[2] + 0.18)
+            sx, sy = c.camera.apply(clash_pt[0], clash_pt[1], clash_pt[2])
+            pygame.draw.circle(c.surface, (255, 235, 120), (sx, sy), 3)
+            pygame.draw.circle(c.surface, (255, 255, 255), (sx, sy), 1)
+        elif pose == "dual_draw" or p < 0.30:
+            (k, b1), (k2, b2) = _scabbards(c)
+            _blade(c, hand_r, b1, 0.64)
+            _blade(c, hand_l, b2, 0.48, short=True)
+        else:
+            dk, lk, dw, lw = _drawn_dirs(c)
+            _blade(c, hand_r, dk, lk)
+            _blade(c, hand_l, dw, lw, short=True)
+
+    # 5. Vitória (Duplo Chiburi e Postura dos Dois Céus)
+    elif c.state == "VICTORY" or pose in ("double_chiburi", "two_heavens_victory"):
+        if pose == "double_chiburi" or p < 0.45:
+            _blade(c, hand_r, mk.norm((fx * 0.20 - px * 0.85, fy * 0.20 - py * 0.85, -0.45)), 0.66)
+            _blade(c, hand_l, mk.norm((fx * 0.20 + px * 0.85, fy * 0.20 + py * 0.85, -0.45)), 0.50, short=True)
+        else:
+            # Postura dos Dois Céus: Katana apontada para o alto (~65°), Wakizashi na cintura
+            _blade(c, hand_r, mk.norm((fx * 0.20 - px * 0.10, fy * 0.20 - py * 0.10, 0.95)), 0.66)
+            _blade(c, hand_l, mk.norm((fx * 0.60 + px * 0.45, fy * 0.60 + py * 0.45, -0.15)), 0.50, short=True)
+
+    # 6. Combo Melee
     elif c.is_melee:
-        step, p = _step(c), c.atk_progress
-        dk, lk, dw, lw = _blade_dirs(c, p, step)
+        step, p_atk = _step(c), c.atk_progress
+        dk, lk, dw, lw = _blade_dirs(c, p_atk, step)
         _blade(c, hand_r, dk, lk)
         _blade(c, hand_l, dw, lw, short=True)
-        _slash_trail(c, p, step)
-    elif c.is_moving:
-        _sheathed_hilts(c)
+        _slash_trail(c, p_atk, step)
+
+    # 7. Neutra e Caminhada (sempre empunhadas!)
     else:
         dk, lk, dw, lw = _drawn_dirs(c)
         _blade(c, hand_r, dk, lk)
@@ -264,7 +456,7 @@ def _draw_topknot(c):
         alpha=c.alpha,
     )
 
-    # Pontas do coque desgrenhado de rōnin (compactas e naturais)
+    # Pontas do coque desgrenhado de rōnin
     spikes = ((0.5, 0.2, 0.055), (-0.5, 0.15, 0.050), (0.1, 0.5, 0.065), (-0.2, -0.4, 0.055), (0.0, 0.0, 0.075))
     for i, (a, b, length) in enumerate(spikes):
         o = cloth.chain_offsets(1, c.walk_timer, 0.9 * i, trail, (px, py), amp=amp * 1.4, freq=freq * 1.1, wind=wind, wind_gain=0.04)[0]
@@ -502,9 +694,7 @@ def draw_arm(c, shoulder, hand, side):
 def draw_sleeves(c, arms):
     """Mangas do quimono cobrindo os ombros e bíceps até o cotovelo, com caimento vertical natural."""
     P = pal()
-    trail, amp, freq = mk.motion(c, 0.06)
     for k, (s, e, side) in enumerate(arms):
-        # Ombreira/manga assentada no ombro com caimento natural em direção ao cotovelo
         anchor = (s[0] + c.px * side * 0.012, s[1] + c.py * side * 0.012, s[2] + 0.015)
         mid = mk.add(mk.lerp(s, e, 0.40), (c.px * side * 0.015, c.py * side * 0.015, -0.015))
         hem = mk.add(mk.lerp(s, e, 0.75), (c.px * side * 0.018, c.py * side * 0.018, -0.030))
@@ -524,15 +714,18 @@ def draw_sleeves(c, arms):
 
 def draw_head(c):
     """
-    Cabeça de Miyamoto Musashi:
+    Cabeça de Miyamoto Musashi (Entregável 2.2.8):
     - Crânio esculpido em 3D anatômico com mandíbula angular masculina.
     - Feições marciais Tekken 2/3 (olhos focados de guerreiro, nariz proeminente, barba por fazer).
+    - Cicatriz marcante na sobrancelha direita.
     - Franja desalinhada de rōnin estritamente contornada ACIMA da linha das sobrancelhas (z >= hz + 0.108).
     - Costeletas emoldurando a face no lado visível da câmera.
     - Topknot samurai amarrado (se visível no ângulo da câmera).
     """
     P = pal()
     bx, by, hz, fx, fy, px, py, hw = c.base_x, c.base_y, c.head_z, c.fx, c.fy, c.px, c.py, c.head_w
+    extra = getattr(c, "extra_props", None) or {}
+    legacy_mode = extra.get("legacy_mode", False)
 
     # Costeletas no lado voltado para a câmera
     for s in (-1.0, 1.0):
@@ -552,6 +745,21 @@ def draw_head(c):
                 w_start=0.024, h_start=0.016,
                 w_end=0.014, h_end=0.010,
                 color=P["hair"],
+                up=(0.0, 0.0, 1.0),
+                outline=False,
+                alpha=c.alpha,
+            )
+
+        # Cicatriz na sobrancelha direita do veterano Musashi (Fase 2 Overhaul)
+        if not legacy_mode:
+            p_scar_0 = (bx + fx * (front_d + 0.006) - px * 0.042, by + fy * (front_d + 0.006) - py * 0.042, hz + 0.116)
+            p_scar_1 = (bx + fx * (front_d + 0.006) - px * 0.030, by + fy * (front_d + 0.006) - py * 0.030, hz + 0.092)
+            draw_tapered_frustum_3d(
+                c.surface, c.camera,
+                p_scar_0, p_scar_1,
+                w_start=0.008, h_start=0.006,
+                w_end=0.006, h_end=0.004,
+                color=P["scar"],
                 up=(0.0, 0.0, 1.0),
                 outline=False,
                 alpha=c.alpha,

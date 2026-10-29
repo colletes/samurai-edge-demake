@@ -1,12 +1,13 @@
 """
-Hanzo, o mestre shinobi de Iga (Yellow Shinobi):
+Hanzo, o mestre shinobi de Iga (Yellow Shinobi — Sub-fase 2.3 Overhaul):
 - Capuz shinobi dourado com máscara preta e abertura para olhos marciais ambarinos penetrantes.
 - Rosto esculpido 3D com mandíbula/gola de tecido preto contínuo sem vazamento de cor de pele.
 - Túnica shozoku amarela com lapelas pretas cruzadas e filamentos dourados no peito.
 - Ombreira de aço escuro no ombro esquerdo com rebordo polido e rebite dourado.
 - Calças shinobi amarelas contínuas afunilando em botas tabi pretas com amarrações, sem degraus nos joelhos.
-- Katana shinobi (Ninja-to) nas costas em diagonal, ordenada por profundidade 3D (Painter's Algorithm).
-- Par de kunais de aço afiado empunhados nas mãos com empunhadura preta e anel pommel.
+- Katana shinobi (Ninja-to) nas costas em diagonal; ao sacar para combate melee, a bainha nas costas fica vazia e a Ninjato é empunhada na mão com empunhadura invertida (reverse grip).
+- Kunai tática empunhada na mão esquerda pronta para arremesso ou deflexão.
+- Materiais realistas (Seda Shozoku, Lona, Couro Tabi, Aço Tamahagane, Ouro polido) e LEGACY_MATERIALS para modo De/Para.
 """
 import math
 import pygame
@@ -20,7 +21,7 @@ from src.isometric.mesh_primitives import (
     draw_portrait_face_3d,
 )
 
-PALETTE = {
+LEGACY_PALETTE = {
     "torso": (224, 172, 36),
     "torso_dark": (168, 122, 20),
     "pants": (206, 154, 28),
@@ -46,10 +47,43 @@ PALETTE = {
     "aura_core": (255, 244, 190),
 }
 
-MATERIALS = {
+PALETTE = {
+    "torso": (232, 178, 32),          # Seda Shozoku amarelo-ouro refinado
+    "torso_dark": (158, 115, 16),
+    "pants": (214, 160, 24),          # Calça de algodão resistente
+    "pants_dark": (145, 104, 14),
+    "mask": (20, 18, 24),             # Tecido de balaclava escuro profundo
+    "mask_dark": (12, 10, 15),
+    "neck": (20, 18, 24),             # Gola integrada sem vazamento de pele
+    "hair": (232, 178, 32),
+    "hair_dark": (158, 115, 16),
+    "skin": (226, 190, 156),
+    "skin_shadow": (175, 138, 110),
+    "gold": (248, 208, 76),           # Ouro brilhante nos rebites e tsuba
+    "gold_trim": (212, 168, 54),
+    "belt": (22, 19, 25),             # Couro tratado
+    "steel": (210, 215, 226),         # Aço Tamahagane de alta reflexão
+    "steel_dark": (68, 72, 84),       # Aço envelhecido da armadura
+    "steel_light": (242, 246, 255),
+    "boot": (24, 22, 28),             # Couro tabi
+    "sole": (16, 14, 18),
+    "wrap": (22, 19, 25),
+    "ito": (25, 22, 28),
+    "aura": (255, 214, 70),
+    "aura_core": (255, 244, 190),
+}
+
+LEGACY_MATERIALS = {
     "torso": "knit", "pants": "knit", "torso_dark": "knit", "pants_dark": "knit",
     "mask": "leather", "boot": "leather", "belt": "leather", "wrap": "canvas",
     "steel": "steel", "steel_dark": "metal", "steel_light": "metal",
+    "gold": "gold", "gold_trim": "gold"
+}
+
+MATERIALS = {
+    "torso": "silk", "pants": "canvas", "torso_dark": "silk", "pants_dark": "canvas",
+    "mask": "leather", "boot": "leather", "belt": "leather", "wrap": "cloth",
+    "steel": "katana_steel", "steel_dark": "metal", "steel_light": "metal",
     "gold": "gold", "gold_trim": "gold"
 }
 
@@ -63,25 +97,43 @@ def _smooth(x):
     return x * x * (3.0 - 2.0 * x)
 
 
+def is_sword_drawn(c) -> bool:
+    """Retorna True se a Ninjato está empunhada na mão (e a bainha das costas vazia)."""
+    pose = (c.extra_props or {}).get("pose", "")
+    if pose in ("ninjato_draw", "shinobi_stance", "reverse_slash", "thrust_lunge", "finisher_1"):
+        return True
+    return bool(c.is_melee)
+
+
 # ---------------------------------------------------------------------------------------------------------------------
-# Cinemática dos Braços e Kunais
+# Cinemática dos Braços, Ninjato e Kunais
 # ---------------------------------------------------------------------------------------------------------------------
 
-def _hands(c, p):
-    """(esquerda, direita) do golpe de kunais: antecipação recolhida, estocada da direita e corte cruzado da esquerda."""
+def attack_arms(c, progress=None):
+    """Calcula os braços durante o ataque Melee (Reverse Slash ou Thrust Lunge)."""
+    p = c.atk_progress if progress is None else progress
+    p = 0.5 if p is None else p
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
-    r = _smooth((p - 0.2) / 0.4)
-    reach_r = 0.08 + 0.36 * r
-    right = (bx + fx * reach_r - px * 0.10, by + fy * reach_r - py * 0.10, tz + 0.14 + 0.02 * r)
-    s = _smooth((p - 0.35) / 0.4)
-    lat = 0.18 - 0.30 * s
-    reach_l = 0.0 + 0.30 * s
-    left = (bx + fx * reach_l + px * lat, by + fy * reach_l + py * lat, tz + 0.12 - 0.02 * s)
+    step = (c.extra_props or {}).get("combo_step", 1)
+    is_thrust = (step == 2) or (c.extra_props or {}).get("is_landing_cancel", False)
+
+    if is_thrust:
+        # Passo 2: Estocada fulminante no plexo solar com Ninjato
+        r = _smooth((p - 0.15) / 0.50)
+        reach = 0.12 + 0.46 * r
+        right = (bx + fx * reach - px * 0.05, by + fy * reach - py * 0.05, tz + 0.14)
+        s = _smooth((p - 0.20) / 0.40)
+        left = (bx + fx * (0.04 + 0.22 * s) + px * 0.14, by + fy * (0.04 + 0.22 * s) + py * 0.14, tz + 0.10)
+    else:
+        # Passo 1: Corte horizontal reverso (Reverse Slash)
+        r = _smooth((p - 0.10) / 0.50)
+        sweep_fx = 0.08 + 0.32 * r
+        sweep_px = 0.18 - 0.38 * r
+        right = (bx + fx * sweep_fx + px * sweep_px, by + fy * sweep_fx + py * sweep_px, tz + 0.13 + 0.02 * r)
+        s = _smooth((p - 0.25) / 0.40)
+        left = (bx - fx * 0.04 + px * 0.14, by - fy * 0.04 + py * 0.14, tz + 0.09)
+
     return left, right
-
-
-def attack_arms(c):
-    return _hands(c, c.atk_progress)
 
 
 def idle_arms(c):
@@ -93,15 +145,66 @@ def idle_arms(c):
 
 
 def _current_hands(c):
+    pose = (c.extra_props or {}).get("pose", "")
+    bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
+
+    # 1. Poses específicas de Intro, Vitória e Finishers
+    if pose == "leaf_crouch":
+        right = (bx + fx * 0.12 - px * 0.14, by + fy * 0.12 - py * 0.14, tz - 0.04)
+        left = (bx + fx * 0.12 + px * 0.14, by + fy * 0.12 + py * 0.14, tz - 0.04)
+        return left, right
+
+    elif pose == "ninjato_draw":
+        # Mão direita alcança o hilt da Ninjato sobre o ombro direito atrás da cabeça
+        right = (bx - fx * 0.06 - px * 0.05, by - fy * 0.06 - py * 0.05, tz + 0.32)
+        left = (bx + fx * 0.04 + px * 0.10, by + fy * 0.04 + py * 0.10, tz + 0.04)
+        return left, right
+
+    elif pose == "shinobi_stance":
+        right = (bx + fx * 0.08 - px * 0.12, by + fy * 0.08 - py * 0.12, tz + 0.10)
+        left = (bx + fx * 0.20 + px * 0.08, by + fy * 0.20 + py * 0.08, tz + 0.12)
+        return left, right
+
+    elif pose == "reverse_slash":
+        return attack_arms(c, progress=0.60)
+
+    elif pose == "thrust_lunge":
+        return attack_arms(c, progress=0.75)
+
+    elif pose == "kuji_kiri":
+        # Mãos unidas em selo místico Kuji-Kiri na altura do coração
+        right = (bx + fx * 0.16 - px * 0.02, by + fy * 0.16 - py * 0.02, tz + 0.18)
+        left = (bx + fx * 0.16 + px * 0.02, by + fy * 0.16 + py * 0.02, tz + 0.18)
+        return left, right
+
+    elif pose == "smoke_vanish":
+        right = (bx - fx * 0.06 - px * 0.22, by - fy * 0.06 - py * 0.22, tz + 0.04)
+        left = (bx - fx * 0.06 + px * 0.22, by - fy * 0.06 + py * 0.22, tz + 0.04)
+        return left, right
+
+    elif pose == "finisher_1":
+        # Estocada penetrante atravessando a garganta/coração
+        right = (bx + fx * 0.44 - px * 0.04, by + fy * 0.44 - py * 0.04, tz + 0.16)
+        left = (bx + fx * 0.24 + px * 0.12, by + fy * 0.24 + py * 0.12, tz + 0.12)
+        return left, right
+
+    elif pose == "finisher_2":
+        # Arremesso/fincada de kunai na testa
+        right = (bx + fx * 0.36 - px * 0.06, by + fy * 0.36 - py * 0.06, tz + 0.22)
+        left = (bx + fx * 0.16 + px * 0.10, by + fy * 0.16 + py * 0.10, tz + 0.14)
+        return left, right
+
+    # 2. Ataque Melee
     if c.is_melee and c.atk_progress is not None:
         return attack_arms(c)
+
+    # 3. Caminhada
     if c.is_moving and hasattr(c, "walk_timer"):
-        tz = c.torso_z
-        bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
         sw = math.sin(c.walk_timer * 8.0) * 0.04
         right = (bx + fx * 0.10 - px * 0.12 + fx * sw, by + fy * 0.10 - py * 0.12 + fy * sw, tz + 0.10)
         left = (bx + fx * 0.06 + px * 0.12 - fx * sw, by + fy * 0.06 + py * 0.12 - fy * sw, tz + 0.08)
         return left, right
+
     return idle_arms(c)
 
 
@@ -125,23 +228,56 @@ def _kunai(c, hand, d):
     return mk.add(tip, d, 0.20)
 
 
-def _render_kunais_and_hands(c, arm_l, arm_r):
+def _draw_ninjato_in_hand(c, hand, d, reverse=True):
+    """Ninjato chokutō curta empunhada com empunhadura invertida (reverse grip) na mão direita."""
+    P = pal()
+    # Empunhadura com ito preto
+    mk.obox(c, mk.add(hand, d, -0.06), d, 0.13, 0.036, 0.036, P["ito"])
+    # Tsuba quadrada ninja dourada
+    tsuba_pos = mk.add(hand, d, 0.05) if not reverse else mk.add(hand, d, -0.06)
+    mk.obox(c, tsuba_pos, d, 0.012, 0.070, 0.070, P["gold"], outline=True)
+    # Habaki
+    habaki_pos = mk.add(tsuba_pos, d, 0.010 if not reverse else -0.010)
+    mk.obox(c, habaki_pos, d, 0.020, 0.046, 0.036, P["gold_trim"], outline=False)
+    # Lâmina reta de aço chokutō
+    blade_dir = d if not reverse else mk.norm((-d[0], -d[1], -d[2]))
+    blade_root = mk.add(habaki_pos, blade_dir, 0.010)
+    mk.obox(c, blade_root, blade_dir, 0.52, 0.038, 0.016, P["steel"], texture="steel")
+    # Fio de corte polido
+    mk.obox(c, mk.add(blade_root, (0, 0, 0.002)), blade_dir, 0.51, 0.018, 0.012, P["steel_light"], outline=False)
+    return mk.add(blade_root, blade_dir, 0.52)
+
+
+def _render_weapons_and_hands(c, arm_l, arm_r):
     hand_l = (arm_l[0], arm_l[1], arm_l[2] - 0.065)
     hand_r = (arm_r[0], arm_r[1], arm_r[2] - 0.065)
-    dr, dl = _kunai_dirs(c)
-    if c.is_melee:
-        dr = mk.norm((c.fx * 0.95, c.fy * 0.95, 0.0))
-        dl = mk.norm((c.fx * 0.4 - c.px * 0.55, c.fy * 0.4 - c.py * 0.55, -0.05))
-    if c.is_moving and not c.is_melee:
-        dr = mk.norm((c.fx * 0.3, c.fy * 0.3, -0.8))
-        dl = mk.norm((c.fx * 0.3, c.fy * 0.3, -0.8))
 
-    if (c.extra_props or {}).get("has_kunai", True):
-        _kunai(c, hand_r, dr)
-    _kunai(c, hand_l, dl)
+    if is_sword_drawn(c):
+        # Ninjato sacada na mão direita em reverse grip
+        dr = mk.norm((c.fx * 0.95 - c.px * 0.20, c.fy * 0.95 - c.py * 0.20, 0.0))
+        if c.is_melee:
+            step = (c.extra_props or {}).get("combo_step", 1)
+            if step == 2 or (c.extra_props or {}).get("is_landing_cancel", False):
+                dr = mk.norm((c.fx * 0.98, c.fy * 0.98, -0.05))
+            else:
+                dr = mk.norm((c.fx * 0.70 - c.px * 0.65, c.fy * 0.70 - c.py * 0.65, 0.0))
+        _draw_ninjato_in_hand(c, hand_r, dr, reverse=True)
 
-    if c.is_melee and c.atk_progress >= 0.30:
-        _trail(c, c.atk_progress)
+        # Kunai tática pronta na mão esquerda
+        dl = mk.norm((c.fx * 0.50 + c.px * 0.45, c.fy * 0.50 + c.py * 0.45, -0.15))
+        _kunai(c, hand_l, dl)
+
+        if c.is_melee and c.atk_progress is not None and c.atk_progress >= 0.25:
+            _trail(c, c.atk_progress)
+    else:
+        # Kunais em ambas as mãos
+        dr, dl = _kunai_dirs(c)
+        if c.is_moving:
+            dr = mk.norm((c.fx * 0.3, c.fy * 0.3, -0.8))
+            dl = mk.norm((c.fx * 0.3, c.fy * 0.3, -0.8))
+        if (c.extra_props or {}).get("has_kunai", True):
+            _kunai(c, hand_r, dr)
+        _kunai(c, hand_l, dl)
 
 
 def _trail(c, p):
@@ -149,20 +285,18 @@ def _trail(c, p):
     ghosts = []
     for j in range(5):
         pj = p - 0.06 * j
-        if pj < 0.25:
+        if pj < 0.20:
             break
-        left, right = _hands(c, pj)
+        left, right = attack_arms(c, pj)
         h = (right[0], right[1], right[2] - 0.065)
         d = mk.norm((c.fx * 0.95, c.fy * 0.95, 0.0))
-        h2 = (left[0], left[1], left[2] - 0.065)
-        d2 = mk.norm((c.fx * 0.4 - c.px * 0.55, c.fy * 0.4 - c.py * 0.55, -0.05))
-        ghosts.append((mk.add(h, d, 0.12), mk.add(h, d, 0.24), mk.add(h2, d2, 0.12), mk.add(h2, d2, 0.24)))
+        ghosts.append((mk.add(h, d, 0.12), mk.add(h, d, 0.42)))
     for j in range(len(ghosts) - 1):
         fade = 1.0 - j / 5.0
-        for a0, a1, b0, b1 in ((ghosts[j][0], ghosts[j][1], ghosts[j + 1][0], ghosts[j + 1][1]),
-                               (ghosts[j][2], ghosts[j][3], ghosts[j + 1][2], ghosts[j + 1][3])):
-            mk.band(c, (a0, a1, b1, b0), P["aura"] + (int(215 * fade),))
-            mk.band(c, (mk.lerp(a0, a1, 0.5), a1, b1, mk.lerp(b0, b1, 0.5)), P["aura_core"] + (int(245 * fade),))
+        a0, a1 = ghosts[j]
+        b0, b1 = ghosts[j + 1]
+        mk.band(c, (a0, a1, b1, b0), P["aura"] + (int(215 * fade),))
+        mk.band(c, (mk.lerp(a0, a1, 0.5), a1, b1, mk.lerp(b0, b1, 0.5)), P["aura_core"] + (int(245 * fade),))
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -184,10 +318,11 @@ def _draw_back_sword(c):
     # Colarinho koiguchi dourado
     mk.obox(c, origin, d, 0.025, 0.048, 0.048, P["gold"], outline=False)
 
-    # Empunhadura com ito preto e tsuba quadrada shinobi
-    top = mk.add(origin, d, 0.46)
-    mk.obox(c, top, d, 0.13, 0.036, 0.036, P["ito"])
-    mk.obox(c, mk.add(top, d, -0.005), d, 0.012, 0.072, 0.072, P["gold"], outline=True)
+    # Empunhadura e tsuba SÓ são desenhadas se a lâmina NÃO estiver sacada na mão!
+    if not is_sword_drawn(c):
+        top = mk.add(origin, d, 0.46)
+        mk.obox(c, top, d, 0.13, 0.036, 0.036, P["ito"])
+        mk.obox(c, mk.add(top, d, -0.005), d, 0.012, 0.072, 0.072, P["gold"], outline=True)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -199,7 +334,7 @@ def draw_behind(c):
     Camada traseira (Painter's Algorithm):
     - Katana dorsal (se estiver do lado oposto à câmera).
     - Cauda esvoaçante do capuz shinobi (se estiver atrás da cabeça).
-    - Braços e kunais (se as mãos estiverem atrás do tronco ao encarar de costas).
+    - Braços, ninjato e kunais (se as mãos estiverem atrás do tronco ao encarar de costas).
     """
     d_torso = mk.depth(c, c.base_x, c.base_y)
 
@@ -213,11 +348,11 @@ def draw_behind(c):
     if d_cowl < d_torso:
         _draw_hood_tail(c)
 
-    # Mãos e kunais
+    # Mãos, ninjato e kunais
     hand_l, hand_r = _current_hands(c)
     w_mid = ((hand_l[0] + hand_r[0]) * 0.5, (hand_l[1] + hand_r[1]) * 0.5)
     if mk.depth(c, w_mid[0], w_mid[1]) < d_torso:
-        _render_kunais_and_hands(c, hand_l, hand_r)
+        _render_weapons_and_hands(c, hand_l, hand_r)
 
 
 def draw_legs(c):
@@ -432,7 +567,7 @@ def draw_front(c, arm_l, arm_r):
     """
     Camada frontal (Painter's Algorithm):
     - Katana dorsal (se estiver do lado voltado para a câmera).
-    - Kunais e manoplas são renderizadas aqui APENAS se as mãos estiverem à frente do tronco.
+    - Armas e manoplas são renderizadas aqui APENAS se as mãos estiverem à frente do tronco.
     """
     d_torso = mk.depth(c, c.base_x, c.base_y)
 
@@ -445,4 +580,4 @@ def draw_front(c, arm_l, arm_r):
     w_mid = ((hand_l[0] + hand_r[0]) * 0.5, (hand_l[1] + hand_r[1]) * 0.5)
 
     if mk.depth(c, w_mid[0], w_mid[1]) >= d_torso:
-        _render_kunais_and_hands(c, hand_l, hand_r)
+        _render_weapons_and_hands(c, hand_l, hand_r)

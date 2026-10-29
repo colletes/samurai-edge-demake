@@ -137,11 +137,13 @@ class AoiHuntress(Samurai):
 
         return True
 
-    def trigger_snow_slide(self, dwx: float, dwy: float, particles: list = None):
+    def trigger_snow_slide(self, dwx: float, dwy: float, particles: list = None) -> bool:
         """Esquiva especial: Deslize rasteiro na neve com partículas boreais e i-frames."""
         if not self.can_act() or self.roll_cooldown_timer > 0:
-            return
-        super().trigger_roll(dwx, dwy, particles)
+            return False
+        res = super().trigger_roll(dwx, dwy, particles)
+        if not res:
+            return False
         if particles is not None:
             for _ in range(8):
                 particles.append(SparkParticle(
@@ -150,6 +152,7 @@ class AoiHuntress(Samurai):
                     random.uniform(0.05, 0.30),
                     color=random.choice([(230, 242, 255), (150, 210, 245)])
                 ))
+        return True
 
     def update(self, dt: float, game_map=None, particles: list = None, opponent=None, projectiles: list = None, banners: list = None, **kwargs):
         self.update_dodge_timers(dt)

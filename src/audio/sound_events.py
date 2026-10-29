@@ -167,4 +167,6 @@ class MusicTrack(str, Enum):
     HEIAN_TEMPLE_THEME = "bgm_heian_temple" # Tema do Pavilhão Astral Heian (Seimei)
     SACRED_PINES_THEME = "bgm_sacred_pines" # Tema da Floresta dos Pinheiros (Daiki)
     EZO_TUNDRA_THEME = "bgm_ezo_tundra"     # Tema da Taiga Gelada de Ezo (Aoi)
+    OPENING_THEME = "Samurai Edge- Opening Theme"   # Tema vocal de abertura (Suno)
+    CLOSING_THEME = "Samurai Edge - Closing Theme"  # Tema vocal de encerramento: toca nos créditos (291 s)
 

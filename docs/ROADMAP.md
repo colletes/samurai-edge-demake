@@ -31,9 +31,9 @@ Consulte o documento mestre [`docs/EXPANSION_ROADMAP_AND_DESIGN.md`](EXPANSION_R
 2. **Fase 2: A Grande Reformulação dos 24 Guerreiros (Movesets, Atributos, Finishers Duplos, Fidelidade HD & Transições)**
    *Cada combatente possui 11 entregáveis atômicos: .1 Primário | .2 Secundário | .3 Esquiva/Defesa | .4a Finisher Primário | .4b Finisher Secundário | .5 Intro | .6 Vitória | .7 SSAA 2x/Anti-Tearing | .8 Olhos/Face HD | .9 LERP Blend | .10 Materiais CC0*
    - 🥋 `2.1`: Kenshi (Hiten Mitsurugi-ryu — Shukuchi Battoujutsu & Ryuu Tsui Sen) **[CONCLUÍDO ✅]**
-   - ⚔️ `2.2`: Musashi (Hyoho Niten Ichi-ryu — Dual Cleave & Cross Shockwave) **[PRÓXIMO NA FILA 🎯]**
-   - 🥷 `2.3`: Hanzo (Iga Ninjutsu — Reverse Slash & Kunai Snipe)
-   - 🐕 `2.4`: Joe & Yamato (Tactical Tanto & Pounce do Doberman)
+   - ⚔️ `2.2`: Musashi (Hyoho Niten Ichi-ryu — Dual Cleave & Cross Shockwave) **[CONCLUÍDO ✅]**
+   - 🥷 `2.3`: Hanzo (Iga Ninjutsu — Reverse Slash & Kunai Snipe) **[CONCLUÍDO ✅]**
+   - 🐕 `2.4`: Joe & Yamato (Tactical Tanto & Pounce do Doberman) **[PRÓXIMO NA FILA 🎯]**
    - 🐺 `2.5`: Saitou (Lobos de Mibu — Shinsengumi Slash & Gatotsu Zero-Shiki)
    - 💥 `2.6`: Teppo (Ashigaru — Tiro de Arcabuz Tanegashima & Coronhada)
    - ⛓️ `2.7`: Murasaki (Kusarigama — Foice Curta & Arremesso do Peso de Ferro)

@@ -65,11 +65,11 @@ class GrayNinja(Samurai):
     def trigger_throw_bomb(self, target_wx: float, target_wy: float, projectiles: list):
         """Ataque Primário: Arremessa bomba em arco 3D (até 2 ativas). Detona por contato ou tempo."""
         if not self.can_act() or self.bomb_timer > 0:
-            return
+            return False
 
         active_bombs = sum(1 for p in projectiles if isinstance(p, TimedBombEntity) and p.owner == self and p.is_active)
         if active_bombs >= 2:
-            return
+            return False
 
         self.stealth_timer = 0.0
         self.alpha = 255
@@ -86,6 +86,7 @@ class GrayNinja(Samurai):
 
         bomb = TimedBombEntity(wx=self.wx + dir_x * 0.40, wy=self.wy + dir_y * 0.40, wz=0.75, dir_x=dir_x, dir_y=dir_y, owner=self)
         projectiles.append(bomb)
+        return True
 
     def trigger_remote_mine(self, target_wx: float = 0.0, target_wy: float = 0.0, projectiles: list = None, fighters: list = None, particles: list = None, banners: list = None, cinematic_director = None):
         """
@@ -102,11 +103,12 @@ class GrayNinja(Samurai):
                 self.mine_timer = self.mine_cooldown
                 self.stealth_timer = 0.0
                 self.alpha = 255
-            return
+                return True
+            return False
 
         # Senão, planta a mina no solo!
         if not self.can_act() or self.mine_timer > 0:
-            return
+            return False
 
         self.stealth_timer = 0.0
         self.alpha = 255
@@ -122,6 +124,7 @@ class GrayNinja(Samurai):
         if particles is not None:
             for _ in range(6):
                 particles.append(SparkParticle(self.wx, self.wy, 0.25))
+        return True
 
     def trigger_smoke_bomb(self, target_wx: float, target_wy: float, projectiles: list, fighters: list = None, particles: list = None, banners: list = None, cinematic_director = None):
         """Compatibilidade: redireciona para a Mina Remota."""
@@ -130,9 +133,11 @@ class GrayNinja(Samurai):
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
         """Bomba de Fumaça / Esquiva Furtiva: Nuvem densa e maciça de fumaça, alta transparência (alpha=15) e camuflagem."""
         if not self.is_alive or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK) or self.dash_recovery_timer > 0:
-            return
+            return False
 
-        super().trigger_roll(dir_x, dir_y, particles=None)  # Sem faíscas do super
+        res = super().trigger_roll(dir_x, dir_y, particles=None)  # Sem faíscas do super
+        if not res:
+            return False
         self.alpha = 15  # Bem mais transparente (~6% de opacidade)
         self.stealth_timer = 1.0  # o resto da camuflagem vem de ficar dentro do rastro de névoa
         self.fog_nodes.append((self.wx, self.wy, 1.5))
@@ -154,6 +159,7 @@ class GrayNinja(Samurai):
                 color = random.choice([(150, 155, 165), (130, 135, 145), (180, 185, 195)])
                 lifetime = random.uniform(0.8, 1.5)
                 particles.append(SmokeParticle(self.wx, self.wy, wz, color=color, size=size, lifetime=lifetime))
+        return True
 
     def update(self, dt: float, game_map, particles: list = None):
         if not self.is_alive:

@@ -305,13 +305,16 @@ class ValeriusNecromancer(Samurai):
                 ))
         return True
 
-    def trigger_mist_dash(self, dwx: float, dwy: float, particles: list = None):
+    def trigger_mist_dash(self, dwx: float, dwy: float, particles: list = None) -> bool:
         """Esquiva especial: Deslizamento etéreo de névoa espectral com i-frames."""
         if not self.can_act() or self.roll_cooldown_timer > 0:
-            return
+            return False
 
-        super().trigger_roll(dwx, dwy, particles)
+        res = super().trigger_roll(dwx, dwy, particles)
+        if not res:
+            return False
         if particles is not None:
+            from src.effects.particles import SmokeParticle
             for _ in range(12):
                 particles.append(SmokeParticle(
                     self.wx + random.uniform(-0.2, 0.2),
@@ -321,8 +324,9 @@ class ValeriusNecromancer(Samurai):
                     radius=0.20,
                     lifetime=0.45
                 ))
+        return True
 
-    def update(self, dt: float, game_map=None, particles: list = None, opponent=None, projectiles: list = None, banners: list = None):
+    def update(self, dt: float, game_map=None, particles: list = None, opponent=None, projectiles: list = None, banners: list = None, cinematic_director=None, **kwargs):
         """Atualiza a máquina de estados, timers de recarga e o lacaio esquelético."""
         self.update_dodge_timers(dt)
 

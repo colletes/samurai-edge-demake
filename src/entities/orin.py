@@ -62,7 +62,7 @@ class OrinMinstrel(Samurai):
     def trigger_kamaitachi_pluck(self, aim_x: float, aim_y: float, projectiles: list, particles: list = None):
         """Ataque Primário: Disparo de lâmina acústica de vácuo Kamaitachi com cooldown."""
         if not self.can_act() or self.kamaitachi_timer > 0:
-            return
+            return False
 
         self.set_facing(aim_x, aim_y)
         self.state = STATE_ATTACK
@@ -85,12 +85,13 @@ class OrinMinstrel(Samurai):
         if particles is not None:
             for _ in range(6):
                 particles.append(SparkParticle(self.wx + self.facing_x * 0.3, self.wy + self.facing_y * 0.3, 0.2))
+        return True
 
     def trigger_deadly_resonance_chord(self, aim_x: float, aim_y: float, projectiles: list, particles: list = None, banners: list = None):
         """Ação Secundária: Acorde de Ressonância Mortal.
         Dispara 3 ondas sônicas curvas separadas por 120° em espiral expansiva. Cooldown 5.0s."""
         if not self.can_act() or self.resonance_timer > 0:
-            return
+            return False
 
         self.set_facing(aim_x, aim_y)
         self.state = STATE_RESONANCE
@@ -123,10 +124,11 @@ class OrinMinstrel(Samurai):
         if particles is not None:
             for _ in range(14):
                 particles.append(SparkParticle(self.wx, self.wy, 0.4, color=(255, 120, 180)))
+        return True
 
     def trigger_resonance_shockwave(self, aim_x: float, aim_y: float, projectiles: list, particles: list = None, banners: list = None):
         """Alias retrocompatível para Acorde de Ressonância Mortal."""
-        self.trigger_deadly_resonance_chord(aim_x, aim_y, projectiles, particles=particles, banners=banners)
+        return self.trigger_deadly_resonance_chord(aim_x, aim_y, projectiles, particles=particles, banners=banners)
 
     def set_facing(self, target_wx: float, target_wy: float):
         """Define a direção que está olhando."""

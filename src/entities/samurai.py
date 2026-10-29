@@ -240,7 +240,7 @@ class Samurai:
             or self.roll_cooldown_timer > 0
             or self.dash_recovery_timer > 0
         ):
-            return
+            return False
 
         self.wz = 0.0
 
@@ -263,6 +263,7 @@ class Samurai:
             from src.effects.particles import SparkParticle
             for _ in range(8):
                 particles.append(SparkParticle(self.wx, self.wy, 0.35))
+        return True
 
     def update_roll(self, dt: float, game_map, particles: list = None):
         """Atualiza a translação física e cronômetro do rolamento/esquiva."""
@@ -434,7 +435,7 @@ class Samurai:
         speed_mult_at = getattr(game_map, "speed_mult_at", None)
         if speed_mult_at is not None:
             current_speed *= speed_mult_at(self.wx, self.wy)
-        elif game_map.is_water(self.wx, self.wy):
+        elif game_map is not None and hasattr(game_map, "is_water") and game_map.is_water(self.wx, self.wy):
             current_speed *= 0.55
 
         # Avanço do ciclo de caminhada: taxa de 2.6 rad/s na velocidade base gera a passada visual

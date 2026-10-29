@@ -59,7 +59,7 @@ class Musketeer(Samurai):
         Estocada de florete linear com +25% de alcance e hitbox refinada (0.70m).
         """
         if not self.can_act() or self.thrust_timer > 0:
-            return
+            return False
 
         self.set_facing(target_wx, target_wy)
         self.state = STATE_ATTACK
@@ -70,6 +70,7 @@ class Musketeer(Samurai):
         # Alcance estendido à frente
         self.hitbox_center = (self.wx + self.facing_x * 1.30, self.wy + self.facing_y * 1.30)
         self.thrust_timer = self.thrust_cooldown
+        return True
 
     def trigger_flintlock_shot(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None):
         """
@@ -105,8 +106,8 @@ class Musketeer(Samurai):
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
         """Terceira Ação: rolamento grande com i-frames; a capa desvia projéteis durante o giro (ver CombatSystem)."""
         if self.state == "CAPE_FLOURISH":
-            return
-        super().trigger_roll(dir_x, dir_y, particles)
+            return False
+        return super().trigger_roll(dir_x, dir_y, particles)
 
     def trigger_cape_flip(self, dir_x: float, dir_y: float, particles: list = None, opponent=None, banners: list = None):
         """

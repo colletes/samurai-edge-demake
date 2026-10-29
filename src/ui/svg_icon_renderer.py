@@ -224,26 +224,23 @@ def resolve_icon_name(token: str) -> str:
 import re
 _ICON_TAG_RE = re.compile(r'\{icon:([^}]+)\}')
 
-def render_text_with_icons(
-    surface: pygame.Surface,
+def create_text_with_icons_surface(
     font: pygame.font.Font,
     text: str,
-    center_x: int,
-    center_y: int,
     text_color: tuple[int, int, int] = (255, 255, 255),
     icon_size: int = 20,
-    alpha: int = 255,
-    shadow: bool = True,
+    shadow: bool = False,
     shadow_color: tuple[int, int, int] = (10, 10, 10),
     shadow_offset: tuple[int, int] = (1, 1),
-) -> pygame.Rect:
+) -> pygame.Surface:
     """
-    Renderiza um texto contendo tokens como '{icon:attack}', '{icon:square}', '{icon:cross}',
-    substituindo-os perfeitamente por ícones vetoriais com alinhamento visual, suporte a
-    sombra e transparência alpha. Centralizado em (center_x, center_y).
+    Cria e retorna uma Surface pygame.SRCALPHA contendo o texto e os ícones vetoriais
+    substituídos a partir de tokens como '{icon:attack}', '{icon:cancel}', etc.
     """
     if not text:
-        return pygame.Rect(center_x, center_y, 0, 0)
+        empty = pygame.Surface((1, max(font.get_height(), icon_size)), pygame.SRCALPHA)
+        empty.fill((0, 0, 0, 0))
+        return empty
 
     parts = _ICON_TAG_RE.split(text)
     font_h = font.get_height()
@@ -267,9 +264,11 @@ def render_text_with_icons(
             total_w += t_w
 
     if total_w == 0:
-        return pygame.Rect(center_x, center_y, 0, 0)
+        empty = pygame.Surface((1, line_h), pygame.SRCALPHA)
+        empty.fill((0, 0, 0, 0))
+        return empty
 
-    pad = 4
+    pad = 2
     comp_surf = pygame.Surface((total_w + pad * 2, line_h + pad * 2), pygame.SRCALPHA)
     comp_surf.fill((0, 0, 0, 0))
 
@@ -297,6 +296,39 @@ def render_text_with_icons(
             iy = cur_y_base + (line_h - icon_size) // 2
             comp_surf.blit(obj, (cur_x + 2, iy))
         cur_x += iw
+
+    return comp_surf
+
+def render_text_with_icons(
+    surface: pygame.Surface,
+    font: pygame.font.Font,
+    text: str,
+    center_x: int,
+    center_y: int,
+    text_color: tuple[int, int, int] = (255, 255, 255),
+    icon_size: int = 20,
+    alpha: int = 255,
+    shadow: bool = True,
+    shadow_color: tuple[int, int, int] = (10, 10, 10),
+    shadow_offset: tuple[int, int] = (1, 1),
+) -> pygame.Rect:
+    """
+    Renderiza um texto contendo tokens como '{icon:attack}', '{icon:square}', '{icon:cross}',
+    substituindo-os perfeitamente por ícones vetoriais com alinhamento visual, suporte a
+    sombra e transparência alpha. Centralizado em (center_x, center_y).
+    """
+    if not text:
+        return pygame.Rect(center_x, center_y, 0, 0)
+
+    comp_surf = create_text_with_icons_surface(
+        font=font,
+        text=text,
+        text_color=text_color,
+        icon_size=icon_size,
+        shadow=shadow,
+        shadow_color=shadow_color,
+        shadow_offset=shadow_offset,
+    )
 
     if alpha < 255:
         fade_mask = pygame.Surface(comp_surf.get_size(), pygame.SRCALPHA)

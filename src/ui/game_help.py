@@ -105,55 +105,61 @@ FIGHTERS_GUIDE_DATA = [
         "pt": {
             "name": "MUSASHI",
             "title": "O Santo da Espada",
-            "style": "Niten Ichi-ryū (Duas Lâminas)",
+            "style": "Hyoho Niten Ichi-ryū (Duas Lâminas)",
             "vel": "[2/5] Firme e Pesado",
-            "dano": "Combo 3-Cortes (Resiliente)",
-            "especial": "Parry / Guarda Perfeita Defensiva",
+            "dano": "Combo Niten 3 Cortes (3 HP Resiliente)",
+            "especial": "Cross Guard Parry & Cross Shockwave",
             "keys_p1": "[E] Combo de Lâminas (Ataque)",
-            "keys_p2": "[R] Parry (Defesa)",
+            "keys_p2": "[R] Cross Guard / Shockwave",
             "conceito": (
                 "O maior duelista da história do Japão, empunhando a Katana longa e a Wakizashi curta ao mesmo "
-                "tempo. Musashi personifica a serenidade tática, a resistência física e o contra-ataque esmagador."
+                "tempo sem nunca embainhar durante o combate. Musashi personifica a serenidade tática, a resistência física "
+                "e o contra-ataque devastador."
             ),
             "habilidades": (
-                "• Combo 3-Cortes [E]: Sequência encadeada de golpes pesados com as duas espadas.\n"
-                "• Parry [R]: Ergue as espadas em cruz frontal. Anula qualquer ataque frontal com faíscas."
+                "• Combo 3-Cortes [E]: Sequência ritmada de Katana descendente, Wakizashi ascendente e clivagem dupla em X com avanço e onda cortante.\n"
+                "• Cross Guard Parry [R]: Ergue ambas as lâminas cruzadas em X (0.28s de reflexão frontal). Se defletir um golpe, libera o punitivo Cross Shockwave.\n"
+                "• Rolamento Tático [Espaço]: Esquiva fluida de ombro no solo sem zanzou, cancelável aos 40% finais em lunge de ataque instantâneo.\n"
+                "• Finalizações: Niten Ichi-ryu (Empalamento sequencial e rasgo em 3 partes) e Cross Vacuum Slicer (Corte em X em 4 partes)."
             ),
             "estrategia_ofensiva": (
-                "• Jogue na defensiva paciente. Aguarde o oponente tomar a iniciativa e aperte [R] para o Parry.\n"
-                "• Ao aparar com sucesso, o oponente entra em hitstop e recuo; avance desferindo o combo completo.\n"
-                "• Use o peso e tamanho das suas lâminas para controlar o centro do mapa e a ponte estreita."
+                "• Encadeie os golpes no ritmo exato para manter a pressão; o terceiro golpe projeta um lunge vigoroso acompanhado de onda de vácuo.\n"
+                "• Use o Rolamento Tático para fechar distância e aperte Ataque nos últimos 40% da esquiva para cancelar imediatamente no golpe corrido.\n"
+                "• Defletir com o Cross Guard permite contra-atacar imediatamente com o devastador Cross Shockwave à queima-roupa."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Musashi: O Parry só bloqueia ataques pela frente! Flanqueie-o pelas diagonais "
-                "ou ataque-o pelas costas. Arqueiros, bombas e projéteis à distância ignoram o Parry tradicional."
+                "• Como vencer Musashi: O Cross Guard só deflete ataques frontais! Flanqueie-o pelas diagonais "
+                "ou ataque-o pelas costas enquanto ele se recupera. Bombas e armadilhas no solo ignoram o bloqueio."
             )
         },
         "en": {
             "name": "MUSASHI",
             "title": "The Sword Saint",
-            "style": "Niten Ichi-ryū (Two Swords)",
+            "style": "Hyoho Niten Ichi-ryū (Two Swords)",
             "vel": "[2/5] Resilient & Heavy",
-            "dano": "3-Slash Combo (Tough)",
-            "especial": "Parry / Perfect Defense",
+            "dano": "3-Slash Niten Combo (3 HP Tough)",
+            "especial": "Cross Guard Parry & Cross Shockwave",
             "keys_p1": "[E] Blade Combo (Attack)",
-            "keys_p2": "[R] Parry (Deflect)",
+            "keys_p2": "[R] Cross Guard / Shockwave",
             "conceito": (
-                "Japan's most famed swordsman, wielding both Katana and Wakizashi simultaneously. "
-                "Musashi embodies disciplined patience, rugged physical resilience, and crushing counter-attacks."
+                "Japan's legendary duel master, wielding both Katana and Wakizashi simultaneously without "
+                "ever re-sheathing during combat. Musashi embodies disciplined patience, rugged physical resilience, "
+                "and crushing counter-attacks."
             ),
             "habilidades": (
-                "• 3-Slash Combo [E]: Heavy chained combo strikes with both blades.\n"
-                "• Parry [R]: Crosses dual blades frontally, deflecting any forward strike with bright sparks."
+                "• 3-Slash Combo [E]: Rhythmic descending Katana, rising Wakizashi, and double X-cleave with forward lunge and vacuum wave.\n"
+                "• Cross Guard Parry [R]: Crosses dual blades frontally (0.28s reflection window). Deflecting an attack arms the punishing Cross Shockwave.\n"
+                "• Tactical Roll [Space]: Ground shoulder roll without zanzou, cancellable in the last 40% into an instant running strike.\n"
+                "• Finishers: Niten Ichi-ryu (Sequential dual impale tearing torso into 3) and Cross Vacuum Slicer (X-wave dividing into 4 quadrants)."
             ),
             "estrategia_ofensiva": (
-                "• Play patiently on defense. Wait for your foe to commit forward, then press [R] to Parry.\n"
-                "• A successful parry inflicts hitstop and heavy pushback on your foe; counter with your combo.\n"
-                "• Dominate the central bridge with your wide dual blades."
+                "• Time your combo strikes rhythmically to sustain offensive pressure; the 3rd slash unleashes a forward lunge and cutting wave.\n"
+                "• Use the Tactical Roll to close distance, cancelling with Attack during the final 40% for an instant surprise lunging cut.\n"
+                "• Deflecting with Cross Guard allows an immediate lethal Cross Shockwave counter at point-blank range."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Musashi: The Parry only deflects frontal attacks! Flank him diagonally or "
-                "strike his back. Ranged projectiles, bombs, and arrows bypass the parry."
+                "• How to defeat Musashi: The Cross Guard only deflects frontal attacks! Flank him diagonally or "
+                "strike his back while he recovers. Ground bombs and traps bypass his guard."
             )
         }
     },
@@ -166,55 +172,57 @@ FIGHTERS_GUIDE_DATA = [
             "title": "Ninja Mestre de Iga",
             "style": "Iga Ninjutsu & Kunai",
             "vel": "[5/5] Extrema Agilidade",
-            "dano": "Estocada Tanto (Desarmado) / Kunai Aérea",
-            "especial": "Salto Parabólico Evasivo (Arremesso Aéreo)",
-            "keys_p1": "[E] Tanto (Sem Kunai) / Salto Kunai",
-            "keys_p2": "[R] Salto Parabólico Evasivo",
+            "dano": "Ninjato Invertida (2 Tempos) / Kunai Snipe",
+            "especial": "Salto Ninja Parabólico (Landing Cancel)",
+            "keys_p1": "[E] Ninjato Combo | [R] Kunai Snipe",
+            "keys_p2": "[Space/Roll] Salto Acrobático",
             "conceito": (
-                "Shinobi lendário das sombras feudais. Especializado em acrobacias aéreas, esquiva "
-                "por salto parabólico sobre golpes rasteiros e arremesso aéreo de Kunai. "
-                "Seu ataque corpo a corpo com a Tanto fica disponível apenas quando estiver desarmado (sem kunai)."
+                "Shinobi lendário das sombras feudais de Iga. Mestre em combate letal de curta distância "
+                "com Ninjato empunhada de modo invertido (Reverse Grip) e arremessos precisos de Kunai. "
+                "Possui salto acrobático parabólico que passa por cima de golpes baixos e permite cancelamento "
+                "ofensivo veloz na aterrissagem (Landing Strike Lunge)."
             ),
             "habilidades": (
-                "• Salto Parabólico [R]: Salto alto evasivo que passa por cima de cortes baixos. Permite arremessar a Kunai no ar.\n"
-                "• Estocada Tanto [E]: Golpe corpo a corpo rápido com a Tanto (disponível apenas quando a Kunai foi lançada)."
+                "• Ninjato 2-Golpes [E]: Combo de 2 tempos com corte reverso horizontal e estocada penetrante no plexo solar com avanço.\n"
+                "• Kunai Snipe [R]: Disparo de kunai a 24 m/s em trajetória horizontal no solo ou mergulho descendente íngreme no ar.\n"
+                "• Salto Ninja [Space/Roll]: Salto parabólico evasivo (wz até 1.35m) sem zanzou. Nos 40% finais da aterrissagem, pressionar ataque cancela o lag em estocada imediata!"
             ),
             "estrategia_ofensiva": (
-                "• Use o Salto Parabólico para saltar sobre estocadas e disparar a Kunai do ar com ângulo superior.\n"
-                "• Se errar ou a Kunai for bloqueada, aproxime-se para lutar com a adaga Tanto ou recupere a Kunai do solo.\n"
-                "• Sua mobilidade aérea desorienta adversários de golpes lineares como Kenshi e Saitou."
+                "• Salte sobre ataques terrestres previsíveis e dispare a Kunai do ar para punir o oponente em ângulo descendente.\n"
+                "• Use o Landing Cancel para surpreender o rival imediatamente ao tocar o chão com uma estocada profunda de 2 de dano.\n"
+                "• O golpe Melee de Ninjato sempre está pronto e possui recuo rápido, permitindo encadear combos com alta pressão."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Hanzo: Acompanhe o arco de queda do Salto Parabólico. No momento em que Hanzo aterrissa, "
-                "há uma fração de segundo de vulnerabilidade antes de poder se mover ou saltar novamente."
+                "• Como vencer Hanzo: Se Hanzo atacar durante o salto aéreo, execute um Parry certeiro — Hanzo cairá imediatamente no solo atordoado, anulando qualquer flutuação aérea."
             )
         },
         "en": {
             "name": "HANZO",
             "title": "Iga Master Shinobi",
-            "style": "Iga Ninjutsu & Kunai",
+            "style": "Iga Ninjutsu & Reverse Ninjato",
             "vel": "[5/5] Extreme Agility",
-            "dano": "Tanto Thrust (Unarmed) / Midair Kunai",
-            "especial": "Parabolic Evasive Jump (Air Throw)",
-            "keys_p1": "[E] Tanto (No Kunai) / Jump Throw",
-            "keys_p2": "[R] Parabolic Evasive Jump",
+            "dano": "Reverse Ninjato (2-Step) / Kunai Snipe",
+            "especial": "Acrobatic Shinobi Jump (Landing Cancel)",
+            "keys_p1": "[E] Ninjato Combo | [R] Kunai Snipe",
+            "keys_p2": "[Space/Roll] Shinobi Jump",
             "conceito": (
-                "Legendary shinobi of feudal shadows. Master of acrobatic leaps, parabolic jumps "
-                "vaulting over ground slashes, and deadly mid-air Kunai throws. "
-                "His close-quarters Tanto dagger thrust is only active when unarmed (after throwing the kunai)."
+                "Legendary shinobi of the Iga clan. Master of close-quarters assassination with "
+                "a reverse-grip Ninjato short sword and high-velocity Kunai snipes. "
+                "Features parabolic acrobatic evasion vaulting over ground slashes with instant "
+                "offensive cancel upon landing (Landing Strike Lunge)."
             ),
             "habilidades": (
-                "• Parabolic Jump [R]: High evasive jump leaping over low strikes. Allows mid-air Kunai throw.\n"
-                "• Tanto Thrust [E]: Swift close-range dagger thrust (only available while kunai is deployed)."
+                "• Ninjato 2-Step [E]: Agile 2-hit combo: horizontal reverse slash followed by a deep solar plexus thrust.\n"
+                "• Kunai Snipe [R]: High-speed 24 m/s throw traveling horizontally on ground or diving steeply downward from mid-air.\n"
+                "• Shinobi Jump [Space/Roll]: High evasive vault (wz up to 1.35m). During the final 40% of landing, pressing attack cancels recovery into an immediate forward strike!"
             ),
             "estrategia_ofensiva": (
-                "• Use Parabolic Jump to clear incoming slashes and fling your Kunai downwards from above.\n"
-                "• Once unarmed, engage directly with rapid Tanto strikes or retrieve your Kunai from the terrain.\n"
-                "• Your superior vertical evasion counters linear dash attackers like Kenshi and Saitou."
+                "• Vault over low horizontal slashes and snipe downward from above with steep Kunai trajectory.\n"
+                "• Use Landing Cancel to close distance instantly as your boots touch down, dealing 2 fatal damage.\n"
+                "• Your reverse-grip Ninjato is always drawn for melee without needing to retrieve or discard weapons."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Hanzo: Anticipate the landing arc of his parabolic jump. As he lands on the ground, "
-                "there is a brief window of recovery before he can leap again."
+                "• How to defeat Hanzo: If Hanzo strikes while airborne, time your Parry cleanly — he will immediately plummet to the earth stunned, completely canceling any mid-air floating."
             )
         }
     },

@@ -204,7 +204,9 @@ class CinematicDirector:
             "MAI_X_CLEAVE": ("紅舞必殺", "BENIMAI HISSATSU — DANÇA DA MORTE"),
             "KENSHIN_SPLIT": ("一刀両断", "ITTOU RYOUDAN — UM CORTE, DUAS PARTES"),
             "VERTICAL_BISECTION": ("龍槌閃", "RYUU TSUI SEN — DIVISÃO CELESTIAL DE BAMBU"),
-            "DUAL_IMPALE_X_SPREAD": ("二天一流", "NITEN ICHI-RYUU — DUAS LÂMINAS"),
+            "DUAL_IMPALE_X_SPREAD": ("二天一流", "NITEN ICHI-RYUU — EMPALAMENTO DUPLO EM LEQUE"),
+            "CROSS_VACUUM_SLICER": ("十字真空波", "JUUJI SHINKUU-HA — ONDA DE VÁCUO EM X"),
+            "REFLECTED_TORSO_CLEAVE": ("十字真空波", "JUUJI SHINKUU-HA — ONDA DE VÁCUO EM X"),
             "ARMORED_HEART_IMPALE": ("金剛貫通", "KONGOU KANTSUU — EMPALAMENTO DE FERRO"),
             "NAGINATA_HOIST_SLAM": ("金剛叩落", "KONGOU TATAKI-OTOSHI — ESMAGAMENTO ADAMANTINO"),
             "SKEWERED_LANCE_FLAG": ("薙刀槍旗", "NAGINATA SOUKI — ESTANDARTE DE GUERRA"),
@@ -468,7 +470,7 @@ class CinematicDirector:
                 attacker.state = "ATTACK"
                 attacker.state_timer = 0.85
 
-        elif death_style in ("DUAL_IMPALE_X_SPREAD", "REFLECTED_TORSO_CLEAVE"):
+        elif death_style in ("DUAL_IMPALE_X_SPREAD", "CROSS_VACUUM_SLICER", "REFLECTED_TORSO_CLEAVE"):
             # Musashi: Niten Ichi-ryuu - Duas espadas cruzadas rasgam o torso em 'X' com corte duplo simultâneo
             self.freeze_timer = 1.10
             self.bw_flash_duration = 1.50
@@ -1421,7 +1423,7 @@ class CinematicDirector:
                 # O suspense acabou: O corpo se parte e o geiser explode!
                 self.shuriken_active = False
                 ds = getattr(self.pending_corpse, "death_style", "")
-                if ds in ("WINDMILL_SHURIKEN_DECAP", "DUAL_IMPALE_X_SPREAD", "KUWA_SKULL_CLEAVE", "EARTH_STOMP_CRUSH", "BLIND_CAROTID_SLICE", "BLIND_SPINE_PIERCE", "KENSHIN_SPLIT", "VERTICAL_BISECTION", "SOUL_REAP", "DRAGGED_TO_GRAVE", "SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR", "SEIMEI_FATAL_FIRE", "SEIMEI_FATAL_WATER", "SEIMEI_FATAL_WOOD", "SEIMEI_FATAL_METAL", "SEIMEI_FATAL_EARTH", "SEIMEI_FATAL_YINYANG"):
+                if ds in ("WINDMILL_SHURIKEN_DECAP", "DUAL_IMPALE_X_SPREAD", "CROSS_VACUUM_SLICER", "REFLECTED_TORSO_CLEAVE", "KUWA_SKULL_CLEAVE", "EARTH_STOMP_CRUSH", "BLIND_CAROTID_SLICE", "BLIND_SPINE_PIERCE", "KENSHIN_SPLIT", "VERTICAL_BISECTION", "SOUL_REAP", "DRAGGED_TO_GRAVE", "SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR", "SEIMEI_FATAL_FIRE", "SEIMEI_FATAL_WATER", "SEIMEI_FATAL_WOOD", "SEIMEI_FATAL_METAL", "SEIMEI_FATAL_EARTH", "SEIMEI_FATAL_YINYANG"):
                     try:
                         from src.audio.sound_manager import get_sound_manager
                         from src.audio.sound_events import SoundEvent

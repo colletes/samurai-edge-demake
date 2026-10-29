@@ -222,12 +222,14 @@ class SeimeiOnmyoji(Samurai):
         self.advance_rondel()
         return True
 
-    def trigger_shikigami_glide(self, dwx: float, dwy: float, particles: list = None):
+    def trigger_shikigami_glide(self, dwx: float, dwy: float, particles: list = None) -> bool:
         """Esquiva especial: Deslize místico com asas de papel Shikigami e i-frames."""
         if not self.can_act() or self.roll_cooldown_timer > 0:
-            return
+            return False
 
-        super().trigger_roll(dwx, dwy, particles)
+        res = super().trigger_roll(dwx, dwy, particles)
+        if not res:
+            return False
         if particles is not None:
             for _ in range(10):
                 particles.append(SparkParticle(
@@ -236,6 +238,7 @@ class SeimeiOnmyoji(Samurai):
                     random.uniform(0.1, 0.5),
                     color=random.choice([(252, 250, 245), (140, 190, 255), (255, 240, 140)])
                 ))
+        return True
 
     def update(self, dt: float, game_map=None, particles: list = None, opponent=None, projectiles: list = None, banners: list = None, cinematic_director=None, **kwargs):
         """Atualiza a máquina de estados e tempos de recarga dos feitiços Onmyodo."""

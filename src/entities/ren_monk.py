@@ -92,10 +92,16 @@ class RenMonk(Samurai):
         self.slash_dir = (self.facing_x, self.facing_y)
         self.hitbox_center = (self.wx + self.facing_x * offset, self.wy + self.facing_y * offset)
 
+        try:
+            from src.audio import play_sfx, SoundEvent
+            play_sfx(SoundEvent.SWING_BLUNT, volume_scale=0.92)
+        except Exception:
+            pass
+
     def trigger_punch_combo(self, target_wx: float, target_wy: float):
         """Ataque Primário: Combo Shaolin ritmado de 3 acertos (Soco -> Palma -> Chute)."""
         if not self.is_alive or self.state in (STATE_STUNNED, STATE_DEAD, STATE_ROLL, "KIAI_SHOUT"):
-            return
+            return False
 
         # Se já está executando um golpe do combo, enfileira (buffer) o próximo sem cancelar o golpe atual!
         if self.state == STATE_ATTACK:
@@ -103,10 +109,10 @@ class RenMonk(Samurai):
                 self.combo_target_step += 1
                 self.combo_buffered = True
                 self.set_facing(target_wx, target_wy)
-            return
+            return False
 
         if not self.can_act():
-            return
+            return False
 
         self.set_facing(target_wx, target_wy)
 
@@ -119,6 +125,7 @@ class RenMonk(Samurai):
         self.combo_target_step = next_step
         self.combo_buffered = False
         self._start_combo_step(next_step)
+        return True
 
     def trigger_primary_attack(self, target_wx: float, target_wy: float):
         self.trigger_punch_combo(target_wx, target_wy)
@@ -129,7 +136,7 @@ class RenMonk(Samurai):
         Gera uma aura esférica de energia que repele projéteis e aplica alto knockback no oponente.
         """
         if not self.can_act() or self.kiai_timer > 0:
-            return
+            return False
 
         if target_wx is not None and target_wy is not None:
             self.set_facing(target_wx, target_wy)
@@ -188,6 +195,7 @@ class RenMonk(Samurai):
                 # Atordoamento leve (soft stun)
                 if hasattr(opponent, "stun"):
                     opponent.stun(0.40)
+        return True
 
     def trigger_secondary_action(self, target_wx: float, target_wy: float, opponent=None, projectiles: list = None, particles: list = None, banners: list = None):
         self.trigger_kiai_shout(target_wx, target_wy, opponent=opponent, projectiles=projectiles, particles=particles, banners=banners)

@@ -65,7 +65,7 @@ class ChiyoKunoichi(Samurai):
     def trigger_kodachi_strike(self, target_wx: float, target_wy: float):
         """Ataque Primário: Corte Cruzado com as 2 Kodachi (Lâminas Curtas Duplas)."""
         if not self.can_act() or self.scissor_timer > 0:
-            return
+            return False
 
         self.set_facing(target_wx, target_wy)
         self.combo_step = (getattr(self, "combo_step", 0) % 3) + 1
@@ -80,6 +80,7 @@ class ChiyoKunoichi(Samurai):
         self.wy += self.facing_y * 0.35
         self.hitbox_center = (self.wx + self.facing_x * 0.90, self.wy + self.facing_y * 0.90)
         self.scissor_timer = self.scissor_cooldown
+        return True
 
     def trigger_primary_attack(self, target_wx: float, target_wy: float):
         self.trigger_kodachi_strike(target_wx, target_wy)
@@ -96,7 +97,7 @@ class ChiyoKunoichi(Samurai):
           sem fôlego por 0.45s (exaustão vulnerável e lenta).
         """
         if not self.can_act() or self.mai_dance_timer > 0:
-            return
+            return False
 
         if target_wx is not None and target_wy is not None:
             self.set_facing(target_wx, target_wy)
@@ -147,6 +148,7 @@ class ChiyoKunoichi(Samurai):
                             proj.dir_y = -proj.dir_y
                         proj.owner = self
                         self.on_mai_parry_success()
+        return True
 
     def on_mai_parry_success(self, attacker=None, game_map=None):
         """Chamado quando a Dança Mai apara um ataque ou reflete um projétil com sucesso."""

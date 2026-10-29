@@ -266,6 +266,7 @@ class MatchIntro:
         fade = self._fade_from_black()
         if fade > 0.01:
             black = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+            black.fill((0, 0, 0))
             black.set_alpha(int(255 * fade))
             surface.blit(black, (0, 0))
 

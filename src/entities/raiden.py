@@ -72,7 +72,20 @@ class RaidenSumo(Samurai):
         self.roll_duration = 0.20
         self.roll_recovery_duration = 0.16
         self.roll_cooldown_duration = 0.38
-        self.recovery_duration = self.tsuppari_recovery
+        self.recovery_duration = 0.38
+        self.noto_walk_speed_mult = 0.50
+
+        # Qualidade Visual & Fluidez Cinemática (Padrão Kenshi / Sub-fase 2.23)
+        self.ssaa_enabled = True
+        self._pose_lerp_tracker = {
+            "lerp_duration": 0.08,
+            "blend_timer": 0.0,
+            "pose_key": None,
+            "prev_snap": None,
+            "last_snap": None,
+            "transitions_count": 0,
+        }
+        self.opponent_launch_state = {"active": False}
 
     def can_act(self) -> bool:
         if not self.is_alive:
@@ -85,6 +98,22 @@ class RaidenSumo(Samurai):
         if self.combo_step == 1 and self.combo_window_timer > 0 and self.state == STATE_RECOVERY:
             return True
         return False
+
+    def can_move(self) -> bool:
+        """Raiden pode se mover livremente em Kamae e durante recuperação (Suriashi a 50% de velocidade)."""
+        if self.roll_recovery_timer > 0:
+            return False
+        if self.state == STATE_RECOVERY:
+            return self.is_alive
+        return super().can_move()
+
+    def apply_movement(self, move_x: float, move_y: float, dt: float, game_map):
+        """Aplica movimentação com passada Suriashi de Sumô (50% de velocidade durante recuperação)."""
+        saved_speed = self.speed
+        if self.state == STATE_RECOVERY:
+            self.speed = saved_speed * getattr(self, "noto_walk_speed_mult", 0.50)
+        super().apply_movement(move_x, move_y, dt, game_map)
+        self.speed = saved_speed
 
     def trigger_parry(self) -> bool:
         """Guarda Cerimonial Gassho-hineri: braços cruzados anulando 100% de recuo de impacto."""
@@ -120,12 +149,13 @@ class RaidenSumo(Samurai):
 
         return True
 
-    def trigger_tsuppari_rush(self, aim_x: float, aim_y: float, particles: list = None, banners: list = None) -> bool:
+    def trigger_tsuppari_rush(self, aim_x: float = None, aim_y: float = None, particles: list = None, banners: list = None) -> bool:
         """Ataque Primário: Combo de 2 Golpes Pesados (Harite -> Morote-Tsuppari)."""
         if not self.can_act():
             return False
 
-        self.set_facing(aim_x, aim_y)
+        if aim_x is not None and aim_y is not None:
+            self.set_facing(aim_x, aim_y)
 
         # Se já desferiu o Golpe 1 e está dentro da janela de combo -> Golpe 2 (Morote-Tsuppari quebra guardas)
         if self.combo_step == 1 and self.combo_window_timer > 0:
@@ -137,7 +167,7 @@ class RaidenSumo(Samurai):
             self.strike2_hit_applied = False
             self.hitbox_active = False
             self.hitbox_damage = 2
-            self.hitbox_radius = 0.70
+            self.hitbox_radius = 0.65
             self.hitbox_center = (
                 self.wx + self.facing_x * 0.72,
                 self.wy + self.facing_y * 0.72
@@ -174,8 +204,11 @@ class RaidenSumo(Samurai):
 
         return True
 
-    def trigger_primary(self, aim_x: float, aim_y: float, particles: list = None, banners: list = None, **kwargs) -> bool:
+    def trigger_primary(self, aim_x: float = None, aim_y: float = None, particles: list = None, banners: list = None, **kwargs) -> bool:
         return self.trigger_tsuppari_rush(aim_x, aim_y, particles, banners)
+
+    def trigger_attack(self, aim_x: float = None, aim_y: float = None, particles: list = None, banners: list = None, **kwargs) -> bool:
+        return self.trigger_primary(aim_x, aim_y, particles, banners, **kwargs)
 
     def trigger_tachiai_tackle(self, aim_x: float = None, aim_y: float = None, particles: list = None, banners: list = None, opponent=None, game_map=None) -> bool:
         """
@@ -250,6 +283,72 @@ class RaidenSumo(Samurai):
         return True, False
 
     def update(self, dt: float, game_map=None, particles: list = None, opponent=None, projectiles: list = None, banners: list = None, **kwargs):
+        # Atualizar interpolador de pose (Pose LERP 0.08s — Entregável 2.23.9 / Padrão Kenshi; avança mesmo em INTRO/VICTORY)
+        lerp_dt = dt if dt > 0.0 else (1.0 / 60.0)
+        if hasattr(self, "_pose_lerp_tracker") and self._pose_lerp_tracker["blend_timer"] > 0.0:
+            self._pose_lerp_tracker["blend_timer"] = max(0.0, self._pose_lerp_tracker["blend_timer"] - lerp_dt)
+
+        # Atualização contínua da física parabólica de arremesso do adversário atingido pelo Tachiai
+        if getattr(self, "opponent_launch_state", None) and self.opponent_launch_state.get("active", False):
+            ls = self.opponent_launch_state
+            opp = ls.get("opponent")
+            if opp and getattr(opp, "is_alive", False) and ls["timer"] > 0:
+                # 1. Fase de Hitstop no instante exato do impacto (peso e gravidade visual)
+                if ls.get("hitstop_timer", 0.0) > 0.0:
+                    ls["hitstop_timer"] = max(0.0, ls["hitstop_timer"] - dt)
+                    if particles is not None and random.random() < 0.60:
+                        particles.append(SparkParticle(opp.wx, opp.wy, getattr(opp, "wz", 0.0) + 0.35, color=(255, 180, 70)))
+                else:
+                    # 2. Voo parabólico com gravidade e arrasto de ar
+                    ls["timer"] = max(0.0, ls["timer"] - dt)
+                    opp.wz = max(0.0, getattr(opp, "wz", 0.0) + ls["vz"] * dt)
+                    ls["vz"] -= ls["gravity"] * dt
+
+                    drag = 0.94 ** (dt * 60.0)
+                    ls["vx"] *= drag
+                    ls["vy"] *= drag
+
+                    next_wx = opp.wx + ls["vx"] * dt
+                    next_wy = opp.wy + ls["vy"] * dt
+
+                    collided_wall = False
+                    if game_map is not None:
+                        min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
+                        bounded_x = max(min_x, min(max_x, next_wx))
+                        bounded_y = max(min_y, min(max_y, next_wy))
+                        if bounded_x != next_wx or bounded_y != next_wy:
+                            collided_wall = True
+                            next_wx, next_wy = bounded_x, bounded_y
+
+                        for obs in list(getattr(game_map, "rocks", [])) + list(getattr(game_map, "buildings", [])):
+                            col, push_x, push_y = obs.check_collision(next_wx, next_wy, getattr(opp, "radius", 0.35))
+                            if col:
+                                collided_wall = True
+                                next_wx += push_x
+                                next_wy += push_y
+
+                    opp.wx, opp.wy = next_wx, next_wy
+
+                    # Impacto na parede/obstáculo durante o voo
+                    if collided_wall and not ls.get("bounced", False) and (abs(ls["vx"]) + abs(ls["vy"]) > 2.5):
+                        ls["bounced"] = True
+                        ls["vx"] *= -0.20
+                        ls["vy"] *= -0.20
+                        if particles is not None:
+                            for _ in range(8):
+                                particles.append(SparkParticle(opp.wx, opp.wy, getattr(opp, "wz", 0.0) + 0.35, color=(235, 205, 160)))
+
+                    # Pouso sísmico no solo do dohyo
+                    if opp.wz <= 0.0 and ls["vz"] < 0:
+                        opp.wz = 0.0
+                        ls["active"] = False
+                        if particles is not None:
+                            count = 14 if ls.get("dmg", 1) == 2 else 7
+                            for _ in range(count):
+                                particles.append(SparkParticle(opp.wx, opp.wy, 0.12, color=(210, 195, 170)))
+            else:
+                self.opponent_launch_state["active"] = False
+
         self.update_dodge_timers(dt)
 
         if self.combo_window_timer > 0:
@@ -311,8 +410,18 @@ class RaidenSumo(Samurai):
                 if dist_opp <= self.hitbox_radius + getattr(opponent, "radius", 0.35):
                     push_x = self.facing_x * 3.6 * dt
                     push_y = self.facing_y * 3.6 * dt
-                    opponent.wx += push_x
-                    opponent.wy += push_y
+                    new_opp_x = opponent.wx + push_x
+                    new_opp_y = opponent.wy + push_y
+                    if game_map is not None:
+                        min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
+                        new_opp_x = max(min_x, min(max_x, new_opp_x))
+                        new_opp_y = max(min_y, min(max_y, new_opp_y))
+                        for obs in list(getattr(game_map, "rocks", [])) + list(getattr(game_map, "buildings", [])):
+                            col, px, py = obs.check_collision(new_opp_x, new_opp_y, getattr(opponent, "radius", 0.35))
+                            if col:
+                                new_opp_x += px
+                                new_opp_y += py
+                    opponent.wx, opponent.wy = new_opp_x, new_opp_y
                     if particles is not None and random.random() < 0.35:
                         particles.append(SparkParticle(opponent.wx, opponent.wy, 0.25, color=(240, 215, 175)))
 
@@ -368,8 +477,19 @@ class RaidenSumo(Samurai):
 
                     push_x = self.facing_x * 7.0 * dt
                     push_y = self.facing_y * 7.0 * dt
-                    opponent.wx += push_x
-                    opponent.wy += push_y
+                    new_opp_x = opponent.wx + push_x
+                    new_opp_y = opponent.wy + push_y
+                    if game_map is not None:
+                        min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
+                        new_opp_x = max(min_x, min(max_x, new_opp_x))
+                        new_opp_y = max(min_y, min(max_y, new_opp_y))
+                        for obs in list(getattr(game_map, "rocks", [])) + list(getattr(game_map, "buildings", [])):
+                            col, px, py = obs.check_collision(new_opp_x, new_opp_y, getattr(opponent, "radius", 0.35))
+                            if col:
+                                new_opp_x += px
+                                new_opp_y += py
+                    opponent.wx, opponent.wy = new_opp_x, new_opp_y
+
                     if not self.strike2_hit_applied:
                         self.strike2_hit_applied = True
                         if hasattr(opponent, "stun"):
@@ -445,11 +565,25 @@ class RaidenSumo(Samurai):
                     dmg = 2 if self.current_tackle_speed >= 10.0 else 1
                     hit, dead = opponent.take_hit((self.facing_x, self.facing_y), damage=dmg)
 
-                    # Arremesso parabólico do rival
-                    launch_mult = 5.2 if dmg == 2 else 3.8
-                    opponent.wx += self.facing_x * launch_mult
-                    opponent.wy += self.facing_y * launch_mult
-                    opponent.stun(0.95 if dmg == 2 else 0.65)
+                    # Inicia lançamento físico com trajetória parabólica autêntica (sem teleport instantaneous)
+                    launch_speed = 25.0 if dmg == 2 else 19.5
+                    self.opponent_launch_state = {
+                        "active": True,
+                        "opponent": opponent,
+                        "vx": self.facing_x * launch_speed,
+                        "vy": self.facing_y * launch_speed,
+                        "vz": 5.2 if dmg == 2 else 4.2,
+                        "gravity": 12.5 if dmg == 2 else 12.0,
+                        "timer": 0.90 if dmg == 2 else 0.75,
+                        "hitstop_timer": 0.08 if dmg == 2 else 0.05,
+                        "dmg": dmg,
+                        "bounced": False,
+                    }
+                    opponent.stun(1.10 if dmg == 2 else 0.75)
+                    opponent.wz = 0.08
+
+                    # Frenagem por impacto físico
+                    self.current_tackle_speed = min(self.current_tackle_speed, 3.0)
 
                     if particles is not None:
                         for _ in range(18 if dmg == 2 else 10):
@@ -480,7 +614,11 @@ class RaidenSumo(Samurai):
             return
 
     def render(self, surface: pygame.Surface, camera):
-        extra = {"ssaa_2x": True}
+        extra = {
+            "ssaa_2x": getattr(self, "ssaa_enabled", True),
+            "pose_lerp_tracker": getattr(self, "_pose_lerp_tracker", None),
+            "tachiai_phase": getattr(self, "tackle_phase", ""),
+        }
 
         if self.state == "TSUPPARI_STRIKE_2":
             extra["pose"] = "tsuppari_2"

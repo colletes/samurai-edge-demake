@@ -154,9 +154,9 @@ class Rifleman(Samurai):
         """Ação Secundária: Black Powder Ground Trap — arma sticky bomb no solo.
         Não consome pólvora, mas só pode haver 1 mina ativa por vez (cooldown de 5s para redepositar)."""
         if not self.can_act() or self.trap_timer > 0:
-            return
+            return False
         if self.active_trap is not None and getattr(self.active_trap, "is_active", False):
-            return
+            return False
         self.trap_timer = self.trap_cooldown
 
         # Suporte a chamada posicional flexível (ex: trigger_powder_trap(traps_list))
@@ -173,6 +173,7 @@ class Rifleman(Samurai):
         if particles is not None:
             for _ in range(8):
                 particles.append(SparkParticle(self.wx, self.wy, 0.35))
+        return True
 
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
         """Terceira Ação: Tumble & Reload Roll — rolamento evasivo com recarga tática ao concluir."""
@@ -183,7 +184,7 @@ class Rifleman(Samurai):
             or self.roll_cooldown_timer > 0
             or self.dash_recovery_timer > 0
         ):
-            return
+            return False
 
         if dir_x == 0 and dir_y == 0:
             dir_x, dir_y = -self.facing_x, -self.facing_y
@@ -205,9 +206,10 @@ class Rifleman(Samurai):
         if particles is not None:
             for _ in range(8):
                 particles.append(SparkParticle(self.wx, self.wy, 0.35))
+        return True
 
     def trigger_tumble_roll(self, dir_x: float, dir_y: float, particles: list = None):
-        self.trigger_roll(dir_x, dir_y, particles)
+        return self.trigger_roll(dir_x, dir_y, particles)
 
     def check_powder_pickup(self, pouches: list, particles: list = None) -> bool:
         """Verifica se Teppo passou por cima de um saquinho de pólvora para carregar o arcabuz."""
@@ -243,19 +245,19 @@ class Rifleman(Samurai):
     def trigger_shoot(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None, immediate: bool = False):
         """Ataque Primário: Aponta o arcabuz em mira e aguarda delay (0.24s) simulando a queima da mecha antes do disparo fatal."""
         if not self.can_act():
-            return
+            return False
 
         if not self.has_ammo or self.cocking_timer > 0:
             # Se descarregado, desfere coronhada tática; se ainda engatilhando, aguarda
             if not self.has_ammo:
-                self.trigger_rifle_butt(target_wx, target_wy, particles)
-            return
+                return self.trigger_rifle_butt(target_wx, target_wy, particles)
+            return False
 
         self.set_facing(target_wx, target_wy)
 
         if immediate:
             self._fire_musket(target_wx, target_wy, projectiles, particles)
-            return
+            return True
 
         self.state = STATE_RIFLE_AIM
         self.state_timer = self.aim_duration
@@ -270,6 +272,7 @@ class Rifleman(Samurai):
             py = self.wy + self.facing_y * 0.45
             for _ in range(6):
                 particles.append(SparkParticle(px, py, 0.40, color=(255, 180, 50)))
+        return True
 
     def _fire_musket(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None):
         """Disparo efetivo da bala de arcabuz após a conclusão da mira."""
@@ -309,7 +312,7 @@ class Rifleman(Samurai):
     def trigger_rifle_butt(self, target_wx: float, target_wy: float, particles: list = None):
         """Coronhada Defensiva: Golpe de madeira de curto alcance que atordoa e afasta o adversário."""
         if not self.can_act():
-            return
+            return False
         self.set_facing(target_wx, target_wy)
         self.state = STATE_ATTACK
         self.state_timer = 0.16
@@ -326,6 +329,7 @@ class Rifleman(Samurai):
         if particles is not None:
             for _ in range(6):
                 particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.3))
+        return True
 
     def trigger_reload_hold(self):
         """Ativado enquanto o jogador mantém pressionado o botão de ação secundária."""

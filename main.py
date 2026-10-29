@@ -285,9 +285,7 @@ def get_fighter_action_labels(fighter):
     elif isinstance(fighter, BlueSamurai):
         return "3-Cortes", "Parry"
     elif isinstance(fighter, YellowNinja):
-        if getattr(fighter, "has_kunai", True):
-            return "Arremesso Kunai", "Salto Parabólico"
-        return "Estocada Tanto", "Salto Parabólico"
+        return "Ninjato 2-Golpes", "Kunai Snipe"
     elif isinstance(fighter, AmericanNinja):
         return "Shuriken", "Cão Dash"
     elif isinstance(fighter, GrayNinja):
@@ -360,10 +358,13 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
 
     elif isinstance(fighter, YellowNinja):
         if not getattr(fighter, "has_kunai", True):
-            return {"name": "Sem Kunai", "timer": 1.0, "max_cd": 1.0, "color": (230, 70, 70), "warning": True}
-        timer = max(0.0, getattr(fighter, "jump_timer", 0.0))
-        cd = getattr(fighter, "jump_cooldown", 3.2)
-        return {"name": "Salto Ninja", "timer": timer, "max_cd": cd, "color": (245, 210, 40)}
+            timer = max(0.0, getattr(fighter, "kunai_timer", 0.0))
+            return {"name": "Recarregando Kunai", "timer": timer, "max_cd": 1.5, "color": (230, 70, 70)}
+        if getattr(fighter, "combo_step", 0) > 0:
+            timer = getattr(fighter, "combo_window_timer", 0.0)
+            return {"name": f"Combo {fighter.combo_step}/2", "timer": timer, "max_cd": 0.40, "color": (255, 215, 60)}
+        timer = max(0.0, getattr(fighter, "jump_cooldown_timer", 0.0))
+        return {"name": "Salto Ninja", "timer": timer, "max_cd": 0.35, "color": (245, 210, 40)}
 
     elif isinstance(fighter, AmericanNinja):
         if hasattr(fighter, "dog") and fighter.dog and getattr(fighter.dog, "state", "") == "KNOCKED_OUT":
@@ -562,15 +563,7 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
         fighter.trigger_combo_attack(aim_x, aim_y)
         play_sfx(SoundEvent.SLASH_KATANA)
     elif isinstance(fighter, YellowNinja):
-        if fighter.has_kunai:
-            if fighter.state == "JUMP":
-                fighter.trigger_midair_throw(aim_x, aim_y, projectiles)
-            else:
-                fighter.trigger_standing_throw(aim_x, aim_y, projectiles)
-            play_sfx(SoundEvent.KUNAI_THROW)
-        else:
-            fighter.trigger_thrust_attack(aim_x, aim_y)
-            play_sfx(SoundEvent.SLASH_KATANA)
+        fighter.trigger_combo_attack(aim_x, aim_y)
     elif isinstance(fighter, AmericanNinja):
         fighter.trigger_shuriken(aim_x, aim_y, projectiles)
         play_sfx(SoundEvent.KUNAI_THROW)
@@ -650,12 +643,7 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
         fighter.trigger_parry()
         play_sfx(SoundEvent.PARRY)
     elif isinstance(fighter, YellowNinja):
-        if fighter.state == "JUMP" and fighter.has_kunai:
-            fighter.trigger_midair_throw(aim_x, aim_y, projectiles)
-            play_sfx(SoundEvent.KUNAI_THROW)
-        else:
-            fighter.trigger_jump(aim_x, aim_y, projectiles)
-            play_sfx(SoundEvent.DASH_ROLL)
+        fighter.trigger_kunai_snipe(aim_x, aim_y, projectiles)
     elif isinstance(fighter, AmericanNinja):
         fighter.trigger_dog_attack(aim_x, aim_y)
         play_sfx(SoundEvent.DOG_BARK)
@@ -760,6 +748,8 @@ def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: f
         fighter.trigger_shikigami_glide(dwx, dwy, particles=particles)
     elif isinstance(fighter, AoiHuntress):
         fighter.trigger_snow_slide(dwx, dwy, particles=particles)
+    elif isinstance(fighter, YellowNinja):
+        fighter.trigger_jump(dwx, dwy)
     else:
         # Demais personagens (BlueSamurai, YellowNinja, AmericanNinja, GrayNinja, PurpleNinja, SaitouSamurai)
         if hasattr(fighter, "trigger_roll"):

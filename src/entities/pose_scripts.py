@@ -98,11 +98,18 @@ INTRO = {
         _seg(0.66, 0.88, "ATTACK", 0.0, 1.0),
         _idle(0.88, 1.0),
     ],
-    # Niten: dois cortes, aparada cruzada e guarda
-    "musashi": [_idle(0.0, 0.15), _seg(0.15, 0.4, "ATTACK", 0.0, 1.0, combo_step=1),
-                _seg(0.4, 0.62, "ATTACK", 0.0, 1.0, combo_step=2), _seg(0.62, 0.82, "PARRY", 0.5, 0.5), _idle(0.82, 1.0)],
-    # Dois golpes de kunai
-    "ninja": [_idle(0.0, 0.2), _seg(0.2, 0.5, "ATTACK", 0.0, 1.0), _idle(0.5, 0.6), _seg(0.6, 0.85, "ATTACK", 0.0, 1.0), _idle(0.85, 1.0)],
+    # Musashi (2.2.5): Saque duplo de ambas as espadas -> atrito de lâminas em 'X' com faíscas metálicas ('shhh-clink') -> transição contínua para a guarda de duelo
+    "musashi": [
+        _idle(0.0, 0.30, pose="dual_draw"),
+        _idle(0.30, 0.65, pose="cross_blade_clash"),
+        _idle(0.65, 1.0, pose="two_heavens_guard"),
+    ],
+    # Hanzo (2.3.8): Redemoinho de folhas secas revela Hanzo agachado em guarda -> saque da Ninjato das costas com estalo metálico -> guarda baixa invertida
+    "ninja": [
+        _idle(0.0, 0.35, pose="leaf_crouch"),
+        _idle(0.35, 0.70, pose="ninjato_draw"),
+        _idle(0.70, 1.0, pose="shinobi_stance"),
+    ],
     # Shuriken/kunai e o cão que chega correndo
     "american": [_idle(0.0, 0.25), _seg(0.25, 0.65, "ATTACK", 0.0, 1.0), _idle(0.65, 1.0)],
     # Postura do Gatotsu: lâmina apontada à frente
@@ -199,8 +206,16 @@ VICTORY = {
         _idle(0.46, 0.82, pose="noto_sheath"),
         _idle(0.82, 1.0, pose="victory_bow"),
     ],
-    "musashi": [_idle(0.0, 0.1), _seg(0.1, 0.4, "ATTACK", 0.0, 1.0, combo_step=1), _seg(0.4, 0.85, "PARRY", 0.15, 0.85), _idle(0.85, 1.0)],
-    "ninja": [_idle(0.0, 0.1), _seg(0.1, 0.45, "ATTACK", 0.0, 1.0), _idle(0.45, 0.55), _seg(0.55, 0.9, "ATTACK", 0.0, 1.0), _idle(0.9, 1.0)],
+    # Musashi (2.2.6): Duplo Chiburi simultâneo (sacudida lateral do sangue no piso à esquerda e direita) -> elevação na Postura dos Dois Céus sem embainhar
+    "musashi": [
+        _idle(0.0, 0.45, pose="double_chiburi"),
+        _idle(0.45, 1.0, pose="two_heavens_victory"),
+    ],
+    # Hanzo (2.3.8): Selo de dedos Kuji-Kiri no peito -> desvanecimento total em fumaça negra shinobi
+    "ninja": [
+        _idle(0.0, 0.45, pose="kuji_kiri"),
+        _idle(0.45, 1.0, pose="smoke_vanish", alpha=(1.0, 0.0)),
+    ],
     "american": [_idle(0.0, 0.1), _seg(0.1, 0.55, "ATTACK", 0.0, 1.0), _idle(0.55, 1.0)],
     "saitou": [_idle(0.0, 0.1), _seg(0.1, 0.8, "GATOTSU_CHARGE", 0.2, 0.7), _idle(0.8, 1.0)],
     "rifleman": [_idle(0.0, 0.15), _seg(0.15, 0.55, "ATTACK", 0.0, 1.0), _idle(0.55, 1.0)],
@@ -286,8 +301,8 @@ SCRIPTS = {"intro": INTRO, "victory": VICTORY}
 BEATS = {
     "intro": {
         "kenshin": [(0.37, "sfx:parry"), (0.38, "fx:sparks"), (0.68, "sfx:sword_slash")],
-        "musashi": [(0.16, "sfx:sword_slash"), (0.41, "sfx:sword_slash"), (0.64, "sfx:parry")],
-        "ninja": [(0.22, "sfx:kunai_throw"), (0.62, "sfx:kunai_throw")],
+        "musashi": [(0.26, "sfx:sword_slash"), (0.42, "sfx:parry"), (0.44, "fx:sparks")],
+        "ninja": [(0.02, "fx:petals"), (0.36, "sfx:parry"), (0.38, "fx:sparks"), (0.68, "sfx:sword_slash")],
         "american": [(0.12, "sfx:dog_bark"), (0.3, "sfx:shuriken_throw")],
         "saitou": [(0.22, "sfx:sword_slash")],
         "rifleman": [(0.28, "sfx:obstacle_hit")],
@@ -311,8 +326,8 @@ BEATS = {
     },
     "victory": {
         "kenshin": [(0.08, "sfx:sword_slash"), (0.28, "sfx:dodge_whoosh"), (0.30, "fx:blood"), (0.74, "sfx:parry"), (0.76, "fx:petals")],
-        "musashi": [(0.12, "sfx:parry")],
-        "ninja": [(0.12, "sfx:kunai_throw"), (0.57, "sfx:kunai_throw")],
+        "musashi": [(0.14, "sfx:sword_slash"), (0.20, "fx:blood"), (0.50, "sfx:parry")],
+        "ninja": [(0.15, "sfx:dodge_whoosh"), (0.46, "fx:smoke"), (0.48, "sfx:smoke_puff")],
         "american": [(0.1, "sfx:dog_bark"), (0.3, "sfx:shuriken_throw")],
         "saitou": [(0.12, "sfx:sword_slash")],
         "rifleman": [(0.2, "sfx:obstacle_hit")],

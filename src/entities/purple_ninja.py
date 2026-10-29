@@ -76,7 +76,7 @@ class PurpleNinja(Samurai):
         com PRECEDÊNCIA ABSOLUTA sobre qualquer outro ataque. Corta bambus no caminho.
         """
         if not self.can_act() or self.kama_timer > 0:
-            return
+            return False
 
         self.set_facing(target_wx, target_wy)
         self.state = STATE_ATTACK
@@ -99,26 +99,31 @@ class PurpleNinja(Samurai):
                     part = b.cut((self.facing_x, self.facing_y))
                     if part and particles is not None:
                         particles.append(part)
+        return True
 
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
         """Roll evasivo sombrio: sem faíscas, com névoa violeta (Item 12)."""
         if not self.is_alive or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK) or self.dash_recovery_timer > 0:
-            return
+            return False
 
-        super().trigger_roll(dir_x, dir_y, particles=None)  # Sem faíscas
+        res = super().trigger_roll(dir_x, dir_y, particles=None)  # Sem faíscas
+        if not res:
+            return False
         if particles is not None:
             from src.effects.particles import SmokeParticle
             for _ in range(8):
                 particles.append(SmokeParticle(self.wx, self.wy, 0.35, color=(85, 45, 115), size=5))
+        return True
 
     def start_chain_shield(self, target_wx: float, target_wy: float):
         """Inicia o escudo giratório de corrente (Hold - Item 24)."""
         if not self.can_act() or self.chain_timer > 0:
-            return
+            return False
         self.set_facing(target_wx, target_wy)
         self.is_holding_shield = True
         self.is_spinning_chain = True
         self.shield_spin_angle = 0.0
+        return True
 
     def update_chain_shield(self, dt: float, target_wx: float, target_wy: float):
         """Atualiza a mira/direção e giro protetor da corrente enquanto segurado (Item 24)."""

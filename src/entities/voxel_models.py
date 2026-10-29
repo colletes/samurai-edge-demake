@@ -420,7 +420,7 @@ def _render_voxel_humanoid(
     is_melee = state in (
         "ATTACK", "CUTLASS_CLEAVE", "FLECHE", "ZEROSHIKI", "GATOTSU_CHARGE",
         "KIAI", "NODACHI_DANCE", "NAGINATA_THROW", "TACKLE_CHARGE", "RESONANCE",
-        "POLE_VAULT", "PLANT_TRAP", "TSUPPARI_RUSH", "TSUPPARI_STRIKE_1", "TSUPPARI_STRIKE_2", "FLASK_THROW"
+        "POLE_VAULT", "PLANT_TRAP", "TSUPPARI_RUSH", "TSUPPARI_STRIKE_1", "TSUPPARI_STRIKE_2", "TACHIAI_TACKLE", "FLASK_THROW"
     )
     atk_progress = 0.0
     if is_melee:
@@ -457,6 +457,7 @@ def _render_voxel_humanoid(
             else: atk_dur = 0.17
         elif char_type == "raiden":
             if state == "TSUPPARI_STRIKE_2": atk_dur = 0.28
+            elif state == "TACHIAI_TACKLE": atk_dur = 0.52
             else: atk_dur = 0.22
         elif char_type == "hendrika":
             if state == "FLASK_THROW": atk_dur = 0.14
@@ -564,12 +565,16 @@ def _render_voxel_humanoid(
                     "lift": _bld.get("lift", 0.0),
                 }
 
-    pelvis_z = base_z + (0.48 if is_female else 0.46)
+    model = MODEL_FIGHTERS.get(char_type)
+    tz_drop = 0.0
+    if model is not None and hasattr(model, "get_squat_drop"):
+        tz_drop = model.get_squat_drop(extra_props)
+
+    pelvis_z = base_z + (0.48 if is_female else 0.46) - tz_drop
     pelvis_w = 0.35 if char_type in ("benkei", "raiden") else (0.27 if char_type == "kenshin" else (0.24 if is_female else 0.28))
     pelvis_d = 0.27 if char_type in ("benkei", "raiden") else (0.18 if is_female else 0.21)
 
     # Contexto dos modelos próprios: alturas do tronco e da cabeça já são conhecidas aqui
-    model = MODEL_FIGHTERS.get(char_type)
     model_c = None
     if model is not None:
         torso_z0 = pelvis_z + 0.13

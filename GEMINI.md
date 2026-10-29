@@ -109,8 +109,19 @@ Whenever implementing UI elements, banners, floating combat callouts, or cinemat
   - Every freshly allocated `pygame.Surface((w, h), pygame.SRCALPHA)` intended as a composite canvas must immediately execute `surf.fill((0, 0, 0, 0))` before drawing shapes or blitting text onto it.
 - **Cinematic & Kanji Overlays**:
   - All cinematic banners (`_build_kanji_overlay`), round announcements (`準備 / 始め`), victory banners, and combat callouts must use `BLEND_RGBA_MULT` for alpha fading. Never mutate cached source surfaces with `set_alpha()`.
+- **Strict Subscreen Event Isolation (Zero Phantom Rect Collisions)**:
+  - In tabbed menus, hubs, or multi-view screens (such as `SettingsMenu`, `GalleryScreen`), event handling MUST be strictly partitioned by active screen state (`if self.current_subscreen == "..."`).
+  - NEVER test click collision against precomputed rects of inactive views in a flat global chain. If rects from different tabs share screen coordinates (e.g. `language_toggle_rect` in Gameplay sharing Y-range with `bgm_minus_rect` / `bgm_bar_rect` in Audiovisual), a flat global check will cause clicks on the visible tab to trigger invisible actions on hidden tabs (the "BGM volume click changes language" and frozen sliders bug).
+- **Mandatory `{icon:...}` Token Parsing & Vector Badge Rendering (Zero Literal Tags Policy)**:
+  - Any user-facing string originating from `i18n.py` that contains controller button tokens (`{icon:cancel}`, `{icon:confirm}`, `{icon:attack}`, `{icon:secondary}`, `{icon:dash}`) MUST be processed through `create_text_with_icons_surface(...)` or `render_text_with_icons(...)`.
+  - NEVER call raw `font.render()` or unparsed string slicers on strings with `{icon:...}` tags. Doing so prints literal `{icon:cancel}` text on buttons, prompts, and footers.
+  - Never rely on raw unicode symbols (`▢`, `△`, `○`) for controller buttons in UI text, as platform fallback fonts render them as missing glyph tofu boxes. Always use vector badge surfaces from `svg_icon_renderer.py`.
+- **Complete Transport & Interactive Media Architecture (Jukebox / Gallery)**:
+  - Any media player or jukebox screen must provide complete transport primitives: Previous (`|<<`), Play/Pause (`▶ / ❚❚`), Stop (`■`), Next (`>>|`), Loop mode (`🔁`), alongside active progress indicators (`⏱ MM:SS` and seekbar).
+  - List views must provide full visibility into all assets: scroll up/down buttons, draggable thumb, mousewheel support (`MOUSEWHEEL` / buttons 4 & 5), and direct click-to-play on list rows.
+  - Interactive feature toggles (such as Karaoke) must never be static non-functional labels; they must be actionable buttons with real-time synchronized playback (cyan sweep progress and bilingual verse display).
 - **Automated Verification**:
-  - Keep `tests/test_font_transparency.py` passing 100% to ensure no text bounding boxes or opaque artifacts regress.
+  - Keep `tests/test_font_transparency.py`, `tests/test_settings_hub.py`, and `tests/test_gallery_screen.py` passing 100% to ensure no text bounding boxes, phantom collisions, or transport regressions recur.
 
 ## 10. iOS Packaging & Porting Architecture Directives
 Whenever implementing new features, UI screens, combat systems, or asset additions, ALWAYS consider iOS compatibility:
@@ -217,5 +228,20 @@ Whenever executing the overhaul of ANY character in Phase 2, adhere strictly to 
 - **Full 3D Pitch Camera for Somersaults & Aerial Flips**: Sagittal-plane rotations (`PARRY_AERIAL`, acrobatics) must use a dynamic pitch camera (`_SomersaultPitchCamera`) centered on the body's center of mass (`wz + 0.52`). When upside down (`cos(somersault_rad) < -0.15`), the painter's algorithm order must invert (`_render_lower_body` drawn after the cranium so the head is occluded behind the torso and legs).
 - **Continuous Limb Meshes vs Segmented Cubes**: Unbroken clothing (hakama, trousers, kunoichi leggings) must use 3D continuous ribbon meshes with tapered frustums, avoiding joint steps/shelves at knees and elbows.
 - **Clean State Transitions & Timer Guards**: Noto and recovery animations must smoothly transition to `IDLE` without prematurely clamping movement or freezing input. Ensure all temporary animation flags (`is_aerial_parry`, `somersault_angle`, `extra_props`) are cleanly cleared when actions complete.
+
+## 14. Combat Input & Audio Synchronization Directives (Zero Phantom SFX Policy)
+Whenever implementing or refactoring character actions, movesets, input processing, or weapon sound effects:
+- **Strict Prohibition of Unconditional SFX on Button Presses**:
+  - NEVER trigger attack swooshes, slash SFX, weapon clangs, or dodge whooshes unconditionally inside input handlers (`execute_fighter_attack`, `execute_fighter_secondary`, `execute_fighter_roll` in `main.py`).
+  - When the player presses an action button while a fighter is already in mid-animation (`STATE_ATTACK`, `STATE_ROLL`), in recovery (`STATE_RECOVERY`), stunned (`STATE_STUNNED`), or on cooldown, the action is rejected by the fighter. Calling `play_sfx(...)` unconditionally results in the "button-mashing phantom audio" bug where characters emit multiple attack sounds without swinging.
+- **Action Success Contract (Boolean Returns)**:
+  - Every fighter action trigger method (`trigger_...`) MUST return a boolean indicating whether the action was actually executed (`True`) or rejected/buffered (`False`).
+  - In `execute_fighter_...`, sound effects and stage interactions (e.g. `add_wind_impulse`) must ONLY be triggered if `executed == True`.
+- **Zero Double-Triggering (Internal Audio Priority)**:
+  - For fighters that handle audio cues internally with frame-perfect precision (such as `RedSamurai` with tsuba click on startup and slash on release, `BlueSamurai` on combo strike execution, and `Rifleman` with `TANEGASHIMA_SHOT` and rifle butt swing), `main.py` must NEVER play duplicate sounds on top of the character's internal audio manager.
+- **Buffered Inputs Play Audio Only on Physical Execution**:
+  - When an input is buffered (e.g. `BlueSamurai` or `RenMonk` buffering combo steps during an active swing), the input press must NOT trigger audio immediately. Audio MUST only trigger on the exact frame the buffered state transitions and the physical strike begins in `update()`.
+- **Automated Verification**:
+  - Keep `tests/test_attack_audio_cooldown.py` passing 100% across all fighters to verify that mashing buttons during attacks, recoveries, or cooldowns produces zero duplicate or phantom sounds.
 
 

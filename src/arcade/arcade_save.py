@@ -13,7 +13,8 @@ SAVE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path
 
 
 def empty_data() -> dict:
-    return {"version": SAVE_VERSION, "high_scores": [], "best_clear_time": {}, "clears": {}, "current_run": None}
+    return {"version": SAVE_VERSION, "high_scores": [], "best_clear_time": {}, "clears": {}, "current_run": None,
+            "gallery_unlocked": False}
 
 
 def load(path: str = SAVE_PATH) -> dict:
@@ -32,6 +33,8 @@ def load(path: str = SAVE_PATH) -> dict:
                     out[key] = data[key]
             if isinstance(data.get("current_run"), dict):
                 out["current_run"] = data["current_run"]
+            # Galeria: flag explícita, ou migração de saves antigos que já registram alguma conclusão
+            out["gallery_unlocked"] = bool(data.get("gallery_unlocked")) or bool(out["clears"])
             return out
         except (OSError, ValueError):
             if attempt < 2 and os.path.exists(path):
@@ -39,6 +42,18 @@ def load(path: str = SAVE_PATH) -> dict:
                 continue
             return empty_data()
     return empty_data()
+
+
+def is_gallery_unlocked(data: dict) -> bool:
+    """A Galeria (imagens, vídeos e músicas) abre ao concluir o Arcade com qualquer personagem e dificuldade."""
+    return bool(data.get("gallery_unlocked"))
+
+
+def unlock_gallery(data: dict) -> bool:
+    """Marca a Galeria como desbloqueada; devolve True se isto acabou de mudar (primeira conclusão)."""
+    newly = not data.get("gallery_unlocked")
+    data["gallery_unlocked"] = True
+    return newly
 
 
 def save(data: dict, path: str = SAVE_PATH) -> bool:

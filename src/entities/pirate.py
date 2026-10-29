@@ -58,7 +58,7 @@ class PirateSwordswoman(Samurai):
     def trigger_cutlass_cleave(self, target_wx: float, target_wy: float):
         """Ataque Primário: Golpe horizontal em meia-lua de 180° com o alfanje e avanço frontal vigoroso."""
         if not self.can_act() or self.cleave_timer > 0:
-            return
+            return False
 
         self.set_facing(target_wx, target_wy)
         self.state = STATE_ATTACK
@@ -71,6 +71,7 @@ class PirateSwordswoman(Samurai):
         self.wy += self.facing_y * 0.65
         self.hitbox_center = (self.wx + self.facing_x * 0.90, self.wy + self.facing_y * 0.90)
         self.cleave_timer = self.cleave_cooldown
+        return True
 
     def trigger_quick_cannon(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None):
         """Disparo Imediato de Canhão (Tap rápido ou IA): dispara bola de canhão a distância efetiva."""
@@ -89,10 +90,11 @@ class PirateSwordswoman(Samurai):
     def start_cannon_strike(self, target_wx: float, target_wy: float):
         """Inicia o direcionamento do bombardeio naval orbital (Hold). Anne pode se mover e atacar livremente."""
         if not self.is_alive or self.cannon_cooldown_timer > 0:
-            return
+            return False
         self.is_aiming_cannon = True
         self.cannon_target_wx = target_wx
         self.cannon_target_wy = target_wy
+        return True
 
     def update_cannon_strike(self, dt: float, target_wx: float, target_wy: float):
         """Atualiza o retículo de mira do canhão enquanto o botão de secundário for mantido pressionado."""
@@ -128,7 +130,7 @@ class PirateSwordswoman(Samurai):
             or self.roll_cooldown_timer > 0
             or self.dash_recovery_timer > 0
         ):
-            return
+            return False
 
         if dir_x == 0 and dir_y == 0:
             dir_x, dir_y = -self.facing_x, -self.facing_y
@@ -151,6 +153,7 @@ class PirateSwordswoman(Samurai):
         if particles is not None:
             for _ in range(10):
                 particles.append(SparkParticle(self.wx, self.wy, 0.4))
+        return True
 
     def trigger_deck_roll(self, dir_x: float, dir_y: float, particles: list = None):
         self.trigger_roll(dir_x, dir_y, particles)

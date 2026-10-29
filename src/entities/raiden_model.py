@@ -112,6 +112,30 @@ def _smooth(x: float) -> float:
     return cx * cx * (3.0 - 2.0 * cx)
 
 
+def get_squat_drop(extra_props: dict) -> float:
+    """Retorna o rebaixamento fluido do centro de massa e torso durante o Sonkyo ritual (Intro)."""
+    if not extra_props:
+        return 0.0
+    pose = extra_props.get("pose", "")
+    if pose == "sonkyo_squat":
+        if "seg_u" in extra_props:
+            u = float(extra_props["seg_u"])
+            if u < 0.28:
+                return 0.15 * _smooth(u / 0.28)
+            elif u <= 0.72:
+                return 0.15
+            else:
+                return 0.15 * _smooth((1.0 - u) / 0.28)
+        return 0.15
+    return 0.0
+
+
+def _get_squat_drop(c) -> float:
+    """Retorna o rebaixamento fluido do centro de massa e torso durante o Sonkyo ritual (Intro)."""
+    extra = getattr(c, "extra_props", None) or {}
+    return get_squat_drop(extra)
+
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Poses dos Braços e Cinemática de Combate
 # ---------------------------------------------------------------------------------------------------------------------
@@ -186,7 +210,17 @@ def tackle_arms(c):
     - Fase 2 (Aceleração, 0.25 <= p < 0.80): Corpo inclinado à frente em arremetida, braços bombeando com vigor.
     - Fase 3 (Impacto, p >= 0.80): Extensão explosiva das duas palmas impulsionando o rival.
     """
-    p = c.atk_progress if c.atk_progress is not None else 0.5
+    extra = getattr(c, "extra_props", None) or {}
+    pose = extra.get("pose", "")
+    phase = extra.get("tachiai_phase", "")
+
+    if pose == "tachiai_crouch" or phase in ("STARTUP", "CROUCH"):
+        p = 0.12
+    elif phase == "IMPACT":
+        p = 0.90
+    else:
+        p = c.atk_progress if c.atk_progress is not None else 0.50
+
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
 
     if p < 0.25:
@@ -238,19 +272,42 @@ def slip_step_arms(c):
 
 
 def intro_arms(c):
-    """Cerimonial de Intro: Palmas trovejantes -> Postura sagrada Sonkyo."""
+    """Cerimonial de Intro: Palmas trovejantes -> Postura sagrada Sonkyo -> Kamae."""
     pose = c.extra_props.get("pose") if c.extra_props else ""
+    extra = getattr(c, "extra_props", None) or {}
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
 
     if pose == "ceremonial_clap":
-        # Palmas unidas no centro do peito com impacto
-        left = (bx + fx * 0.18 + px * 0.02, by + fy * 0.18 + py * 0.02, tz + 0.16)
-        right = (bx + fx * 0.18 - px * 0.02, by + fy * 0.18 - py * 0.02, tz + 0.16)
+        u = float(extra.get("seg_u", 0.5))
+        breath = math.sin(u * math.pi) * 0.02
+        left = (bx + fx * 0.18 + px * 0.02, by + fy * 0.18 + py * 0.02, tz + 0.16 + breath)
+        right = (bx + fx * 0.18 - px * 0.02, by + fy * 0.18 - py * 0.02, tz + 0.16 + breath)
         return left, right
+
     elif pose == "sonkyo_squat":
-        # Antebraços e punhos apoiados firmemente sobre os joelhos abertos
-        left = (bx + fx * 0.18 + px * 0.26, by + fy * 0.18 + py * 0.26, c.base_z + 0.26)
-        right = (bx + fx * 0.18 - px * 0.26, by + fy * 0.18 - py * 0.26, c.base_z + 0.26)
+        if "seg_u" in extra:
+            u = float(extra["seg_u"])
+            if u < 0.28:
+                squat_t = _smooth(u / 0.28)
+            elif u <= 0.72:
+                squat_t = 1.0
+            else:
+                squat_t = _smooth((1.0 - u) / 0.28)
+        else:
+            squat_t = 1.0
+
+        # Mãos em transição suave: do peito (palmas/kamae) para apoio sobre os joelhos abertos
+        stand_l = (bx + fx * 0.18 + px * 0.08, by + fy * 0.18 + py * 0.08, tz + 0.14)
+        stand_r = (bx + fx * 0.18 - px * 0.08, by + fy * 0.18 - py * 0.08, tz + 0.14)
+        knee_l = (bx + fx * 0.18 + px * 0.26, by + fy * 0.18 + py * 0.26, c.base_z + 0.26)
+        knee_r = (bx + fx * 0.18 - px * 0.26, by + fy * 0.18 - py * 0.26, c.base_z + 0.26)
+
+        left = (stand_l[0] + (knee_l[0] - stand_l[0]) * squat_t,
+                stand_l[1] + (knee_l[1] - stand_l[1]) * squat_t,
+                stand_l[2] + (knee_l[2] - stand_l[2]) * squat_t)
+        right = (stand_r[0] + (knee_r[0] - stand_r[0]) * squat_t,
+                 stand_r[1] + (knee_r[1] - stand_r[1]) * squat_t,
+                 stand_r[2] + (knee_r[2] - stand_r[2]) * squat_t)
         return left, right
 
     return idle_arms(c)
@@ -259,13 +316,29 @@ def intro_arms(c):
 def victory_arms(c):
     """Cerimonial de Vitória: Shiko ritual com punhos cravados no Mawashi."""
     pose = c.extra_props.get("pose") if c.extra_props else ""
+    extra = getattr(c, "extra_props", None) or {}
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
 
     if pose == "shiko_raise":
-        # Braço esquerdo apoia a coxa esquerda, braço direito ergue-se em equilíbrio
-        left = (bx + px * 0.24, by + py * 0.24, tz + 0.04)
-        right = (bx - px * 0.28, by - py * 0.28, tz + 0.32)
+        if "seg_u" in extra:
+            u = float(extra["seg_u"])
+            raise_t = _smooth(u / 0.65) if u < 0.65 else 1.0
+        else:
+            raise_t = 1.0
+
+        stand_l = (bx + px * 0.18, by + py * 0.18, tz + 0.08)
+        stand_r = (bx - px * 0.18, by - py * 0.18, tz + 0.08)
+        pose_l = (bx + px * 0.24, by + py * 0.24, tz + 0.04)
+        pose_r = (bx - px * 0.28, by - py * 0.28, tz + 0.32)
+
+        left = (stand_l[0] + (pose_l[0] - stand_l[0]) * raise_t,
+                stand_l[1] + (pose_l[1] - stand_l[1]) * raise_t,
+                stand_l[2] + (pose_l[2] - stand_l[2]) * raise_t)
+        right = (stand_r[0] + (pose_r[0] - stand_r[0]) * raise_t,
+                 stand_r[1] + (pose_r[1] - stand_r[1]) * raise_t,
+                 stand_r[2] + (pose_r[2] - stand_r[2]) * raise_t)
         return left, right
+
     elif pose in ("shiko_stomp", "mawashi_fists"):
         # Ambos os punhos cerrados e apoiados firmemente na cintura/mawashi
         left = (bx + px * 0.21, by + py * 0.21, tz - 0.02)
@@ -392,15 +465,36 @@ def _render_haori_back(c, P):
 
 def draw_legs(c):
     """
-    Pernas monumentais de Rikishi com adaptação biomecânica a todas as posturas:
-    - Sonkyo (Agachamento sagrado nos artelhos com joelhos abertos).
-    - Shiko Raise (Elevação lateral da perna a 90°).
+    Pernas monumentais de Rikishi com adaptação biomecânica fluida a todas as posturas:
+    - Sonkyo (Agachamento sagrado nos artelhos com joelhos abertos e transição contínua sem teleport).
+    - Shiko Raise (Elevação lateral da perna a 90° com subida suave e sustentação).
     - Tachiai Charge (Inclinação frontal e passadas em arremetida).
     """
     P = pal()
     trail, amp, freq = mk.motion(c, 0.030)
     extra = getattr(c, "extra_props", None) or {}
     pose = extra.get("pose", "")
+
+    squat_t = 0.0
+    if pose == "sonkyo_squat":
+        if "seg_u" in extra:
+            u = float(extra["seg_u"])
+            if u < 0.28:
+                squat_t = _smooth(u / 0.28)
+            elif u <= 0.72:
+                squat_t = 1.0
+            else:
+                squat_t = _smooth((1.0 - u) / 0.28)
+        else:
+            squat_t = 1.0
+
+    raise_t = 0.0
+    if pose == "shiko_raise":
+        if "seg_u" in extra:
+            u = float(extra["seg_u"])
+            raise_t = _smooth(u / 0.65) if u < 0.65 else 1.0
+        else:
+            raise_t = 1.0
 
     order = sorted(("L", "R"), key=lambda s: mk.depth(c, c.legs_data[s]["foot"][0], c.legs_data[s]["foot"][1]))
 
@@ -412,23 +506,52 @@ def draw_legs(c):
 
         o1, o2 = cloth.chain_offsets(2, c.walk_timer, 0.70 * sign, trail, (c.px, c.py), amp=amp * 0.3, freq=freq)
 
-        if pose == "sonkyo_squat":
-            # Agachamento profundo Sonkyo: joelhos projetados para os lados, calcanhares erguidos
-            top = (th[0] + c.px * sign * 0.08, th[1] + c.py * sign * 0.08, c.pelvis_z + 0.02)
-            knee = (th[0] + c.px * sign * 0.22 + c.fx * 0.10, th[1] + c.py * sign * 0.22 + c.fy * 0.10, c.base_z + 0.16)
-            cuff_pos = (th[0] + c.px * sign * 0.16 + c.fx * 0.05, th[1] + c.py * sign * 0.16 + c.fy * 0.05, c.base_z + 0.08)
-            ankle = (foot[0] + c.px * sign * 0.08, foot[1] + c.py * sign * 0.08, foot[2])
-        elif pose == "shiko_raise" and side == "R":
-            # Perna direita erguida a 90° em Shiko cerimonial
-            top = (th[0], th[1], th[2] + 0.22)
-            knee = (c.base_x - c.px * 0.34, c.base_y - c.py * 0.34, c.pelvis_z + 0.28)
-            cuff_pos = (c.base_x - c.px * 0.42, c.base_y - c.py * 0.42, c.pelvis_z + 0.34)
-            ankle = (c.base_x - c.px * 0.48, c.base_y - c.py * 0.48, c.pelvis_z + 0.38)
+        stand_top = (th[0], th[1], th[2] + 0.22)
+        stand_knee = (sh[0] + o1[0] * 0.15, sh[1] + o1[1] * 0.15, sh[2] + 0.14)
+        stand_cuff = (sh[0] + o1[0] * 0.10, sh[1] + o1[1] * 0.10, sh[2] + 0.06)
+        stand_ankle = (foot[0] + o2[0] * 0.10, foot[1] + o2[1] * 0.10, foot[2] + 0.02)
+
+        if squat_t > 0.0:
+            sonkyo_top = (th[0] + c.px * sign * 0.08, th[1] + c.py * sign * 0.08, c.pelvis_z + 0.02)
+            sonkyo_knee = (th[0] + c.px * sign * 0.22 + c.fx * 0.10, th[1] + c.py * sign * 0.22 + c.fy * 0.10, c.base_z + 0.16)
+            sonkyo_cuff = (th[0] + c.px * sign * 0.16 + c.fx * 0.05, th[1] + c.py * sign * 0.16 + c.fy * 0.05, c.base_z + 0.08)
+            sonkyo_ankle = (foot[0] + c.px * sign * 0.08, foot[1] + c.py * sign * 0.08, foot[2])
+
+            top = (stand_top[0] + (sonkyo_top[0] - stand_top[0]) * squat_t,
+                   stand_top[1] + (sonkyo_top[1] - stand_top[1]) * squat_t,
+                   stand_top[2] + (sonkyo_top[2] - stand_top[2]) * squat_t)
+            knee = (stand_knee[0] + (sonkyo_knee[0] - stand_knee[0]) * squat_t,
+                    stand_knee[1] + (sonkyo_knee[1] - stand_knee[1]) * squat_t,
+                    stand_knee[2] + (sonkyo_knee[2] - stand_knee[2]) * squat_t)
+            cuff_pos = (stand_cuff[0] + (sonkyo_cuff[0] - stand_cuff[0]) * squat_t,
+                        stand_cuff[1] + (sonkyo_cuff[1] - stand_cuff[1]) * squat_t,
+                        stand_cuff[2] + (sonkyo_cuff[2] - stand_cuff[2]) * squat_t)
+            ankle = (stand_ankle[0] + (sonkyo_ankle[0] - stand_ankle[0]) * squat_t,
+                     stand_ankle[1] + (sonkyo_ankle[1] - stand_ankle[1]) * squat_t,
+                     stand_ankle[2] + (sonkyo_ankle[2] - stand_ankle[2]) * squat_t)
+        elif raise_t > 0.0 and side == "R":
+            shiko_top = (th[0], th[1], th[2] + 0.22)
+            shiko_knee = (c.base_x - c.px * 0.34, c.base_y - c.py * 0.34, c.pelvis_z + 0.28)
+            shiko_cuff = (c.base_x - c.px * 0.42, c.base_y - c.py * 0.42, c.pelvis_z + 0.34)
+            shiko_ankle = (c.base_x - c.px * 0.48, c.base_y - c.py * 0.48, c.pelvis_z + 0.38)
+
+            top = (stand_top[0] + (shiko_top[0] - stand_top[0]) * raise_t,
+                   stand_top[1] + (shiko_top[1] - stand_top[1]) * raise_t,
+                   stand_top[2] + (shiko_top[2] - stand_top[2]) * raise_t)
+            knee = (stand_knee[0] + (shiko_knee[0] - stand_knee[0]) * raise_t,
+                    stand_knee[1] + (shiko_knee[1] - stand_knee[1]) * raise_t,
+                    stand_knee[2] + (shiko_knee[2] - stand_knee[2]) * raise_t)
+            cuff_pos = (stand_cuff[0] + (shiko_cuff[0] - stand_cuff[0]) * raise_t,
+                        stand_cuff[1] + (shiko_cuff[1] - stand_cuff[1]) * raise_t,
+                        stand_cuff[2] + (shiko_cuff[2] - stand_cuff[2]) * raise_t)
+            ankle = (stand_ankle[0] + (shiko_ankle[0] - stand_ankle[0]) * raise_t,
+                     stand_ankle[1] + (shiko_ankle[1] - stand_ankle[1]) * raise_t,
+                     stand_ankle[2] + (shiko_ankle[2] - stand_ankle[2]) * raise_t)
         else:
-            top = (th[0], th[1], th[2] + 0.22)
-            knee = (sh[0] + o1[0] * 0.15, sh[1] + o1[1] * 0.15, sh[2] + 0.14)
-            cuff_pos = (sh[0] + o1[0] * 0.10, sh[1] + o1[1] * 0.10, sh[2] + 0.06)
-            ankle = (foot[0] + o2[0] * 0.10, foot[1] + o2[1] * 0.10, foot[2] + 0.02)
+            top = stand_top
+            knee = stand_knee
+            cuff_pos = stand_cuff
+            ankle = stand_ankle
 
         # Coxa e canela maciças em malha 3D contínua
         draw_ribbon_mesh_3d(
@@ -469,9 +592,14 @@ def draw_obi(c):
 
     # 2. Corda sagrada Shimenawa de Yokozuna (apenas na versão atualizada Overhaul)
     if not legacy:
-        shime_pos = (bx + fx * 0.02, by + fy * 0.02, z + 0.01)
-        mk.obox(c, shime_pos, (fx, fy, 0.0), pelvis_w * 0.90, pelvis_w + 0.065, 0.045, P["shimenawa"], up=(0.0, 0.0, 1.0), outline=True)
-        mk.obox(c, (shime_pos[0] + fx * 0.01, shime_pos[1] + fy * 0.01, shime_pos[2]), (fx, fy, 0.0), pelvis_w * 0.86, pelvis_w + 0.045, 0.020, P["shimenawa_dark"], up=(0.0, 0.0, 1.0), outline=False)
+        # Shimenawa frontal trançada ajustada à cintura (sem protusão frontal)
+        shime_half_w = (pelvis_w + 0.050) * 0.5
+        front_rope_origin = (bx - px * shime_half_w + fx * (pelvis_w * 0.42),
+                             by - py * shime_half_w + fy * (pelvis_w * 0.42),
+                             z + 0.015)
+        mk.obox(c, front_rope_origin, (px, py, 0.0), shime_half_w * 2.0, 0.048, 0.046, P["shimenawa"], up=(0.0, 0.0, 1.0), outline=True)
+        mk.obox(c, (front_rope_origin[0] + fx * 0.005, front_rope_origin[1] + fy * 0.005, front_rope_origin[2] + 0.008),
+                (px, py, 0.0), shime_half_w * 1.90, 0.032, 0.024, P["shimenawa_dark"], up=(0.0, 0.0, 1.0), outline=False)
 
     # 3. Serpentinas brancas Gohei rituais em zigue-zague pendendo da Shimenawa
     if mk.depth(c, fx, fy) > -0.15:
@@ -494,6 +622,7 @@ def draw_torso(c):
     """
     Tronco Colossal de Raiden com manto cerimonial Haori carmesim e peitoral exposto:
     - Em Tachiai Tackle, aplica inclinação corporal de 35° à frente.
+    - Em Sonkyo squat, rebaixa o centro de massa fluidamente.
     """
     P = pal()
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
@@ -625,12 +754,14 @@ def draw_head(c):
     - Calota craniana robusta com topete Oicho-mage em leque tradicional de Yokozuna.
     - Cordão de papel branco ritual Motoyui.
     - Olhar marcial estóico e intimidador via `draw_portrait_face_3d`.
+    - Transição fluida de elevação/descida no Sonkyo sem snap.
     """
     P = pal()
     bx, by, hz, fx, fy, px, py = c.base_x, c.base_y, c.head_z, c.fx, c.fy, c.px, c.py
     hw = getattr(c, "head_w", 0.165)
     extra = getattr(c, "extra_props", None) or {}
     pose = extra.get("pose", "")
+    legacy = bool(extra.get("legacy_mode", False))
 
     lean_fwd = 0.08 if (pose in ("tackle", "tachiai_charge") or getattr(c, "state", "") == "TACHIAI_TACKLE") else 0.0
 
@@ -664,16 +795,23 @@ def draw_head(c):
     mk.obox(c, bun_base, (0.0, 0.0, 1.0), 0.026, 0.068, 0.068, P["motoyui"], up=(fx, fy, 0.0), outline=False)
 
     # 3. Rosto marcial masculino 3D low-poly estilizado
-    if not getattr(c, "_face_drawn", False):
+    if not legacy and not getattr(c, "_face_drawn", False):
         draw_portrait_face_3d(c, char_type="raiden")
         c._face_drawn = True
 
 
 def _render_palm_effects(c, hand_l, hand_r):
-    """Renderiza auras de choque Tsuppari, linhas de velocidade Tachiai e pó de sal."""
+    """Renderiza auras de choque Tsuppari, linhas de velocidade Tachiai e pó de sal ritual."""
     P = pal()
     extra = getattr(c, "extra_props", None) or {}
     pose = extra.get("pose", "")
+
+    # 0. Efeito cerimonial de sal ritual no aplauso da Intro
+    if pose == "ceremonial_clap" and extra.get("salt_flash", False):
+        rx, ry, rz = hand_r
+        mk.cbox(c, rx, ry, rz + 0.04, 0.12, 0.12, 0.12, P["gohei"], outline=False)
+        mk.cbox(c, rx + c.fx * 0.03, ry + c.fy * 0.03, rz + 0.06, 0.08, 0.08, 0.08, P["gohei_shadow"], outline=False)
+        return
 
     # 1. Efeito de investida Tachiai (Linhas de velocidade sísmica e poeira)
     if pose in ("tackle", "tachiai_charge") or getattr(c, "state", "") == "TACHIAI_TACKLE":

@@ -88,7 +88,7 @@ class SaitouSamurai(Samurai):
         e sofre derrapagem prolongada ao frear.
         """
         if not self.can_act():
-            return
+            return False
 
         dx = target_wx - self.wx
         dy = target_wy - self.wy
@@ -116,6 +116,7 @@ class SaitouSamurai(Samurai):
             self.wy + self.charge_dir_y * 0.95
         )
         self.trail_points = [(self.wx, self.wy)]
+        return True
 
     def trigger_gatotsu(self, target_wx: float, target_wy: float):
         self.trigger_gatotsu_thrust(target_wx, target_wy)
@@ -156,7 +157,7 @@ class SaitouSamurai(Samurai):
         Golpe instantâneo sem corrida, disparado do corpo a corpo.
         """
         if not self.can_act():
-            return
+            return False
 
         dx = target_wx - self.wx
         dy = target_wy - self.wy
@@ -169,6 +170,7 @@ class SaitouSamurai(Samurai):
         self.zeroshiki_phase = "WINDUP"
         self.state_timer = self.zeroshiki_windup
         self.hitbox_active = False
+        return True
 
     def update(self, dt: float, game_map, particles: list = None):
         if not self.is_alive:

@@ -92,12 +92,11 @@ class BenkeiSamurai(Samurai):
     def trigger_naginata_thrust(self, aim_x: float, aim_y: float):
         """Ataque Primário com Naginata ou Investida Desarmada."""
         if not self.can_act():
-            return
+            return False
 
         if not self.has_naginata:
             # Desarmado: Tackle de atropelamento com stun
-            self.trigger_tackle_charge(aim_x, aim_y)
-            return
+            return self.trigger_tackle_charge(aim_x, aim_y)
 
         # Estocada colossal armada
         self.set_facing(aim_x, aim_y)
@@ -113,16 +112,16 @@ class BenkeiSamurai(Samurai):
         )
         self.hitbox_radius = self.thrust_radius
         self.slash_dir = (self.facing_x, self.facing_y)
+        return True
 
     def trigger_naginata_throw(self, aim_x: float, aim_y: float, projectiles: list, particles: list = None):
         """Ação Secundária: Arremesso da Naginata em voo supersônico."""
         if not self.can_act():
-            return
+            return False
 
         if not self.has_naginata:
             # Já está desarmado: executar tackle de recuperação
-            self.trigger_tackle_charge(aim_x, aim_y)
-            return
+            return self.trigger_tackle_charge(aim_x, aim_y)
 
         self.set_facing(aim_x, aim_y)
         self.state = STATE_NAGINATA_THROW
@@ -147,11 +146,12 @@ class BenkeiSamurai(Samurai):
         if particles is not None:
             for _ in range(8):
                 particles.append(SparkParticle(self.wx, self.wy, 0.3))
+        return True
 
     def trigger_tackle_charge(self, aim_x: float, aim_y: float):
         """Investida de alta velocidade desarmada: deal 0 lethal damage + STUN garantido (1.2s)."""
         if not self.is_alive or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD):
-            return
+            return False
 
         # Se houver naginata fincada no solo, guiar na direção dela se o jogador mirar próximo
         target_x, target_y = aim_x, aim_y
@@ -182,6 +182,7 @@ class BenkeiSamurai(Samurai):
         self.hitbox_radius = 1.05
         self.hitbox_center = (self.wx + self.facing_x * 0.70, self.wy + self.facing_y * 0.70)
         self.slash_dir = (self.facing_x, self.facing_y)
+        return True
 
     def recover_naginata(self):
         """Recupera a Naginata empunhada com sucesso."""

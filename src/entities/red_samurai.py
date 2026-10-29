@@ -139,7 +139,7 @@ class RedSamurai(Samurai):
         """
         is_cancel = self.can_cancel_shukuchi()
         if not self.can_act() and not is_cancel:
-            return
+            return False
 
         self.set_facing(target_wx, target_wy)
         self.is_shukuchi_cancel = is_cancel
@@ -166,6 +166,7 @@ class RedSamurai(Samurai):
                 play_sfx(SoundEvent.SLASH_KATANA, volume_scale=0.92)
         except Exception:
             pass
+        return True
 
     def trigger_ryuu_tsui_sen(self, target_wx: float, target_wy: float, particles: list = None, banners: list = None, opponent = None):
         """
@@ -176,7 +177,7 @@ class RedSamurai(Samurai):
         3. DESCEND (0.14s): Queda meteórica vertical com corte de cima para baixo (raio 1.45m).
         """
         if not self.can_act() or self.ryuu_timer > 0:
-            return
+            return False
 
         self.set_facing(target_wx, target_wy)
         self.ryuu_timer = self.ryuu_cooldown
@@ -211,6 +212,7 @@ class RedSamurai(Samurai):
             for _ in range(8):
                 particles.append(SmokeParticle(self.wx, self.wy, 0.25, color=(230, 235, 245), size=6))
                 particles.append(SparkParticle(self.wx, self.wy, 0.35, color=(255, 215, 110)))
+        return True
 
     def trigger_tsuka_ate(self, target_wx: float, target_wy: float, particles: list = None, opponent = None, banners: list = None):
         """Compatibilidade: executa Tsuka-ate de quebra de guarda ou redireciona para Ryuu Tsui Sen."""
@@ -234,7 +236,7 @@ class RedSamurai(Samurai):
             or self.roll_cooldown_timer > 0
             or self.dash_recovery_timer > 0
         ):
-            return
+            return False
         if dir_x == 0 and dir_y == 0:
             dir_x, dir_y = -self.facing_x, -self.facing_y # Recuo para trás
         else:
@@ -265,6 +267,7 @@ class RedSamurai(Samurai):
             play_sfx(SoundEvent.SHUKUCHI, volume_scale=0.9)
         except Exception:
             pass
+        return True
 
     def stun(self, duration: float = 0.8):
         """Atordoa Kenshi garantindo queda/aterrissagem física (wz = 0.0) sem flutuação."""

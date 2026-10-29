@@ -18,6 +18,7 @@ from src.edition import is_demo
 from src.effects import parchment as pm
 from src.ui.font_manager import render_text_fx
 from src.ui.fonts import get_title_font, get_text_font
+from src.ui.game_logo import get_logo
 
 MODE_ARCADE = 0
 MODE_VERSUS = 1
@@ -214,39 +215,44 @@ class SumieTitleScreen:
         font_menu_sub = get_text_font(13)
         font_menu_tip = get_text_font(14)
 
-        title_text = t("game_title")
-        sub_text = t("game_subtitle")
+        logo = get_logo("light", 600)
+        if logo is not None:
+            # Logo oficial "Samurai Edge: Bakumatsu" (já inclui o subtítulo)
+            surface.blit(logo, (SCREEN_WIDTH // 2 - logo.get_width() // 2, 48))
+        else:
+            title_text = t("game_title")
+            sub_text = t("game_subtitle")
 
-        title_surf = render_text_fx(
-            font_title_big,
-            title_text,
-            color=(28, 22, 18),
-            outline=True,
-            outline_color=(58, 48, 38),
-            outline_width=1,
-            glow=True,
-            glow_color=(212, 175, 55),
-            glow_width=3,
-            shadow=True,
-            shadow_color=(20, 16, 12),
-            shadow_offset=(2, 2)
-        )
-        title_y = 65
-        surface.blit(title_surf, (SCREEN_WIDTH // 2 - title_surf.get_width() // 2, title_y))
+            title_surf = render_text_fx(
+                font_title_big,
+                title_text,
+                color=(28, 22, 18),
+                outline=True,
+                outline_color=(58, 48, 38),
+                outline_width=1,
+                glow=True,
+                glow_color=(212, 175, 55),
+                glow_width=3,
+                shadow=True,
+                shadow_color=(20, 16, 12),
+                shadow_offset=(2, 2)
+            )
+            title_y = 65
+            surface.blit(title_surf, (SCREEN_WIDTH // 2 - title_surf.get_width() // 2, title_y))
 
-        sub_surf = render_text_fx(
-            font_title_sub,
-            f"―  {sub_text}  ―",
-            color=pm.SEAL_RED,
-            glow=True,
-            glow_color=(235, 205, 140),
-            glow_width=2,
-            shadow=True,
-            shadow_color=(30, 20, 18),
-            shadow_offset=(1, 1)
-        )
-        sub_y = title_y + title_surf.get_height() - 8
-        surface.blit(sub_surf, (SCREEN_WIDTH // 2 - sub_surf.get_width() // 2, sub_y))
+            sub_surf = render_text_fx(
+                font_title_sub,
+                f"―  {sub_text}  ―",
+                color=pm.SEAL_RED,
+                glow=True,
+                glow_color=(235, 205, 140),
+                glow_width=2,
+                shadow=True,
+                shadow_color=(30, 20, 18),
+                shadow_offset=(1, 1)
+            )
+            sub_y = title_y + title_surf.get_height() - 8
+            surface.blit(sub_surf, (SCREEN_WIDTH // 2 - sub_surf.get_width() // 2, sub_y))
 
         # Brasão da garça no canto superior direito
         pm.draw_crest(surface, SCREEN_WIDTH - 120, 26, scale=0.68)
@@ -424,5 +430,5 @@ class SumieTitleScreen:
         if is_demo():
             badge = font_menu_title.render(t("demo_badge"), True, COLOR_GOLD)
             surface.blit(badge, (SCREEN_WIDTH - badge.get_width() - 24, 20))
-        tip_text = font_menu_tip.render(t("title_menu_hint"), True, (175, 170, 165))
+        tip_text = pm.fit_text(font_menu_tip, t("title_menu_hint"), (175, 170, 165), SCREEN_WIDTH - 80)
         surface.blit(tip_text, (SCREEN_WIDTH // 2 - tip_text.get_width() // 2, SCREEN_HEIGHT - 16))

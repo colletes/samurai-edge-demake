@@ -80,13 +80,8 @@ class PropSurfaceCache:
     def _get_scratch(self) -> pygame.Surface:
         if self._scratch is None:
             self._scratch = pygame.Surface((self.SCRATCH_W, self.SCRATCH_H), pygame.SRCALPHA)
-            self._scratch.fill((0, 0, 0, 0))
-        elif self._last_dirty_rect is not None:
-            # Limpa só a região usada no último bake em vez de 1024x1024 px inteiros
-            self._scratch.fill((0, 0, 0, 0), self._last_dirty_rect.inflate(160, 120))
-            self._last_dirty_rect = None
-        else:
-            self._scratch.fill((0, 0, 0, 0))
+        self._scratch.fill((0, 0, 0, 0))
+        self._last_dirty_rect = None
         return self._scratch
 
     @staticmethod

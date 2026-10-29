@@ -297,7 +297,7 @@ class Kabuki(Samurai):
     def trigger_fan_strike(self, target_wx: float, target_wy: float, particles: list = None):
         """Ataque Primário: Golpe veloz e duplo de leques de ferro afiados (Tessen)."""
         if not self.can_act():
-            return
+            return False
 
         self.set_facing(target_wx, target_wy)
         # Micro-avanço tático para fechar distância no duelo melee
@@ -314,11 +314,12 @@ class Kabuki(Samurai):
         if particles is not None:
             for _ in range(6):
                 particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.35))
+        return True
 
     def trigger_dokukiri(self, target_wx: float, target_wy: float, clouds: list = None, particles: list = None):
         """Ação Secundária: Dokukiri (Sopro Venenoso) — cone frontal projetado com leques que empurra o adversário."""
         if not self.can_act() or self.poison_cooldown_timer > 0:
-            return
+            return False
 
         self.set_facing(target_wx, target_wy)
         self.state = "DOKUKIRI"
@@ -331,6 +332,7 @@ class Kabuki(Samurai):
         if particles is not None:
             for _ in range(16):
                 particles.append(SparkParticle(self.wx + self.facing_x * 0.8, self.wy + self.facing_y * 0.8, 0.5))
+        return True
 
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None, decoys: list = None):
         """Terceira Ação: Kawarimi Dash Teatral com manequim de seda, pétalas de sakura e i-frames."""
@@ -341,7 +343,7 @@ class Kabuki(Samurai):
             or self.roll_cooldown_timer > 0
             or self.dash_recovery_timer > 0
         ):
-            return
+            return False
 
         if dir_x == 0 and dir_y == 0:
             dir_x, dir_y = -self.facing_x, -self.facing_y
@@ -370,9 +372,10 @@ class Kabuki(Samurai):
             from src.config import COLOR_SAKURA_PINK
             for _ in range(16):
                 particles.append(SparkParticle(self.wx, self.wy, 0.45, color=COLOR_SAKURA_PINK))
+        return True
 
     def trigger_kabuki_roll(self, dir_x: float, dir_y: float, particles: list = None, decoys: list = None):
-        self.trigger_roll(dir_x, dir_y, particles=particles, decoys=decoys)
+        return self.trigger_roll(dir_x, dir_y, particles=particles, decoys=decoys)
 
     def trigger_kawarimi_decoy(self, dir_x: float, dir_y: float, decoys: list, particles: list = None):
         """Compatibilidade: finta teatral com manequim e pirueta."""

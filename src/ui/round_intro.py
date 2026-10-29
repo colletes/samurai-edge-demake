@@ -118,6 +118,7 @@ class RoundIntroScreen:
             pm.draw_rod(surface, "bottom", SCREEN_WIDTH // 2, scroll_y + scroll_h - rh // 2, scroll_w + 40)
         else:
             scroll_surf = pygame.Surface((scroll_w, scroll_h), pygame.SRCALPHA)
+            scroll_surf.fill((0, 0, 0, 0))
             pygame.draw.rect(scroll_surf, (235, 225, 200, 235), (0, 0, scroll_w, scroll_h), border_radius=10)
             pygame.draw.rect(scroll_surf, (90, 60, 30, 255), (0, 0, scroll_w, scroll_h), width=4, border_radius=10)
             pygame.draw.rect(scroll_surf, (40, 25, 15, 255), (0, 0, scroll_w, 14), border_radius=6)
@@ -147,7 +148,9 @@ class RoundIntroScreen:
             if text_alpha < 255:
                 for s in (p1_surf, p2_surf, vs_surf, b1_surf, b2_surf):
                     if s is not None:
-                        s.fill((255, 255, 255, text_alpha), special_flags=pygame.BLEND_RGBA_MULT)
+                        fade_m = pygame.Surface(s.get_size(), pygame.SRCALPHA)
+                        fade_m.fill((255, 255, 255, max(0, min(255, text_alpha))))
+                        s.blit(fade_m, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
             cy = scroll_y + scroll_h // 2
             mid_x = scroll_x + scroll_w // 2
@@ -168,5 +171,7 @@ class RoundIntroScreen:
                 font_round = get_text_font(16)
                 r_surf = font_round.render(self.round_label, True, pm.SEAL_RED if parch else (70, 45, 20))
                 if text_alpha < 255:
-                    r_surf.fill((255, 255, 255, text_alpha), special_flags=pygame.BLEND_RGBA_MULT)
+                    fade_m = pygame.Surface(r_surf.get_size(), pygame.SRCALPHA)
+                    fade_m.fill((255, 255, 255, max(0, min(255, text_alpha))))
+                    r_surf.blit(fade_m, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
                 surface.blit(r_surf, (mid_x - r_surf.get_width() // 2, scroll_y + 46 if parch else scroll_y - 26))

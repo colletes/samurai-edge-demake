@@ -116,10 +116,11 @@ class KyudoArcher(Samurai):
     def start_sacred_volley(self, target_wx: float, target_wy: float):
         """Inicia a mira em arco da Chuva de Flechas Sagradas (Hold). Tomoe pode se mover livremente."""
         if not self.is_alive or self.volley_cooldown_timer > 0:
-            return
+            return False
         self.is_aiming_volley = True
         self.volley_target_wx = target_wx
         self.volley_target_wy = target_wy
+        return True
 
     def start_volley_strike(self, target_wx: float, target_wy: float):
         self.start_sacred_volley(target_wx, target_wy)
@@ -212,7 +213,7 @@ class KyudoArcher(Samurai):
     def trigger_bow_draw(self, target_wx: float, target_wy: float, projectiles: list = None, particles: list = None):
         """Ataque Primário: Disparo imediato da flecha Yumi sem windup (mira manual)."""
         if not self.can_act() or self.arrow_cooldown_timer > 0:
-            return
+            return False
 
         self.set_facing(target_wx, target_wy)
         self.target_aim_x = target_wx
@@ -231,15 +232,17 @@ class KyudoArcher(Samurai):
         if particles is not None:
             for _ in range(8):
                 particles.append(SparkParticle(self.wx + self.facing_x * 0.6, self.wy + self.facing_y * 0.6, 0.4))
+        return True
 
     def start_rope_arrow_charge(self, target_wx: float, target_wy: float, game_map=None):
         """Inicia o tensionamento da corda (Hold)."""
         if not self.can_act() or self.rope_timer > 0:
-            return
+            return False
         self.is_charging_rope = True
         self.rope_charge_time = 0.0
         self.set_facing(target_wx, target_wy)
         self._calculate_rope_target(game_map)
+        return True
 
     def update_rope_charge(self, dt: float, target_wx: float, target_wy: float, game_map=None):
         """Atualiza a mira e alcance contínuo enquanto o botão é mantido pressionado."""

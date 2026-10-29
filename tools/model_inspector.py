@@ -448,6 +448,36 @@ CHARACTER_ANIM_BUTTONS = {
         ("FINISHER_1", "F1. Finisher 1: Tsuppari Sonic Decapitation", 1.25),
         ("FINISHER_2", "F2. Finisher 2: Tachiai Cataclysmic Slam", 1.35),
     ],
+    "musashi": [
+        ("IDLE", "1. Idle (Postura Chūdan)", 0.0),
+        ("WALK", "2. Walk (Passada Marcial)", 0.0),
+        ("ATTACK_1", "3. Golpe 1: Katana Descendente", 0.60),
+        ("ATTACK_2", "4. Golpe 2: Wakizashi Ascendente", 0.60),
+        ("ATTACK_3", "5. Golpe 3: Clivagem em X (Onda)", 0.65),
+        ("CROSS_GUARD", "6. Guarda: Cross Guard Parry", 0.50),
+        ("CROSS_SHOCKWAVE", "7. Contra-Ataque: Cross Shockwave", 0.65),
+        ("TACTICAL_ROLL", "8. Esquiva: Rolamento Tático (Sem Zanzou)", 0.45),
+        ("ROLL_CANCEL", "9. Cancel: Lunge do Rolamento (40% -> Golpe)", 0.65),
+        ("INTRO", "0. Intro: Saque Duplo & Faíscas em X", 2.00),
+        ("VICTORY", "V. Vitória: Duplo Chiburi & Dois Céus", 2.20),
+        ("FINISHER_1", "F1. Finisher 1: Niten Ichi-ryu (3 Partes)", 1.25),
+        ("FINISHER_2", "F2. Finisher 2: Cross Vacuum Slicer (4 Partes)", 1.35),
+    ],
+    "ninja": [
+        ("IDLE", "1. Idle (Postura Ninja)", 0.0),
+        ("WALK", "2. Walk (Passo Furtivo)", 0.0),
+        ("ATTACK_1", "3. Golpe 1: Ninjato Reverse Slash", 0.60),
+        ("ATTACK_2", "4. Golpe 2: Solar Plexus Thrust", 0.60),
+        ("KUNAI_SNIPE", "5. Secundário: Kunai Snipe (Solo)", 0.50),
+        ("KUNAI_AERIAL", "6. Secundário: Kunai Snipe (Aéreo)", 0.55),
+        ("SHINOBI_JUMP", "7. Esquiva: Salto Ninja Parabólico", 0.65),
+        ("JUMP_CANCEL", "8. Cancel: Landing Strike Lunge", 0.65),
+        ("PARRY_RECOIL", "9. Parry Reaction: Queda Imediata", 0.60),
+        ("INTRO", "0. Intro: Leaf Cover & Saque Ninjato", 2.00),
+        ("VICTORY", "V. Vitória: Kuji-Kiri & Fumaça Negra", 2.20),
+        ("FINISHER_1", "F1. Finisher 1: Tantou Kyuusho (Garganta)", 1.25),
+        ("FINISHER_2", "F2. Finisher 2: Kunai Miken (Testa)", 1.25),
+    ],
 }
 
 DEFAULT_ANIM_BUTTONS = [
@@ -472,6 +502,21 @@ OVERHAUL_DE_PARA_NOTES = {
         "Materiais: Corda Sagrada Shimenawa, Serpentinas Gohei, Seda Carmesim, Ouro, Couro",
         "Tachiai 3 Fases: Aceleração contínua (4.0 -> 12.5 m/s) + 2 de Dano em Velocidade Máxima",
         "Combo Tsuppari: Harite + Morote Quebra-Guarda + Esquiva Shiko no Dohyo",
+    ],
+    "musashi": [
+        "SSAA 2x Offscreen (Zero serrilhado nas lâminas duplas e cordões)",
+        "Rosto Marcial Veterano (Olhar severo, cicatriz na sobrancelha e barba por fazer)",
+        "Materiais: Quimono Índigo, Linho Cru, Laca Urushi, Hamon Tamahagane",
+        "Combo Niten 3 Tempos (Sem embainhar) + Postura dos Dois Céus",
+        "Rolamento Tático sem Zanzou + Cancelamento Ofensivo aos 40%",
+    ],
+    "ninja": [
+        "SSAA 2x Offscreen (Zero serrilhado nas lâminas, capuz e kunais)",
+        "Olhos Marciais Ambarinos HD (Anel limbal dourado penetrante sob a máscara)",
+        "Materiais: Seda Shozoku, Lona Tabi, Aço Tamahagane, Ouro Urushi",
+        "Ninjato com Empunhadura Invertida (Bainha vazia ao sacar para combate)",
+        "Salto Acrobático sem Zanzou + Cancelamento Ofensivo aos 40%",
+        "Anti-Floating: Queda imediata no solo se aparado no ar",
     ],
 }
 
@@ -598,9 +643,9 @@ class ModelInspector:
         self.action_duration = dur
         if action_id in POSES:
             self.current_pose_idx = POSES.index(action_id)
-        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "FINISHER_1", "FINISHER_2"):
+        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "ATTACK_1", "ATTACK_2", "ATTACK_3", "CROSS_SHOCKWAVE", "ROLL_CANCEL", "FINISHER_1", "FINISHER_2"):
             self.current_pose_idx = POSES.index("ATTACK")
-        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY"):
+        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY", "CROSS_GUARD", "TACTICAL_ROLL"):
             self.current_pose_idx = POSES.index("RECOVERY")
 
     def select_character(self, idx: int | str):
@@ -1017,10 +1062,118 @@ class ModelInspector:
                 extra_props["pose"] = "hataki_komi"
                 wx = 0.12 * math.sin(prog * math.pi)
                 wy = 0.12 * math.sin(prog * math.pi)
+        elif act == "ATTACK_1":
+            state = "ATTACK"
+            extra_props["combo_step"] = 1
+            if char_type == "ninja":
+                extra_props["pose"] = "reverse_slash"
+                state_timer = max(0.01, (1.0 - prog) * 0.16)
+                wx = 0.08 * math.sin(prog * math.pi)
+                wy = 0.08 * math.sin(prog * math.pi)
+            else:
+                # Musashi Golpe 1: Katana descendente
+                state_timer = max(0.01, (1.0 - prog) * 0.18)
+                wx = 0.10 * math.sin(prog * math.pi)
+                wy = 0.10 * math.sin(prog * math.pi)
+        elif act == "ATTACK_2":
+            state = "ATTACK"
+            extra_props["combo_step"] = 2
+            if char_type == "ninja":
+                extra_props["pose"] = "thrust_lunge"
+                state_timer = max(0.01, (1.0 - prog) * 0.18)
+                wx = 0.22 * math.sin(prog * math.pi)
+                wy = 0.22 * math.sin(prog * math.pi)
+            else:
+                # Musashi Golpe 2: Wakizashi ascendente
+                state_timer = max(0.01, (1.0 - prog) * 0.18)
+                wx = 0.15 * math.sin(prog * math.pi)
+                wy = 0.15 * math.sin(prog * math.pi)
+        elif act == "KUNAI_SNIPE":
+            # Hanzo Secundário Solo: Kunai Snipe veloz
+            state = "RECOVERY"
+            extra_props["has_kunai"] = False
+            state_timer = max(0.01, (1.0 - prog) * 0.12)
+        elif act == "KUNAI_AERIAL":
+            # Hanzo Secundário Aéreo: Salto com mergulho de Kunai
+            state = "JUMP"
+            wz = math.sin(prog * math.pi) * 1.35
+            extra_props["has_kunai"] = (prog < 0.40)
+            wx = 0.35 * prog
+            wy = 0.35 * prog
+        elif act == "SHINOBI_JUMP":
+            # Hanzo Salto Ninja Acrobático Parabólico
+            state = "JUMP"
+            wz = math.sin(prog * math.pi) * 1.35
+            wx = 0.42 * prog
+            wy = 0.42 * prog
+        elif act == "JUMP_CANCEL":
+            # Hanzo Cancelamento de Aterrissagem (Landing Strike Lunge)
+            if prog < 0.45:
+                state = "JUMP"
+                wz = (1.0 - (prog / 0.45)) * 0.50
+                wx = 0.25 * (prog / 0.45)
+                wy = 0.25 * (prog / 0.45)
+            else:
+                u = (prog - 0.45) / 0.55
+                state = "ATTACK"
+                wz = 0.0
+                extra_props["combo_step"] = 2
+                extra_props["is_landing_cancel"] = True
+                extra_props["pose"] = "thrust_lunge"
+                state_timer = max(0.01, (1.0 - u) * 0.18)
+                wx = 0.25 + 0.32 * u
+                wy = 0.25 + 0.32 * u
+        elif act == "PARRY_RECOIL":
+            # Hanzo Queda Imediata ao Sofrer Parry (Anti-Floating)
+            state = "STUNNED"
+            wz = 0.0
+            state_timer = max(0.01, (1.0 - prog) * 0.60)
+            wx = -0.15 * math.sin(prog * math.pi)
+            wy = -0.15 * math.sin(prog * math.pi)
+        elif act == "ATTACK_3":
+            # Musashi Golpe 3: Clivagem em X com lunge e onda
+            state = "ATTACK"
+            extra_props["combo_step"] = 3
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            wx = 0.32 * math.sin(prog * math.pi)
+            wy = 0.32 * math.sin(prog * math.pi)
+        elif act == "CROSS_GUARD":
+            # Musashi Postura Cross Guard Parry
+            state = "PARRY"
+            extra_props["pose"] = "cross_guard"
+        elif act == "CROSS_SHOCKWAVE":
+            # Musashi Contra-Ataque Cross Shockwave
+            state = "CROSS_SHOCKWAVE"
+            extra_props["pose"] = "cross_shockwave"
+            extra_props["cross_shockwave"] = True
+            state_timer = max(0.01, (1.0 - prog) * 0.24)
+            wx = 0.18 * math.sin(prog * math.pi)
+            wy = 0.18 * math.sin(prog * math.pi)
+        elif act == "TACTICAL_ROLL":
+            # Musashi Rolamento Tático (sem zanzou, sem duplicação)
+            state = "ROLL"
+            extra_props["is_roll"] = True
+            extra_props["pose"] = "tactical_roll"
+            wx = 0.45 * prog
+            wy = 0.45 * prog
+        elif act == "ROLL_CANCEL":
+            # Cancelamento ofensivo aos 40% em lunge de ataque
+            if prog < 0.40:
+                state = "ROLL"
+                extra_props["is_roll"] = True
+                extra_props["pose"] = "tactical_roll"
+                wx = 0.35 * (prog / 0.40)
+                wy = 0.35 * (prog / 0.40)
+            else:
+                state = "ATTACK"
+                extra_props["combo_step"] = 1
+                state_timer = max(0.01, (1.0 - (prog - 0.40) / 0.60) * 0.18)
+                wx = 0.35 + 0.25 * ((prog - 0.40) / 0.60)
+                wy = 0.35 + 0.25 * ((prog - 0.40) / 0.60)
         elif act in ("INTRO", "VICTORY"):
             kind = "intro" if act == "INTRO" else "victory"
             p_sample = prog if dur > 0.0 else ((self.anim_time * 0.42) % 1.0)
-            if is_legacy and char_type in ("kenshin", "raiden"):
+            if is_legacy and char_type in ("kenshin", "raiden", "musashi"):
                 # Roteiro legado pré-Fase 2 (apenas IDLE + ATTACK simples)
                 if p_sample < 0.25 or p_sample > 0.75:
                     state = "IDLE"
@@ -1043,6 +1196,24 @@ class ModelInspector:
                     extra_props["tsuppari_hit"] = 2
                     extra_props["pose"] = "finisher_morote"
                     wx, wy = 0.15 * prog, 0.15 * prog
+            elif char_type == "musashi":
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - prog) * 0.20)
+                    extra_props["pose"] = "finisher_1"
+                    extra_props["p"] = prog
+                    wx, wy = 0.15 * prog, 0.15 * prog
+            elif char_type == "ninja":
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "IDLE"
+                    extra_props["pose"] = "finisher_1"
+                    wx, wy = 0.18 * prog, 0.18 * prog
             else:
                 # 2.1.4a: Ittou Ryoudan
                 state = "RECOVERY"
@@ -1057,9 +1228,37 @@ class ModelInspector:
                     state_timer = 0.10
                 else:
                     state = "TACHIAI_TACKLE"
-                    extra_props["pose"] = "tackle"
-                    extra_props["tachiai_phase"] = "DASH"
-                    wx, wy = (prog - 0.5) * 0.55, (prog - 0.5) * 0.55
+                    if prog < 0.20:
+                        extra_props["pose"] = "tachiai_crouch"
+                        extra_props["tachiai_phase"] = "STARTUP"
+                    elif prog < 0.70:
+                        u = (prog - 0.20) / 0.50
+                        extra_props["pose"] = "tackle"
+                        extra_props["tachiai_phase"] = "DASH"
+                        wx, wy = (u - 0.5) * 0.55, (u - 0.5) * 0.55
+                    else:
+                        extra_props["pose"] = "cataclysm_slam"
+                        extra_props["tachiai_phase"] = "IMPACT"
+                        wx, wy = 0.28, 0.28
+            elif char_type == "musashi":
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "CROSS_SHOCKWAVE"
+                    extra_props["pose"] = "finisher_2"
+                    extra_props["p"] = prog
+                    extra_props["cross_shockwave"] = True
+                    wx, wy = 0.12 * prog, 0.12 * prog
+            elif char_type == "ninja":
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "IDLE"
+                    extra_props["pose"] = "finisher_2"
+                    wz = math.sin(prog * math.pi) * 0.60
+                    wx, wy = 0.22 * prog, 0.22 * prog
             else:
                 # 2.1.4b: Divisão Celestial de Bambu (Ápice + Queda Meteórica)
                 if prog < 0.42:

@@ -232,6 +232,10 @@ class BossOni(Samurai):
         self._clank = False
         self.dying = False
         self.events: list[str] = []
+        self.collapse_timer = 0.0
+        self.dissolve_timer = 0.0
+        self.whiteout_alpha = 0.0
+        self.dissolve_complete = False
         self.model.prime(0, self.frame())
 
     # ------------------------------------------------------------------ utilidades
@@ -350,8 +354,90 @@ class BossOni(Samurai):
     def begin_collapse(self):
         """Chamado pelo diretor cinematográfico depois do congelamento fatal: os ossos desabam."""
         self.state = "BONE_COLLAPSE"
+        self.collapse_timer = 0.0
+        self.dissolve_timer = 0.0
+        self.whiteout_alpha = 0.0
+        self.dissolve_complete = False
         self.hazards.clear()
         self.model.begin_collapse(self.model.last_poses or self.model.poses(self.current_layout()))
+
+    def _update_death_dissolve(self, dt: float, particles=None, camera=None):
+        """
+        Ao ser finalizado, os ossos do Gashadokuro desabam, irrompem em sombras e névoa roxas
+        até desaparecerem por completo, enquanto a tela vai branqueando suavemente até 100% branco.
+        """
+        self.collapse_timer += dt
+
+        # A partir de 0.6s de colapso (ossos já em queda e espalhando no solo),
+        # irrompem sombras roxas místicas/espectrais:
+        if self.collapse_timer >= 0.6:
+            self.state = "PURPLE_DISSOLVE"
+            self.dissolve_timer += dt
+
+            # 1. Gerar partículas de sombras roxas e faíscas espectrais
+            if particles is not None:
+                from src.effects.particles import SmokeParticle, SparkParticle
+                poses = self.model.poses(self.current_layout())
+                bone_keys = list(poses.keys())
+
+                # Paleta de sombras roxas profundas e espectrais
+                purple_palette = [
+                    (138, 43, 226),  # BlueViolet
+                    (75, 0, 130),    # Indigo
+                    (106, 13, 173),  # Deep Purple
+                    (147, 112, 219), # Medium Purple
+                    (58, 12, 85),    # Dark Shadow Purple
+                    (186, 85, 211),  # Medium Orchid
+                ]
+                num_p = 7 if self.dissolve_timer < 2.0 else 3
+                for _ in range(num_p):
+                    if bone_keys and self.rng.random() < 0.75:
+                        bk = self.rng.choice(bone_keys)
+                        pt = poses[bk][self.rng.choice((0, 1))]
+                        px, py, pz = pt[0], pt[1], max(0.1, pt[2])
+                    else:
+                        ang = self.rng.uniform(0, math.tau)
+                        dist = self.rng.uniform(0.3, 2.5)
+                        px = self.wx + math.cos(ang) * dist
+                        py = self.wy + math.sin(ang) * dist
+                        pz = self.rng.uniform(0.1, 1.8)
+
+                    p_col = self.rng.choice(purple_palette)
+                    sp = SmokeParticle(
+                        px, py, wz=pz,
+                        color=p_col,
+                        radius=self.rng.uniform(0.35, 0.80),
+                        lifetime=self.rng.uniform(0.65, 1.20)
+                    )
+                    # Força ascendente de sombras que sobem ao céu
+                    sp.vz = self.rng.uniform(1.2, 2.8)
+                    sp.vx = self.rng.uniform(-0.6, 0.6)
+                    sp.vy = self.rng.uniform(-0.6, 0.6)
+                    particles.append(sp)
+
+                    if self.rng.random() < 0.4:
+                        spark_col = (220, 140, 255) if self.rng.random() < 0.7 else (255, 255, 255)
+                        particles.append(SparkParticle(px, py, pz, color=spark_col))
+
+            # Leve tremor de câmera das sombras irrompendo
+            if camera is not None and self.dissolve_timer < 2.0:
+                if self.rng.random() < 0.35:
+                    camera.add_shake(1.2)
+
+            # 2. Desaparecimento gradual dos ossos (alpha vai de 255 a 0)
+            dissolve_prog = max(0.0, min(1.0, self.dissolve_timer / 2.2))
+            self.alpha = int(255 * (1.0 - dissolve_prog))
+
+            # 3. Branqueamento crescente da tela (whiteout vai de 0 a 255)
+            # Começa suave aos 0.4s de dissolução e atinge 255 aos 2.8s
+            whiteout_prog = max(0.0, min(1.0, (self.dissolve_timer - 0.4) / 2.4))
+            self.whiteout_alpha = min(255.0, 255.0 * (whiteout_prog ** 1.6))
+
+            # 4. Conclusão da dissolução (tela 100% branca e ossos sumidos)
+            if self.dissolve_timer >= 2.8 and self.whiteout_alpha >= 254.0:
+                self.whiteout_alpha = 255.0
+                self.alpha = 0
+                self.dissolve_complete = True
 
     def pop_events(self) -> list[str]:
         ev, self.events = self.events, []
@@ -383,6 +469,11 @@ class BossOni(Samurai):
         self.time += dt
         was_transforming = self.model.transforming
         self.model.update(dt)
+
+        if self.state in ("BONE_COLLAPSE", "PURPLE_DISSOLVE"):
+            self._update_death_dissolve(dt, particles=particles, camera=camera)
+            return
+
         if was_transforming and not self.model.transforming and self.is_alive:
             self._finish_transform(target, banners)
         if self.invuln_timer > 0:

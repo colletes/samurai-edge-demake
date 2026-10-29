@@ -627,6 +627,7 @@ PORTRAIT_FACE_STYLES = {
         "brow_tilt": 0.28, "delicate_nose": False,
         "eye_z": 0.076, "brow_z": 0.096, "spacing": 0.035,
         "hairline_mid": 0.48, "hairline_lat": 0.38,
+        "hd_anime_eyes": True,
     },
     "hanzo": {
         "iris": (235, 185, 45), "iris_core": (255, 225, 95), "iris_limbal": (75, 50, 15),
@@ -635,6 +636,7 @@ PORTRAIT_FACE_STYLES = {
         "brow_tilt": 0.28, "delicate_nose": False,
         "eye_z": 0.076, "brow_z": 0.096, "spacing": 0.035,
         "hairline_mid": 0.48, "hairline_lat": 0.38,
+        "hd_anime_eyes": True,
     },
     "american": {
         "iris": (75, 110, 140), "iris_core": (120, 180, 225), "iris_limbal": (32, 50, 70),

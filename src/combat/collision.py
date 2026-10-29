@@ -38,10 +38,10 @@ def _get_death_style_for_attacker(attacker, weapon: str | None = None, victim=No
             return "VERTICAL_BISECTION"
         return "KENSHIN_SPLIT"
 
-    # 2. Musashi: Combo de 3 cortes (DUAL_IMPALE_X_SPREAD) vs Parry/Onda refletida (REFLECTED_TORSO_CLEAVE)
+    # 2. Musashi: Combo de 3 cortes (DUAL_IMPALE_X_SPREAD) vs Parry/Onda refletida (CROSS_VACUUM_SLICER)
     elif "musashi" in char_type or "blue" in char_type:
-        if state in ("PARRY", "REFLECT", "DEFENSE") or weapon == "wave":
-            return "REFLECTED_TORSO_CLEAVE"
+        if state in ("PARRY", "REFLECT", "DEFENSE", "CROSS_SHOCKWAVE") or weapon in ("wave", "shockwave", "cross_wave"):
+            return "CROSS_VACUUM_SLICER"
         return "DUAL_IMPALE_X_SPREAD"
 
     # 3. Ren (Shaolin): Combo Marcial (HYAKURETSU_BODY_EXPLOSION) vs Kiai (WALL_SMASH_FATAL)
@@ -166,6 +166,19 @@ def is_fighter_evading(target) -> bool:
         )
         and getattr(target, "is_invulnerable_dodge", False)
     )
+
+def _is_vertical_hit(attacker, defender) -> bool:
+    """
+    Checagem de altura 3D para combate melee:
+    Golpes executados no solo (att_wz < 0.30m) NÃO acertam alvos no ar (def_wz >= 0.40m),
+    passando por baixo do salto acrobático do ninja.
+    """
+    att_wz = getattr(attacker, "wz", 0.0)
+    def_wz = getattr(defender, "wz", 0.0)
+    is_aerial_atk = getattr(attacker, "state", "") in ("RYUU_TSUI_SEN", "POLE_VAULT") or getattr(attacker, "is_aerial_attack", False)
+    if att_wz < 0.30 and not is_aerial_atk:
+        return def_wz < 0.40
+    return abs(att_wz - def_wz) < 0.65
 
 class CombatSystem:
     def __init__(self):
@@ -1399,7 +1412,7 @@ class CombatSystem:
                         break
 
         if p1.hitbox_active and p2.is_alive:
-            if check_fighter_melee_hit(p1, p2.wx, p2.wy, p2.radius) and getattr(p2, "wz", 0.0) < 0.65:
+            if check_fighter_melee_hit(p1, p2.wx, p2.wy, p2.radius) and _is_vertical_hit(p1, p2):
                 p1.hitbox_active = False
 
                 if p2.state == STATE_PARRY and p1.state != "POLE_VAULT":
@@ -1408,6 +1421,8 @@ class CombatSystem:
                     parry_msg = "PARRY GATOTSU!" if p1.state == "GATOTSU_CHARGE" else "PARRY!"
                     banners.append(FloatingBanner(parry_msg, p2.wx, p2.wy, wz=1.7, color=(100, 200, 255)))
                     camera.add_shake(8.0)
+                    if hasattr(p2, "on_parry_successful"):
+                        p2.on_parry_successful(p1, particles=particles, banners=banners)
                     if hasattr(p1, "on_parried"):
                         p1.on_parried(p2, game_map=game_map, banners=banners, particles=particles)
                     else:
@@ -1542,7 +1557,7 @@ class CombatSystem:
                         break
 
         if p2.hitbox_active and p1.is_alive and winner is None:
-            if check_fighter_melee_hit(p2, p1.wx, p1.wy, p1.radius) and getattr(p1, "wz", 0.0) < 0.65:
+            if check_fighter_melee_hit(p2, p1.wx, p1.wy, p1.radius) and _is_vertical_hit(p2, p1):
                 p2.hitbox_active = False
 
                 if p1.state == STATE_PARRY and p2.state != "POLE_VAULT":
@@ -1551,6 +1566,8 @@ class CombatSystem:
                     parry_msg = "PARRY GATOTSU!" if p2.state == "GATOTSU_CHARGE" else "PARRY!"
                     banners.append(FloatingBanner(parry_msg, p1.wx, p1.wy, wz=1.7, color=(100, 200, 255)))
                     camera.add_shake(8.0)
+                    if hasattr(p1, "on_parry_successful"):
+                        p1.on_parry_successful(p2, particles=particles, banners=banners)
                     if hasattr(p2, "on_parried"):
                         p2.on_parried(p1, game_map=game_map, banners=banners, particles=particles)
                     else:

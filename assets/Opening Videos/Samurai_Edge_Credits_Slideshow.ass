@@ -1,0 +1,60 @@
+[Script Info]
+; Script generated for Samurai Edge Bakumatsu Closing Theme
+; Karaoking & Subtitle Synchronization
+Title: Samurai Edge Closing
+ScriptType: v4.00+
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+YCbCr Matrix: TV.709
+PlayResX: 1280
+PlayResY: 720
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Trebuchet MS,38,&H00FFD030,&H00FFFFFF,&H00000000,&H60000000,-1,0,0,0,100,100,0,0,1,2.5,1.0,2,30,30,35,1
+Style: Karaoke_Romaji,Trebuchet MS,38,&H00FFD030,&H00FFFFFF,&H00000000,&H60000000,-1,0,0,0,100,100,0,0,1,2.5,1.0,2,30,30,35,1
+Style: Translation_Top,Trebuchet MS,24,&H20FFFFFF,&H00000000,&H00000000,&H60000000,0,-1,0,0,100,100,0,0,1,1.5,0.0,8,30,30,28,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:44.00,0:00:50.00,Translation_Top,,0,0,0,,The morning sun shines upon the bamboo forest
+Dialogue: 0,0:00:44.00,0:00:50.00,Karaoke_Romaji,,0,0,0,,{\K125}Asahi {\K50}ga {\K125}sasu, {\K100}take {\K50}no {\K100}mori {\K50}ni
+Dialogue: 0,0:00:50.00,0:00:56.50,Translation_Top,,0,0,0,,The lantern lights quietly fade away
+Dialogue: 0,0:00:50.00,0:00:56.50,Karaoke_Romaji,,0,0,0,,{\K182}Chōchin {\K52}no {\K52}hi {\K52}wa {\K182}shizuka {\K52}ni {\K78}kie
+Dialogue: 0,0:00:56.50,0:01:03.00,Translation_Top,,0,0,0,,Kyoto's sky is dyed in brilliant gold
+Dialogue: 0,0:00:56.50,0:01:03.00,Karaoke_Romaji,,0,0,0,,{\K120}Kyoto {\K48}no {\K96}sora {\K48}wa {\K144}kogane {\K48}ni {\K144}somari
+Dialogue: 0,0:01:03.00,0:01:09.00,Translation_Top,,0,0,0,,In the whispering wind, our blades find their sleep
+Dialogue: 0,0:01:03.00,0:01:09.00,Karaoke_Romaji,,0,0,0,,{\K100}Kaze {\K50}no {\K125}naka, {\K125}yaiba {\K50}wa {\K150}nemuru
+Dialogue: 0,0:01:09.00,0:01:13.00,Karaoke_Romaji,,0,0,0,,{\K82}Sunlight {\K82}breaking {\K71}through {\K30}the {\K92}shattered {\K41}gate
+Dialogue: 0,0:01:13.00,0:01:16.50,Karaoke_Romaji,,0,0,0,,{\K24}We {\K48}have {\K108}conquered {\K36}the {\K60}curse {\K24}of {\K48}fate
+Dialogue: 0,0:01:16.50,0:01:20.00,Karaoke_Romaji,,0,0,0,,{\K77}Ronin, {\K103}shinobi, {\K64}scars {\K38}and {\K64}pride
+Dialogue: 0,0:01:20.00,0:01:26.50,Karaoke_Romaji,,0,0,0,,{\K130}Stand {\K52}as {\K78}one {\K52}on {\K78}the {\K130}other {\K130}side!
+Dialogue: 0,0:01:27.00,0:01:31.00,Karaoke_Romaji,,0,0,0,,{\K88}Dawn {\K44}of {\K66}the {\K133}golden {\K66}sky
+Dialogue: 0,0:01:31.00,0:01:35.00,Karaoke_Romaji,,0,0,0,,{\K66}Rise {\K66}from {\K50}the {\K83}ashes {\K33}of {\K100}night!
+Dialogue: 0,0:01:35.00,0:01:40.00,Translation_Top,,0,0,0,,Like birds taking wing into the sky
+Dialogue: 0,0:01:35.00,0:01:40.00,Karaoke_Romaji,,0,0,0,,{\K175}Tsubasa {\K75}eru {\K100}tori {\K50}no {\K50}yō {\K50}ni
+Dialogue: 0,0:01:40.00,0:01:42.50,Karaoke_Romaji,,0,0,0,,{\K42}Beyond {\K21}the {\K42}storm, {\K21}our {\K28}oath {\K42}shines {\K50}bright!
+Dialogue: 0,0:01:42.50,0:01:45.50,Translation_Top,,0,0,0,,Forgiving the crime and the punishment
+Dialogue: 0,0:01:42.50,0:01:45.50,Karaoke_Romaji,,0,0,0,,{\K65}Tsumi {\K26}to {\K65}batsu {\K26}wo {\K117}yurushite
+Dialogue: 0,0:01:45.50,0:01:48.50,Karaoke_Romaji,,0,0,0,,{\K34}Ride {\K25}the {\K60}morning {\K42}wind, {\K42}stand {\K25}for {\K25}the {\K42}free!
+Dialogue: 0,0:01:48.50,0:01:55.50,Karaoke_Romaji,,0,0,0,,{\K48}Out {\K32}of {\K48}the {\K65}iron {\K48}and {\K97}smoke, {\K32}we {\K81}found {\K48}the {\K81}peace {\K32}we {\K81}seek!
+Dialogue: 0,0:02:22.50,0:02:26.50,Translation_Top,,0,0,0,,The spring breeze heals every wound
+Dialogue: 0,0:02:22.50,0:02:26.50,Karaoke_Romaji,,0,0,0,,{\K69}Haru {\K34}no {\K69}kaze {\K34}ga {\K69}kizu {\K34}wo {\K86}iyasu
+Dialogue: 0,0:02:26.50,0:02:32.00,Translation_Top,,0,0,0,,Upon the bridge of fate, our promise fulfilled
+Dialogue: 0,0:02:26.50,0:02:32.00,Karaoke_Romaji,,0,0,0,,{\K70}Dōro {\K35}no {\K177}kakehashi, {\K159}hatashita {\K106}chikai
+Dialogue: 0,0:02:32.00,0:02:38.00,Karaoke_Romaji,,0,0,0,,{\K46}No {\K161}shadows {\K92}left {\K46}to {\K115}chain {\K46}my {\K92}soul
+Dialogue: 0,0:02:38.00,0:02:44.50,Karaoke_Romaji,,0,0,0,,{\K68}This {\K119}newborn {\K119}sunrise {\K85}makes {\K51}our {\K102}spirit {\K102}whole!
+Dialogue: 0,0:02:55.50,0:02:59.00,Karaoke_Romaji,,0,0,0,,{\K58}Sakura {\K48}bloom {\K48}above {\K29}the {\K48}quiet {\K48}stone {\K68}lake...
+Dialogue: 0,0:02:59.00,0:03:03.00,Karaoke_Romaji,,0,0,0,,{\K28}For {\K47}every {\K57}fallen {\K47}soul, {\K10}a {\K47}brand {\K28}new {\K47}world {\K85}awaits...
+Dialogue: 0,0:03:03.00,0:03:10.50,Karaoke_Romaji,,0,0,0,,{\K130}Into {\K97}the {\K195}golden {\K130}dawn {\K65}we {\K130}fly!
+Dialogue: 0,0:03:54.50,0:03:57.00,Karaoke_Romaji,,0,0,0,,{\K55}Dawn {\K27}of {\K41}the {\K83}golden {\K41}sky
+Dialogue: 0,0:03:57.00,0:04:00.50,Karaoke_Romaji,,0,0,0,,{\K58}Rise {\K58}from {\K43}the {\K72}ashes {\K29}of {\K87}night!
+Dialogue: 0,0:04:00.50,0:04:05.50,Translation_Top,,0,0,0,,Like birds taking wing into the sky
+Dialogue: 0,0:04:00.50,0:04:05.50,Karaoke_Romaji,,0,0,0,,{\K175}Tsubasa {\K75}eru {\K100}tori {\K50}no {\K50}yō {\K50}ni
+Dialogue: 0,0:04:05.50,0:04:08.00,Karaoke_Romaji,,0,0,0,,{\K42}Beyond {\K21}the {\K42}storm, {\K21}our {\K28}oath {\K42}shines {\K50}bright!
+Dialogue: 0,0:04:08.00,0:04:11.20,Translation_Top,,0,0,0,,Forgiving the crime and the punishment
+Dialogue: 0,0:04:08.00,0:04:11.20,Karaoke_Romaji,,0,0,0,,{\K69}Tsumi {\K27}to {\K69}batsu {\K27}wo {\K124}yurushite
+Dialogue: 0,0:04:11.20,0:04:14.30,Karaoke_Romaji,,0,0,0,,{\K72}Through {\K31}the {\K51}fire, {\K41}into {\K31}the {\K51}clear {\K31}sky
+Dialogue: 0,0:04:14.30,0:04:22.00,Karaoke_Romaji,,0,0,0,,{\K59}We {\K118}have {\K207}crowned {\K29}a {\K147}brand {\K88}new {\K118}age!
+Dialogue: 0,0:04:22.00,0:04:28.50,Translation_Top,,0,0,0,,Open the dawn...
+Dialogue: 0,0:04:22.00,0:04:28.50,Karaoke_Romaji,,0,0,0,,{\K203}Yoake {\K81}wo {\K365}hirake...

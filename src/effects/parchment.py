@@ -411,7 +411,11 @@ def prewarm(card_sizes: list[tuple[int, int, int]]):
 
 
 def fit_text(font: pygame.font.Font, text: str, color, max_w: int) -> pygame.Surface:
-    """Renderiza o texto encurtando com '...' se passar da largura máxima."""
+    """Renderiza o texto encurtando com '...' se passar da largura máxima ou substituindo tags {icon:...}."""
+    if "{icon:" in text:
+        from src.ui.svg_icon_renderer import create_text_with_icons_surface
+        h = font.get_height()
+        return create_text_with_icons_surface(font, text, color, icon_size=max(16, h - 2))
     surf = font.render(text, True, color)
     if surf.get_width() <= max_w:
         return surf

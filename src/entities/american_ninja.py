@@ -46,7 +46,7 @@ class AmericanNinja(Samurai):
     def trigger_shuriken(self, target_wx: float, target_wy: float, projectiles: list):
         """Arremessa uma shuriken atordoante (não mata, mas dá stun de 0.48s)."""
         if not self.can_act() or self.shuriken_timer > 0:
-            return
+            return False
 
         self.set_facing(target_wx, target_wy)
         self.shuriken_timer = self.shuriken_cooldown
@@ -62,16 +62,19 @@ class AmericanNinja(Samurai):
             owner=self
         )
         projectiles.append(shuriken)
+        return True
 
     def trigger_dog_attack(self, target_wx: float, target_wy: float):
         """Ordena o Doberman a disparar em um dash de mordida letal (1-hit kill)."""
         if not self.can_act():
-            return
+            return False
         if self.dog and self.dog.can_attack():
             self.set_facing(target_wx, target_wy)
             self.state = STATE_RECOVERY
             self.state_timer = 0.15
             self.dog.charge(target_wx, target_wy)
+            return True
+        return False
 
     def update(self, dt: float, game_map):
         """Atualiza o Ninja e seu Doberman."""

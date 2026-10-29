@@ -25,7 +25,7 @@ STUCK_WEAPON = {
     "SAITOU_IMPALE": "blade", "KUNAI_PIN": "kunai", "ARROW_PIN": "arrow", "STAB_FALL": "kunai",
     "ARMORED_HEART_IMPALE": "naginata", "SKEWERED_LANCE_FLAG": "naginata",
     "HEART_IMPALE_LUNGE": "blade", "BLIND_SPINE_PIERCE": "blade",
-    "FOREHEAD_PIN": "kunai",
+    "FOREHEAD_PIN": "kunai", "HEART_THROAT_STAB": "blade",
     "PINNED_TO_EARTH": "arrow", "HAMAYA_HOLY_PIERCE": "arrow",
     "SPEAR_HEART_SLIDE": "naginata", "TRAP_AND_EXECUTE": "kunai",
 }
@@ -336,40 +336,69 @@ class VoxelCorpse:
                 self._add_blood_drop(spread=0.6)
 
         elif style == "DUAL_IMPALE_X_SPREAD":
-            # Musashi: Niten Ichi-ryuu - Golpe cruzado em 'X'. O torso superior é bissectado diagonalmente
-            # e a cabeça é arremessada no cruzamento das lâminas duplas!
+            # Musashi Finisher 1 (Entregável 2.2.4a — Niten Ichi-ryu):
+            # Empalamento sequencial duplo e abertura violenta em leque rasgando o torso em 3 partes!
             self.severed_head = P(x, y, NECK_Z + 0.12, 0.16, 0.16, 0.16, self.col_hair,
-                                  vx=dx * 2.2 + random.uniform(-0.6, 0.6), vy=dy * 2.2 + random.uniform(-0.6, 0.6),
-                                  vz=3.6, rot_speed=320.0, piece_type="head", region=lambda c: c.band(None, NECK_Z),
+                                  vx=dx * 2.4 + random.uniform(-0.4, 0.4), vy=dy * 2.4 + random.uniform(-0.4, 0.4),
+                                  vz=3.8, rot_speed=340.0, piece_type="head", region=lambda c: c.band(None, NECK_Z),
                                   pivot="center", floor_z=0.15)
-            self.top_half = P(x, y, WAIST_Z, 0.32, 0.24, 0.48, self.col_torso,
-                              vx=dx * 3.2 - dy * 1.6, vy=dy * 3.2 + dx * 1.6, vz=2.0,
-                              piece_type="top", region=lambda c: c.diagonal(upper=True),
-                              rot_target=108.0, rot_speed=260.0)
-            self.bottom_half = P(x, y, 0.0, 0.32, 0.24, 0.50, self.col_pants,
-                                 vx=-dx * 0.8, vy=-dy * 0.8, vz=0.3,
-                                 piece_type="bottom", region=lambda c: c.diagonal(upper=False),
-                                 rot_target=FALL_DEG, rot_speed=130.0, rot_delay=0.18)
-            self.pieces.extend([self.severed_head, self.top_half, self.bottom_half])
-            for _ in range(28):
+            # Parte 1 do Torso: Ombro e peitoral esquerdo projetado lateralmente
+            self.torso_left = P(x, y, WAIST_Z + 0.08, 0.22, 0.18, 0.38, self.col_torso,
+                                vx=dx * 2.2 - dy * 2.6, vy=dy * 2.2 + dx * 2.6, vz=2.4,
+                                piece_type="top", region=lambda c: c.diagonal(upper=True),
+                                rot_target=115.0, rot_speed=280.0)
+            # Parte 2 do Torso: Ombro e peitoral direito projetado lateralmente
+            self.torso_right = P(x, y, WAIST_Z + 0.08, 0.22, 0.18, 0.38, self.col_torso,
+                                 vx=dx * 2.2 + dy * 2.6, vy=dy * 2.2 - dx * 2.6, vz=2.4,
+                                 piece_type="top", region=lambda c: c.diagonal(upper=True),
+                                 rot_target=-115.0, rot_speed=280.0)
+            # Parte 3 do Torso: Tronco inferior e pelve desabando
+            self.torso_base = P(x, y, 0.0, 0.32, 0.24, 0.50, self.col_pants,
+                                vx=-dx * 0.9, vy=-dy * 0.9, vz=0.3,
+                                piece_type="bottom", region=lambda c: c.diagonal(upper=False),
+                                rot_target=FALL_DEG, rot_speed=140.0, rot_delay=0.15)
+            self.pieces.extend([self.severed_head, self.torso_left, self.torso_right, self.torso_base])
+            # Géiser arterial e chuva de sangue violenta
+            for _ in range(36):
                 angle = random.uniform(0, math.pi * 2)
-                sp = random.uniform(1.8, 4.8)
-                self.pieces.append(P(x, y, CHEST_Z, 0.08, 0.08, 0.08, random.choice([self.col_torso, COLOR_BLOOD, (160, 20, 25)]),
-                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(2.0, 5.0),
-                                     rot_speed=random.uniform(-300, 300), piece_type="blood_gib"))
-            for _ in range(32):
-                self._add_blood_drop(spread=0.8)
+                sp = random.uniform(2.0, 5.2)
+                self.pieces.append(P(x, y, CHEST_Z, 0.08, 0.08, 0.08, random.choice([self.col_torso, COLOR_BLOOD, (170, 20, 25)]),
+                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(2.5, 5.5),
+                                     rot_speed=random.uniform(-320, 320), piece_type="blood_gib"))
+            for _ in range(40):
+                self._add_blood_drop(spread=0.9)
 
-        elif style == "REFLECTED_TORSO_CLEAVE":
-            # Musashi Parry: Corte refletido que divide o torso e o arremessa para trás
-            self.pieces.append(P(x, y, 0.0, 0.42, 0.30, 0.42, self.col_pants,
-                                 vx=-dx * 0.8, vy=-dy * 0.8, vz=0.4,
-                                 piece_type="bottom", region=lambda c: c.band(WAIST_Z, None),
-                                 rot_target=70.0, rot_speed=140.0, rot_delay=0.15))
-            self.pieces.append(P(x, y, WAIST_Z, 0.42, 0.30, 0.45, self.col_torso,
-                                 vx=dx * 3.5, vy=dy * 3.5, vz=2.0,
+        elif style in ("CROSS_VACUUM_SLICER", "REFLECTED_TORSO_CLEAVE"):
+            # Musashi Finisher 2 (Entregável 2.2.4b — Cross Vacuum Slicer / 十字真空波):
+            # Onda de vácuo em 'X' divide o oponente em 4 partes simétricas (quadrantes)!
+            # 1. Quadrante Superior Esquerdo
+            self.pieces.append(P(x, y, WAIST_Z + 0.10, 0.22, 0.16, 0.38, self.col_torso,
+                                 vx=dx * 2.5 - dy * 2.2, vy=dy * 2.5 + dx * 2.2, vz=2.6,
                                  piece_type="top", region=lambda c: c.band(None, WAIST_Z),
-                                 rot_target=110.0, rot_speed=280.0))
+                                 rot_target=120.0, rot_speed=300.0))
+            # 2. Quadrante Superior Direito
+            self.pieces.append(P(x, y, WAIST_Z + 0.10, 0.22, 0.16, 0.38, self.col_torso,
+                                 vx=dx * 2.5 + dy * 2.2, vy=dy * 2.5 - dx * 2.2, vz=2.6,
+                                 piece_type="top", region=lambda c: c.band(None, WAIST_Z),
+                                 rot_target=-120.0, rot_speed=300.0))
+            # 3. Quadrante Inferior Esquerdo
+            self.pieces.append(P(x, y, 0.0, 0.20, 0.16, 0.44, self.col_pants,
+                                 vx=-dx * 1.6 - dy * 1.8, vy=-dy * 1.6 + dx * 1.8, vz=1.0,
+                                 piece_type="bottom", region=lambda c: c.band(WAIST_Z, None),
+                                 rot_target=75.0, rot_speed=180.0, rot_delay=0.10))
+            # 4. Quadrante Inferior Direito
+            self.pieces.append(P(x, y, 0.0, 0.20, 0.16, 0.44, self.col_pants,
+                                 vx=-dx * 1.6 + dy * 1.8, vy=-dy * 1.6 - dx * 1.8, vz=1.0,
+                                 piece_type="bottom", region=lambda c: c.band(WAIST_Z, None),
+                                 rot_target=-75.0, rot_speed=180.0, rot_delay=0.10))
+            for _ in range(32):
+                angle = random.uniform(0, math.pi * 2)
+                sp = random.uniform(1.8, 4.6)
+                self.pieces.append(P(x, y, CHEST_Z, 0.07, 0.07, 0.07, random.choice([COLOR_BLOOD, (160, 20, 25), (120, 180, 255)]),
+                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(2.0, 4.5),
+                                     rot_speed=random.uniform(-300, 300), piece_type="blood_gib"))
+            for _ in range(36):
+                self._add_blood_drop(spread=0.85)
 
         elif style == "HYAKURETSU_BODY_EXPLOSION":
             # Ren Monge (Estilo Fist of the North Star / Hyakuretsu Ken):
@@ -635,17 +664,17 @@ class VoxelCorpse:
                                  vx=-dx * 2.8, vy=-dy * 2.8, vz=1.6,
                                  piece_type="impaled_body", region=lambda c: c.band(None, None),
                                  rot_target=-FALL_DEG, rot_speed=260.0))
-            for _ in range(16):
-                self._add_blood_drop(spread=0.5)
+            for _ in range(28):
+                self._add_blood_drop(spread=0.65)
 
         elif style == "HEART_THROAT_STAB":
-            # Hanzo Melee: Estocada dupla fulminante no coração e transversal na garganta
+            # Hanzo Melee: Estocada dupla fulminante no coração e transversal na garganta com fonte arterial
             self.pieces.append(P(x, y, 0.0, 0.44, 0.32, 0.74, self.col_torso,
                                  vx=dx * 0.5, vy=dy * 0.5, vz=0.2,
                                  piece_type="fallen_body", region=lambda c: c.band(None, None),
                                  rot_target=82.0, rot_speed=130.0, rot_delay=0.18))
-            for _ in range(26):
-                self._add_blood_drop(spread=0.75)
+            for _ in range(36):
+                self._add_blood_drop(spread=0.85)
 
         elif style == "SOUL_REAP":
             # Valerius Primário: Foice decapita a cabeça do rival (presa/recolhida) e reanima o cadáver decapitado em esqueleto!
