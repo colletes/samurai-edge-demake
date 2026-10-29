@@ -506,7 +506,7 @@ class GalleryScreen:
         if self.is_playing_music:
             self.music_playback_time += dt
 
-    def render(self, surface: pygame.Surface):
+    def render(self, surface: pygame.Surface, font_large=None, font_mid=None, font_small=None, *args, **kwargs):
         if not self.is_open:
             return
 

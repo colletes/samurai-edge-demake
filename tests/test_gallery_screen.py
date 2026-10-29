@@ -147,6 +147,31 @@ def test_settings_menu_gallery_button_integration():
     assert menu.request_gallery is True, "Deveria solicitar abertura da galeria ao clicar"
 
 
+def test_gallery_screen_render():
+    pygame.init()
+    scr = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+    g = GalleryScreen()
+    g.open()
+
+    from src.ui.fonts import get_title_font, get_text_font
+    f_l = get_title_font(32)
+    f_m = get_title_font(20)
+    f_s = get_text_font(14)
+
+    # Render with just surface
+    g.render(scr)
+
+    # Render with fonts (main.py style)
+    g.render(scr, f_l, f_m, f_s)
+
+    # Render other tabs
+    g.current_tab = TAB_VIDEOS
+    g.render(scr, f_l, f_m, f_s)
+
+    g.current_tab = TAB_MUSIC
+    g.render(scr, f_l, f_m, f_s)
+
+
 if __name__ == "__main__":
     test_gallery_screen_initialization_and_assets()
     test_gallery_tab_navigation()
@@ -154,4 +179,5 @@ if __name__ == "__main__":
     test_gallery_video_selection()
     test_gallery_music_player_and_karaoke_badge()
     test_settings_menu_gallery_button_integration()
+    test_gallery_screen_render()
     print("test_gallery_screen OK")
