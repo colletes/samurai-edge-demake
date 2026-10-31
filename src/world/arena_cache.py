@@ -96,10 +96,8 @@ class PropSurfaceCache:
         if item_type in ("rock", "well", "tree", "torii"):
             return True
         if item_type == "bamboo":
-            # Bambus com impulso de vento de combate ativo são desenhados ao vivo
-            if abs(getattr(obj, "combat_bend_x", 0.0)) > 0.005 or abs(getattr(obj, "combat_bend_y", 0.0)) > 0.005:
-                return False
-            return True
+            # Bambu gerencia seu próprio BambooTemplateCache ultra-rápido, sem thrashing no PropSurfaceCache
+            return False
         if item_type == "building":
             cls_name = type(obj).__name__
             # SolidProp puro é 100% estático; Cannon, PowderBarrel, ShrineBell e MachiyaFacade em chamas animam

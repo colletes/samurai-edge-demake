@@ -772,6 +772,10 @@ def get_kyoto_arena_spawns(game_map, min_distance: float = 7.0) -> tuple[tuple[f
 
 def build_static_render_queue(current_map):
     """Constrói a fila ordenada de elementos estáticos do cenário (bambus, rochas, construções)."""
+    if getattr(current_map, 'bamboos', None):
+        from src.world.bamboo import warm_up_bamboo_templates
+        warm_up_bamboo_templates()
+
     queue = []
     for bamboo in current_map.bamboos:
         queue.append((bamboo.wx + bamboo.wy, 'bamboo', bamboo))
@@ -801,6 +805,29 @@ def static_item_center(item_type: str, obj) -> tuple[float, float]:
         b_d = getattr(obj, 'depth', 0.5)
         return obj.wx + b_w * 0.5, obj.wy + b_d * 0.5
     return obj.wx, obj.wy
+
+
+def is_static_prop_visible(camera, item_type: str, obj, screen_w: int, screen_h: int) -> bool:
+    """Verifica se um prop estático está dentro do campo de visão da câmera (Frustum Culling)."""
+    bsx, bsy = camera.apply(obj.wx, obj.wy, 0.0)
+    zoom = camera.zoom
+    if item_type == 'bamboo':
+        h = getattr(obj, 'total_height', 3.5)
+        top_sy = bsy - int(h * 32.0 * zoom)
+        mx = int(64 * zoom) + 16
+        my = int(24 * zoom) + 16
+        return not (bsx + mx < 0 or bsx - mx > screen_w or bsy + my < 0 or top_sy - my > screen_h)
+    elif item_type == 'building':
+        w = getattr(obj, 'width', 3.0)
+        d = getattr(obj, 'depth', 3.0)
+        h = getattr(obj, 'height', 2.0)
+        m = int(max(w, d, h) * 48.0 * zoom) + 96
+        return not (bsx + m < 0 or bsx - m > screen_w or bsy + m < 0 or bsy - m * 1.5 > screen_h)
+    else:
+        # rock, well, tree, torii, lantern
+        mx = int(80 * zoom) + 32
+        my = int(120 * zoom) + 32
+        return not (bsx + mx < 0 or bsx - mx > screen_w or bsy + my < 0 or bsy - my > screen_h)
 
 
 def run_game():
@@ -2418,13 +2445,18 @@ def run_game():
         screen.fill(bg_col)
         game_map.render_terrain(screen, camera, game_time)
 
-        # Entregável 1.3: Reutiliza a fila estática pré-calculada do cenário
+        # Entregável 1.3: Reutiliza a fila estática do cenário com Frustum Culling universal
         if not static_render_queue:
             static_render_queue = build_static_render_queue(game_map)
-        if abs(camera.azimuth) > 1e-6:
-            render_queue = [(camera.depth(*static_item_center(t_, o_)), t_, o_) for _, t_, o_ in static_render_queue]
-        else:
-            render_queue = list(static_render_queue)
+
+        scr_w, scr_h = screen.get_width(), screen.get_height()
+        is_rotated = abs(camera.azimuth) > 1e-6
+        render_queue = []
+        for depth_or_sort, t_, o_ in static_render_queue:
+            if not is_static_prop_visible(camera, t_, o_, scr_w, scr_h):
+                continue
+            d = camera.depth(*static_item_center(t_, o_)) if is_rotated else depth_or_sort
+            render_queue.append((d, t_, o_))
 
         # Adicionar elementos dinâmicos exclusivos (Carruagens, Escombros de Kyoto)
         if hasattr(game_map, 'carriages'):
