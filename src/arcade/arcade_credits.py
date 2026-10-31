@@ -773,7 +773,7 @@ class ArcadeCreditsScreen:
 
         return None
 
-    def render(self, surface: pygame.Surface):
+    def render(self, surface: pygame.Surface, render_subtitles: bool = True):
         """Renderiza o vídeo pré-renderizado ou a imagem atual com crossfade autêntico e cartões de créditos."""
         if not self.active:
             return
@@ -913,85 +913,86 @@ class ArcadeCreditsScreen:
             # -------------------------------------------------------------
             # Legendas Traduzidas (Topo) & Letra do Karaokê com Wipe Animado
             # -------------------------------------------------------------
-            active_lyric = None
-            for item in CLOSING_THEME_LYRICS:
-                if item["start"] <= self.total_time <= item["end"]:
-                    active_lyric = item
-                    break
+            if render_subtitles:
+                active_lyric = None
+                for item in CLOSING_THEME_LYRICS:
+                    if item["start"] <= self.total_time <= item["end"]:
+                        active_lyric = item
+                        break
 
-            if active_lyric is not None:
-                l_start = active_lyric["start"]
-                l_end = active_lyric["end"]
+                if active_lyric is not None:
+                    l_start = active_lyric["start"]
+                    l_end = active_lyric["end"]
 
-                fade_window = 0.22
-                in_f = min(1.0, (self.total_time - l_start) / fade_window) if fade_window > 0 else 1.0
-                out_f = min(1.0, (l_end - self.total_time) / fade_window) if fade_window > 0 else 1.0
-                lyric_alpha = int(255 * max(0.0, min(1.0, in_f, out_f)))
+                    fade_window = 0.22
+                    in_f = min(1.0, (self.total_time - l_start) / fade_window) if fade_window > 0 else 1.0
+                    out_f = min(1.0, (l_end - self.total_time) / fade_window) if fade_window > 0 else 1.0
+                    lyric_alpha = int(255 * max(0.0, min(1.0, in_f, out_f)))
 
-                if lyric_alpha > 5:
-                    # 1. Tradução em inglês no topo (apenas para versos em japonês)
-                    trans_text = active_lyric.get("trans")
-                    if trans_text:
-                        surf_trans = _render_outlined_text(
-                            font_trans, trans_text, (245, 248, 255), (0, 0, 0), outline_px=1.5
+                    if lyric_alpha > 5:
+                        # 1. Tradução em inglês no topo (apenas para versos em japonês)
+                        trans_text = active_lyric.get("trans")
+                        if trans_text:
+                            surf_trans = _render_outlined_text(
+                                font_trans, trans_text, (245, 248, 255), (0, 0, 0), outline_px=1.5
+                            )
+                            tw, th = surf_trans.get_size()
+                            tx = cx - tw // 2
+                            ty = 28
+
+                            if lyric_alpha < 255:
+                                surf_trans_f = surf_trans.copy()
+                                fade_m = pygame.Surface(surf_trans.get_size(), pygame.SRCALPHA)
+                                fade_m.fill((255, 255, 255, lyric_alpha))
+                                surf_trans_f.blit(fade_m, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                                surface.blit(surf_trans_f, (tx, ty))
+                            else:
+                                surface.blit(surf_trans, (tx, ty))
+
+                        # 2. Karaokê Animado (Fixo no fundo da tela com wipe por sílaba e kerning pixel-exato)
+                        sung_text = active_lyric["sung"]
+                        surf_white = _render_outlined_text(
+                            font_sung, sung_text, (255, 255, 255), (0, 0, 0), outline_px=2.5
                         )
-                        tw, th = surf_trans.get_size()
-                        tx = cx - tw // 2
-                        ty = 28
+                        surf_cyan = _render_outlined_text(
+                            font_sung, sung_text, (48, 208, 255), (0, 0, 0), outline_px=2.5
+                        )
+
+                        sw, sh = surf_white.get_size()
+                        sx = cx - sw // 2
+
+                        layout = _get_syllable_layout(font_sung, active_lyric, outline_px=2.5)
+                        if layout:
+                            elapsed = self.total_time - l_start
+                            if elapsed <= 0.0:
+                                wipe_w = 0
+                            else:
+                                acc = 0.0
+                                for item in layout:
+                                    i_dur = item["dur"]
+                                    if elapsed < acc + i_dur:
+                                        frac = max(0.0, elapsed - acc) / max(0.001, i_dur)
+                                        wipe_w = int(round(item["px0"] + frac * (item["px1"] - item["px0"])))
+                                        break
+                                    acc += i_dur
+                                else:
+                                    wipe_w = sw
+                        else:
+                            dur = max(0.1, l_end - l_start)
+                            progress = max(0.0, min(1.0, (self.total_time - l_start) / dur))
+                            wipe_w = int(sw * progress)
+
+                        # Composite do wipe de karaokê
+                        comp_karaoke = surf_white.copy()
+                        if wipe_w > 0:
+                            comp_karaoke.blit(surf_cyan, (0, 0), area=pygame.Rect(0, 0, min(sw, wipe_w), sh))
 
                         if lyric_alpha < 255:
-                            surf_trans_f = surf_trans.copy()
-                            fade_m = pygame.Surface(surf_trans.get_size(), pygame.SRCALPHA)
-                            fade_m.fill((255, 255, 255, lyric_alpha))
-                            surf_trans_f.blit(fade_m, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-                            surface.blit(surf_trans_f, (tx, ty))
-                        else:
-                            surface.blit(surf_trans, (tx, ty))
+                            fade_ms = pygame.Surface((sw, sh), pygame.SRCALPHA)
+                            fade_ms.fill((255, 255, 255, lyric_alpha))
+                            comp_karaoke.blit(fade_ms, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-                    # 2. Karaokê Animado (Fixo no fundo da tela com wipe por sílaba e kerning pixel-exato)
-                    sung_text = active_lyric["sung"]
-                    surf_white = _render_outlined_text(
-                        font_sung, sung_text, (255, 255, 255), (0, 0, 0), outline_px=2.5
-                    )
-                    surf_cyan = _render_outlined_text(
-                        font_sung, sung_text, (48, 208, 255), (0, 0, 0), outline_px=2.5
-                    )
-
-                    sw, sh = surf_white.get_size()
-                    sx = cx - sw // 2
-
-                    layout = _get_syllable_layout(font_sung, active_lyric, outline_px=2.5)
-                    if layout:
-                        elapsed = self.total_time - l_start
-                        if elapsed <= 0.0:
-                            wipe_w = 0
-                        else:
-                            acc = 0.0
-                            for item in layout:
-                                i_dur = item["dur"]
-                                if elapsed < acc + i_dur:
-                                    frac = max(0.0, elapsed - acc) / max(0.001, i_dur)
-                                    wipe_w = int(round(item["px0"] + frac * (item["px1"] - item["px0"])))
-                                    break
-                                acc += i_dur
-                            else:
-                                wipe_w = sw
-                    else:
-                        dur = max(0.1, l_end - l_start)
-                        progress = max(0.0, min(1.0, (self.total_time - l_start) / dur))
-                        wipe_w = int(sw * progress)
-
-                    # Composite do wipe de karaokê
-                    comp_karaoke = surf_white.copy()
-                    if wipe_w > 0:
-                        comp_karaoke.blit(surf_cyan, (0, 0), area=pygame.Rect(0, 0, min(sw, wipe_w), sh))
-
-                    if lyric_alpha < 255:
-                        fade_ms = pygame.Surface((sw, sh), pygame.SRCALPHA)
-                        fade_ms.fill((255, 255, 255, lyric_alpha))
-                        comp_karaoke.blit(fade_ms, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-
-                    surface.blit(comp_karaoke, (sx, sy))
+                        surface.blit(comp_karaoke, (sx, sy))
 
         # 3. Indicador de "Segure para pular" com anel radial após 5 segundos de exibição
         if self.show_skip_prompt and self.total_time >= 5.0:
