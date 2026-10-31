@@ -24,6 +24,7 @@ from src.isometric.iso_math import world_to_iso
 from src.entities.voxel_models import render_voxel_humanoid, render_voxel_doberman
 from src.i18n import t, get_lang, set_lang, toggle_lang, LANG_PT, LANG_EN
 from src.ui.portraits import get_portrait
+from src.effects import parchment as pm
 
 class HelpPreviewCam:
     def __init__(self, cx, cy):
@@ -244,17 +245,18 @@ FIGHTERS_GUIDE_DATA = [
                 "cão de combate Doberman. Sua doutrina se baseia no ataque em pinça e na distração estratégica."
             ),
             "habilidades": (
-                "• Shuriken [E]: Estrela de metal ninja arremessada rapidamente; atordoa o oponente no impacto.\n"
-                "• Comando Cão [R]: O Doberman avança em disparada furiosa, desferindo uma mordida fatal (1-Hit Kill)."
+                "• Shuriken [E]: Estrela de metal arremessada a 15.5 m/s (cooldown 0.90s); atordoa no impacto.\n"
+                "• Yamato Dash [R]: O leal Doberman Yamato dispara a 14.5 m/s com mordida letal de 1-Hit Kill.\n"
+                "• Flic-Flac [Espaço]: Salto acrobático para trás encadeável até 3x (atenção com choques em obstáculos sólidos)."
             ),
             "estrategia_ofensiva": (
-                "• A estratégia clássica de pinça: lance a Shuriken para paralisar o alvo com stun.\n"
-                "• Enquanto o oponente estiver atordoado, pressione [R] para o Doberman finalizar com 1-Hit Kill!\n"
-                "• Mantenha-se distante enquanto seu cão pressiona as linhas do oponente."
+                "• A estratégia clássica de pinça: lance a Shuriken a 15.5 m/s para paralisar o alvo com stun.\n"
+                "• Com o oponente atordoado, pressione [R] para Yamato liquidar a luta com mordida fatal na jugular!\n"
+                "• Use o Flic-Flac triplo para recuar com acrobacia tática e manter a distância ideal de arremesso."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Joe: O Doberman avança em linha reta previsível. Golpes cortantes de ampla abertura "
-                "podem interceptar a investida. Pressione Joe diretamente para impedir que ele mire suas shurikens."
+                "• Como vencer Joe: Yamato avança em linha reta a 14.5 m/s e pode ser aparado com Parry (atordoando o cão por 2.0s). "
+                "Cuidado ao encurralar Joe: se ele errar o flic-flac contra rochas ou poços, ficará atordoado por 0.60s!"
             )
         },
         "en": {
@@ -268,20 +270,21 @@ FIGHTERS_GUIDE_DATA = [
             "keys_p2": "[R] Dog Dash (Special)",
             "conceito": (
                 "Western tactical operative trained in secret ninjutsu arts, fighting alongside his trained "
-                "combat Doberman. Specializes in pincer maneuvers and tactical distractions."
+                "combat Doberman Yamato. Specializes in pincer maneuvers, acrobatic backflips, and tactical zoning."
             ),
             "habilidades": (
-                "• Shuriken [E]: Rapidly tossed metal throwing star; briefly stuns on impact.\n"
-                "• Dog Command [R]: The Doberman sprints forward at top speed, delivering a fatal 1-Hit Kill bite."
+                "• Shuriken [E]: Rapid 15.5 m/s throwing star (0.90s cooldown); inflicts hitstun on impact.\n"
+                "• Yamato Dash [R]: Loyal combat Doberman sprints at 14.5 m/s delivering a fatal 1-Hit Kill bite.\n"
+                "• Flic-Flac [Space]: Acrobatic back handspring chainable up to 3 times (careful with solid obstacles)."
             ),
             "estrategia_ofensiva": (
-                "• Classic pincer maneuver: throw your Shuriken to freeze the rival in hitstun.\n"
-                "• While the enemy is stunned, immediately command your Doberman [R] to finish them from afar!\n"
-                "• Stay at safe distance while your hound pressures the enemy."
+                "• Classic pincer maneuver: throw your Shuriken at 15.5 m/s to freeze the rival in hitstun.\n"
+                "• While the enemy is stunned, immediately command Yamato [R] to deliver the lethal jugular bite!\n"
+                "• Use the 3x Flic-Flac chain to rapidly reposition and control zoning space."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Joe: The Doberman charges in a predictable straight line. Wide slashes can "
-                "intercept the dog. Rush Joe directly to disrupt his throwing aim."
+                "• How to defeat Joe: Yamato charges in a straight line and can be parried, stunning the dog for 2.0s. "
+                "Cornering Joe near solid obstacles (rocks, wells) can cause his flic-flac to crash, stunning him for 0.60s!"
             )
         }
     },
@@ -1767,6 +1770,8 @@ class GameHelpModal:
 
         # Escurecimento dramático do fundo
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        from src.effects import parchment as pm
+
         overlay.fill((10, 14, 12, 220))
         surface.blit(overlay, (0, 0))
 
@@ -1776,30 +1781,30 @@ class GameHelpModal:
         my = (SCREEN_HEIGHT - mh) // 2
         self.modal_rect = pygame.Rect(mx, my, mw, mh)
 
-        # Fundo do Modal & Borda Dourada Estilizada
-        pygame.draw.rect(surface, (20, 26, 23), self.modal_rect, border_radius=14)
-        pygame.draw.rect(surface, COLOR_GOLD, self.modal_rect, 2, border_radius=14)
+        # Fundo do Modal em Pergaminho Sumi-E Envelhecido com Varas de Madeira
+        paper = pm.make_paper(mw, mh, seed=77, ragged=(False, False, True, True), burn=0.25)
+        surface.blit(pm._soft_shadow(paper, blur=8, opacity=140), (mx + 3, my + 5))
+        surface.blit(paper, (mx, my))
+
+        pm.draw_rod(surface, "top", self.modal_rect.centerx, self.modal_rect.y - 14, mw + 32)
+        pm.draw_rod(surface, "bottom", self.modal_rect.centerx, self.modal_rect.bottom - 22, mw + 32)
 
         # Barra de Título Superior
-        header_rect = pygame.Rect(mx, my, mw, 56)
-        pygame.draw.rect(surface, (28, 36, 32), header_rect, border_top_left_radius=14, border_top_right_radius=14)
-        pygame.draw.line(surface, (60, 75, 68), (mx, my + 56), (mx + mw, my + 56), 1)
-
-        title_s = font_large.render(t("help_modal_title"), True, COLOR_GOLD)
-        surface.blit(title_s, (mx + 28, my + 10))
+        title_s = font_large.render(t("help_modal_title"), True, pm.INK)
+        surface.blit(title_s, (mx + 36, my + 24))
 
         # Botão Seletor Flutuante de Idioma [ PT | EN ] (Padrão Boardbots)
-        self.lang_btn_rect = pygame.Rect(mx + mw - 165, my + 11, 100, 34)
-        pygame.draw.rect(surface, (30, 40, 35), self.lang_btn_rect, border_radius=6)
-        pygame.draw.rect(surface, COLOR_GOLD, self.lang_btn_rect, 1, border_radius=6)
+        self.lang_btn_rect = pygame.Rect(mx + mw - 175, my + 24, 100, 32)
+        pygame.draw.rect(surface, (226, 212, 185), self.lang_btn_rect, border_radius=6)
+        pygame.draw.rect(surface, (140, 125, 105), self.lang_btn_rect, 1, border_radius=6)
 
-        pt_col = COLOR_GOLD if lang == LANG_PT else (140, 155, 148)
-        en_col = COLOR_GOLD if lang == LANG_EN else (140, 155, 148)
-        pt_bg = (48, 64, 54) if lang == LANG_PT else (25, 34, 29)
-        en_bg = (48, 64, 54) if lang == LANG_EN else (25, 34, 29)
+        pt_col = COLOR_WHITE if lang == LANG_PT else pm.INK_SOFT
+        en_col = COLOR_WHITE if lang == LANG_EN else pm.INK_SOFT
+        pt_bg = pm.SEAL_RED if lang == LANG_PT else (210, 195, 170)
+        en_bg = pm.SEAL_RED if lang == LANG_EN else (210, 195, 170)
 
-        r_pt = pygame.Rect(self.lang_btn_rect.x + 3, self.lang_btn_rect.y + 3, 44, 28)
-        r_en = pygame.Rect(self.lang_btn_rect.x + 53, self.lang_btn_rect.y + 3, 44, 28)
+        r_pt = pygame.Rect(self.lang_btn_rect.x + 3, self.lang_btn_rect.y + 3, 44, 26)
+        r_en = pygame.Rect(self.lang_btn_rect.x + 53, self.lang_btn_rect.y + 3, 44, 26)
         pygame.draw.rect(surface, pt_bg, r_pt, border_radius=4)
         pygame.draw.rect(surface, en_bg, r_en, border_radius=4)
 
@@ -1809,40 +1814,40 @@ class GameHelpModal:
         surface.blit(s_en, (r_en.centerx - s_en.get_width() // 2, r_en.centery - s_en.get_height() // 2))
 
         # Botão Fechar [ X ]
-        self.close_btn_rect = pygame.Rect(mx + mw - 48, my + 11, 34, 34)
-        pygame.draw.rect(surface, (45, 30, 32), self.close_btn_rect, border_radius=6)
-        pygame.draw.rect(surface, (220, 80, 80), self.close_btn_rect, 1, border_radius=6)
-        x_lbl = font_mid.render("X", True, (240, 140, 140))
+        self.close_btn_rect = pygame.Rect(mx + mw - 56, my + 24, 32, 32)
+        pygame.draw.rect(surface, pm.SEAL_RED, self.close_btn_rect, border_radius=6)
+        pygame.draw.rect(surface, (212, 175, 55), self.close_btn_rect, 1, border_radius=6)
+        x_lbl = font_mid.render("X", True, COLOR_WHITE)
         surface.blit(x_lbl, (self.close_btn_rect.centerx - x_lbl.get_width() // 2, self.close_btn_rect.centery - x_lbl.get_height() // 2))
 
         # Abas de Navegação Superiores
         tab_names = [t("tab_rules"), t("tab_controls"), t("tab_fighters")]
-        tab_w = 255
+        tab_w = 230
         tab_h = 34
-        start_tab_x = mx + 28
-        tab_y = my + 66
+        start_tab_x = mx + 36
+        tab_y = my + 72
 
         self.tab_rects.clear()
         for i, name in enumerate(tab_names):
-            t_rect = pygame.Rect(start_tab_x + i * (tab_w + 10), tab_y, tab_w, tab_h)
+            t_rect = pygame.Rect(start_tab_x + i * (tab_w + 12), tab_y, tab_w, tab_h)
             self.tab_rects.append(t_rect)
             is_active = (self.current_tab == i)
 
-            t_bg = (42, 55, 48) if is_active else (25, 32, 28)
-            t_border = COLOR_GOLD if is_active else (55, 70, 62)
-            t_col = COLOR_GOLD if is_active else (180, 195, 185)
+            t_bg = (238, 226, 202) if is_active else (226, 212, 185)
+            t_border = pm.SEAL_RED if is_active else (160, 145, 125)
+            t_col = pm.SEAL_RED if is_active else pm.INK
 
             pygame.draw.rect(surface, t_bg, t_rect, border_radius=6)
             pygame.draw.rect(surface, t_border, t_rect, 2 if is_active else 1, border_radius=6)
             t_surf = font_mid.render(name, True, t_col)
             surface.blit(t_surf, (t_rect.centerx - t_surf.get_width() // 2, t_rect.centery - t_surf.get_height() // 2))
 
-        # Dica sutil de rolagem
-        hint_txt = font_small.render(t("scroll_hint"), True, (150, 170, 160))
-        surface.blit(hint_txt, (mx + mw - hint_txt.get_width() - 28, tab_y + 9))
+        # Dica sutil de rolagem (posicionada à direita das abas sem sobreposição)
+        hint_txt = font_small.render(t("scroll_hint"), True, pm.INK_SOFT)
+        surface.blit(hint_txt, (mx + mw - hint_txt.get_width() - 36, tab_y + 8))
 
         # Área de Conteúdo
-        content_rect = pygame.Rect(mx + 28, my + 110, mw - 56, mh - 130)
+        content_rect = pygame.Rect(mx + 36, my + 116, mw - 72, mh - 138)
 
         if self.current_tab == self.TAB_RULES:
             self._render_tab_rules(surface, content_rect, font_mid, font_small)
@@ -1857,9 +1862,9 @@ class GameHelpModal:
         max_line_w = col_w - 24
 
         boxes = [
-            (t("rules_box1_title"), COLOR_GOLD, t("rules_box1_lines")),
-            (t("rules_box2_title"), (110, 205, 150), t("rules_box2_lines")),
-            (t("rules_box3_title"), (245, 140, 110), t("rules_box3_lines")),
+            (t("rules_box1_title"), pm.SEAL_RED, t("rules_box1_lines")),
+            (t("rules_box2_title"), pm.GOLD_INK, t("rules_box2_lines")),
+            (t("rules_box3_title"), pm.SEAL_BLUE, t("rules_box3_lines")),
         ]
 
         self.max_scroll = 0.0
@@ -1867,11 +1872,12 @@ class GameHelpModal:
         for i, (btitle, bcol, lines) in enumerate(boxes):
             bx = rect.x + i * (col_w + 12)
             b_rect = pygame.Rect(bx, rect.y, col_w, rect.height)
-            pygame.draw.rect(surface, (25, 33, 29), b_rect, border_radius=8)
-            pygame.draw.rect(surface, (48, 62, 54), b_rect, 1, border_radius=8)
+            pygame.draw.rect(surface, (234, 222, 198), b_rect, border_radius=8)
+            pygame.draw.rect(surface, (160, 145, 125), b_rect, 1, border_radius=8)
 
             head_h = 36
-            pygame.draw.rect(surface, (32, 42, 37), (bx, rect.y, col_w, head_h), border_top_left_radius=8, border_top_right_radius=8)
+            pygame.draw.rect(surface, (224, 210, 184), (bx, rect.y, col_w, head_h), border_top_left_radius=8, border_top_right_radius=8)
+            pygame.draw.line(surface, (160, 145, 125), (bx, rect.y + head_h), (bx + col_w, rect.y + head_h), 1)
             t_surf = self._fit_text(font_mid, btitle, bcol, max_line_w)
             surface.blit(t_surf, (bx + 12, rect.y + 8))
 
@@ -1881,7 +1887,7 @@ class GameHelpModal:
                     cur_y += 7
                     continue
                 is_bullet = raw_line.lstrip().startswith("•")
-                col = (220, 230, 225) if is_bullet else (170, 185, 180)
+                col = pm.INK if is_bullet else pm.INK_SOFT
                 indent = "   " if is_bullet else "  "
                 wrapped = self._wrap_text(font_small, raw_line, max_line_w, indent=indent)
                 for wline in wrapped:
@@ -1895,28 +1901,28 @@ class GameHelpModal:
 
         # Painel Esquerdo: Controles P1 e P2
         p_left = pygame.Rect(rect.x, rect.y, half_w, rect.height)
-        pygame.draw.rect(surface, (25, 33, 29), p_left, border_radius=8)
-        pygame.draw.rect(surface, (48, 62, 54), p_left, 1, border_radius=8)
+        pygame.draw.rect(surface, (234, 222, 198), p_left, border_radius=8)
+        pygame.draw.rect(surface, (160, 145, 125), p_left, 1, border_radius=8)
 
-        t1 = self._fit_text(font_mid, t("ctrl_p1_title"), COLOR_GOLD, max_line_w)
+        t1 = self._fit_text(font_mid, t("ctrl_p1_title"), pm.SEAL_RED, max_line_w)
         surface.blit(t1, (p_left.x + 14, p_left.y + 12))
 
         cy = p_left.y + 44
         color_map = {
-            "header": COLOR_RED_AURA,
-            "header2": COLOR_BLUE_AURA,
-            "body": (220, 225, 220),
-            "body_e": (255, 205, 205),
-            "body_r": (255, 220, 220),
-            "tip": (255, 215, 120),
-            "body_dim": (180, 195, 190),
+            "header": pm.SEAL_RED,
+            "header2": pm.SEAL_BLUE,
+            "body": pm.INK,
+            "body_e": (160, 42, 38),
+            "body_r": (160, 42, 38),
+            "tip": pm.GOLD_INK,
+            "body_dim": pm.INK_SOFT,
             "sep": (0, 0, 0),
         }
         for text, style in t("ctrl_p1_lines"):
             if not text:
                 cy += 8
                 continue
-            col = color_map.get(style, (220, 225, 220))
+            col = color_map.get(style, pm.INK)
             wrapped = self._wrap_text(font_small, text, max_line_w, indent="    ")
             for wline in wrapped:
                 s = font_small.render(wline, True, col)
@@ -1925,17 +1931,17 @@ class GameHelpModal:
 
         # Painel Direito: Atalhos do Sistema
         p_right = pygame.Rect(rect.x + half_w + 16, rect.y, half_w, rect.height)
-        pygame.draw.rect(surface, (25, 33, 29), p_right, border_radius=8)
-        pygame.draw.rect(surface, (48, 62, 54), p_right, 1, border_radius=8)
+        pygame.draw.rect(surface, (234, 222, 198), p_right, border_radius=8)
+        pygame.draw.rect(surface, (160, 145, 125), p_right, 1, border_radius=8)
 
-        t2 = self._fit_text(font_mid, t("ctrl_p2_title"), (110, 205, 150), max_line_w)
+        t2 = self._fit_text(font_mid, t("ctrl_p2_title"), pm.GOLD_INK, max_line_w)
         surface.blit(t2, (p_right.x + 14, p_right.y + 12))
 
         color_map2 = {
-            "key": COLOR_GOLD,
-            "key_action": (255, 140, 110),
-            "body": (220, 225, 220),
-            "body_dim": (180, 195, 190),
+            "key": pm.GOLD_INK,
+            "key_action": pm.SEAL_RED,
+            "body": pm.INK,
+            "body_dim": pm.INK_SOFT,
             "sep": (0, 0, 0),
         }
         cy = p_right.y + 44
@@ -1943,7 +1949,7 @@ class GameHelpModal:
             if not text:
                 cy += 8
                 continue
-            col = color_map2.get(style, (220, 225, 220))
+            col = color_map2.get(style, pm.INK)
             wrapped = self._wrap_text(font_small, text, max_line_w, indent="    ")
             for wline in wrapped:
                 s = font_small.render(wline, True, col)
@@ -1978,14 +1984,14 @@ class GameHelpModal:
             self.fighter_tab_rects.append(b_rect)
 
             is_cur = (self.selected_fighter_idx == i)
-            bg_col = (45, 58, 50) if is_cur else (22, 28, 25)
-            border_col = fdata["color"] if is_cur else (45, 55, 50)
+            bg_col = (238, 226, 202) if is_cur else (224, 210, 184)
+            border_col = fdata["color"] if is_cur else (160, 145, 125)
 
             pygame.draw.rect(surface, bg_col, b_rect, border_radius=4)
             pygame.draw.rect(surface, border_col, b_rect, 2 if is_cur else 1, border_radius=4)
 
             short_name = fdata[lang]["name"]
-            txt_col = fdata["color"] if is_cur else (160, 175, 170)
+            txt_col = fdata["color"] if is_cur else pm.INK_SOFT
             n_surf = self._fit_text(font_small, short_name, txt_col, bw - 6)
             surface.blit(n_surf, (b_rect.centerx - n_surf.get_width() // 2, b_rect.centery - n_surf.get_height() // 2))
 
@@ -1996,7 +2002,7 @@ class GameHelpModal:
         detail_h = rect.height - (btn_h * 2 + 8)
         detail_rect = pygame.Rect(rect.x, detail_y, rect.width, detail_h)
 
-        pygame.draw.rect(surface, (23, 30, 26), detail_rect, border_radius=8)
+        pygame.draw.rect(surface, (234, 222, 198), detail_rect, border_radius=8)
         pygame.draw.rect(surface, cur_fighter["color"], detail_rect, 2, border_radius=8)
 
         # Coluna Esquerda: Retrato Voxel 3D e Dados Básicos (largura 310px)
@@ -2005,7 +2011,7 @@ class GameHelpModal:
         portrait_cy = detail_y + 44
 
         # Moldura circular e Retrato de Busto HD-2D do guerreiro
-        pygame.draw.circle(surface, (16, 22, 19), (portrait_cx, portrait_cy), 36)
+        pygame.draw.circle(surface, (218, 204, 178), (portrait_cx, portrait_cy), 36)
         pygame.draw.circle(surface, cur_fighter["color"], (portrait_cx, portrait_cy), 36, 2)
 
         p_size = (68, 68)
@@ -2028,8 +2034,8 @@ class GameHelpModal:
         text_x = detail_rect.x + 92
         max_title_w = left_col_w - 92 - 10
         n_surf = self._fit_text(font_mid, cur_data["name"], cur_fighter["color"], max_title_w)
-        t_surf = self._fit_text(font_small, cur_data["title"], COLOR_WHITE, max_title_w)
-        s_surf = self._fit_text(font_small, cur_data["style"], COLOR_GOLD, max_title_w)
+        t_surf = self._fit_text(font_small, cur_data["title"], pm.INK, max_title_w)
+        s_surf = self._fit_text(font_small, cur_data["style"], pm.GOLD_INK, max_title_w)
 
         surface.blit(n_surf, (text_x, detail_y + 12))
         surface.blit(t_surf, (text_x, detail_y + 36))
@@ -2037,16 +2043,16 @@ class GameHelpModal:
 
         # Atributos e Teclas com quebra automática de linha
         stat_y = detail_y + 88
-        pygame.draw.line(surface, (45, 58, 52), (detail_rect.x + 14, stat_y), (detail_rect.x + left_col_w, stat_y), 1)
+        pygame.draw.line(surface, (175, 160, 140), (detail_rect.x + 14, stat_y), (detail_rect.x + left_col_w, stat_y), 1)
 
         stat_max_w = left_col_w - 28
         stat_items = [
-            (f"{t('stat_speed')} {cur_data['vel']}", (230, 220, 180)),
-            (f"{t('stat_damage')} {cur_data['dano']}", (205, 215, 210)),
-            (f"{t('stat_special')} {cur_data['especial']}", (205, 215, 210)),
+            (f"{t('stat_speed')} {cur_data['vel']}", pm.INK),
+            (f"{t('stat_damage')} {cur_data['dano']}", pm.INK),
+            (f"{t('stat_special')} {cur_data['especial']}", pm.INK),
             ("", None),
-            (cur_data["keys_p1"], (255, 210, 180)),
-            (cur_data["keys_p2"], (255, 210, 180)),
+            (cur_data["keys_p1"], pm.SEAL_RED),
+            (cur_data["keys_p2"], pm.SEAL_RED),
         ]
         sy = stat_y + 6
         for sl, col in stat_items:
@@ -2066,19 +2072,19 @@ class GameHelpModal:
         self.prev_fighter_btn = pygame.Rect(detail_rect.x + 14, btn_nav_y, 134, 30)
         self.next_fighter_btn = pygame.Rect(detail_rect.x + 158, btn_nav_y, 134, 30)
 
-        pygame.draw.rect(surface, (35, 45, 40), self.prev_fighter_btn, border_radius=6)
-        pygame.draw.rect(surface, (60, 75, 68), self.prev_fighter_btn, 1, border_radius=6)
-        prev_lbl = self._fit_text(font_small, t("btn_prev"), COLOR_GOLD, 124)
+        pygame.draw.rect(surface, (224, 210, 184), self.prev_fighter_btn, border_radius=6)
+        pygame.draw.rect(surface, (160, 145, 125), self.prev_fighter_btn, 1, border_radius=6)
+        prev_lbl = self._fit_text(font_small, t("btn_prev"), pm.INK, 124)
         surface.blit(prev_lbl, (self.prev_fighter_btn.centerx - prev_lbl.get_width() // 2, self.prev_fighter_btn.centery - prev_lbl.get_height() // 2))
 
-        pygame.draw.rect(surface, (35, 45, 40), self.next_fighter_btn, border_radius=6)
-        pygame.draw.rect(surface, (60, 75, 68), self.next_fighter_btn, 1, border_radius=6)
-        next_lbl = self._fit_text(font_small, t("btn_next"), COLOR_GOLD, 124)
+        pygame.draw.rect(surface, (224, 210, 184), self.next_fighter_btn, border_radius=6)
+        pygame.draw.rect(surface, (160, 145, 125), self.next_fighter_btn, 1, border_radius=6)
+        next_lbl = self._fit_text(font_small, t("btn_next"), pm.INK, 124)
         surface.blit(next_lbl, (self.next_fighter_btn.centerx - next_lbl.get_width() // 2, self.next_fighter_btn.centery - next_lbl.get_height() // 2))
 
         # Divisória vertical
         sep_x = detail_rect.x + left_col_w + 12
-        pygame.draw.line(surface, (45, 58, 52), (sep_x, detail_y + 12), (sep_x, detail_rect.bottom - 12), 1)
+        pygame.draw.line(surface, (175, 160, 140), (sep_x, detail_y + 12), (sep_x, detail_rect.bottom - 12), 1)
 
         # Coluna Direita: Sub-filtros e Conteúdo Estratégico com Rolagem Anti-Overflow
         right_x = sep_x + 14
@@ -2100,19 +2106,19 @@ class GameHelpModal:
             sb_rect = pygame.Rect(right_x + s_idx * (sub_w + sub_gap), sub_y, sub_w, sub_h)
             self.sub_sec_btn_rects.append(sb_rect)
             is_active_sub = (self.fighter_sub_section == s_idx)
-            s_bg = (48, 62, 54) if is_active_sub else (26, 33, 29)
-            s_bcol = COLOR_GOLD if is_active_sub else (50, 62, 55)
+            s_bg = (238, 226, 202) if is_active_sub else (224, 210, 184)
+            s_bcol = pm.SEAL_RED if is_active_sub else (160, 145, 125)
             pygame.draw.rect(surface, s_bg, sb_rect, border_radius=4)
-            pygame.draw.rect(surface, s_bcol, sb_rect, 1, border_radius=4)
-            s_txt = self._fit_text(font_small, s_lbl, COLOR_GOLD if is_active_sub else (160, 175, 168), sub_w - 6)
+            pygame.draw.rect(surface, s_bcol, sb_rect, 2 if is_active_sub else 1, border_radius=4)
+            s_txt = self._fit_text(font_small, s_lbl, pm.SEAL_RED if is_active_sub else pm.INK, sub_w - 6)
             surface.blit(s_txt, (sb_rect.centerx - s_txt.get_width() // 2, sb_rect.centery - s_txt.get_height() // 2))
 
         # Seções de Conteúdo a serem exibidas
         all_sections = [
-            (t("sec_concept"), COLOR_GOLD, cur_data["conceito"], self.SEC_CONCEPT),
-            (t("sec_arsenal"), (110, 205, 150), cur_data["habilidades"], self.SEC_ARSENAL),
-            (t("sec_offense"), (255, 205, 120), cur_data["estrategia_ofensiva"], self.SEC_OFFENSE),
-            (t("sec_defense"), (255, 130, 120), cur_data["estrategia_defensiva"], self.SEC_DEFENSE)
+            (t("sec_concept"), pm.SEAL_RED, cur_data["conceito"], self.SEC_CONCEPT),
+            (t("sec_arsenal"), pm.GOLD_INK, cur_data["habilidades"], self.SEC_ARSENAL),
+            (t("sec_offense"), pm.SEAL_BLUE, cur_data["estrategia_ofensiva"], self.SEC_OFFENSE),
+            (t("sec_defense"), (160, 42, 38), cur_data["estrategia_defensiva"], self.SEC_DEFENSE)
         ]
 
         if self.fighter_sub_section == self.SEC_ALL:
@@ -2136,7 +2142,7 @@ class GameHelpModal:
                 indent = "  " if rline.lstrip().startswith("•") else ""
                 wrapped = self._wrap_text(font_small, rline, text_w, indent=indent)
                 for wline in wrapped:
-                    block_lines.append(("line", wline, (215, 225, 220)))
+                    block_lines.append(("line", wline, pm.INK))
             layout_blocks.append(block_lines)
 
         for blk in layout_blocks:
@@ -2173,7 +2179,7 @@ class GameHelpModal:
             track_x = right_x + right_w - 8
             track_y = clip_top
             track_h = clip_h
-            pygame.draw.rect(surface, (28, 36, 31), (track_x, track_y, 6, track_h), border_radius=3)
+            pygame.draw.rect(surface, (215, 202, 178), (track_x, track_y, 6, track_h), border_radius=3)
 
             # Cálculo do polegar da barra de rolagem (Thumb)
             thumb_ratio = max(0.15, clip_h / (clip_h + self.max_scroll))
@@ -2181,4 +2187,4 @@ class GameHelpModal:
             thumb_pos = int((track_h - thumb_h) * (self.scroll_y / self.max_scroll))
             thumb_y = track_y + thumb_pos
 
-            pygame.draw.rect(surface, COLOR_GOLD, (track_x, thumb_y, 6, thumb_h), border_radius=3)
+            pygame.draw.rect(surface, pm.SEAL_RED, (track_x, thumb_y, 6, thumb_h), border_radius=3)

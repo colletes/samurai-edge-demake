@@ -1266,8 +1266,8 @@ class CombatSystem:
                         ctrl_mgr.rumble_player(0, 0.5, 0.7, 200)
                         ctrl_mgr.rumble_player(1, 0.6, 0.8, 180)
                 else:
-                    # MORTE FATAL PELO DOBERMAN!
-                    hit, dead = p2.take_hit((dog.facing_x, dog.facing_y), damage=2)
+                    # MORTE FATAL PELO DOBERMAN (1-Hit Kill letal)!
+                    hit, dead = p2.take_hit((dog.facing_x, dog.facing_y), damage=3)
                     if dead:
                         camera.add_shake(16.0)
                         for _ in range(30):
@@ -1282,7 +1282,7 @@ class CombatSystem:
                     else:
                         dog.state = "FOLLOW"
                         dog.hitbox_active = False
-                        dog.cooldown_timer = 8.0
+                        dog.cooldown_timer = 2.5
                         if ctrl_mgr:
                             ctrl_mgr.rumble_player(0, 0.8, 1.0, 320)
                             ctrl_mgr.rumble_player(1, 1.0, 1.0, 400)
@@ -1308,7 +1308,8 @@ class CombatSystem:
                         ctrl_mgr.rumble_player(1, 0.5, 0.7, 200)
                         ctrl_mgr.rumble_player(0, 0.6, 0.8, 180)
                 else:
-                    hit, dead = p1.take_hit((dog.facing_x, dog.facing_y), damage=2)
+                    # MORTE FATAL PELO DOBERMAN (1-Hit Kill letal)!
+                    hit, dead = p1.take_hit((dog.facing_x, dog.facing_y), damage=3)
                     if dead:
                         camera.add_shake(16.0)
                         for _ in range(30):
@@ -1323,7 +1324,7 @@ class CombatSystem:
                     else:
                         dog.state = "FOLLOW"
                         dog.hitbox_active = False
-                        dog.cooldown_timer = 8.0
+                        dog.cooldown_timer = 2.5
                         if ctrl_mgr:
                             ctrl_mgr.rumble_player(1, 0.8, 1.0, 320)
                             ctrl_mgr.rumble_player(0, 1.0, 1.0, 400)

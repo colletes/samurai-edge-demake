@@ -425,14 +425,8 @@ def fit_text(font: pygame.font.Font, text: str, color, max_w: int) -> pygame.Sur
 
 
 def draw_crest(surface: pygame.Surface, x: int, y: int, scale: float = 0.8):
-    crest = _load("crane_crest.png")
-    if crest is None:
-        return
-    key = ("crest", scale)
-    if key not in _cache:
-        w, h = crest.get_size()
-        _cache[key] = pygame.transform.smoothscale(crest, (int(w * scale), int(h * scale)))
-    surface.blit(_cache[key], (x, y), special_flags=pygame.BLEND_RGB_MULT)
+    """(Desativado a pedido do usuário - ícone de garça removido dos menus)"""
+    return
 
 
 # ---------------------------------------------------------------------------

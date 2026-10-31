@@ -41,7 +41,11 @@ def resolve_playable_bounds(game_map) -> tuple[float, float, float, float]:
     bounds = getattr(game_map, "playable_bounds", None)
     if bounds is not None:
         return bounds
-    return 1.0, 1.0, game_map.cols - 1.0, game_map.rows - 1.0
+    if game_map is not None:
+        cols = getattr(game_map, "cols", 20)
+        rows = getattr(game_map, "rows", 20)
+        return 1.0, 1.0, cols - 1.0, rows - 1.0
+    return 1.0, 1.0, 19.0, 19.0
 
 
 def slide_movement_against_obstacles(
@@ -476,6 +480,9 @@ class Samurai:
 
     def update_stealth(self, game_map):
         """Atualiza estado de camuflagem na vegetação de bambu."""
-        self.is_hidden = game_map.is_hidden_in_bamboo(self.wx, self.wy)
+        if game_map and hasattr(game_map, "is_hidden_in_bamboo"):
+            self.is_hidden = game_map.is_hidden_in_bamboo(self.wx, self.wy)
+        else:
+            self.is_hidden = False
         target_alpha = 110 if self.is_hidden else 255
         self.alpha += int((target_alpha - self.alpha) * 0.15)

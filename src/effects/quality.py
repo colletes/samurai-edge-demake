@@ -19,30 +19,73 @@ _low_fps_streak = 0
 _high_fps_streak = 0
 _governor_stepped_down = False
 _game_boost_enabled: bool = False
+_macos_activity_token = None
+
+
+def _apply_macos_game_mode(enable: bool):
+    """Ativa o Modo de Jogo oficial do macOS via NSProcessInfo (NSActivityLatencyCritical).
+
+    Garante prioridade máxima em tempo real no kernel do macOS para CPU e GPU,
+    reduz a latência de Bluetooth de controles/AirPods e suprime tarefas em background.
+    """
+    global _macos_activity_token
+    import sys
+    if sys.platform != "darwin":
+        return
+
+    try:
+        import ctypes
+        import ctypes.util
+        objc_path = ctypes.util.find_library("objc")
+        if not objc_path:
+            return
+        objc = ctypes.cdll.LoadLibrary(objc_path)
+        objc.objc_getClass.restype = ctypes.c_void_p
+        objc.objc_getClass.argtypes = [ctypes.c_char_p]
+        objc.sel_registerName.restype = ctypes.c_void_p
+        objc.sel_registerName.argtypes = [ctypes.c_char_p]
+
+        msgSend_ptr = ctypes.cast(objc.objc_msgSend, ctypes.c_void_p).value
+        NSProcessInfo = objc.objc_getClass(b"NSProcessInfo")
+        NSString = objc.objc_getClass(b"NSString")
+        if not NSProcessInfo or not NSString:
+            return
+
+        sel_pinfo = objc.sel_registerName(b"processInfo")
+        sel_str = objc.sel_registerName(b"stringWithUTF8String:")
+        sel_begin = objc.sel_registerName(b"beginActivityWithOptions:reason:")
+        sel_end = objc.sel_registerName(b"endActivity:")
+
+        pinfo = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)(msgSend_ptr)(NSProcessInfo, sel_pinfo)
+
+        if enable:
+            if _macos_activity_token is None:
+                reason = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p)(msgSend_ptr)(
+                    NSString, sel_str, b"macOS Official Game Mode (Latency Critical)"
+                )
+                # NSActivityLatencyCritical (0xFF00000000) | NSActivityUserInitiated (0x00FFFFFF)
+                opts = ctypes.c_uint64(0xFF00000000 | 0x00FFFFFF)
+                _macos_activity_token = ctypes.CFUNCTYPE(
+                    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_void_p
+                )(msgSend_ptr)(pinfo, sel_begin, opts.value, reason)
+        else:
+            if _macos_activity_token is not None:
+                ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)(msgSend_ptr)(
+                    pinfo, sel_end, _macos_activity_token
+                )
+                _macos_activity_token = None
+    except Exception:
+        pass
 
 
 def set_game_boost(enabled: bool):
     global _game_boost_enabled
     _game_boost_enabled = bool(enabled)
-    if _game_boost_enabled:
-        _apply_process_boost()
+    _apply_macos_game_mode(_game_boost_enabled)
 
 
 def is_game_boost_enabled() -> bool:
     return _game_boost_enabled
-
-
-def _apply_process_boost():
-    """Eleva a prioridade de processo / QoS para Game Mode no macOS / POSIX quando suportado."""
-    try:
-        import os
-        if hasattr(os, "nice"):
-            try:
-                os.nice(-2)
-            except Exception:
-                pass
-    except Exception:
-        pass
 
 
 def set_effects_quality(level: str):
@@ -63,9 +106,7 @@ def is_high() -> bool:
 
 
 def scaled(count: int, minimum: int = 1) -> int:
-    """Quantidade de partículas na qualidade atual: com Game Boost ativo usa um quarto; baixa usa um terço."""
-    if _game_boost_enabled:
-        return max(minimum, int(count / 4))
+    """Quantidade de partículas na qualidade atual."""
     return count if _level == HIGH else max(minimum, int(count / 3))
 
 

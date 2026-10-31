@@ -48,9 +48,13 @@ class CinematicDirector:
         self.sonic_spark_accum = 0.0
         self.sonic_style = ""
 
-        # Joe & Yamato: Windmill Shuriken Decap
+        # Joe & Yamato: Windmill Shuriken Decap & Triple Shuriken Dismember
         self.joe_attacker = None
         self.joe_victim = None
+        self.joe_triple_attacker = None
+        self.joe_triple_victim = None
+        self.joe_triple_timer = 0.0
+        self.joe_triple_shots = 0
         self.joe_pin_timer = 0.0
         self.joe_throw_timer = 0.0
         self.shuriken_proj_x = 0.0
@@ -58,6 +62,10 @@ class CinematicDirector:
         self.shuriken_active = False
         self.joe_sound_played = False
         self.joe_throw_sound_played = False
+        self.joe_triple_attacker = None
+        self.joe_triple_victim = None
+        self.joe_triple_timer = 0.0
+        self.joe_triple_shots = 0
 
         # Julie: Rapier Flurry & Point-blank Flintlock
         self.julie_attacker = None
@@ -215,6 +223,7 @@ class CinematicDirector:
             "RESONANCE_WIND_GALE": ("突風両断", "TOPPUU RYOUDAN — VENTO DECAPITADOR"),
             "RESONANCE_BURST": ("突風両断", "TOPPUU RYOUDAN — VENTO DECAPITADOR"),
             "WINDMILL_SHURIKEN_DECAP": ("風車斬首", "FUUSHA ZANSHU — DECAPITAÇÃO DA SHURIKEN MOINHO"),
+            "TRIPLE_SHURIKEN_DISMEMBER": ("三連手裏剣", "SANREN SHURIKEN — DESMEMBRAMENTO TÁTICO"),
             "RAPIER_FLURRY_POINTBLANK": ("零距離乱撃", "REIKYORI RANGEKI — DISPARO À QUEIMA-ROUPA"),
             # Ciclo 3 Fatalities
             "KUWA_SKULL_CLEAVE": ("鍬頭砕断", "KUWA TOUSAIDAN — CLIVAGEM CRANIANA DA ENXADA"),
@@ -363,6 +372,10 @@ class CinematicDirector:
         self.sonic_victim = None
         self.joe_attacker = None
         self.joe_victim = None
+        self.joe_triple_attacker = None
+        self.joe_triple_victim = None
+        self.joe_triple_timer = 0.0
+        self.joe_triple_shots = 0
         self.julie_attacker = None
         self.julie_victim = None
         self.goro_attacker = None
@@ -452,6 +465,20 @@ class CinematicDirector:
             if attacker is not None:
                 attacker.set_facing(victim.wx, victim.wy)
                 attacker.state = "IDLE"
+
+        elif death_style == "TRIPLE_SHURIKEN_DISMEMBER":
+            # Joe Finisher A: 3 Shurikens em sequência decepam braço direito, esquerdo e cabeça!
+            self.joe_triple_attacker = attacker
+            self.joe_triple_victim = victim
+            self.joe_triple_timer = 1.15
+            self.joe_triple_shots = 0
+            self.freeze_timer = 1.25
+            self.bw_flash_duration = 1.65
+            self.bw_flash_timer = 1.65
+            self.delayed_death_timer = 1.20
+            if attacker is not None:
+                attacker.set_facing(victim.wx, victim.wy)
+                attacker.state = "ATTACK"
 
         elif death_style == "RAPIER_FLURRY_POINTBLANK":
             # Julie: 24 estocadas de rapieira, pirueta elegante e disparo de pistola à queima-roupa!
@@ -963,6 +990,68 @@ class CinematicDirector:
                     atk.dog.wx += -atk.facing_y * 2.2 * effective_dt
                     atk.dog.wy += atk.facing_x * 2.2 * effective_dt
                     atk.dog.state = "FOLLOW"
+
+        # 4b. Joe Triple Shuriken Dismember (Finisher A)
+        if self.joe_triple_timer > 0:
+            self.joe_triple_timer = max(0.0, self.joe_triple_timer - effective_dt)
+            atk = self.joe_triple_attacker
+            vic = self.joe_triple_victim
+            tp = 1.0 - (self.joe_triple_timer / 1.15)
+            if atk is not None and vic is not None:
+                atk.set_facing(vic.wx, vic.wy)
+                atk.state = "ATTACK"
+                atk.state_timer = 0.20
+                extra = getattr(atk, "extra_props", {}) or {}
+                extra["pose"] = "triple_shuriken"
+                extra["progress"] = tp
+                atk.extra_props = extra
+
+                # Disparo 1: braço direito (tp >= 0.22)
+                if tp >= 0.22 and self.joe_triple_shots < 1:
+                    self.joe_triple_shots = 1
+                    try:
+                        from src.audio.sound_manager import get_sound_manager
+                        from src.audio.sound_events import SoundEvent
+                        get_sound_manager().play(SoundEvent.SHURIKEN_THROW, volume_scale=1.0)
+                        get_sound_manager().play(SoundEvent.SWORD_SLASH, volume_scale=0.8)
+                    except Exception:
+                        pass
+                    if particles is not None:
+                        from src.effects.particles import SparkParticle, BloodParticle
+                        for _ in range(12):
+                            particles.append(BloodParticle(vic.wx + 0.10, vic.wy, 0.65))
+                            particles.append(SparkParticle(vic.wx + 0.10, vic.wy, 0.70))
+
+                # Disparo 2: braço esquerdo (tp >= 0.52)
+                elif tp >= 0.52 and self.joe_triple_shots < 2:
+                    self.joe_triple_shots = 2
+                    try:
+                        from src.audio.sound_manager import get_sound_manager
+                        from src.audio.sound_events import SoundEvent
+                        get_sound_manager().play(SoundEvent.SHURIKEN_THROW, volume_scale=1.0)
+                        get_sound_manager().play(SoundEvent.SWORD_SLASH, volume_scale=0.8)
+                    except Exception:
+                        pass
+                    if particles is not None:
+                        from src.effects.particles import SparkParticle, BloodParticle
+                        for _ in range(14):
+                            particles.append(BloodParticle(vic.wx - 0.10, vic.wy, 0.65))
+                            particles.append(SparkParticle(vic.wx - 0.10, vic.wy, 0.70))
+
+                # Disparo 3: decapitação da cabeça (tp >= 0.82)
+                elif tp >= 0.82 and self.joe_triple_shots < 3:
+                    self.joe_triple_shots = 3
+                    try:
+                        from src.audio.sound_manager import get_sound_manager
+                        from src.audio.sound_events import SoundEvent
+                        get_sound_manager().play(SoundEvent.SHURIKEN_THROW, volume_scale=1.0)
+                        get_sound_manager().play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
+                    except Exception:
+                        pass
+                    if particles is not None:
+                        from src.effects.particles import BloodParticle
+                        for _ in range(24):
+                            particles.append(BloodParticle(vic.wx, vic.wy, 0.85))
 
         # 5. Julie Rapier Flurry & Point-blank
         if self.julie_flurry_timer > 0:
@@ -1482,7 +1571,7 @@ class CinematicDirector:
                 # O suspense acabou: O corpo se parte e o geiser explode!
                 self.shuriken_active = False
                 ds = getattr(self.pending_corpse, "death_style", "")
-                if ds in ("WINDMILL_SHURIKEN_DECAP", "DUAL_IMPALE_X_SPREAD", "CROSS_VACUUM_SLICER", "REFLECTED_TORSO_CLEAVE", "KUWA_SKULL_CLEAVE", "EARTH_STOMP_CRUSH", "BLIND_CAROTID_SLICE", "BLIND_SPINE_PIERCE", "KENSHIN_SPLIT", "VERTICAL_BISECTION", "SOUL_REAP", "DRAGGED_TO_GRAVE", "SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR", "SEIMEI_FATAL_FIRE", "SEIMEI_FATAL_WATER", "SEIMEI_FATAL_WOOD", "SEIMEI_FATAL_METAL", "SEIMEI_FATAL_EARTH", "SEIMEI_FATAL_YINYANG"):
+                if ds in ("TRIPLE_SHURIKEN_DISMEMBER", "WINDMILL_SHURIKEN_DECAP", "DUAL_IMPALE_X_SPREAD", "CROSS_VACUUM_SLICER", "REFLECTED_TORSO_CLEAVE", "KUWA_SKULL_CLEAVE", "EARTH_STOMP_CRUSH", "BLIND_CAROTID_SLICE", "BLIND_SPINE_PIERCE", "KENSHIN_SPLIT", "VERTICAL_BISECTION", "SOUL_REAP", "DRAGGED_TO_GRAVE", "SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR", "SEIMEI_FATAL_FIRE", "SEIMEI_FATAL_WATER", "SEIMEI_FATAL_WOOD", "SEIMEI_FATAL_METAL", "SEIMEI_FATAL_EARTH", "SEIMEI_FATAL_YINYANG"):
                     try:
                         from src.audio.sound_manager import get_sound_manager
                         from src.audio.sound_events import SoundEvent
@@ -1900,6 +1989,10 @@ class CinematicDirector:
         self.sonic_style = ""
         self.joe_attacker = None
         self.joe_victim = None
+        self.joe_triple_attacker = None
+        self.joe_triple_victim = None
+        self.joe_triple_timer = 0.0
+        self.joe_triple_shots = 0
         self.joe_pin_timer = 0.0
         self.joe_throw_timer = 0.0
         self.shuriken_proj_x = 0.0

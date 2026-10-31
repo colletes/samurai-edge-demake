@@ -1146,8 +1146,8 @@ def run_game():
             rank = arcade_save.add_high_score(data, arcade_run)
             data["current_run"] = None
             arcade_save.save(data)
+            sound_mgr.stop_music(fadeout_ms=300)
             arcade_credits_screen.open(arcade_run, rank, data["high_scores"])
-            sound_mgr.play_music(MusicTrack.TITLE_THEME)
             game_state = STATE_ARCADE_CREDITS
         else:
             save_arcade_run()
@@ -1334,9 +1334,11 @@ def run_game():
                             gallery_screen.close()
                             settings_menu.open(subscreen="HUB")
                         elif g_act == "OPEN_OPENING_VIDEO":
-                            opening_video.play(screen)
+                            opening_screen.play(screen)
+                            sound_mgr.ensure_mixer_ready()
                         elif g_act == "OPEN_CREDITS_SLIDESHOW":
-                            arcade_credits.play_video(screen)
+                            arcade_credits_screen.play(screen)
+                            sound_mgr.ensure_mixer_ready()
                 gallery_screen.update(dt)
                 title_screen.render(screen, font_large, font_mid, font_small)
                 gallery_screen.render(screen, font_large, font_mid, font_small)
@@ -1492,12 +1494,16 @@ def run_game():
                     continue
                 if arcade_credits_screen.handle_event(event, ctrl_mgr) == "DONE":
                     play_sfx(SoundEvent.MENU_SELECT)
+                    arcade_credits_screen.stop()
                     arcade_result_screen.open(arcade_credits_screen.run, arcade_credits_screen.rank, arcade_credits_screen.high_scores)
+                    sound_mgr.play_music(MusicTrack.TITLE_THEME)
                     game_state = STATE_ARCADE_RESULT
                     break
             if game_state == STATE_ARCADE_CREDITS:
                 if arcade_credits_screen.update(dt) == "DONE":
+                    arcade_credits_screen.stop()
                     arcade_result_screen.open(arcade_credits_screen.run, arcade_credits_screen.rank, arcade_credits_screen.high_scores)
+                    sound_mgr.play_music(MusicTrack.TITLE_THEME)
                     game_state = STATE_ARCADE_RESULT
                 else:
                     arcade_credits_screen.render(screen)
@@ -1616,9 +1622,11 @@ def run_game():
                         gallery_screen.close()
                         settings_menu.open(subscreen="HUB")
                     elif g_act == "OPEN_OPENING_VIDEO":
-                        opening_video.play(screen)
+                        opening_screen.play(screen)
+                        sound_mgr.ensure_mixer_ready()
                     elif g_act == "OPEN_CREDITS_SLIDESHOW":
-                        arcade_credits.play_video(screen)
+                        arcade_credits_screen.play(screen)
+                        sound_mgr.ensure_mixer_ready()
             gallery_screen.update(dt)
             gallery_screen.render(screen, font_large, font_mid, font_small)
             pygame.display.flip()
@@ -2299,7 +2307,10 @@ def run_game():
 
             # A música da arena continua em loop entre rounds; só encerra quando a luta inteira for resolvida
             if ends_match:
-                sound_mgr.play_death_music(fadeout_ms=450)
+                if arcade_run is not None and arcade_run.is_finished:
+                    sound_mgr.stop_music(fadeout_ms=600)
+                else:
+                    sound_mgr.play_death_music(fadeout_ms=450)
 
             if round_winner in ("P1_WINS", "P2_WINS"):
                 loser = p2 if round_winner == "P1_WINS" else p1

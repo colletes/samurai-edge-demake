@@ -29,11 +29,70 @@ CAT_ENDING = "ENDING_SLIDES"
 FILTER_KEYS = [CAT_ALL, CAT_CHARACTERS, CAT_ARENAS, CAT_ENDING]
 
 # Faixas que contêm vocais cantados com letras completas
-VOCAL_TRACKS = {
-    "Samurai Edge- Opening Theme",
-    "Samurai Edge - Closing Theme",
-}
-KARAOKE_TRACKS = VOCAL_TRACKS  # Retrocompatibilidade com testes e módulos legados
+JOE_THEME_LYRICS = [
+    {"sung": "Step into the forest, check the camo headband!"},
+    {"sung": "Fastest American shinobi in the land!"},
+    {"sung": "I read a scroll in Texas, now I'm master of the blade,"},
+    {"sung": "Watch me throw a shuriken from the pine tree shade!"},
+    {"sung": "TEMPURA! BONSAI!"},
+    {"sung": "Slice 'em with the steel!"},
+    {"sung": "SUDOKU! TERIYAKI!"},
+    {"sung": "That's the ninja deal!"},
+    {"sung": "Sick 'em, Yamato! Give 'em the bite!"},
+    {"sung": "KARAOKE! WASABI! We're winning tonight!"},
+    {"sung": "Oh yeah! Konnichiwa, baby! Sayonara!"},
+    {"sung": "Arigato, amigos! Banzai!"},
+]
+
+KASUMI_THEME_LYRICS = [
+    {"sung": "Kochira yo...", "trans": "I am right here..."},
+    {"sung": "Kiri no naka de kakurenbo,", "trans": "Hide and seek in the silver mist,"},
+    {"sung": "Maboroshi ka na? Honmono ka na?", "trans": "Is it a mirage? Or is it real?"},
+    {"sung": "Ahaha!", "trans": "*Playful kunoichi giggle*"},
+    {"sung": "Hanabi ga saku yo — DŌN!", "trans": "The fireworks bloom — BOOM!"},
+]
+
+ANNE_THEME_LYRICS = [
+    {"sung": "Hahaha! All hands on deck!"},
+    {"sung": "Raise the black flag in the Bakumatsu sea!"},
+    {"sung": "Steel in my hand and the storm winds free!"},
+    {"sung": "Roll with the deck or go over the side,"},
+    {"sung": "My cutlass is hungry for samurai pride!"},
+    {"sung": "Heave! Ho! Cut through the gale!"},
+    {"sung": "Blood and gold! Under tattered sail!"},
+    {"sung": "Light up the cannon and blow 'em away —"},
+    {"sung": "FIRE IN THE HOLE!"},
+    {"sung": "Yo-ho! Bring it on!"},
+]
+
+JULIE_THEME_LYRICS = [
+    {"sung": "En garde, monsieur!"},
+    {"sung": "Sous le soleil de marbre blanc,", "trans": "Beneath the sun of white marble,"},
+    {"sung": "La rose fleurit dans le sang!", "trans": "The rose blossoms in the blood!"},
+    {"sung": "Un éclair d'argent, une danse royale,", "trans": "A flash of silver, a royal dance,"},
+    {"sung": "Voici ma lame fatale!", "trans": "Behold my fatal blade!"},
+    {"sung": "Un, deux — Touché!"},
+    {"sung": "Pour la couronne — ADIEU!", "trans": "For the crown — FAREWELL!"},
+]
+
+NINJA_CHALLENGE_LYRICS = [
+    {"sung": "Fastest American shinobi in the land!"},
+    {"sung": "Read a scroll in Texas, now I'm master of the blade!"},
+    {"sung": "TEMPURA! BONSAI! Slice 'em with the steel!"},
+    {"sung": "SUDOKU! TERIYAKI! That's the ninja deal!"},
+    {"sung": "Kochira yo...", "trans": "I am right here..."},
+    {"sung": "Kiri no naka de kakurenbo,", "trans": "Hide and seek in the silver mist,"},
+    {"sung": "Maboroshi ka na? Honmono ka na?", "trans": "Is it a mirage? Or is it real?"},
+    {"sung": "Yami no kusari ga odoru toki,", "trans": "When the dark chains begin to dance,"},
+    {"sung": "Murasaki no kage ni nemure...", "trans": "Sleep within the purple shadow..."},
+    {"sung": "Tsukamaeta... fufufu...", "trans": "Caught you... hehehe..."},
+    {"sung": "Kage... Fu! Ha!", "trans": "Shadow... Strike!"},
+    {"sung": "Kiri to kusari to kage no yaiba,", "trans": "Mist, chains, and blades of shadow,"},
+    {"sung": "Yottsu no kage ga yoru wo kiru!", "trans": "Four shadows cleave through the night!"},
+    {"sung": "Shinobi no yaiba — METSU!", "trans": "Blade of the shinobi — ANNIHILATE!"},
+    {"sung": "Hanabi ga saku yo — DŌN!", "trans": "The fireworks bloom — BOOM!"},
+    {"sung": "Arigato, amigos! Banzai!"},
+]
 
 # Letras oficiais sincronizadas para o tema de abertura
 OPENING_THEME_LYRICS = [
@@ -60,39 +119,52 @@ try:
 except Exception:
     CLOSING_THEME_LYRICS = []
 
+TRACK_LYRICS = {
+    "Samurai Edge- Opening Theme": OPENING_THEME_LYRICS,
+    "Samurai Edge - Closing Theme": CLOSING_THEME_LYRICS,
+    "bgm_forest_camp": JOE_THEME_LYRICS,
+    "bgm_mist_temple": KASUMI_THEME_LYRICS,
+    "bgm_pirate_deck": ANNE_THEME_LYRICS,
+    "bgm_baroque_court": JULIE_THEME_LYRICS,
+    "bgm_ninja_challenge": NINJA_CHALLENGE_LYRICS,
+}
+
+VOCAL_TRACKS = set(TRACK_LYRICS.keys())
+KARAOKE_TRACKS = VOCAL_TRACKS  # Retrocompatibilidade com testes e módulos legados
+
 FRIENDLY_NAMES = {
-    "Samurai Edge- Opening Theme": "Tema Vocal de Abertura (Shojumaru)",
-    "Samurai Edge - Closing Theme": "Tema de Encerramento (Alvorada)",
-    "bgm_bamboo": "Floresta de Bambu (Kenshi)",
-    "bgm_ganryu_island": "Ilha Ganryū (Musashi)",
-    "bgm_iga_rooftops": "Telhados de Iga (Hanzo)",
-    "bgm_forest_camp": "Acampamento na Floresta (Joe)",
-    "bgm_kyoto": "Kyoto em Chamas (Saitou)",
-    "bgm_nagashino_field": "Campo de Nagashino (Teppo)",
-    "bgm_shadow_cave": "Gruta das Sombras (Murasaki)",
-    "bgm_mist_temple": "Templo na Névoa (Kasumi)",
-    "bgm_kabuki_stage": "Palco Kabuki (Okuni)",
-    "bgm_mountain_shrine": "Santuário na Montanha (Tomoe)",
-    "bgm_pirate_deck": "Convés na Tempestade (Anne)",
-    "bgm_baroque_court": "Pátio Barroco (Julie)",
-    "bgm_shaolin_temple": "Pátio Shaolin (Ren)",
-    "bgm_higanbana_garden": "Lírios Carmim (Chiyo)",
-    "bgm_gojo_bridge": "Ponte Gojo (Benkei)",
-    "bgm_yoshiwara_alley": "Beco Yoshiwara (O-Rin)",
-    "bgm_rice_paddies": "Arrozais Terraciados (Goro)",
-    "bgm_rain_mill": "Moinho na Chuva (Ichi)",
-    "bgm_prussian_cemetery": "Cemitério Gótico (Valerius)",
-    "bgm_heian_temple": "Pavilhão Astral Heian (Seimei)",
-    "bgm_pine_forest": "Floresta dos Pinheiros (Daiki)",
-    "bgm_ezo_taiga": "Taiga Gelada de Ezo (Aoi)",
-    "bgm_sacred_dohyo": "Dohyō Sagrado (Raiden)",
-    "bgm_dejima_dock": "Armazém de Dejima (Hendrika)",
-    "bgm_ninja_challenge": "Desafio Ninja (Joe, Kasumi, Murasaki, Hanzo)",
-    "bgm_gashadokuro": "Cemitério da Ossada (Oni Gashadokuro)",
-    "bgm_menu": "Tema do Menu Principal",
-    "bgm_char_select": "Seleção de Lutadores",
-    "bgm_death": "Cena de Morte / Fim de Round",
-    "bgm_death_full": "Elegia dos Caídos",
+    "Samurai Edge- Opening Theme": "Blades in the burning chaos",
+    "Samurai Edge - Closing Theme": "dawn of the golden sky",
+    "bgm_bamboo": "Kenshi's theme",
+    "bgm_ganryu_island": "Musashi's theme",
+    "bgm_iga_rooftops": "Hanzo's theme",
+    "bgm_forest_camp": "Joe's theme",
+    "bgm_kyoto": "Saitou's theme",
+    "bgm_nagashino_field": "Teppo's theme",
+    "bgm_shadow_cave": "Murasaki's theme",
+    "bgm_mist_temple": "Kasumi's theme",
+    "bgm_kabuki_stage": "Okuni's theme",
+    "bgm_mountain_shrine": "Tomoe's theme",
+    "bgm_pirate_deck": "Anne's theme",
+    "bgm_baroque_court": "Julie's theme",
+    "bgm_shaolin_temple": "Ren's theme",
+    "bgm_higanbana_garden": "Chiyo's theme",
+    "bgm_gojo_bridge": "Benkei's theme",
+    "bgm_yoshiwara_alley": "O-Rin's theme",
+    "bgm_rice_paddies": "Goro's theme",
+    "bgm_rain_mill": "Ichi's theme",
+    "bgm_prussian_cemetery": "Valerius's theme",
+    "bgm_heian_temple": "Seimei's theme",
+    "bgm_pine_forest": "Daiki's theme",
+    "bgm_ezo_taiga": "Aoi's theme",
+    "bgm_sacred_dohyo": "Raiden's theme",
+    "bgm_dejima_dock": "Hendrika's theme",
+    "bgm_ninja_challenge": "Ninja Challenge theme",
+    "bgm_gashadokuro": "Oni Gashadokuro's theme",
+    "bgm_menu": "Main Menu theme",
+    "bgm_char_select": "Character Select theme",
+    "bgm_death": "Round Death theme",
+    "bgm_death_full": "Elegy of the Fallen",
 }
 
 
@@ -1104,7 +1176,7 @@ class GalleryScreen:
             surface.set_clip(clip_r)
 
             cur_y = clip_r.y - self.lyrics_scroll_offset
-            lyrics_table = OPENING_THEME_LYRICS if "Opening" in cur_track_key else CLOSING_THEME_LYRICS
+            lyrics_table = TRACK_LYRICS.get(cur_track_key, OPENING_THEME_LYRICS if "Opening" in cur_track_key else CLOSING_THEME_LYRICS)
 
             for lyr in lyrics_table:
                 # Tradução em inglês se houver

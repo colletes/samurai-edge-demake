@@ -100,6 +100,7 @@ class SoundEvent(str, Enum, metaclass=_SoundEventMeta):
     SHIP_CREAK = "ship_creak"              # Ranger de madeira do navio adernando (aviso do balanço)
     FALL = "fall"                          # Queda em buraco da arena (assobio descendente + baque distante)
     HEARTBEAT = "heartbeat"                # Batimento cardíaco surdo de tensão visceral dos finishers
+    JOE_BANJO = "joe_banjo"                # Riff do banjo na pose de vitória do Joe
 
     # Interface & Apresentação de Partida
     ROUND_START = "round_start"            # Tambor Taiko de início de duelo

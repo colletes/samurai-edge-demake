@@ -16,16 +16,28 @@ class OpeningVideoScreen:
     """Controla a reproducao do video cinematografico de abertura."""
 
     def __init__(self, video_path: str = None):
-        self.is_finished = False
-        self.video = None
         self.font = get_text_font(18)
+        self.video = None
+        self.video_path = video_path
+        self.is_finished = False
+        self.is_ios_native = False
+        self.prompt_timer = 0.0
+        self.hold_timer = 0.0
+        self.is_holding = False
+        self.hold_pos = (SCREEN_WIDTH - 140, SCREEN_HEIGHT - 60)
+        self.open(video_path)
+
+    def open(self, video_path: str = None):
+        """Inicializa ou reinicializa a reprodução do vídeo de abertura."""
+        self.stop()
+        self.is_finished = False
         self.prompt_timer = 0.0
         self.hold_timer = 0.0
         self.is_holding = False
         self.is_ios_native = False
         self.hold_pos = (SCREEN_WIDTH - 140, SCREEN_HEIGHT - 60)
 
-        if not video_path:
+        if not video_path and not self.video_path:
             candidates = [
                 get_asset_path("assets/Opening Videos/Samurai_Edge_Opening_Final.mp4"),
                 get_asset_path("assets/Opening Videos/Samurai_Edge_Opening.mp4"),
@@ -36,10 +48,11 @@ class OpeningVideoScreen:
                     break
             if not video_path:
                 video_path = candidates[0]
-        self.video_path = video_path
+        elif video_path:
+            self.video_path = video_path
 
         # Em ambiente headless ou se arquivo não existir, encerrar de imediato
-        if os.environ.get("SDL_VIDEODRIVER") == "dummy" or not os.path.exists(self.video_path):
+        if os.environ.get("SDL_VIDEODRIVER") == "dummy" or not self.video_path or not os.path.exists(self.video_path):
             self.is_finished = True
             return
 
@@ -133,6 +146,13 @@ class OpeningVideoScreen:
             pyvidplayer2.mixer_handler.MixerHandler.stop = _safe_mixer_stop
             pyvidplayer2.mixer_handler.MixerHandler.unload = _safe_mixer_unload
 
+            # Parar qualquer música de fundo anterior antes de inicializar o player
+            try:
+                from src.audio.sound_manager import SoundManager
+                SoundManager.get_instance().stop_music()
+            except Exception:
+                pass
+
             # use_pygame_audio=True garante que o audio saia pelo mixer do Pygame (dispositivo de som ativo do jogo)
             # chunk_size=120 carrega a trilha inteira (99.6s) em um unico buffer continuo sem cortes
             self.video = Video(self.video_path, use_pygame_audio=True, chunk_size=120, max_chunks=1)
@@ -151,6 +171,30 @@ class OpeningVideoScreen:
                 except Exception:
                     pass
                 self.video = None
+
+    def play(self, screen: pygame.Surface):
+        """Loop modal autônomo para reprodução na Galeria ou cutscene."""
+        self.open()
+        if self.is_finished:
+            return
+        clock = pygame.time.Clock()
+        running = True
+        while running and not self.is_finished:
+            dt = clock.tick(60) / 1000.0
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.stop()
+                    running = False
+                    break
+                if self.handle_event(event):
+                    running = False
+                    break
+            if not running or self.is_finished:
+                break
+            self.update(dt)
+            self.render(screen)
+            pygame.display.flip()
+        self.stop()
 
     def handle_event(self, event) -> bool:
         """

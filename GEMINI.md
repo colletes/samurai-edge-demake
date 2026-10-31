@@ -263,4 +263,36 @@ Whenever implementing or refactoring character actions, movesets, input processi
 - **Automated Verification**:
   - Keep `tests/test_attack_audio_cooldown.py` passing 100% across all fighters to verify that mashing buttons during attacks, recoveries, or cooldowns produces zero duplicate or phantom sounds.
 
+## 15. UI Layout, Video Synchronization & Performance Directives
+- **Video Playback & Audio Desynchronization / Frame Drops (`pyvidplayer2`)**:
+  - When playing video with `pyvidplayer2` using `use_pygame_audio=True`, ALWAYS fade and stop pre-existing background music (`sound_mgr.stop_music()`) BEFORE initializing video playback.
+  - In `pygame.mixer.music`, `get_pos()` returns the elapsed playback time of whatever music was previously playing. If title or death music is running, `pyvidplayer2` measures this offset (e.g. 116 seconds) and aggressively drops all video frames up to that timestamp to "catch up", causing video players to instantly skip slides or jump straight to the middle/end.
+  - Defensively patch `pyvidplayer2.mixer_handler.MixerHandler` and reset audio channels before opening videos.
+- **Parchment Scroll Clearance (Wooden Rod Offset)**:
+  - In any screen utilizing Sumi-e parchment panels (`pm.make_paper()`, `pm.draw_rod()`), the top wooden rod spans `panel_y - 14` to `panel_y + 20`.
+  - Submenu titles, headers, and navigation tabs must maintain a minimum top margin of `panel_y + 28` to avoid rendering halfway inside the wooden rod.
+- **Settings Sliders & Numeric Readout Geometry**:
+  - In audio/video sliders, label titles (e.g. "BGM", "SFX") must be anchored to the left of the slider, and percentage readouts (e.g. "100%") must be placed to the right of the `+` button.
+  - NEVER place percentage text in the center of the slider track where slider thumbs obscure the numbers.
+- **Zero Text Overflow on Localized Strings**:
+  - Any button, header, or prompt displaying localized strings from `i18n.py` must filter rendered surfaces through text bounds clamping (e.g. `_fit_text(font, text, color, max_w)`) or multi-line wrapping (`_wrap_text`) to prevent layout clipping when switching between languages (PT/EN/JA).
+- **Official macOS Game Mode Directives**:
+  - NEVER downgrade visual fidelity (do not bypass SSAA 2x or reduce particle counts) in the name of "Game Boost".
+  - On macOS, official Game Mode is driven system-wide by Apple:
+    1. Register latency-critical QoS via Foundation's `NSProcessInfo.processInfo().beginActivityWithOptions(NSActivityLatencyCritical | NSActivityUserInitiated, ...)` to prioritize CPU/GPU scheduling and minimize Bluetooth controller latency.
+    2. Enter native macOS Fullscreen, which triggers Apple's system Game Mode (`gamepolicyd`) and displays the official controller icon in the menu bar.
+- **Gallery & Jukebox Track Metadata Invariants**:
+  - Canonical music titles in the Jukebox and Sound Test must remain in English regardless of active game language:
+    - Opening Theme: `"Blades in the burning chaos"`
+    - Closing Theme: `"dawn of the golden sky"`
+    - Fighter/Arena Themes: `"<Fighter Name>'s theme"` (e.g. `"Kenshi's theme"`, `"Musashi's theme"`)
+  - All vocal tracks must have full lyrical transcriptions in `TRACK_LYRICS` inside `src/ui/gallery_screen.py`.
+- **Pixel-Exact ASS Karaoke Syllable Synchronization**:
+  - NEVER calculate karaoke wipe progress as a scalar time fraction across an entire sentence (`wipe_w = int(sw * progress)`). In music, words have vastly different syllable durations (e.g. rapid verses vs held final notes lasting multiple seconds); treating time linearly across screen width causes rapid words to lag behind and held notes to drag the wipe backward.
+  - Parse each syllable's duration (`\k`, `\K`, `\kf`, `\ko` case-insensitively) and exact text segment.
+  - Pre-measure cumulative horizontal pixel boundaries for each syllable (`px0` to `px1`) using cumulative font kerning (`font.size(prefix)`).
+  - During playback, interpolate `wipe_w` strictly within the active syllable's pixel bounds (`px0 + frac * (px1 - px0)`), guaranteeing 100% frame-perfect synchronization with the singer across all verses.
+
+
+
 

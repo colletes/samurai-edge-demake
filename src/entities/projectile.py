@@ -205,18 +205,19 @@ class ShurikenProjectile:
         self.wz = wz
         self.owner = owner
 
-        speed = 18.0
+        speed = 15.5  # Calibrado para 15.5 m/s (legível, veloz e parriável)
         self.vx = dir_x * speed
         self.vy = dir_y * speed
         self.dir_x = dir_x
         self.dir_y = dir_y
 
         self.rot_angle = 0.0
-        self.rot_speed = 900.0  # Rotação ultra rápida no ar
+        self.rot_speed = 950.0  # Rotação veloz no ar
         self.max_range = 6.5
         self.dist_traveled = 0.0
         self.is_active = True
         self.has_been_reflected = False  # Anti-spam: previne reflexão infinita
+        self.trail_timer = 0.0
 
     def update(self, dt: float, game_map, particles: list) -> bool:
         if not self.is_active:
@@ -227,6 +228,12 @@ class ShurikenProjectile:
         self.wy += self.vy * dt
         self.dist_traveled += step
         self.rot_angle += self.rot_speed * dt
+
+        # Rastro de faíscas metálicas
+        self.trail_timer += dt
+        if self.trail_timer >= 0.035 and particles is not None:
+            self.trail_timer = 0.0
+            particles.append(SparkParticle(self.wx, self.wy, self.wz))
 
         # Corte de bambus
         for b in game_map.bamboos:
@@ -266,7 +273,7 @@ class ShurikenProjectile:
         # Núcleo central da shuriken
         draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.05, self.wz, 0.10, 0.10, 0.05, COLOR_STEEL)
 
-        # 4 pontas afiadas girando
+        # 4 pontas afiadas girando em estrela
         rad = math.radians(self.rot_angle)
         rx = math.cos(rad) * 0.12
         ry = math.sin(rad) * 0.12

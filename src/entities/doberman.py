@@ -129,19 +129,19 @@ class DobermanDog:
                     elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius:
                         self.state = STATE_DOG_FOLLOW
                         self.hitbox_active = False
-                        self.cooldown_timer = 8.0
+                        self.cooldown_timer = 2.5
                         return
                 if getattr(game_map, "well", None) and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
                     self.state = STATE_DOG_FOLLOW
                     self.hitbox_active = False
-                    self.cooldown_timer = 8.0
+                    self.cooldown_timer = 2.5
                     return
 
             if self.charge_dist >= self.charge_range:
-                # Terminou o dash sem acertar: retorna a seguir o dono com cooldown de comando
+                # Terminou o dash sem acertar (whiff): recuperação rápida de 2.5s
                 self.state = STATE_DOG_FOLLOW
                 self.hitbox_active = False
-                self.cooldown_timer = 8.0
+                self.cooldown_timer = 2.5
 
         elif self.state == STATE_DOG_KNOCKED_OUT:
             self.hitbox_active = False

@@ -7,6 +7,7 @@ localizados para Game Design/QA, Apoiadores e Agradecimento Especial.
 import glob
 import math
 import os
+import re
 import pygame
 
 from src.config import COLOR_GOLD, COLOR_WHITE, SCREEN_HEIGHT, SCREEN_WIDTH, get_asset_path
@@ -254,8 +255,107 @@ CLOSING_THEME_LYRICS = [
     },
 ]
 
+def _load_ass_lyrics(ass_path: str) -> list[dict]:
+    """Carrega letras de karaoke e tradução diretamente do arquivo .ass se disponível."""
+    if not os.path.isfile(ass_path):
+        return []
+    import re
+
+    def parse_time(ts: str) -> float:
+        parts = ts.strip().split(":")
+        if len(parts) == 3:
+            return float(parts[0]) * 3600.0 + float(parts[1]) * 60.0 + float(parts[2])
+        return 0.0
+
+    karaoke_lines = []
+    translation_lines = []
+    try:
+        with open(ass_path, "r", encoding="utf-8-sig") as f:
+            for line in f:
+                line = line.strip()
+                if not line.startswith("Dialogue:"):
+                    continue
+                parts = line.split(",", 9)
+                if len(parts) < 10:
+                    continue
+                style = parts[3].strip()
+                st = parse_time(parts[1])
+                et = parse_time(parts[2])
+                raw = parts[9].strip()
+                clean = re.sub(r"\{[^}]*\}", "", raw).strip()
+                if "Karaoke" in style or "Default" in style:
+                    matches = re.findall(r"\{(\\[kK][fFoO]?(\d+))\}([^\{]*)", raw)
+                    syllables = []
+                    for full_tag, dur_cs, txt in matches:
+                        syllables.append({
+                            "dur": float(dur_cs) / 100.0,
+                            "text": txt,
+                        })
+                    if syllables:
+                        syllables[-1]["text"] = syllables[-1]["text"].rstrip()
+                        clean = "".join(s["text"] for s in syllables)
+                    karaoke_lines.append({
+                        "start": st,
+                        "end": et,
+                        "sung": clean,
+                        "raw": raw,
+                        "syllables": syllables,
+                    })
+                elif "Translation" in style:
+                    translation_lines.append({
+                        "start": st,
+                        "end": et,
+                        "trans": clean,
+                    })
+
+        for k in karaoke_lines:
+            for tr in translation_lines:
+                if abs(k["start"] - tr["start"]) < 0.5 or (tr["start"] <= k["start"] and k["end"] <= tr["end"] + 0.5):
+                    k["trans"] = tr["trans"]
+                    break
+        return karaoke_lines
+    except Exception as e:
+        print(f"[ArcadeCredits] Erro ao analisar {ass_path}: {e}")
+        return []
+
+# Sincronização automática com arquivo .ass gerado pelo usuário no Aegisub
+_ass_candidate = get_asset_path("assets/Opening Videos/Samurai_Edge_Credits_Slideshow.ass")
+_loaded_ass = _load_ass_lyrics(_ass_candidate)
+if _loaded_ass:
+    CLOSING_THEME_LYRICS = _loaded_ass
+
 _KARAOKE_FONT_CACHE: dict = {}
 _TEXT_OUTLINE_CACHE: dict = {}
+_SYLLABLE_LAYOUT_CACHE: dict = {}
+
+
+def _get_syllable_layout(font, lyric: dict, outline_px: float = 2.5):
+    """Calcula posições de pixel contínuas para cada sílaba, preservando kerning cumulativo exato."""
+    key = (id(font), lyric.get("sung", ""), outline_px)
+    if key in _SYLLABLE_LAYOUT_CACHE:
+        return _SYLLABLE_LAYOUT_CACHE[key]
+
+    syllables = lyric.get("syllables", [])
+    if not syllables:
+        _SYLLABLE_LAYOUT_CACHE[key] = None
+        return None
+
+    opx = int(math.ceil(outline_px))
+    layout = []
+    prefix = ""
+    for s in syllables:
+        w_before = font.size(prefix)[0]
+        prefix += s["text"]
+        w_after = font.size(prefix)[0]
+        layout.append({
+            "text": s["text"],
+            "dur": s["dur"],
+            "px0": opx + w_before,
+            "px1": opx + w_after,
+        })
+
+    _SYLLABLE_LAYOUT_CACHE[key] = layout
+    return layout
 
 
 def _get_karaoke_fonts():
@@ -372,13 +472,6 @@ def _get_scaled_slide_image(path: str) -> pygame.Surface | None:
         oy = (SCREEN_HEIGHT - nh) // 2
         comp.blit(scaled, (ox, oy))
 
-        # Vinheta cinematográfica (escurecimento suave das bordas para realce dos textos)
-        vignette = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-        # Sombra nas extremidades superior e inferior
-        pygame.draw.rect(vignette, (8, 6, 10, 190), (0, 0, SCREEN_WIDTH, 120))
-        pygame.draw.rect(vignette, (8, 6, 10, 210), (0, SCREEN_HEIGHT - 160, SCREEN_WIDTH, 160))
-        comp.blit(vignette, (0, 0))
-
         _IMAGE_CACHE[path] = comp
         return comp
     except Exception as e:
@@ -453,9 +546,81 @@ class ArcadeCreditsScreen:
         if self.video_path and os.environ.get("SDL_VIDEODRIVER") != "dummy":
             try:
                 from pyvidplayer2 import Video
+                import pyvidplayer2.mixer_handler
                 from src.audio.sound_manager import SoundManager
                 # Para reprodução de trilha de fundo para não misturar áudios
                 SoundManager.get_instance().stop_music()
+                try:
+                    if pygame.mixer.get_init():
+                        pygame.mixer.music.stop()
+                        pygame.mixer.music.unload()
+                except Exception:
+                    pass
+
+                def _safe_mixer_get_busy(handler_self):
+                    try:
+                        if not pygame.mixer.get_init():
+                            try:
+                                pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                            except Exception:
+                                return False
+                        return bool(pygame.mixer.music.get_busy())
+                    except Exception:
+                        return False
+
+                def _safe_mixer_get_pos(handler_self):
+                    if not getattr(handler_self, "loaded", False):
+                        return 0.0
+                    try:
+                        if not pygame.mixer.get_init():
+                            try:
+                                pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                            except Exception:
+                                return 0.0
+                        return max(0.0, pygame.mixer.music.get_pos() / 1000.0)
+                    except Exception:
+                        return 0.0
+
+                def _safe_mixer_load(handler_self, audio_chunk):
+                    try:
+                        if not pygame.mixer.get_init():
+                            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                        from io import BytesIO
+                        pygame.mixer.music.load(BytesIO(audio_chunk), "wav")
+                        handler_self.loaded = True
+                    except Exception:
+                        handler_self.loaded = False
+
+                def _safe_mixer_play(handler_self):
+                    try:
+                        if not pygame.mixer.get_init():
+                            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                        pygame.mixer.music.play()
+                    except Exception:
+                        pass
+
+                def _safe_mixer_stop(handler_self):
+                    try:
+                        if pygame.mixer.get_init():
+                            pygame.mixer.music.stop()
+                    except Exception:
+                        pass
+
+                def _safe_mixer_unload(handler_self):
+                    try:
+                        handler_self.stop()
+                        if pygame.mixer.get_init():
+                            pygame.mixer.music.unload()
+                    except Exception:
+                        pass
+                    handler_self.loaded = False
+
+                pyvidplayer2.mixer_handler.MixerHandler.get_busy = _safe_mixer_get_busy
+                pyvidplayer2.mixer_handler.MixerHandler.get_pos = _safe_mixer_get_pos
+                pyvidplayer2.mixer_handler.MixerHandler.load = _safe_mixer_load
+                pyvidplayer2.mixer_handler.MixerHandler.play = _safe_mixer_play
+                pyvidplayer2.mixer_handler.MixerHandler.stop = _safe_mixer_stop
+                pyvidplayer2.mixer_handler.MixerHandler.unload = _safe_mixer_unload
 
                 self.video = Video(
                     self.video_path,
@@ -473,6 +638,17 @@ class ArcadeCreditsScreen:
                 print(f"[ArcadeCredits] Vídeo não pôde ser carregado ({e}), usando modo de slides.")
                 self.video = None
 
+        if not self.video and os.environ.get("SDL_AUDIODRIVER") != "dummy":
+            try:
+                from src.audio.sound_manager import SoundManager
+                SoundManager.get_instance().stop_music()
+                closing_audio = get_asset_path("assets/sounds/music/Samurai Edge - Closing Theme.mp3")
+                if os.path.exists(closing_audio) and pygame.mixer.get_init():
+                    pygame.mixer.music.load(closing_audio)
+                    pygame.mixer.music.play()
+            except Exception as e:
+                print(f"[ArcadeCredits] Erro ao tocar áudio de encerramento: {e}")
+
     def stop(self):
         """Finaliza e fecha os recursos de vídeo e créditos."""
         self.active = False
@@ -482,6 +658,39 @@ class ArcadeCreditsScreen:
             except Exception:
                 pass
             self.video = None
+        try:
+            if pygame.mixer.get_init():
+                pygame.mixer.music.stop()
+        except Exception:
+            pass
+
+    def play(self, screen: pygame.Surface, show_skip_prompt: bool = True):
+        """Loop modal autônomo para reprodução na Galeria."""
+        self.open(None, white_fade_in=False, show_skip_prompt=show_skip_prompt)
+        clock = pygame.time.Clock()
+        running = True
+        while running and self.active:
+            dt = clock.tick(60) / 1000.0
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.stop()
+                    running = False
+                    break
+                res = self.handle_event(event)
+                if res == "DONE":
+                    running = False
+                    break
+            if not running or not self.active:
+                break
+            if self.update(dt) == "DONE":
+                break
+            self.render(screen)
+            pygame.display.flip()
+        self.stop()
+
+    def play_video(self, screen: pygame.Surface, show_skip_prompt: bool = True):
+        """Alias retrocompatível com chamadas legadas."""
+        self.play(screen, show_skip_prompt=show_skip_prompt)
 
     def update(self, dt: float) -> str | None:
         if not self.active:
@@ -632,11 +841,19 @@ class ArcadeCreditsScreen:
                 fade_overlay.fill((10, 8, 12, alpha))
                 surface.blit(fade_overlay, (0, 0))
 
+            font_sung, font_trans = _get_karaoke_fonts()
+            sh = font_sung.get_height()
+            sy = SCREEN_HEIGHT - 35 - sh
+
             # Painel laqueado translúcido para exibição do cartão de créditos (se houver papel/apoiador/logo)
             card_delay = cfg.get("card_delay", 0.0)
             has_card_configured = bool(cfg.get("header_key") or cfg.get("header_text") or cfg.get("logo"))
             has_card = has_card_configured and (self.slide_timer >= card_delay)
-            panel_y = SCREEN_HEIGHT - 210
+
+            panel_w = 900
+            panel_h = 62
+            panel_x = cx - panel_w // 2
+            panel_y = sy - panel_h - 12  # Posicionado logo acima da legenda de karaokê
 
             if has_card:
                 card_time = self.slide_timer - card_delay
@@ -648,37 +865,42 @@ class ArcadeCreditsScreen:
                 else:
                     card_alpha = 255
 
-                panel_w = 680
-                panel_h = 160
-                panel_x = cx - panel_w // 2
-
                 panel_surf = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
-                panel_surf.fill((18, 16, 20, 215))
+                panel_surf.fill((16, 14, 18, 220))
                 card_col = cfg.get("color", COLOR_GOLD)
-                pygame.draw.rect(panel_surf, card_col, (0, 0, panel_w, panel_h), 2, border_radius=8)
-                pygame.draw.rect(panel_surf, (80, 75, 70), (4, 4, panel_w - 8, panel_h - 8), 1, border_radius=6)
-
-                # Textos do cartão
-                font_header = get_title_font(26)
-                font_name = get_title_font(34)
+                pygame.draw.rect(panel_surf, card_col, (0, 0, panel_w, panel_h), 1, border_radius=6)
+                pygame.draw.rect(panel_surf, (80, 75, 70), (2, 2, panel_w - 4, panel_h - 4), 1, border_radius=5)
 
                 header_text = t(cfg["header_key"]) if "header_key" in cfg else cfg.get("header_text", "")
                 name_text = t(cfg["name_key"]) if "name_key" in cfg else cfg.get("name_text", "")
 
-                if header_text:
-                    sh_head = font_header.render(header_text, True, (12, 10, 14))
-                    tx_head = font_header.render(header_text, True, card_col)
-                    panel_surf.blit(sh_head, ((panel_w - tx_head.get_width()) // 2 + 2, 26))
-                    panel_surf.blit(tx_head, ((panel_w - tx_head.get_width()) // 2, 24))
-
-                logo = get_logo(cfg["logo"], 360) if "logo" in cfg else None
+                logo = get_logo(cfg["logo"], 320) if "logo" in cfg else None
                 if logo is not None:
-                    panel_surf.blit(logo, ((panel_w - logo.get_width()) // 2, 66))
-                elif name_text:
-                    sh_name = font_name.render(name_text, True, (12, 10, 14))
-                    tx_name = font_name.render(name_text, True, COLOR_WHITE)
-                    panel_surf.blit(sh_name, ((panel_w - tx_name.get_width()) // 2 + 2, 78))
-                    panel_surf.blit(tx_name, ((panel_w - tx_name.get_width()) // 2, 76))
+                    lw, lh = logo.get_size()
+                    if lh > 44:
+                        scale = 44.0 / lh
+                        logo = pygame.transform.smoothscale(logo, (int(lw * scale), 44))
+                    panel_surf.blit(logo, ((panel_w - logo.get_width()) // 2, (panel_h - logo.get_height()) // 2))
+                elif header_text and name_text:
+                    font_h = get_title_font(18)
+                    font_n = get_title_font(24)
+                    sh_head = font_h.render(header_text, True, (12, 10, 14))
+                    tx_head = font_h.render(header_text, True, card_col)
+                    panel_surf.blit(sh_head, ((panel_w - tx_head.get_width()) // 2 + 1, 9))
+                    panel_surf.blit(tx_head, ((panel_w - tx_head.get_width()) // 2, 8))
+
+                    sh_name = font_n.render(name_text, True, (12, 10, 14))
+                    tx_name = font_n.render(name_text, True, COLOR_WHITE)
+                    panel_surf.blit(sh_name, ((panel_w - tx_name.get_width()) // 2 + 1, 31))
+                    panel_surf.blit(tx_name, ((panel_w - tx_name.get_width()) // 2, 30))
+                elif header_text or name_text:
+                    font_single = get_title_font(24)
+                    txt = header_text or name_text
+                    col = card_col if header_text else COLOR_WHITE
+                    sh_s = font_single.render(txt, True, (12, 10, 14))
+                    tx_s = font_single.render(txt, True, col)
+                    panel_surf.blit(sh_s, ((panel_w - tx_s.get_width()) // 2 + 1, (panel_h - tx_s.get_height()) // 2 + 1))
+                    panel_surf.blit(tx_s, ((panel_w - tx_s.get_width()) // 2, (panel_h - tx_s.get_height()) // 2))
 
                 # Aplicar fade suave do cartão respeitando a Zero Artifacts Policy
                 if card_alpha < 255:
@@ -700,8 +922,6 @@ class ArcadeCreditsScreen:
             if active_lyric is not None:
                 l_start = active_lyric["start"]
                 l_end = active_lyric["end"]
-                dur = max(0.1, l_end - l_start)
-                progress = max(0.0, min(1.0, (self.total_time - l_start) / dur))
 
                 fade_window = 0.22
                 in_f = min(1.0, (self.total_time - l_start) / fade_window) if fade_window > 0 else 1.0
@@ -709,8 +929,6 @@ class ArcadeCreditsScreen:
                 lyric_alpha = int(255 * max(0.0, min(1.0, in_f, out_f)))
 
                 if lyric_alpha > 5:
-                    font_sung, font_trans = _get_karaoke_fonts()
-
                     # 1. Tradução em inglês no topo (apenas para versos em japonês)
                     trans_text = active_lyric.get("trans")
                     if trans_text:
@@ -730,7 +948,7 @@ class ArcadeCreditsScreen:
                         else:
                             surface.blit(surf_trans, (tx, ty))
 
-                    # 2. Karaokê Animado
+                    # 2. Karaokê Animado (Fixo no fundo da tela com wipe por sílaba e kerning pixel-exato)
                     sung_text = active_lyric["sung"]
                     surf_white = _render_outlined_text(
                         font_sung, sung_text, (255, 255, 255), (0, 0, 0), outline_px=2.5
@@ -742,16 +960,31 @@ class ArcadeCreditsScreen:
                     sw, sh = surf_white.get_size()
                     sx = cx - sw // 2
 
-                    if has_card:
-                        sy = panel_y - sh - 10
+                    layout = _get_syllable_layout(font_sung, active_lyric, outline_px=2.5)
+                    if layout:
+                        elapsed = self.total_time - l_start
+                        if elapsed <= 0.0:
+                            wipe_w = 0
+                        else:
+                            acc = 0.0
+                            for item in layout:
+                                i_dur = item["dur"]
+                                if elapsed < acc + i_dur:
+                                    frac = max(0.0, elapsed - acc) / max(0.001, i_dur)
+                                    wipe_w = int(round(item["px0"] + frac * (item["px1"] - item["px0"])))
+                                    break
+                                acc += i_dur
+                            else:
+                                wipe_w = sw
                     else:
-                        sy = SCREEN_HEIGHT - 35 - sh
+                        dur = max(0.1, l_end - l_start)
+                        progress = max(0.0, min(1.0, (self.total_time - l_start) / dur))
+                        wipe_w = int(sw * progress)
 
                     # Composite do wipe de karaokê
                     comp_karaoke = surf_white.copy()
-                    wipe_w = int(sw * progress)
                     if wipe_w > 0:
-                        comp_karaoke.blit(surf_cyan, (0, 0), area=pygame.Rect(0, 0, wipe_w, sh))
+                        comp_karaoke.blit(surf_cyan, (0, 0), area=pygame.Rect(0, 0, min(sw, wipe_w), sh))
 
                     if lyric_alpha < 255:
                         fade_ms = pygame.Surface((sw, sh), pygame.SRCALPHA)

@@ -1,6 +1,7 @@
 """
-American Ninja: Guerreiro tático acompanhado pelo seu leal cão Doberman.
-Ataca com Shurikens atordoantes (não matam) e comanda o Doberman para botes letais.
+American Ninja: Guerreiro tático acompanhado pelo seu leal cão Doberman (Yamato).
+Ataca com Shurikens velozes (15.5 m/s, cooldown 0.90s) e comanda Yamato para botes letais.
+Possui sequência de flic-flacs acrobáticos para trás (encadeáveis até 3x com colisão/atordoamento em obstáculos).
 """
 import math
 import pygame
@@ -9,7 +10,8 @@ from src.config import (
     COLOR_STEEL, COLOR_WHITE, COLOR_BLACK, COLOR_GOLD
 )
 from src.entities.samurai import (
-    Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, STATE_ROLL
+    Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, STATE_ROLL,
+    slide_movement_against_obstacles
 )
 from src.entities.doberman import DobermanDog
 from src.entities.projectile import ShurikenProjectile
@@ -21,19 +23,22 @@ class AmericanNinja(Samurai):
         self.char_type = "joe"
         self.speed = 4.8
 
-        # O Cão Doberman companheiro
+        # O Cão Doberman companheiro (Yamato)
         self.dog = DobermanDog(self)
 
-        # Timings de Shuriken e Comando
-        self.shuriken_cooldown = 2.4  # Cooldown calibrado (era 0.55s) para evitar stun lock constante
+        # Timings de Shuriken e Comando (Calibrado para 0.90s para zoning ágil)
+        self.shuriken_cooldown = 0.90
         self.shuriken_timer = 0.0
 
-        # Terceira Ação: Esquiva Pesada / Padrão
-        self.is_agile_dodge = False
-        self.roll_speed = 8.5
-        self.roll_duration = 0.20
-        self.roll_recovery_duration = 0.18
-        self.roll_cooldown_duration = 0.38
+        # Terceira Ação: Sequência de Flic-Flacs Acrobáticos para trás (Encadeável até 3x)
+        self.is_agile_dodge = True
+        self.roll_speed = 8.8
+        self.roll_duration = 0.22
+        self.roll_recovery_duration = 0.08
+        self.roll_cooldown_duration = 0.06
+        self.flic_flac_chain = 0
+        self.roll_dir_x = -1.0
+        self.roll_dir_y = 0.0
 
     def can_act(self) -> bool:
         return (
@@ -41,10 +46,11 @@ class AmericanNinja(Samurai):
             and self.state in (STATE_IDLE, STATE_WALK)
             and self.roll_recovery_timer <= 0
             and self.dash_recovery_timer <= 0
+            and getattr(self, "wz", 0.0) <= 0.05
         )
 
     def trigger_shuriken(self, target_wx: float, target_wy: float, projectiles: list):
-        """Arremessa uma shuriken atordoante (não mata, mas dá stun de 0.48s)."""
+        """Arremessa uma shuriken rápida a 15.5 m/s (atordoa por 0.48s sem matar)."""
         if not self.can_act() or self.shuriken_timer > 0:
             return False
 
@@ -65,7 +71,7 @@ class AmericanNinja(Samurai):
         return True
 
     def trigger_dog_attack(self, target_wx: float, target_wy: float):
-        """Ordena o Doberman a disparar em um dash de mordida letal (1-hit kill)."""
+        """Ordena o Doberman a disparar em um bote letal (1-hit kill fatal)."""
         if not self.can_act():
             return False
         if self.dog and self.dog.can_attack():
@@ -75,6 +81,92 @@ class AmericanNinja(Samurai):
             self.dog.charge(target_wx, target_wy)
             return True
         return False
+
+    def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
+        """
+        Flic-Flac Acrobático para trás:
+        - Salto acrobático de mãos no chão recuando em linha oposta à visada.
+        - Encadeável até 3 vezes consecutivas.
+        """
+        if (
+            not self.is_alive
+            or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK, STATE_RECOVERY)
+            or getattr(self, "wz", 0.0) > 0.40
+            or self.roll_recovery_timer > 0
+            or self.roll_cooldown_timer > 0
+        ):
+            return False
+
+        # Direção do salto é sempre para trás (away from facing)
+        self.roll_dir_x = -self.facing_x
+        self.roll_dir_y = -self.facing_y
+        self.state = STATE_ROLL
+        self.state_timer = self.roll_duration
+        self.is_invulnerable_dodge = True
+        self.flic_flac_chain += 1
+
+        try:
+            from src.audio.sound_manager import get_sound_manager
+            from src.audio.sound_events import SoundEvent
+            get_sound_manager().play(SoundEvent.DODGE_WHOOSH, volume_scale=0.9)
+        except Exception:
+            pass
+
+        return True
+
+    def update_roll(self, dt: float, game_map):
+        """Atualiza a trajetória do flic-flac com detecção de impacto em obstáculos sólidos."""
+        if self.state != STATE_ROLL:
+            return
+
+        self.state_timer -= dt
+        prog = max(0.0, min(1.0, 1.0 - (self.state_timer / self.roll_duration)))
+
+        # Arco parabólico de altura no salto
+        self.wz = math.sin(prog * math.pi) * 0.35
+
+        step = self.roll_speed * dt
+        dx = self.roll_dir_x * step
+        dy = self.roll_dir_y * step
+
+        new_wx, new_wy = slide_movement_against_obstacles(self.wx, self.wy, dx, dy, self.radius, game_map)
+
+        # Checagem de colisão com obstáculo sólido (rocha, poço, parede ou limite de mapa)
+        blocked_dist = math.hypot((self.wx + dx) - new_wx, (self.wy + dy) - new_wy)
+        if blocked_dist > 0.05:
+            # Bateu em obstáculo rígido: atordoamento imediato de 0.60s e quebra da cadeia de saltos!
+            self.state = STATE_STUNNED
+            self.state_timer = 0.60
+            self.wz = 0.0
+            self.is_invulnerable_dodge = False
+            self.flic_flac_chain = 0
+            self.roll_recovery_timer = 0.40
+            self.roll_cooldown_timer = 0.50
+            try:
+                from src.audio.sound_manager import get_sound_manager
+                from src.audio.sound_events import SoundEvent
+                get_sound_manager().play(SoundEvent.OBSTACLE_HIT, volume_scale=1.0)
+            except Exception:
+                pass
+            return
+
+        self.wx, self.wy = new_wx, new_wy
+
+        if self.state_timer <= 0:
+            self.state = STATE_IDLE
+            self.wz = 0.0
+            self.is_invulnerable_dodge = False
+            if self.flic_flac_chain >= 3:
+                # Esgotou os 3 saltos da cadeia: descanso tático normal
+                self.flic_flac_chain = 0
+                self.roll_recovery_timer = 0.16
+                self.roll_cooldown_timer = 0.32
+                self.dash_recovery_timer = 0.16
+            else:
+                # Permite encadeamento ágil do próximo flic-flac
+                self.roll_recovery_timer = 0.06
+                self.roll_cooldown_timer = 0.04
+                self.dash_recovery_timer = 0.06
 
     def update(self, dt: float, game_map):
         """Atualiza o Ninja e seu Doberman."""
@@ -100,7 +192,7 @@ class AmericanNinja(Samurai):
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
 
-        # Atualiza a IA e movimentação do Doberman
+        # Atualiza a IA e movimentação do Doberman (Yamato)
         if self.dog:
             self.dog.update(dt, game_map)
 
@@ -110,6 +202,11 @@ class AmericanNinja(Samurai):
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
+        extra_props = {}
+        if self.state == STATE_ROLL:
+            prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration))))
+            extra_props = {"pose": "flic_flac", "p": prog}
+
         render_voxel_humanoid(
             surface, camera,
             self.wx, self.wy, self.wz,
@@ -118,5 +215,6 @@ class AmericanNinja(Samurai):
             char_type="american",
             walk_timer=self.walk_cycle,
             alpha=self.alpha,
-            is_moving=self.is_moving
+            is_moving=self.is_moving,
+            extra_props=extra_props
         )

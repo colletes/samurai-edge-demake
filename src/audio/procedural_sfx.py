@@ -711,6 +711,29 @@ def generate_swing_shamisen() -> pygame.mixer.Sound:
     return _samples_to_sound(samples)
 
 
+def generate_joe_banjo() -> pygame.mixer.Sound:
+    """Riff clássico de banjo de Joe: dedilhado brilhante bluegrass ou áudio em disco."""
+    from src.config import get_asset_path
+    banjo_path = get_asset_path("assets/sounds/sfx/joe_banjo.wav")
+    if os.path.exists(banjo_path):
+        try:
+            return pygame.mixer.Sound(banjo_path)
+        except Exception:
+            pass
+    duration = 0.65
+    num_samples = int(SAMPLE_RATE * duration)
+    samples = []
+    phase = 0.0
+    for i in range(num_samples):
+        t = i / SAMPLE_RATE
+        freq = 293.66 * (1.0 + 0.5 * math.exp(-6.0 * t))
+        phase += freq / SAMPLE_RATE
+        tri = 2.0 * abs(2.0 * (phase % 1.0) - 1.0) - 1.0
+        env = math.exp(-5.5 * t) * (1.0 - math.exp(-90.0 * t))
+        samples.append(tri * env * 0.85)
+    return _samples_to_sound(samples)
+
+
 def generate_flesh_cleave() -> pygame.mixer.Sound:
     """Impacto visceral de lâmina cortando carne: transiente de corte limpo + textura orgânica úmida e baque corporal."""
     duration = 0.30
@@ -930,6 +953,7 @@ _GENERATOR_MAP = {
     SoundEvent.UI_SELECT: generate_ui_select,
     SoundEvent.UI_CONFIRM: generate_ui_confirm,
     SoundEvent.UI_CANCEL: generate_ui_cancel,
+    SoundEvent.JOE_BANJO: generate_joe_banjo,
 }
 
 

@@ -499,6 +499,24 @@ class VoxelCorpse:
             for _ in range(32):
                 self._add_blood_drop(spread=0.9)
 
+        elif style == "TRIPLE_SHURIKEN_DISMEMBER":
+            # Joe: Sequência rápida de 3 Shurikens decepa braço direito, braço esquerdo e cabeça!
+            self.pieces.append(P(x, y, NECK_Z + 0.12, 0.18, 0.18, 0.18, self.col_hair,
+                                 vx=dx * 2.2 - dy * 1.4, vy=dy * 2.2 + dx * 1.4, vz=3.4,
+                                 rot_speed=360.0, piece_type="head", region=lambda c: c.band(None, NECK_Z), pivot="center", floor_z=0.15))
+            self.pieces.append(P(x + dy * 0.18, y - dx * 0.18, CHEST_Z + 0.05, 0.12, 0.12, 0.28, self.col_torso,
+                                 vx=dx * 1.8 + dy * 2.2, vy=dy * 1.8 - dx * 2.2, vz=2.4,
+                                 rot_speed=240.0, piece_type="arm_r", floor_z=0.08))
+            self.pieces.append(P(x - dy * 0.18, y + dx * 0.18, CHEST_Z + 0.05, 0.12, 0.12, 0.28, self.col_torso,
+                                 vx=dx * 1.8 - dy * 2.2, vy=dy * 1.8 + dx * 2.2, vz=2.4,
+                                 rot_speed=-240.0, piece_type="arm_l", floor_z=0.08))
+            self.pieces.append(P(x, y, 0.0, 0.44, 0.32, 0.68, self.col_torso,
+                                 vx=-dx * 0.4, vy=-dy * 0.4, vz=0.05,
+                                 piece_type="torso_headless", region=lambda c: c.band(NECK_Z, None),
+                                 rot_target=-FALL_DEG, rot_speed=140.0, rot_delay=0.15))
+            for _ in range(36):
+                self._add_blood_drop(spread=0.9)
+
         elif style == "WINDMILL_SHURIKEN_DECAP":
             # Joe: Decapitação brutal com Shuriken Moinho gigante
             self.pieces.append(P(x, y, NECK_Z + 0.12, 0.18, 0.18, 0.18, self.col_hair,

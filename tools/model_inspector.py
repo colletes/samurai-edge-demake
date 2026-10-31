@@ -478,6 +478,18 @@ CHARACTER_ANIM_BUTTONS = {
         ("FINISHER_1", "F1. Finisher 1: Tantou Kyuusho (Garganta)", 1.25),
         ("FINISHER_2", "F2. Finisher 2: Kunai Miken (Testa)", 1.25),
     ],
+    "american": [
+        ("IDLE", "1. Guarda Tática & Respiração", 0.0),
+        ("WALK", "2. Marcha Operacional", 0.0),
+        ("ATTACK", "3. Kunai Estocada Rápida", 0.35),
+        ("SHURIKEN", "4. Shuriken de Combate (15.5m/s)", 0.40),
+        ("FLIC_FLAC", "5. Flic-Flac Acrobático (3x)", 0.66),
+        ("YAMATO_CHARGE", "6. Yamato Bote Letal", 0.70),
+        ("INTRO", "7. Intro: Luvas, Assobio & Alerta", 2.00),
+        ("VICTORY", "8. Vitória: Chapéu & Banjo Clássico", 2.20),
+        ("FINISHER_1", "F1. Finisher 1: 3x Shurikens (Membros & Cabeça)", 1.25),
+        ("FINISHER_2", "F2. Finisher 2: Fuma Shuriken Moinho Gigante", 1.25),
+    ],
 }
 
 DEFAULT_ANIM_BUTTONS = [
@@ -517,6 +529,14 @@ OVERHAUL_DE_PARA_NOTES = {
         "Ninjato com Empunhadura Invertida (Bainha vazia ao sacar para combate)",
         "Salto Acrobático sem Zanzou + Cancelamento Ofensivo aos 40%",
         "Anti-Floating: Queda imediata no solo se aparado no ar",
+    ],
+    "american": [
+        "SSAA 2x Offscreen (Zero serrilhado no colete, rádio e mochila MOLLE)",
+        "Olhos Marciais Masculinos HD (Olhar focado sem vazamento sob balaclava)",
+        "Materiais: Farda Camuflada Ripstop, Couro, Tricô Balaclava, Madeira e Aço",
+        "Flic-Flacs Acrobáticos: Encadeável até 3x com colisão em obstáculos sólidos",
+        "Yamato Letal (1-Hit Kill fatal a 14.5 m/s) + Banjo e Chapéu de Cowboy na Vitória",
+        "Finishers: 3x Shurikens Desmembradoras & Fuma Shuriken Decapitadora",
     ],
 }
 
@@ -1170,10 +1190,30 @@ class ModelInspector:
                 state_timer = max(0.01, (1.0 - (prog - 0.40) / 0.60) * 0.18)
                 wx = 0.35 + 0.25 * ((prog - 0.40) / 0.60)
                 wy = 0.35 + 0.25 * ((prog - 0.40) / 0.60)
+        elif act == "SHURIKEN":
+            # Joe Arremesso de Shuriken Rápido (15.5 m/s)
+            state = "RECOVERY"
+            state_timer = max(0.01, (1.0 - prog) * 0.12)
+            extra_props["pose"] = "shuriken_throw"
+            extra_props["progress"] = prog
+        elif act == "FLIC_FLAC":
+            # Joe Flic-Flac Acrobático para trás (3x)
+            state = "ROLL"
+            wz = math.sin(prog * math.pi) * 0.35
+            wx = -0.42 * prog
+            wy = -0.42 * prog
+            extra_props["pose"] = "flic_flac"
+            extra_props["p"] = prog
+        elif act == "YAMATO_CHARGE":
+            # Joe Comando com Assobio e Yamato
+            state = "RECOVERY"
+            state_timer = max(0.01, (1.0 - prog) * 0.15)
+            extra_props["pose"] = "dog_whistle"
+            extra_props["progress"] = prog
         elif act in ("INTRO", "VICTORY"):
             kind = "intro" if act == "INTRO" else "victory"
             p_sample = prog if dur > 0.0 else ((self.anim_time * 0.42) % 1.0)
-            if is_legacy and char_type in ("kenshin", "raiden", "musashi"):
+            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american"):
                 # Roteiro legado pré-Fase 2 (apenas IDLE + ATTACK simples)
                 if p_sample < 0.25 or p_sample > 0.75:
                     state = "IDLE"
@@ -1214,6 +1254,15 @@ class ModelInspector:
                     state = "IDLE"
                     extra_props["pose"] = "finisher_1"
                     wx, wy = 0.18 * prog, 0.18 * prog
+            elif char_type == "american":
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "triple_shuriken"
+                    extra_props["progress"] = prog
+                    wx, wy = 0.12 * prog, 0.12 * prog
             else:
                 # 2.1.4a: Ittou Ryoudan
                 state = "RECOVERY"
@@ -1259,6 +1308,15 @@ class ModelInspector:
                     extra_props["pose"] = "finisher_2"
                     wz = math.sin(prog * math.pi) * 0.60
                     wx, wy = 0.22 * prog, 0.22 * prog
+            elif char_type == "american":
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "fuma_throw"
+                    extra_props["progress"] = prog
+                    wx, wy = 0.15 * prog, 0.15 * prog
             else:
                 # 2.1.4b: Divisão Celestial de Bambu (Ápice + Queda Meteórica)
                 if prog < 0.42:

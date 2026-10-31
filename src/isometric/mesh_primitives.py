@@ -660,12 +660,14 @@ PORTRAIT_FACE_STYLES = {
         "brow": (55, 40, 30), "lip": (180, 125, 115),
         "brow_tilt": 0.22, "mask": (26, 27, 31), "mask_light": (46, 48, 56),
         "delicate_nose": False, "eye_z": 0.068, "brow_z": 0.082, "spacing": 0.034,
+        "hd_anime_eyes": True,
     },
     "joe": {
         "iris": (75, 110, 140), "iris_core": (120, 180, 225), "iris_limbal": (32, 50, 70),
         "brow": (55, 40, 30), "lip": (180, 125, 115),
         "brow_tilt": 0.22, "mask": (26, 27, 31), "mask_light": (46, 48, 56),
         "delicate_nose": False, "eye_z": 0.068, "brow_z": 0.082, "spacing": 0.034,
+        "hd_anime_eyes": True,
     },
     "anne": {
         "iris": (45, 148, 112), "iris_core": (85, 215, 168), "iris_limbal": (22, 70, 52),

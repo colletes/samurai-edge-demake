@@ -30,6 +30,7 @@ hd2d_edition/
 assets/sound_drafts/
 assets/Opening Videos/Take*
 assets/Opening Videos/Samurai_Edge_Opening.mp4
+assets/concepts/Ending Slides/*.mp4
 src/i18n_backup.py
 
 # Tournament result dumps

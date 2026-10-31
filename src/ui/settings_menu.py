@@ -247,13 +247,21 @@ class SettingsMenu:
         SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
 
     def toggle_game_boost(self):
-        """Alterna o Modo Game Boost (alto desempenho e economia) e grava em settings.json."""
+        """Alterna o Modo Game Boost oficial do macOS e grava em settings.json."""
+        import sys
         from src.audio.sound_manager import SoundManager
         from src.audio.sound_events import SoundEvent
         from src.effects import quality
         new_state = not quality.is_game_boost_enabled()
         quality.set_game_boost(new_state)
         quality.save_video_setting(quality.SETTINGS_PATH, "game_boost", new_state)
+        if sys.platform == "darwin" and new_state:
+            surf = pygame.display.get_surface()
+            if surf and not (surf.get_flags() & pygame.FULLSCREEN):
+                try:
+                    pygame.display.toggle_fullscreen()
+                except Exception:
+                    pass
         SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
 
     def toggle_invert_y(self):
@@ -843,10 +851,9 @@ class SettingsMenu:
         surface.blit(pm._soft_shadow(paper, blur=8, opacity=130), (panel_x + 3, panel_y + 5))
         surface.blit(paper, (panel_x, panel_y))
 
-        # Varas de madeira e brasão Sumi-E
+        # Varas de madeira
         pm.draw_rod(surface, "top", panel_rect.centerx, panel_rect.y - 14, panel_w + 32)
         pm.draw_rod(surface, "bottom", panel_rect.centerx, panel_rect.bottom - 22, panel_w + 32)
-        pm.draw_crest(surface, panel_rect.right - 92, panel_rect.y + 14, scale=0.62)
 
         # Despacho por subtela
         if self.current_subscreen == "HUB":
@@ -897,11 +904,11 @@ class SettingsMenu:
         # Cabeçalho
         t_col = pm.INK if is_parchment else (212, 175, 55)
         title_surf = font_large.render(t("settings_hub_title"), True, t_col)
-        surface.blit(title_surf, (panel_rect.centerx - title_surf.get_width() // 2, panel_rect.y + 14))
+        surface.blit(title_surf, (panel_rect.centerx - title_surf.get_width() // 2, panel_rect.y + 28))
 
         sub_col = pm.INK_SOFT if is_parchment else (180, 175, 165)
         sub_surf = font_small.render(t("settings_hub_subtitle"), True, sub_col)
-        surface.blit(sub_surf, (panel_rect.centerx - sub_surf.get_width() // 2, panel_rect.y + 58))
+        surface.blit(sub_surf, (panel_rect.centerx - sub_surf.get_width() // 2, panel_rect.y + 68))
 
         # Sumários de Status para as Tabuletas
         q_str = t("quality_high") if quality.is_high() else t("quality_low")
@@ -996,15 +1003,19 @@ class SettingsMenu:
 
         t_col = pm.INK if is_parchment else (212, 175, 55)
         title_surf = font_large.render(t("settings_sub_audiovisual_title"), True, t_col)
-        surface.blit(title_surf, (panel_rect.centerx - title_surf.get_width() // 2, panel_rect.y + 14))
+        surface.blit(title_surf, (panel_rect.centerx - title_surf.get_width() // 2, panel_rect.y + 28))
 
         sub_col = pm.INK_SOFT if is_parchment else (180, 175, 165)
         sub_surf = font_small.render(t("settings_hub_audiovisual_desc"), True, sub_col)
-        surface.blit(sub_surf, (panel_rect.centerx - sub_surf.get_width() // 2, panel_rect.y + 58))
+        surface.blit(sub_surf, (panel_rect.centerx - sub_surf.get_width() // 2, panel_rect.y + 68))
 
         # 1. Slider SFX
-        sfx_lbl = font_mid.render(f"{t('sfx_volume_label')}: {int(mgr.sfx_volume * 100)}%", True, pm.SEAL_RED if (self.sub_row_index == 0 and is_parchment) else ((255, 225, 90) if self.sub_row_index == 0 else t_col))
-        surface.blit(sfx_lbl, (self.sfx_minus_rect.x - 220, self.sfx_minus_rect.y + 4))
+        sfx_title = font_mid.render(t('sfx_volume_label'), True, pm.SEAL_RED if (self.sub_row_index == 0 and is_parchment) else ((255, 225, 90) if self.sub_row_index == 0 else t_col))
+        surface.blit(sfx_title, (self.sfx_minus_rect.x - 290, self.sfx_minus_rect.y + 4))
+
+        sfx_pct_surf = font_mid.render(f"{int(mgr.sfx_volume * 100)}%", True, pm.SEAL_RED if (self.sub_row_index == 0 and is_parchment) else (pm.INK if is_parchment else COLOR_WHITE))
+        surface.blit(sfx_pct_surf, (self.sfx_plus_rect.right + 14, self.sfx_plus_rect.y + 4))
+
         if self.sub_row_index == 0:
             glow_r = self.sfx_bar_rect.inflate(8, 8)
             pygame.draw.rect(surface, pm.SEAL_RED if is_parchment else (255, 215, 60), glow_r, 2, border_radius=6)
@@ -1022,8 +1033,12 @@ class SettingsMenu:
         pygame.draw.rect(surface, (140, 125, 105) if is_parchment else COLOR_GOLD, self.sfx_bar_rect, 1, border_radius=4)
 
         # 2. Slider BGM
-        bgm_lbl = font_mid.render(f"{t('bgm_volume_label')}: {int(mgr.bgm_volume * 100)}%", True, pm.SEAL_RED if (self.sub_row_index == 1 and is_parchment) else ((255, 225, 90) if self.sub_row_index == 1 else t_col))
-        surface.blit(bgm_lbl, (self.bgm_minus_rect.x - 220, self.bgm_minus_rect.y + 4))
+        bgm_title = font_mid.render(t('bgm_volume_label'), True, pm.SEAL_RED if (self.sub_row_index == 1 and is_parchment) else ((255, 225, 90) if self.sub_row_index == 1 else t_col))
+        surface.blit(bgm_title, (self.bgm_minus_rect.x - 290, self.bgm_minus_rect.y + 4))
+
+        bgm_pct_surf = font_mid.render(f"{int(mgr.bgm_volume * 100)}%", True, pm.SEAL_RED if (self.sub_row_index == 1 and is_parchment) else (pm.INK if is_parchment else COLOR_WHITE))
+        surface.blit(bgm_pct_surf, (self.bgm_plus_rect.right + 14, self.bgm_plus_rect.y + 4))
+
         if self.sub_row_index == 1:
             glow_r = self.bgm_bar_rect.inflate(8, 8)
             pygame.draw.rect(surface, pm.SEAL_RED if is_parchment else (255, 215, 60), glow_r, 2, border_radius=6)
@@ -1071,30 +1086,35 @@ class SettingsMenu:
     def _render_gameplay_content(self, surface, panel_rect, font_large, font_mid, font_small, is_parchment: bool):
         from src.effects import parchment as pm
         from src.effects import quality
-        from src.i18n import get_saved_language_preference, LANG_AUTO, LANG_PT, LANG_EN
+        from src.i18n import get_saved_language_preference, get_lang, LANG_AUTO, LANG_PT, LANG_EN
 
         t_col = pm.INK if is_parchment else (212, 175, 55)
         title_surf = font_large.render(t("settings_sub_gameplay_title"), True, t_col)
-        surface.blit(title_surf, (panel_rect.centerx - title_surf.get_width() // 2, panel_rect.y + 14))
+        surface.blit(title_surf, (panel_rect.centerx - title_surf.get_width() // 2, panel_rect.y + 28))
 
         sub_col = pm.INK_SOFT if is_parchment else (180, 175, 165)
         sub_surf = font_small.render(t("settings_hub_gameplay_desc"), True, sub_col)
-        surface.blit(sub_surf, (panel_rect.centerx - sub_surf.get_width() // 2, panel_rect.y + 58))
+        surface.blit(sub_surf, (panel_rect.centerx - sub_surf.get_width() // 2, panel_rect.y + 68))
 
         # 1. Dificuldade da IA
         diff_names = {"easy": t("difficulty_easy"), "normal": t("difficulty_normal"), "hard": t("difficulty_hard")}
         diff_colors = {"easy": (45, 140, 65), "normal": (170, 125, 45), "hard": pm.SEAL_RED}
         d_name = diff_names.get(self.ai_difficulty, t("difficulty_normal"))
         d_col = diff_colors.get(self.ai_difficulty, (170, 125, 45))
-        d_desc = "Fácil: Inimigos mais cautelosos" if self.ai_difficulty == "easy" else (
-            "Normal: Equilíbrio padrão de combate" if self.ai_difficulty == "normal" else "Difícil: IA implacável e reflexos afiados"
-        )
+        if get_lang() == LANG_EN:
+            d_desc = "Easy: Cautious opponents" if self.ai_difficulty == "easy" else (
+                "Normal: Balanced combat intensity" if self.ai_difficulty == "normal" else "Hard: Relentless AI and razor-sharp reflexes"
+            )
+        else:
+            d_desc = "Fácil: Inimigos mais cautelosos" if self.ai_difficulty == "easy" else (
+                "Normal: Equilíbrio padrão de combate" if self.ai_difficulty == "normal" else "Difícil: IA implacável e reflexos afiados"
+            )
 
         pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (38, 36, 34), self.difficulty_toggle_rect, border_radius=8)
         d_border = pm.SEAL_RED if (self.sub_row_index == 0 and is_parchment) else ((255, 215, 60) if self.sub_row_index == 0 else d_col)
         pygame.draw.rect(surface, d_border, self.difficulty_toggle_rect, 3 if self.sub_row_index == 0 else 2, border_radius=8)
-        dl = font_mid.render(t("ai_difficulty_label").format(d_name=d_name), True, d_border if self.sub_row_index == 0 else d_col)
-        ds = font_small.render(d_desc, True, pm.INK_SOFT if is_parchment else (180, 175, 165))
+        dl = self._fit_text(font_mid, t("ai_difficulty_label").format(d_name=d_name), d_border if self.sub_row_index == 0 else d_col, self.difficulty_toggle_rect.width - 48)
+        ds = self._fit_text(font_small, d_desc, pm.INK_SOFT if is_parchment else (180, 175, 165), self.difficulty_toggle_rect.width - 48)
         surface.blit(dl, (self.difficulty_toggle_rect.x + 24, self.difficulty_toggle_rect.y + 8))
         surface.blit(ds, (self.difficulty_toggle_rect.x + 24, self.difficulty_toggle_rect.y + 32))
 
@@ -1104,7 +1124,7 @@ class SettingsMenu:
         pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (38, 36, 34), self.language_toggle_rect, border_radius=8)
         l_border = pm.SEAL_RED if (self.sub_row_index == 1 and is_parchment) else ((255, 215, 60) if self.sub_row_index == 1 else ((140, 125, 105) if is_parchment else (75, 70, 62)))
         pygame.draw.rect(surface, l_border, self.language_toggle_rect, 3 if self.sub_row_index == 1 else 1, border_radius=8)
-        ll = font_mid.render(t("language_toggle_label").format(lang_name=lang_str), True, pm.SEAL_RED if (self.sub_row_index == 1 and is_parchment) else (pm.INK if is_parchment else COLOR_WHITE))
+        ll = self._fit_text(font_mid, t("language_toggle_label").format(lang_name=lang_str), pm.SEAL_RED if (self.sub_row_index == 1 and is_parchment) else (pm.INK if is_parchment else COLOR_WHITE), self.language_toggle_rect.width - 24)
         surface.blit(ll, ll.get_rect(center=self.language_toggle_rect.center))
 
         # 3. Game Boost
@@ -1113,17 +1133,18 @@ class SettingsMenu:
         pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (38, 36, 34), self.game_boost_toggle_rect, border_radius=8)
         b_border = pm.SEAL_RED if (self.sub_row_index == 2 and is_parchment) else ((255, 215, 60) if self.sub_row_index == 2 else ((45, 140, 65) if boost_on else ((140, 125, 105) if is_parchment else (75, 70, 62))))
         pygame.draw.rect(surface, b_border, self.game_boost_toggle_rect, 3 if self.sub_row_index == 2 else (2 if boost_on else 1), border_radius=8)
-        bl = font_mid.render(b_label, True, pm.SEAL_RED if (self.sub_row_index == 2 and is_parchment) else ((45, 140, 65) if boost_on else (pm.INK if is_parchment else COLOR_WHITE)))
+        bl = self._fit_text(font_mid, b_label, pm.SEAL_RED if (self.sub_row_index == 2 and is_parchment) else ((45, 140, 65) if boost_on else (pm.INK if is_parchment else COLOR_WHITE)), self.game_boost_toggle_rect.width - 24)
         surface.blit(bl, bl.get_rect(center=self.game_boost_toggle_rect.center))
 
         # 4. Inverter Eixo Y
         from src.input.controller_manager import get_controller_manager
         inv_y = getattr(get_controller_manager(), "invert_y", False)
-        y_txt = "Inverter Eixo Y do Analógico: [ ATIVADO ]" if inv_y else "Inverter Eixo Y do Analógico: [ DESATIVADO ]"
+        inv_name = t("status_on") if inv_y else t("status_off")
+        y_txt = f"{t('invert_y_label')}: [ {inv_name} ]" if t("invert_y_label") else (f"Invert Analog Y Axis: [ {inv_name} ]" if get_lang() == LANG_EN else f"Inverter Eixo Y do Analógico: [ {inv_name} ]")
         pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (38, 36, 34), self.invert_y_toggle_rect, border_radius=8)
         y_border = pm.SEAL_RED if (self.sub_row_index == 3 and is_parchment) else ((255, 215, 60) if self.sub_row_index == 3 else ((140, 125, 105) if is_parchment else (75, 70, 62)))
         pygame.draw.rect(surface, y_border, self.invert_y_toggle_rect, 3 if self.sub_row_index == 3 else 1, border_radius=8)
-        yl = font_mid.render(y_txt, True, pm.SEAL_RED if (self.sub_row_index == 3 and is_parchment) else (pm.INK if is_parchment else COLOR_WHITE))
+        yl = self._fit_text(font_mid, y_txt, pm.SEAL_RED if (self.sub_row_index == 3 and is_parchment) else (pm.INK if is_parchment else COLOR_WHITE), self.invert_y_toggle_rect.width - 24)
         surface.blit(yl, yl.get_rect(center=self.invert_y_toggle_rect.center))
 
         # 5. Modo de Toque
@@ -1137,7 +1158,7 @@ class SettingsMenu:
         pygame.draw.rect(surface, (226, 212, 185) if is_parchment else (38, 36, 34), self.touch_toggle_rect, border_radius=8)
         t_border = pm.SEAL_RED if (self.sub_row_index == 4 and is_parchment) else ((255, 215, 60) if self.sub_row_index == 4 else ((140, 125, 105) if is_parchment else (75, 70, 62)))
         pygame.draw.rect(surface, t_border, self.touch_toggle_rect, 3 if self.sub_row_index == 4 else 1, border_radius=8)
-        tl = font_mid.render(t("touch_controls_label").format(touch_mode_str=touch_mode_str), True, pm.SEAL_RED if (self.sub_row_index == 4 and is_parchment) else (pm.INK if is_parchment else COLOR_WHITE))
+        tl = self._fit_text(font_mid, t("touch_controls_label").format(touch_mode_str=touch_mode_str), pm.SEAL_RED if (self.sub_row_index == 4 and is_parchment) else (pm.INK if is_parchment else COLOR_WHITE), self.touch_toggle_rect.width - 24)
         surface.blit(tl, tl.get_rect(center=self.touch_toggle_rect.center))
 
         # Botão Voltar às Opções
@@ -1152,11 +1173,11 @@ class SettingsMenu:
 
         t_col = pm.INK if is_parchment else (212, 175, 55)
         title_surf = font_large.render(t("settings_sub_controls_title"), True, t_col)
-        surface.blit(title_surf, (panel_rect.centerx - title_surf.get_width() // 2, panel_rect.y + 14))
+        surface.blit(title_surf, (panel_rect.centerx - title_surf.get_width() // 2, panel_rect.y + 28))
 
         sub_col = pm.INK_SOFT if is_parchment else (180, 175, 165)
         sub_surf = font_small.render(t("settings_hub_controls_desc"), True, sub_col)
-        surface.blit(sub_surf, (panel_rect.centerx - sub_surf.get_width() // 2, panel_rect.y + 58))
+        surface.blit(sub_surf, (panel_rect.centerx - sub_surf.get_width() // 2, panel_rect.y + 68))
 
         # Colunas P1 (Vermelho) e P2 (Azul)
         col_w = 430

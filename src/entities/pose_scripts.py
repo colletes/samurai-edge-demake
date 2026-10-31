@@ -110,8 +110,12 @@ INTRO = {
         _idle(0.35, 0.70, pose="ninjato_draw"),
         _idle(0.70, 1.0, pose="shinobi_stance"),
     ],
-    # Shuriken/kunai e o cão que chega correndo
-    "american": [_idle(0.0, 0.25), _seg(0.25, 0.65, "ATTACK", 0.0, 1.0), _idle(0.65, 1.0)],
+    # Joe & Yamato (2.4): Ajuste de luvas táticas -> assobio aos lábios chamando Yamato -> guarda tática com kunai e shuriken
+    "american": [
+        _idle(0.0, 0.40, pose="adjust_gloves"),
+        _idle(0.40, 0.70, pose="dog_whistle"),
+        _idle(0.70, 1.0, pose="tactical_guard"),
+    ],
     # Postura do Gatotsu: lâmina apontada à frente
     "saitou": [_idle(0.0, 0.2), _seg(0.2, 0.75, "GATOTSU_CHARGE", 0.2, 0.7), _idle(0.75, 1.0)],
     # Coronhada do arcabuz
@@ -216,7 +220,10 @@ VICTORY = {
         _idle(0.0, 0.45, pose="kuji_kiri"),
         _idle(0.45, 1.0, pose="smoke_vanish", alpha=(1.0, 0.0)),
     ],
-    "american": [_idle(0.0, 0.1), _seg(0.1, 0.55, "ATTACK", 0.0, 1.0), _idle(0.55, 1.0)],
+    # Joe & Yamato (2.4): Joe veste o chapéu de cowboy de couro marrom, empunha o banjo de madeira e dedilha o riff clássico enquanto Yamato descansa
+    "american": [
+        _idle(0.0, 1.0, pose="cowboy_banjo", cowboy_hat=True),
+    ],
     "saitou": [_idle(0.0, 0.1), _seg(0.1, 0.8, "GATOTSU_CHARGE", 0.2, 0.7), _idle(0.8, 1.0)],
     "rifleman": [_idle(0.0, 0.15), _seg(0.15, 0.55, "ATTACK", 0.0, 1.0), _idle(0.55, 1.0)],
     "murasaki": [_idle(0.0, 0.1), _seg(0.1, 0.5, "ATTACK", 0.0, 1.0), _seg(0.5, 0.9, "ATTACK", 0.0, 1.0), _idle(0.9, 1.0)],
@@ -303,7 +310,7 @@ BEATS = {
         "kenshin": [(0.37, "sfx:parry"), (0.38, "fx:sparks"), (0.68, "sfx:sword_slash")],
         "musashi": [(0.26, "sfx:sword_slash"), (0.42, "sfx:parry"), (0.44, "fx:sparks")],
         "ninja": [(0.02, "fx:petals"), (0.36, "sfx:parry"), (0.38, "fx:sparks"), (0.68, "sfx:sword_slash")],
-        "american": [(0.12, "sfx:dog_bark"), (0.3, "sfx:shuriken_throw")],
+        "american": [(0.42, "sfx:dog_bark"), (0.72, "sfx:dodge_whoosh")],
         "saitou": [(0.22, "sfx:sword_slash")],
         "rifleman": [(0.28, "sfx:obstacle_hit")],
         "murasaki": [(0.12, "sfx:chain_spin"), (0.47, "sfx:chain_spin")],
@@ -328,7 +335,7 @@ BEATS = {
         "kenshin": [(0.08, "sfx:sword_slash"), (0.28, "sfx:dodge_whoosh"), (0.30, "fx:blood"), (0.74, "sfx:parry"), (0.76, "fx:petals")],
         "musashi": [(0.14, "sfx:sword_slash"), (0.20, "fx:blood"), (0.50, "sfx:parry")],
         "ninja": [(0.15, "sfx:dodge_whoosh"), (0.46, "fx:smoke"), (0.48, "sfx:smoke_puff")],
-        "american": [(0.1, "sfx:dog_bark"), (0.3, "sfx:shuriken_throw")],
+        "american": [(0.10, "sfx:joe_banjo"), (0.50, "sfx:dog_bark")],
         "saitou": [(0.12, "sfx:sword_slash")],
         "rifleman": [(0.2, "sfx:obstacle_hit")],
         "murasaki": [(0.12, "sfx:chain_spin"), (0.52, "sfx:chain_spin")],
