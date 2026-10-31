@@ -108,6 +108,63 @@ def idle_arms(c):
     return left, right
 
 
+def victory_arms(c, p=0.0, pose=""):
+    """
+    Coreografia cinemática de vitória do Joe com LERP contínuo (Zero Freeze Policy):
+    - Fase 1 (0.00 <= p < 0.22 ou pose == 'hat_tip'):
+      Transição suave da guarda de combate para a mão direita subir e tocar/inclinar a aba do chapéu de cowboy (Hat Tip de veterano), com a mão esquerda repousando no cinto.
+    - Fase 2 (0.22 <= p < 0.45 ou pose == 'draw_banjo'):
+      Transição da ponta do chapéu para sacar e empunhar o banjo de madeira na altura do peito/cintura com as duas mãos.
+    - Fase 3 (0.45 <= p <= 1.0 ou pose in ('cowboy_banjo', 'cowboy_victory')):
+      Dedilhado rápido e swing rítmico ininterrupto sobre as cordas do banjo, com micro-slide nos trastes e vibração de palhetada!
+    """
+    bx, by, tz, hz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.head_z, c.fx, c.fy, c.px, c.py
+    extra = getattr(c, "extra_props", {}) or {}
+
+    vic_p = extra.get("p", p)
+    seg_u = extra.get("seg_u", 0.0)
+
+    idle_l, idle_r = idle_arms(c)
+    belt_l = (bx + fx * 0.05 - px * 0.16, by + fy * 0.05 - py * 0.16, tz + 0.03)
+    hat_touch = (bx + fx * 0.12 + px * 0.04, by + fy * 0.12 + py * 0.04, hz + 0.14)
+    banjo_ready_l = (bx + fx * 0.14 - px * 0.17, by + fy * 0.14 - py * 0.17, tz + 0.23)
+    banjo_ready_r = (bx + fx * 0.17 + px * 0.03, by + fy * 0.17 + py * 0.03, tz + 0.08)
+
+    if pose == "hat_tip" or (not pose and vic_p < 0.22):
+        u = _smooth(seg_u if pose == "hat_tip" else (vic_p / 0.22))
+        tip = math.sin(u * math.pi) * 0.022
+        hat_r = (hat_touch[0], hat_touch[1], hat_touch[2] - tip)
+        left = mk.lerp(idle_l, belt_l, u)
+        right = mk.lerp(idle_r, hat_r, u)
+        return left, right
+
+    elif pose == "draw_banjo" or (not pose and vic_p < 0.45):
+        u = _smooth(seg_u if pose == "draw_banjo" else ((vic_p - 0.22) / 0.23))
+        left = mk.lerp(belt_l, banjo_ready_l, u)
+        right = mk.lerp(hat_touch, banjo_ready_r, u)
+        return left, right
+
+    else:
+        # Fase 3: Dedilhado rítmico e swing do banjo ininterrupto
+        t_tick = getattr(c, "walk_timer", 0.0) * 16.0 + getattr(c, "state_timer", 0.0) * 12.0
+        t_strum = (vic_p * 46.0) + t_tick
+
+        strum_x = math.sin(t_strum) * 0.036
+        strum_z = math.cos(t_strum * 1.6) * 0.018
+        strum_y = math.sin(t_strum * 0.8) * 0.012
+
+        fret_slide = math.sin(t_strum * 0.28) * 0.032
+        fret_tap = abs(math.cos(t_strum * 1.3)) * 0.010
+
+        left = (banjo_ready_l[0] - px * fret_slide,
+                banjo_ready_l[1] - py * fret_slide,
+                banjo_ready_l[2] - fret_slide * 0.45 + fret_tap)
+        right = (banjo_ready_r[0] + fx * strum_x + px * strum_y,
+                 banjo_ready_r[1] + fy * strum_x + py * strum_y,
+                 banjo_ready_r[2] + strum_z)
+        return left, right
+
+
 def _hands(c):
     """Retorna a posição das mãos (esquerda, direita) calculadas com animação contínua (LERP)."""
     extra = getattr(c, "extra_props", {}) or {}
@@ -148,14 +205,9 @@ def _hands(c):
             guard_r = (idle_r[0] + fx * 0.08, idle_r[1] + fy * 0.08, idle_r[2] + 0.02)
             return mk.lerp(whistle_l, guard_l, u), mk.lerp(whistle_r, guard_r, u)
 
-    # 4. Tocar Banjo com Chapéu de Cowboy (Vitória)
-    if pose in ("cowboy_banjo", "cowboy_victory"):
-        # Mão esquerda segura o braço do banjo no alto
-        left = (bx + fx * 0.14 - px * 0.17, by + fy * 0.14 - py * 0.17, tz + 0.23)
-        # Mão direita dedilha o corpo do banjo na altura da cintura
-        strum = math.sin(c.walk_timer * 14.0) * 0.025
-        right = (bx + fx * 0.17 + px * 0.03 + fx * strum, by + fy * 0.17 + py * 0.03 + fy * strum, tz + 0.08)
-        return left, right
+    # 2. Sequência Cinemática de Vitória com Chapéu de Cowboy e Banjo (LERP Contínuo)
+    if pose in ("hat_tip", "draw_banjo", "cowboy_banjo", "cowboy_victory") or extra.get("intro_victory_state") == "VICTORY":
+        return victory_arms(c, p, pose)
 
     # 5. Flic-flac acrobático para frente (Esquiva / Roll 360°)
     if pose == "flic_flac" or getattr(c, "state", "") == "ROLL":
@@ -271,7 +323,17 @@ def _draw_cowboy_hat(c):
     """
     P = pal()
     bx, by, hz, fx, fy, px, py = c.base_x, c.base_y, c.head_z, c.fx, c.fy, c.px, c.py
-    crown_z = hz + 0.150
+    extra = getattr(c, "extra_props", {}) or {}
+    pose = extra.get("pose", "")
+    vic_p = extra.get("p", 0.0)
+    t_tick = getattr(c, "walk_timer", 0.0) * 16.0 + getattr(c, "state_timer", 0.0) * 12.0
+    t_strum = (vic_p * 46.0) + t_tick
+    head_bop = math.sin(t_strum * 0.5) * 0.012 if (pose in ("cowboy_banjo", "cowboy_victory") or vic_p >= 0.45) else 0.0
+    tip_drop = 0.0
+    if pose == "hat_tip" or (extra.get("intro_victory_state") == "VICTORY" and vic_p < 0.22):
+        u = _smooth(extra.get("seg_u", vic_p / 0.22))
+        tip_drop = math.sin(u * math.pi) * 0.016
+    crown_z = hz + 0.150 + head_bop - tip_drop
 
     # 1. Aba larga ovalada com laterais curvadas para cima (Aba do chapéu)
     brim_center = (bx, by, crown_z)
@@ -393,12 +455,12 @@ def _draw_weapons(c, arm_l, arm_r):
     pose = extra.get("pose", "")
 
     # Se estiver na pose de vitória de tocar banjo, desenha o banjo
-    if pose in ("cowboy_banjo", "cowboy_victory"):
+    if pose in ("draw_banjo", "cowboy_banjo", "cowboy_victory") or (extra.get("intro_victory_state") == "VICTORY" and extra.get("p", 0.0) >= 0.22):
         _draw_banjo(c, arm_l, arm_r)
         return
 
-    # Se estiver ajustando luvas ou assobiando, as mãos estão ocupadas/livres de armas
-    if pose in ("adjust_gloves", "dog_whistle", "flic_flac"):
+    # Se estiver ajustando luvas, assobiando, flic flac ou tocando no chapéu, as mãos estão ocupadas/livres de armas
+    if pose in ("adjust_gloves", "dog_whistle", "flic_flac", "hat_tip") or (extra.get("intro_victory_state") == "VICTORY" and extra.get("p", 0.0) < 0.22):
         return
 
     # Se estiver arremessando a Fuma Shuriken
@@ -645,7 +707,7 @@ def draw_head(c):
         _headband_tails(c)
 
     # 3. Chapéu de Cowboy OU Óculos de visão noturna (NVG)
-    has_cowboy_hat = extra.get("cowboy_hat", False) or pose in ("cowboy_banjo", "cowboy_victory")
+    has_cowboy_hat = extra.get("cowboy_hat", False) or pose in ("cowboy_banjo", "cowboy_victory", "hat_tip", "draw_banjo") or extra.get("intro_victory_state") == "VICTORY"
     if has_cowboy_hat:
         _draw_cowboy_hat(c)
     else:

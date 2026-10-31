@@ -87,6 +87,22 @@ class DobermanDog:
         if self.state == STATE_DOG_FOLLOW:
             self.hitbox_active = False
             self.target = None
+
+            # Celebração de vitória ao lado de Joe
+            if getattr(self.owner, "state", "") == "VICTORY":
+                target_x = self.owner.wx + getattr(self.owner, "px", 0.0) * 0.70 - getattr(self.owner, "fx", 1.0) * 0.10
+                target_y = self.owner.wy + getattr(self.owner, "py", 0.0) * 0.70 - getattr(self.owner, "fy", 0.0) * 0.10
+                dx = target_x - self.wx
+                dy = target_y - self.wy
+                dist = math.hypot(dx, dy)
+                if dist > 0.08:
+                    step = min(dist, 3.5 * dt)
+                    self.wx += (dx / dist) * step
+                    self.wy += (dy / dist) * step
+                self.facing_x = self.owner.facing_x
+                self.facing_y = self.owner.facing_y
+                return
+
             # Seguir suavemente o dono (a ~0.8 tiles de distância)
             dx = self.owner.wx - self.wx
             dy = self.owner.wy - self.wy

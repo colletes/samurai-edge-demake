@@ -33,9 +33,9 @@ class PoseFrame:
 def canonical(char_type: str) -> str:
     """Nome canônico do lutador, igual ao que `render_voxel_humanoid` usa para escolher o modelo."""
     c = char_type.lower()
-    if "yellow" in c:
+    if "yellow" in c or "hanzo" in c:
         return "ninja"
-    if "american" in c:
+    if "american" in c or "joe" in c:
         return "american"
     if "gray" in c or "kemuri" in c or "kasumi" in c:
         return "kasumi"
@@ -224,9 +224,11 @@ VICTORY = {
         _idle(0.0, 0.45, pose="kuji_kiri"),
         _idle(0.45, 1.0, pose="smoke_vanish", alpha=(1.0, 0.0)),
     ],
-    # Joe & Yamato (2.4): Joe veste o chapéu de cowboy de couro marrom, empunha o banjo de madeira e dedilha o riff clássico enquanto Yamato descansa
+    # Joe & Yamato (2.4): Hat-tip cortês -> empunha o banjo de jacarandá -> dedilhado ininterrupto com balanço rítmico
     "american": [
-        _idle(0.0, 1.0, pose="cowboy_banjo", cowboy_hat=True),
+        _idle(0.0, 0.22, pose="hat_tip", cowboy_hat=True),
+        _idle(0.22, 0.45, pose="draw_banjo", cowboy_hat=True),
+        _idle(0.45, 1.0, pose="cowboy_banjo", cowboy_hat=True),
     ],
     # Saitou (2.5): Chiburi marcial com sacudida rápida de sangue -> embainhamento fluido (Noto) -> acendimento solene do kiseru
     "saitou": [
@@ -344,7 +346,7 @@ BEATS = {
         "kenshin": [(0.08, "sfx:sword_slash"), (0.28, "sfx:dodge_whoosh"), (0.30, "fx:blood"), (0.74, "sfx:parry"), (0.76, "fx:petals")],
         "musashi": [(0.14, "sfx:sword_slash"), (0.20, "fx:blood"), (0.50, "sfx:parry")],
         "ninja": [(0.15, "sfx:dodge_whoosh"), (0.46, "fx:smoke"), (0.48, "sfx:smoke_puff")],
-        "american": [(0.10, "sfx:joe_banjo"), (0.50, "sfx:dog_bark")],
+        "american": [(0.06, "sfx:dodge_whoosh"), (0.34, "sfx:joe_banjo"), (0.72, "sfx:dog_bark")],
         "saitou": [(0.10, "sfx:sword_slash"), (0.15, "fx:blood"), (0.65, "sfx:parry"), (0.80, "fx:smoke")],
         "rifleman": [(0.2, "sfx:obstacle_hit")],
         "murasaki": [(0.12, "sfx:chain_spin"), (0.52, "sfx:chain_spin")],

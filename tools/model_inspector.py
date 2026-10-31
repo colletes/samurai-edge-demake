@@ -1288,6 +1288,9 @@ class ModelInspector:
                 state = pf.state
                 state_timer = pose_scripts.state_timer_for(char_type, pf)
                 extra_props.update(pf.extra)
+                extra_props["p"] = p_sample
+                extra_props["intro_victory_state"] = act
+                walk_timer = self.anim_time
         elif act == "FINISHER_1":
             if char_type == "raiden":
                 if is_legacy:
