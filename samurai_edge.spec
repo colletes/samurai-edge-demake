@@ -106,8 +106,8 @@ if sys.platform == 'darwin':
         info_plist={
             'CFBundleName': 'Samurai Edge Demake',
             'CFBundleDisplayName': 'Samurai Edge Demake',
-            'CFBundleVersion': '3.0.1alpha',
-            'CFBundleShortVersionString': '3.0.1alpha',
+            'CFBundleVersion': '3.0.2alpha',
+            'CFBundleShortVersionString': '3.0.2alpha',
             'NSHighResolutionCapable': 'True',
             'LSApplicationCategoryType': 'public.app-category.action-games',
             'LSMinimumSystemVersion': '10.13.0',
