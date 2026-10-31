@@ -5,6 +5,7 @@ import random
 import pygame
 
 from src.effects.particles import FloatingBanner, SmokeParticle
+from src.i18n import t
 
 PHASE_IDLE = "idle"
 PHASE_WARN = "warn"
@@ -730,7 +731,7 @@ class ZombieWalker:
             for _ in range(8):
                 particles.append(SparkParticle(self.wx, self.wy, 0.5, color=(200, 195, 180)))
         if banners is not None:
-            banners.append(FloatingBanner("ZUMBI DESTRUÍDO! / SLAIN!", self.wx, self.wy, wz=1.6, color=(240, 230, 200)))
+            banners.append(FloatingBanner(t("banner_zombie_slain"), self.wx, self.wy, wz=1.6, color=(240, 230, 200)))
         try:
             from src.audio.sound_events import SoundEvent
             from src.audio.sound_manager import SoundManager
@@ -1107,7 +1108,7 @@ class HealingTalisman:
             if self.warn_timer <= 0.0:
                 self.is_warn = False
                 if banners is not None:
-                    banners.append(FloatingBanner("TALISMÃ SAGRADO! / HEALING WARD!", self.wx, self.wy, wz=1.8, color=(80, 255, 140), duration=1.2))
+                    banners.append(FloatingBanner(t("banner_sacred_talisman"), self.wx, self.wy, wz=1.8, color=(80, 255, 140), duration=1.2))
             return True
 
         self.lifetime -= dt

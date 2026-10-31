@@ -8,6 +8,7 @@ from src.config import (
     COLOR_WHITE, COLOR_BLACK, COLOR_STEEL, COLOR_GOLD
 )
 from src.world.arena_generator import PIT_EDGE_MARGIN
+from src.i18n import t
 
 # Estados da Máquina de Estados Finita (FSM)
 STATE_IDLE = "IDLE"
@@ -188,7 +189,7 @@ class Samurai:
         self.confused_timer = max(self.confused_timer, duration)
         if not was_confused and banners is not None:
             from src.effects.particles import FloatingBanner
-            banners.append(FloatingBanner("CONFUSÃO! / CONFUSED!", self.wx, self.wy, wz=1.85, color=(215, 90, 255), duration=1.4))
+            banners.append(FloatingBanner(t("banner_confused"), self.wx, self.wy, wz=1.85, color=(215, 90, 255), duration=1.4))
 
     def set_facing(self, target_wx: float, target_wy: float):
         """Vira o samurai para encarar o alvo."""

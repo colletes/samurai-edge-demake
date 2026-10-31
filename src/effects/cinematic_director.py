@@ -205,9 +205,12 @@ class CinematicDirector:
         """Gera e cacheia a textura de caligrafia Sumi-E dos kanjis de corte fatal."""
         import random
         from src.ui.fonts import get_text_font
+        from src.i18n import get_lang
+
+        is_pt = (get_lang() == "pt")
 
         # Expressões exclusivas por estilo de Fatality (Ciclo 1 + Clássicos)
-        style_phrases = {
+        style_phrases_pt = {
             "HEADSHOT_EXPLODE": ("一発必中", "IPPATSU HITCHUU — DISPARO MORTAL"),
             "PIRATE_CLEAVE": ("荒波両断", "ARANAMI RYOUDAN — CORTE DO CORSÁRIO"),
             "HYAKURETSU_BODY_EXPLOSION": ("百烈拳", "HYAKURETSU KEN — CEM PUNHOS DE LÓTUS"),
@@ -239,8 +242,8 @@ class CinematicDirector:
             "FOREHEAD_PIN": ("苦無眉間", "KUNAI MIKEN — KUNAI FINCADA NA TESTA"),
             "HEART_THROAT_STAB": ("短刀急所", "TANTOU KYUUSHO — GOLPE MORTAL NA GARGANTA"),
             # Ciclo 4 Fatalities
-            "SOUL_REAP": ("首刈骸生", "DECAPITATION & SKELETON REANIMATION — CEIFADA CADAVÉRICA E TRANSFORMAÇÃO EM ESQUELETO"),
-            "DRAGGED_TO_GRAVE": ("黄泉引摺", "DRAGGED TO GRAVE — ARRASTADO PARA A COVA"),
+            "SOUL_REAP": ("首刈骸生", "KUBIKARI GAISEI — CEIFADA CADAVÉRICA E TRANSFORMAÇÃO EM ESQUELETO"),
+            "DRAGGED_TO_GRAVE": ("黄泉引摺", "YOMI HIKIZURI — ARRASTADO PARA A COVA"),
             "SEAL_STASIS_COLLAPSE": ("青炎灰燼", "SEIEN KAIJIN — CONSUMIDO EM CHAMAS VERDES ÀS CINZAS"),
             "OFUDA_PURIFICATION_PILLAR": ("青炎灰燼", "SEIEN KAIJIN — CONSUMIDO EM CHAMAS VERDES ÀS CINZAS"),
             "SEIMEI_FATAL_FIRE": ("青炎灰燼", "SEIEN KAIJIN — CONSUMIDO EM CHAMAS VERDES ÀS CINZAS"),
@@ -270,13 +273,85 @@ class CinematicDirector:
             "ALCHEMIC_MIASMA_MELT": ("毒瘴崩壊", "DOKU SHOU HOUKAI — COLAPSO NEUROTÓXICO"),
         }
 
+        style_phrases_en = {
+            "HEADSHOT_EXPLODE": ("一発必中", "IPPATSU HITCHUU — DEADLY MARKSMANSHIP"),
+            "PIRATE_CLEAVE": ("荒波両断", "ARANAMI RYOUDAN — CORSAIR CLEAVE"),
+            "HYAKURETSU_BODY_EXPLOSION": ("百烈拳", "HYAKURETSU KEN — HUNDRED LOTUS FISTS"),
+            "WALL_SMASH_FATAL": ("気合衝撃", "KIAI SHOUGEKI — CHI ROAR"),
+            "TRIPLE_SCISSOR_CLEAVE": ("双刃十字", "SOUJIN JUUJI — CRIMSON SCISSORS"),
+            "MAI_X_CLEAVE": ("紅舞必殺", "BENIMAI HISSATSU — DANCE OF DEATH"),
+            "KENSHIN_SPLIT": ("一刀両断", "ITTOU RYOUDAN — ONE CUT, TWO HALVES"),
+            "VERTICAL_BISECTION": ("龍槌閃", "RYUU TSUI SEN — CELESTIAL BAMBOO CLEAVE"),
+            "DUAL_IMPALE_X_SPREAD": ("二天一流", "NITEN ICHI-RYUU — DUAL FANNING IMPALE"),
+            "CROSS_VACUUM_SLICER": ("十字真空波", "JUUJI SHINKUU-HA — X-VACUUM WAVE"),
+            "REFLECTED_TORSO_CLEAVE": ("十字真空波", "JUUJI SHINKUU-HA — X-VACUUM WAVE"),
+            "ARMORED_HEART_IMPALE": ("金剛貫通", "KONGOU KANTSUU — IRON HEART PIERCE"),
+            "NAGINATA_HOIST_SLAM": ("金剛叩落", "KONGOU TATAKI-OTOSHI — ADAMANTINE SMASH"),
+            "SKEWERED_LANCE_FLAG": ("薙刀槍旗", "NAGINATA SOUKI — WAR BANNER IMPALE"),
+            "KAMAITACHI_MINCE": ("三弦微塵", "SANGEN MIJIN — VACUUM SHRED"),
+            "SONIC_SLICER": ("三弦微塵", "SANGEN MIJIN — VACUUM SHRED"),
+            "RESONANCE_WIND_GALE": ("突風両断", "TOPPUU RYOUDAN — GALE BEHEADING"),
+            "RESONANCE_BURST": ("突風両断", "TOPPUU RYOUDAN — GALE BEHEADING"),
+            "WINDMILL_SHURIKEN_DECAP": ("風車斬首", "FUUSHA ZANSHU — WINDMILL SHURIKEN BEHEADING"),
+            "TRIPLE_SHURIKEN_DISMEMBER": ("三連手裏剣", "SANREN SHURIKEN — TACTICAL DISMEMBERMENT"),
+            "RAPIER_FLURRY_POINTBLANK": ("零距離乱撃", "REIKYORI RANGEKI — POINT-BLANK VOLLEY"),
+            # Cycle 3 Fatalities
+            "KUWA_SKULL_CLEAVE": ("鍬頭砕断", "KUWA TOUSAIDAN — HOE SKULL CRUSH"),
+            "EARTH_STOMP_CRUSH": ("地鳴踏潰", "JINARI FUMITSUBUSHI — EARTHQUAKE STOMP"),
+            "BLIND_CAROTID_SLICE": ("盲刃頚断", "MOUJIN KEIDAN — BLIND CAROTID SLICE"),
+            "BLIND_SPINE_PIERCE": ("盲背心貫", "MOUHAI SHINKAN — BLIND SPINE PIERCE"),
+            "HEART_IMPALE_LUNGE": ("牙突心貫", "GATOTSU SHINKAN — WOLF OF MIBU HEART IMPALE"),
+            "TORSO_BLAST_THRUST": ("零式爆突", "ZEROSHIKI BAKUTOTSU — POINT-BLANK TORSO BLAST"),
+            "FOREHEAD_PIN": ("苦無眉間", "KUNAI MIKEN — KUNAI FOREHEAD PIN"),
+            "HEART_THROAT_STAB": ("短刀急所", "TANTOU KYUUSHO — THROAT LETHAL STAB"),
+            # Cycle 4 Fatalities
+            "SOUL_REAP": ("首刈骸生", "KUBIKARI GAISEI — SKELETON REANIMATION"),
+            "DRAGGED_TO_GRAVE": ("黄泉引摺", "YOMI HIKIZURI — DRAGGED TO THE GRAVE"),
+            "SEAL_STASIS_COLLAPSE": ("青炎灰燼", "SEIEN KAIJIN — ASHES OF AZURE FLAME"),
+            "OFUDA_PURIFICATION_PILLAR": ("青炎灰燼", "SEIEN KAIJIN — ASHES OF AZURE FLAME"),
+            "SEIMEI_FATAL_FIRE": ("青炎灰燼", "SEIEN KAIJIN — ASHES OF AZURE FLAME"),
+            "SEIMEI_FATAL_WATER": ("水葬昇華", "SUISOU SHOUKA — SPECTRAL MIST DISSOLUTION"),
+            "SEIMEI_FATAL_WOOD": ("神樹輪廻", "SHINJU RINNE — ETERNAL TREE EMBRACE"),
+            "SEIMEI_FATAL_METAL": ("金剛封縛", "KONGOU FUUBAKU — ASTRAL BLADE IMPALEMENT"),
+            "SEIMEI_FATAL_EARTH": ("岩宿化石", "GANSHUKU KASEKI — ANCIENT STONE PETRIFICATION"),
+            "SEIMEI_FATAL_YINYANG": ("陰陽天誅", "IN-YOU TENCHUU — SPIRIT REALM BANISHMENT"),
+            # Ciclo 5 Fatalities: Okuni, Tomoe, Daiki, Aoi
+            "TESSEN_DECAP": ("鉄扇斬首", "TESSEN ZANSHU — IRON FAN BEHEADING"),
+            "DOKUKIRI_MELT": ("毒霧融骸", "DOKUKIRI YUUGAI — POISON MIST DISSOLUTION"),
+            "OKUNI_MELT": ("毒霧融骸", "DOKUKIRI YUUGAI — POISON MIST DISSOLUTION"),
+            "PINNED_TO_EARTH": ("地縫強弓", "JIFUU KYOUKYUU — ARROW PINNED TO EARTH"),
+            "ARROW_PIN": ("地縫強弓", "JIFUU KYOUKYUU — ARROW PINNED TO EARTH"),
+            "HAMAYA_HOLY_PIERCE": ("破魔天貫", "HAMA TENKAN — SACRED HAMA-NO-YA PIERCE"),
+            "THROAT_TEMPLE_CRUSH": ("六尺砕頭", "ROKUSHAKU SAITOU — SIX-SHAKU TEMPLE CRUSH"),
+            "METEOR_STAFF_CRUSH": ("金剛墜撃", "KONGOU TSUIGEKI — METEOR STAFF CRUSH"),
+            "SPEAR_HEART_SLIDE": ("氷滑心貫", "HYOUKATSU SHINKAN — SPEAR SLIDE HEART PIERCE"),
+            "TRAP_AND_EXECUTE": ("獣罠処刑", "JUUWANA SHOKEI — HUNT TRAP & EXECUTION"),
+            "TSUPPARI_SONIC_DECAP": ("雷電掌断", "RAIDEN SHODAN — TSUPPARI SONIC DECAPITATION"),
+            "TACHIAI_SHATTER_SLAM": ("立合粉砕", "TACHIAI FUNSAI — TACHIAI SUMO SLAM"),
+            "STILETTO_CAROTID_VITRIOL": ("硫酸頸割", "RYUUSAN KEIKATSU — DISSOLVING STILETTO"),
+            "ALCHEMIC_ACID_DISSOLVE": ("強酸溶解", "KYOU SAN YOUKAI — ALCHEMICAL ACID DISSOLUTION"),
+            "ALCHEMIC_FIRE_ASH": ("焦熱灰燼", "SHOU NETSU KAIJIN — GREEK FIRE TO ASHES"),
+            "ALCHEMIC_ETHER_SUFFOCATION": ("幽冥窒息", "YUUMEI CHISSOKU — SOPORIFIC ETHER"),
+            "ALCHEMIC_FROST_SHATTER": ("氷華砕裂", "HYOUKA SAIRETSU — FREEZE & SHATTER"),
+            "ALCHEMIC_MIASMA_MELT": ("毒瘴崩壊", "DOKU SHOU HOUKAI — NEUROTOXIC COLLAPSE"),
+        }
+
+        style_phrases = style_phrases_pt if is_pt else style_phrases_en
+
         # Pool de expressões clássicas de cinema samurai
-        phrases = [
+        phrases_pt = [
             ("一刀両断", "ITTOU RYOUDAN — CORTE CERTEIRO"),
             ("決闘終焉", "KETTOU SHUUEN — FIM DO DUELO"),
             ("神速必殺", "SHINSOKU HISSATSU — GOLPE DIVINO"),
             ("生死一瞬", "SEISHI ISSHUN — VIDA E MORTE"),
         ]
+        phrases_en = [
+            ("一刀両断", "ITTOU RYOUDAN — ONE CUT, TWO HALVES"),
+            ("決闘終焉", "KETTOU SHUUEN — DUEL DECIDED"),
+            ("神速必殺", "SHINSOKU HISSATSU — GODSPEED STRIKE"),
+            ("生死一瞬", "SEISHI ISSHUN — LIFE AND DEATH"),
+        ]
+        phrases = phrases_pt if is_pt else phrases_en
         kanji_str, sub_str = phrase or style_phrases.get(death_style) or random.choice(phrases)
         self.current_kanji_text = kanji_str
         self.current_kanji_subtitle = sub_str

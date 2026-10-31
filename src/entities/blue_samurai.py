@@ -49,6 +49,7 @@ class BlueSamurai(Samurai):
         self.parry_timer = 0.0
         self.parry_duration = 0.45
         self.parry_reflect_active_timer = 0.0  # Janela de reflexão ativa: 0.28s
+        self.parry_cooldown = 0.0              # Cooldown anti-spam de parry (0.45s de whiff)
         self.counter_shockwave_ready = False
         self.cross_shockwave_timer = 0.0
         self.cross_shockwave_duration = 0.24
@@ -231,7 +232,7 @@ class BlueSamurai(Samurai):
             self.trigger_cross_shockwave(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners)
             return True
 
-        if not self.can_move() or self.dash_recovery_timer > 0:
+        if not self.can_move() or self.dash_recovery_timer > 0 or self.parry_cooldown > 0:
             return False
 
         self.state = STATE_PARRY
@@ -287,6 +288,7 @@ class BlueSamurai(Samurai):
     def on_parry_successful(self, opponent=None, particles=None, banners=None):
         """Reação defensiva triunfante de Musashi ao aparar ataque frontal."""
         self.counter_shockwave_ready = True
+        self.parry_cooldown = 0.0
         try:
             from src.audio import play_sfx, SoundEvent
             play_sfx(SoundEvent.SWORD_CLASH, volume_scale=1.0)
@@ -423,6 +425,8 @@ class BlueSamurai(Samurai):
             self.combo_window_timer -= dt
         if self.soft_stun_timer > 0:
             self.soft_stun_timer -= dt
+        if self.parry_cooldown > 0:
+            self.parry_cooldown = max(0.0, self.parry_cooldown - dt)
 
         if self.state == STATE_ATTACK:
             self.state_timer -= dt
@@ -507,6 +511,7 @@ class BlueSamurai(Samurai):
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
                 self.current_pose = ""
+                self.parry_cooldown = 0.45
 
         elif self.state == STATE_ROLL:
             self.update_roll(dt, game_map, particles)

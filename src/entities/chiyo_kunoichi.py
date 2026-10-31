@@ -15,6 +15,7 @@ from src.entities.samurai import (
 )
 from src.entities.voxel_models import render_voxel_humanoid
 from src.effects.particles import SparkParticle, FloatingBanner
+from src.i18n import t
 
 COLOR_CHIYO_AURA = (210, 36, 48)
 
@@ -119,7 +120,7 @@ class ChiyoKunoichi(Samurai):
         self.hitbox_center = (self.wx, self.wy)
 
         if banners is not None:
-            banners.append(FloatingBanner("DANÇA MAI!", self.wx, self.wy - 0.6, wz=1.7, color=COLOR_CHIYO_AURA))
+            banners.append(FloatingBanner(t("banner_mai_dance"), self.wx, self.wy - 0.6, wz=1.7, color=COLOR_CHIYO_AURA))
 
         # Partículas de pétalas de Higanbana e faíscas escarlates
         if particles is not None:
@@ -236,7 +237,7 @@ class ChiyoKunoichi(Samurai):
                     self.mai_exhausted = True
                     self.apply_slow(self.mai_whiff_recovery + 0.15)
                     if banners is not None:
-                        banners.append(FloatingBanner("SEM FÔLEGO!", self.wx, self.wy - 0.5, wz=1.6, color=(235, 165, 90)))
+                        banners.append(FloatingBanner(t("banner_out_of_breath"), self.wx, self.wy - 0.5, wz=1.6, color=(235, 165, 90)))
                 else:
                     self.state = STATE_IDLE
                     self.mai_exhausted = False

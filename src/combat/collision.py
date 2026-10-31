@@ -19,6 +19,7 @@ from src.entities.projectile import (
     AlchemicFlaskProjectile, ChemicalPoolHazard
 )
 from src.entities.doberman import STATE_DOG_CHARGE, STATE_DOG_KNOCKED_OUT, STATE_DOG_BARK
+from src.i18n import t
 
 def _get_death_style_for_attacker(attacker, weapon: str | None = None, victim=None):
     """Estilo de morte contextual pelo golpe recebido: reflete a natureza do ataque que gerou a morte."""
@@ -533,7 +534,7 @@ class CombatSystem:
                                     proj.evaded_targets.clear()
                                 if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
                                     target.on_mai_parry_success()
-                                    banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                                    banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
                                 elif target.state == "LISTEN":
                                     banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
                                     if hasattr(target, "trigger_counter_thrust"):
@@ -604,7 +605,7 @@ class CombatSystem:
                                     proj.evaded_targets.clear()
                                 if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
                                     target.on_mai_parry_success()
-                                    banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                                    banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
                                 elif target.state == "LISTEN":
                                     banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
                                     if hasattr(target, "trigger_counter_thrust"):
@@ -769,7 +770,7 @@ class CombatSystem:
                                     proj.evaded_targets.clear()
                                 if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
                                     target.on_mai_parry_success()
-                                    banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                                    banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
                                 elif target.state == "LISTEN":
                                     banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
                                     if hasattr(target, "trigger_counter_thrust"):
@@ -840,7 +841,7 @@ class CombatSystem:
                                     proj.evaded_targets.clear()
                                 if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
                                     target.on_mai_parry_success()
-                                    banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                                    banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
                                 elif target.state == "LISTEN":
                                     banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
                                     if hasattr(target, "trigger_counter_thrust"):
@@ -1078,7 +1079,7 @@ class CombatSystem:
                                     proj.evaded_targets.clear()
                                 if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
                                     target.on_mai_parry_success()
-                                    banners.append(FloatingBanner("MAI DEFLEXÃO!", target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                                    banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
                                 elif target.state == "LISTEN":
                                     banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
                                     if hasattr(target, "trigger_counter_thrust"):

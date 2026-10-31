@@ -22,6 +22,7 @@ from src.entities.samurai import (
 )
 from src.entities.voxel_models import render_voxel_humanoid
 from src.effects.particles import SparkParticle, BloodParticle, FloatingBanner
+from src.i18n import t
 
 COLOR_RAIDEN_AURA = (195, 45, 55)
 COLOR_SALT_BURST = (255, 250, 235)
@@ -470,7 +471,7 @@ class RaidenSumo(Samurai):
                         opponent.state = STATE_STUNNED
                         opponent.state_timer = 0.65
                         if banners is not None:
-                            banners.append(FloatingBanner("GUARDA QUEBRADA!", opponent.wx, opponent.wy, wz=1.8, color=(255, 60, 60)))
+                            banners.append(FloatingBanner(t("banner_guard_broken"), opponent.wx, opponent.wy, wz=1.8, color=(255, 60, 60)))
                         if particles is not None:
                             for _ in range(12):
                                 particles.append(SparkParticle(opponent.wx, opponent.wy, 0.45, color=(255, 235, 140)))

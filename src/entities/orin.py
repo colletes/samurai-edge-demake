@@ -19,6 +19,7 @@ from src.entities.samurai import (
 from src.entities.voxel_models import render_voxel_humanoid
 from src.entities.projectile import KamaitachiProjectile, AcousticResonanceWave, SpiralResonanceProjectile
 from src.effects.particles import SparkParticle, FloatingBanner
+from src.i18n import t
 
 STATE_RESONANCE = "RESONANCE"
 
@@ -119,7 +120,7 @@ class OrinMinstrel(Samurai):
             projectiles.append(proj)
 
         if banners is not None:
-            banners.append(FloatingBanner("ACORDE RESSONANTE!", self.wx, self.wy, wz=1.75, color=(245, 80, 150)))
+            banners.append(FloatingBanner(t("banner_resonant_chord"), self.wx, self.wy, wz=1.75, color=(245, 80, 150)))
 
         if particles is not None:
             for _ in range(14):

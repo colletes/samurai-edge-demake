@@ -28,6 +28,15 @@ from src.entities.samurai import (
 from src.entities.voxel_models import render_voxel_humanoid
 from src.entities.projectile import AlchemicFlaskProjectile, ChemicalPoolHazard, REAGENT_COLORS
 from src.effects.particles import SparkParticle, BloodParticle, FloatingBanner, SmokeParticle
+from src.i18n import t, get_lang
+
+REAGENT_NAMES_EN = {
+    "acid": "Vitriol Acid",
+    "fire": "Greek Fire",
+    "ether": "Soporific Ether",
+    "frost": "Frost Salpeter",
+    "miasma": "Neurotoxic Miasma",
+}
 
 COLOR_HENDRIKA_AURA = (65, 215, 165)
 
@@ -133,7 +142,7 @@ class HendrikaAlchemist(Samurai):
             self.reagent_tier = 2
             col_core, _ = REAGENT_COLORS.get(self.active_reagent, ((45, 225, 120), (20, 140, 65)))
             if banners is not None:
-                banners.append(FloatingBanner("TIER 2 POTENCIALIZADO!", self.wx, self.wy, wz=1.85, color=col_core, duration=1.0))
+                banners.append(FloatingBanner(t("banner_tier2_empowered"), self.wx, self.wy, wz=1.85, color=col_core, duration=1.0))
             if particles is not None:
                 for _ in range(16):
                     particles.append(SparkParticle(self.wx, self.wy, 0.50, color=col_core))
@@ -179,10 +188,11 @@ class HendrikaAlchemist(Samurai):
             if self.surface_sample_reagent in self.reagents:
                 self.active_reagent_idx = self.reagents.index(self.surface_sample_reagent)
                 self.reagent_tier = 1
-                r_name = REAGENT_NAMES.get(self.active_reagent, self.active_reagent.upper())
+                r_dict = REAGENT_NAMES if get_lang() == "pt" else REAGENT_NAMES_EN
+                r_name = r_dict.get(self.active_reagent, self.active_reagent.upper())
                 col_core, _ = REAGENT_COLORS.get(self.active_reagent, ((45, 225, 120), (20, 140, 65)))
                 if banners is not None:
-                    banners.append(FloatingBanner(f"SÍNTESE: {r_name}!", self.wx, self.wy, wz=1.75, color=col_core, duration=0.85))
+                    banners.append(FloatingBanner(t("banner_synthesis", name=r_name), self.wx, self.wy, wz=1.75, color=col_core, duration=0.85))
                 if particles is not None:
                     for _ in range(12):
                         particles.append(SparkParticle(self.wx, self.wy, 0.40, color=col_core))
@@ -193,7 +203,7 @@ class HendrikaAlchemist(Samurai):
             self.reagent_tier = 2
             col_core, _ = REAGENT_COLORS.get(self.active_reagent, ((45, 225, 120), (20, 140, 65)))
             if banners is not None:
-                banners.append(FloatingBanner("TIER 2 POTENCIALIZADO!", self.wx, self.wy, wz=1.85, color=col_core, duration=1.0))
+                banners.append(FloatingBanner(t("banner_tier2_empowered"), self.wx, self.wy, wz=1.85, color=col_core, duration=1.0))
             if particles is not None:
                 for _ in range(16):
                     particles.append(SparkParticle(self.wx, self.wy, 0.50, color=col_core))
