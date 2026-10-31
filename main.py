@@ -5,6 +5,11 @@ Suporte à Seleção de Personagens: Kenshi (Vermelho), Musashi (Azul) e Ninja H
 import sys
 import os
 
+# Expandir PATH antecipadamente para localizar ferramentas multimídia (Homebrew/MacPorts ffmpeg) em bundles .app GUI
+for _extra_path in ("/opt/homebrew/bin", "/usr/local/bin", "/opt/local/bin"):
+    if os.path.isdir(_extra_path) and _extra_path not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = _extra_path + os.pathsep + os.environ.get("PATH", "")
+
 # Garantir que o diretório do jogo e o CWD estejam no topo do sys.path (iOS / empacotados / subpacotes)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:

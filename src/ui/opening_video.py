@@ -77,6 +77,24 @@ class OpeningVideoScreen:
             self.is_ios_native = False
 
         try:
+            # 1. Expandir PATH do processo para localizar ffmpeg em /opt/homebrew/bin ou /usr/local/bin
+            for extra_path in ("/opt/homebrew/bin", "/usr/local/bin", "/opt/local/bin"):
+                if os.path.isdir(extra_path) and extra_path not in os.environ.get("PATH", ""):
+                    os.environ["PATH"] = extra_path + os.pathsep + os.environ.get("PATH", "")
+
+            import shutil
+            ffmpeg_bin = shutil.which("ffmpeg")
+            ffprobe_bin = shutil.which("ffprobe")
+
+            import pyvidplayer2
+            if ffmpeg_bin:
+                try:
+                    pyvidplayer2.set_ffmpeg_path(ffmpeg_bin)
+                    if ffprobe_bin:
+                        pyvidplayer2.set_ffprobe_path(ffprobe_bin)
+                except Exception:
+                    pass
+
             from pyvidplayer2 import Video
             import pyvidplayer2.mixer_handler
 
@@ -153,13 +171,33 @@ class OpeningVideoScreen:
             except Exception:
                 pass
 
-            # use_pygame_audio=True garante que o audio saia pelo mixer do Pygame (dispositivo de som ativo do jogo)
-            # chunk_size=120 carrega a trilha inteira (99.6s) em um unico buffer continuo sem cortes
-            self.video = Video(self.video_path, use_pygame_audio=True, chunk_size=120, max_chunks=1)
-            if self.video.original_size != (SCREEN_WIDTH, SCREEN_HEIGHT):
+            # Tentativa 1: use_pygame_audio=True com ffmpeg
+            if ffmpeg_bin:
+                try:
+                    self.video = Video(self.video_path, use_pygame_audio=True, chunk_size=120, max_chunks=1)
+                except Exception as ex_ffmpeg:
+                    print(f"[OpeningVideoScreen] FFmpeg falhou ({ex_ffmpeg}), acionando fallback nativo...")
+                    self.video = None
+
+            # Tentativa 2 (Fallback Universal): OpenCV decodifica vídeo (sem ffmpeg) + Pygame mixer toca a trilha
+            if not self.video:
+                self.video = Video(self.video_path, no_audio=True)
+                audio_file = "Samurai Edge - Closing Theme.mp3" if ("Credits" in self.video_path or "Closing" in self.video_path) else "Samurai Edge- Opening Theme.mp3"
+                audio_candidate = get_asset_path(f"assets/sounds/music/{audio_file}")
+                if os.path.exists(audio_candidate):
+                    try:
+                        if not pygame.mixer.get_init():
+                            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                        pygame.mixer.music.load(audio_candidate)
+                        pygame.mixer.music.play()
+                    except Exception as e_music:
+                        print(f"[OpeningVideoScreen] Erro no mixer de fallback: {e_music}")
+
+            if self.video and self.video.original_size != (SCREEN_WIDTH, SCREEN_HEIGHT):
                 self.video.resize((SCREEN_WIDTH, SCREEN_HEIGHT))
             try:
-                self.video.set_volume(1.0)
+                if self.video:
+                    self.video.set_volume(1.0)
             except Exception:
                 pass
         except Exception as e:

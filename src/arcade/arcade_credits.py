@@ -622,20 +622,37 @@ class ArcadeCreditsScreen:
                 pyvidplayer2.mixer_handler.MixerHandler.stop = _safe_mixer_stop
                 pyvidplayer2.mixer_handler.MixerHandler.unload = _safe_mixer_unload
 
-                self.video = Video(
-                    self.video_path,
-                    use_pygame_audio=True,
-                    chunk_size=120,
-                    max_chunks=1,
-                )
-                if self.video.original_size != (SCREEN_WIDTH, SCREEN_HEIGHT):
+                # Tenta primeiro com áudio embutido via ffmpeg
+                import shutil
+                ffmpeg_bin = shutil.which("ffmpeg")
+                if ffmpeg_bin:
+                    try:
+                        self.video = Video(
+                            self.video_path,
+                            use_pygame_audio=True,
+                            chunk_size=120,
+                            max_chunks=1,
+                        )
+                    except Exception:
+                        self.video = None
+
+                # Fallback para vídeo via OpenCV sem ffmpeg
+                if not self.video:
+                    try:
+                        self.video = Video(self.video_path, no_audio=True)
+                    except Exception as e_noaudio:
+                        print(f"[ArcadeCredits] Vídeo não pôde ser carregado ({e_noaudio}), usando modo de slides.")
+                        self.video = None
+
+                if self.video and self.video.original_size != (SCREEN_WIDTH, SCREEN_HEIGHT):
                     self.video.resize((SCREEN_WIDTH, SCREEN_HEIGHT))
                 try:
-                    self.video.set_volume(1.0)
+                    if self.video:
+                        self.video.set_volume(1.0)
                 except Exception:
                     pass
             except Exception as e:
-                print(f"[ArcadeCredits] Vídeo não pôde ser carregado ({e}), usando modo de slides.")
+                print(f"[ArcadeCredits] Falha geral no player de vídeo: {e}")
                 self.video = None
 
         if not self.video and os.environ.get("SDL_AUDIODRIVER") != "dummy":

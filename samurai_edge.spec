@@ -31,12 +31,13 @@ a = Analysis(
     pathex=['.'],
     binaries=[],
     datas=get_runtime_assets(),
-    hiddenimports=collect_submodules('src') + [
+    hiddenimports=collect_submodules('src') + collect_submodules('pyvidplayer2') + [
         'pygame',
         'pygame._sdl2',
         'pygame._sdl2.audio',
         'pygame._sdl2.video',
         'pygame._sdl2.controller',
+        'cv2',
     ],
     hookspath=[],
     hooksconfig={},
