@@ -13,6 +13,7 @@ from src.i18n import t
 from src.ui.character_select import draw_scroll_frame, draw_brush_divider
 from src.input.touch_editor import TouchControlsEditorScreen
 from src.input.device_info import is_mobile_device, get_saved_ui_mode, set_ui_mode
+from src.edition import is_demo
 
 def format_key_name(key_code: int) -> str:
     """Retorna uma representação amigável e legível para a tecla."""
