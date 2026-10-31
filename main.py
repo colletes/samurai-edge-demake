@@ -558,118 +558,117 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
         dy = aim_y - fighter.wy
         game_map.add_wind_impulse(fighter.wx, fighter.wy, strength=1.1, radius=3.2, duration=0.55, dir_x=dx, dir_y=dy)
     if isinstance(fighter, RedSamurai):
-        fighter.trigger_iai_attack(aim_x, aim_y)
-        play_sfx(SoundEvent.SLASH_KATANA)
+        if fighter.trigger_iai_attack(aim_x, aim_y):
+            play_sfx(SoundEvent.SLASH_KATANA)
     elif isinstance(fighter, BlueSamurai):
-        fighter.trigger_combo_attack(aim_x, aim_y)
-        play_sfx(SoundEvent.SLASH_KATANA)
+        if fighter.trigger_combo_attack(aim_x, aim_y):
+            play_sfx(SoundEvent.SLASH_KATANA)
     elif isinstance(fighter, YellowNinja):
         fighter.trigger_combo_attack(aim_x, aim_y)
     elif isinstance(fighter, AmericanNinja):
-        fighter.trigger_shuriken(aim_x, aim_y, projectiles)
-        play_sfx(SoundEvent.KUNAI_THROW)
+        if fighter.trigger_shuriken(aim_x, aim_y, projectiles):
+            play_sfx(SoundEvent.KUNAI_THROW)
     elif isinstance(fighter, GrayNinja):
-        fighter.trigger_throw_bomb(aim_x, aim_y, projectiles)
-        play_sfx(SoundEvent.BOMB_FUSE)
+        if fighter.trigger_throw_bomb(aim_x, aim_y, projectiles):
+            play_sfx(SoundEvent.BOMB_FUSE)
     elif isinstance(fighter, PurpleNinja):
-        fighter.trigger_kama_strike(aim_x, aim_y)
-        play_sfx(SoundEvent.SLASH_CHAIN)
+        if fighter.trigger_kama_strike(aim_x, aim_y):
+            play_sfx(SoundEvent.SLASH_CHAIN)
     elif isinstance(fighter, SaitouSamurai):
-        fighter.trigger_gatotsu_thrust(aim_x, aim_y)
-        play_sfx(SoundEvent.SLASH_KATANA)
+        if fighter.trigger_gatotsu_thrust(aim_x, aim_y):
+            play_sfx(SoundEvent.SLASH_KATANA)
     elif isinstance(fighter, Rifleman):
         if fighter.has_ammo and fighter.cocking_timer <= 0:
-            fighter.trigger_shoot(aim_x, aim_y, projectiles, particles)
-            play_sfx(SoundEvent.BOMB_FUSE)
+            if fighter.trigger_shoot(aim_x, aim_y, projectiles, particles):
+                play_sfx(SoundEvent.BOMB_FUSE)
         else:
-            fighter.trigger_rifle_butt(aim_x, aim_y, particles)
-            play_sfx(SoundEvent.SWING_BLUNT)
+            if fighter.trigger_rifle_butt(aim_x, aim_y, particles):
+                play_sfx(SoundEvent.SWING_BLUNT)
     elif isinstance(fighter, Kabuki):
-        fighter.trigger_fan_strike(aim_x, aim_y, particles)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        if fighter.trigger_fan_strike(aim_x, aim_y, particles):
+            play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, KyudoArcher):
-        fighter.trigger_bow_draw(aim_x, aim_y, projectiles)
-        play_sfx(SoundEvent.BOW_RELEASE)
+        if fighter.trigger_bow_draw(aim_x, aim_y, projectiles):
+            play_sfx(SoundEvent.BOW_RELEASE)
     elif isinstance(fighter, PirateSwordswoman):
-        fighter.trigger_cutlass_cleave(aim_x, aim_y)
-        play_sfx(SoundEvent.SLASH_HEAVY)
+        if fighter.trigger_cutlass_cleave(aim_x, aim_y):
+            play_sfx(SoundEvent.SLASH_HEAVY)
     elif isinstance(fighter, Musketeer):
-        fighter.trigger_fleche_thrust(aim_x, aim_y)
-        play_sfx(SoundEvent.SLASH_RAPIER)
+        if fighter.trigger_fleche_thrust(aim_x, aim_y):
+            play_sfx(SoundEvent.SLASH_RAPIER)
     elif isinstance(fighter, RenMonk):
-        fighter.trigger_punch_combo(aim_x, aim_y)
-        play_sfx(SoundEvent.SWING_BLUNT)
+        if fighter.trigger_punch_combo(aim_x, aim_y):
+            play_sfx(SoundEvent.SWING_BLUNT)
     elif isinstance(fighter, ChiyoKunoichi):
-        fighter.trigger_kodachi_strike(aim_x, aim_y)
-        play_sfx(SoundEvent.SLASH_KATANA)
+        if fighter.trigger_kodachi_strike(aim_x, aim_y):
+            play_sfx(SoundEvent.SLASH_KATANA)
     elif isinstance(fighter, BenkeiSamurai):
-        fighter.trigger_naginata_thrust(aim_x, aim_y)
-        play_sfx(SoundEvent.SLASH_HEAVY)
+        if fighter.trigger_naginata_thrust(aim_x, aim_y):
+            play_sfx(SoundEvent.SLASH_HEAVY)
     elif isinstance(fighter, OrinMinstrel):
-        fighter.trigger_kamaitachi_pluck(aim_x, aim_y, projectiles, particles)
-        play_sfx(SoundEvent.SWING_SHAMISEN)
+        if fighter.trigger_kamaitachi_pluck(aim_x, aim_y, projectiles, particles):
+            play_sfx(SoundEvent.SWING_SHAMISEN)
     elif isinstance(fighter, GoroFarmer):
-        fighter.trigger_kuwa_cleave(aim_x, aim_y)
-        play_sfx(SoundEvent.SLASH_HEAVY)
+        if fighter.trigger_kuwa_cleave(aim_x, aim_y):
+            play_sfx(SoundEvent.SLASH_HEAVY)
     elif isinstance(fighter, IchiBlade):
-        fighter.trigger_gyaku_iai(aim_x, aim_y)
-        play_sfx(SoundEvent.SLASH_KATANA)
+        if fighter.trigger_gyaku_iai(aim_x, aim_y):
+            play_sfx(SoundEvent.SLASH_KATANA)
     elif isinstance(fighter, ValeriusNecromancer):
-        fighter.trigger_scythe_reap(aim_x, aim_y)
-        play_sfx(SoundEvent.SLASH_HEAVY)
+        if fighter.trigger_scythe_reap(aim_x, aim_y):
+            play_sfx(SoundEvent.SLASH_HEAVY)
     elif isinstance(fighter, SeimeiOnmyoji):
-        fighter.trigger_ofuda_toss(aim_x, aim_y, projectiles, particles)
-        play_sfx(SoundEvent.SHURIKEN_THROW)
+        if fighter.trigger_ofuda_toss(aim_x, aim_y, projectiles, particles):
+            play_sfx(SoundEvent.SHURIKEN_THROW)
     elif isinstance(fighter, DaikiPilgrim):
-        fighter.trigger_bo_strike(aim_x, aim_y)
-        play_sfx(SoundEvent.SWING_BLUNT)
+        if fighter.trigger_bo_strike(aim_x, aim_y):
+            play_sfx(SoundEvent.SWING_BLUNT)
     elif isinstance(fighter, AoiHuntress):
-        fighter.trigger_spear_thrust(aim_x, aim_y)
-        play_sfx(SoundEvent.SLASH_KATANA)
+        if fighter.trigger_spear_thrust(aim_x, aim_y):
+            play_sfx(SoundEvent.SLASH_KATANA)
     elif isinstance(fighter, RaidenSumo):
-        fighter.trigger_tsuppari_rush(aim_x, aim_y, particles=particles)
-        play_sfx(SoundEvent.SWING_BLUNT)
+        if fighter.trigger_tsuppari_rush(aim_x, aim_y, particles=particles):
+            play_sfx(SoundEvent.SWING_BLUNT)
     elif isinstance(fighter, HendrikaAlchemist):
-        fighter.trigger_stiletto_thrust(aim_x, aim_y, particles=particles)
-        play_sfx(SoundEvent.SLASH_KATANA)
+        if fighter.trigger_stiletto_thrust(aim_x, aim_y, particles=particles):
+            play_sfx(SoundEvent.SLASH_KATANA)
 
 def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, poison_clouds: list, powder_traps: list, opponent=None, game_map=None, banners: list = None):
     """Executa a Ação Secundária (Técnica Especial / Defesa / Contra-ataque) do combatente."""
     if isinstance(fighter, RedSamurai):
         # Kenshi: Ryuu Tsui Sen (Salto vertical e corte descendente devastador)
-        fighter.trigger_ryuu_tsui_sen(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        if fighter.trigger_ryuu_tsui_sen(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent):
+            play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, BlueSamurai):
         fighter.set_facing(aim_x, aim_y)
-        fighter.trigger_parry()
-        play_sfx(SoundEvent.PARRY)
+        fighter.trigger_parry(particles=particles, banners=banners, opponent=opponent, projectiles=projectiles)
     elif isinstance(fighter, YellowNinja):
         fighter.trigger_kunai_snipe(aim_x, aim_y, projectiles)
     elif isinstance(fighter, AmericanNinja):
-        fighter.trigger_dog_attack(aim_x, aim_y, target_entity=opponent)
-        play_sfx(SoundEvent.DOG_BARK)
+        if fighter.trigger_dog_attack(aim_x, aim_y, target_entity=opponent):
+            play_sfx(SoundEvent.DOG_BARK)
     elif isinstance(fighter, GrayNinja):
         all_f = [fighter, opponent] if opponent else [fighter]
-        fighter.trigger_remote_mine(aim_x, aim_y, projectiles, fighters=all_f, particles=particles, banners=banners)
-        play_sfx(SoundEvent.BOMB_FUSE)
+        if fighter.trigger_remote_mine(aim_x, aim_y, projectiles, fighters=all_f, particles=particles, banners=banners):
+            play_sfx(SoundEvent.BOMB_FUSE)
     elif isinstance(fighter, PurpleNinja):
-        fighter.start_chain_shield(aim_x, aim_y)
-        play_sfx(SoundEvent.CHAIN_SPIN)
+        if fighter.start_chain_shield(aim_x, aim_y):
+            play_sfx(SoundEvent.CHAIN_SPIN)
     elif isinstance(fighter, SaitouSamurai):
-        fighter.trigger_zeroshiki(aim_x, aim_y)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        if fighter.trigger_zeroshiki(aim_x, aim_y):
+            play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, Rifleman):
         # Teppo: Black Powder Ground Trap (Trilha de pólvora inflamável no solo)
-        fighter.trigger_powder_trap(aim_x, aim_y, powder_traps, particles)
-        play_sfx(SoundEvent.BOMB_FUSE)
+        if fighter.trigger_powder_trap(aim_x, aim_y, powder_traps, particles):
+            play_sfx(SoundEvent.BOMB_FUSE)
     elif isinstance(fighter, Kabuki):
         # Okuni: Dokukiri (Sopro de névoa venenosa com leques de ferro)
-        fighter.trigger_dokukiri(aim_x, aim_y, poison_clouds)
-        play_sfx(SoundEvent.POISON_BREATH)
+        if fighter.trigger_dokukiri(aim_x, aim_y, poison_clouds):
+            play_sfx(SoundEvent.POISON_BREATH)
     elif isinstance(fighter, KyudoArcher):
         # Tomoe: Chuva / Salva de Flechas Sagradas em Arco (Mecanismo idêntico ao da Anne: Hold & Release)
-        fighter.start_sacred_volley(aim_x, aim_y)
-        play_sfx(SoundEvent.BOW_RELEASE)
+        if fighter.start_sacred_volley(aim_x, aim_y):
+            play_sfx(SoundEvent.BOW_RELEASE)
     elif isinstance(fighter, PirateSwordswoman):
         # Anne Bonny: Naval Artillery Strike (Hold & release orbital cannonball)
         fighter.start_cannon_strike(aim_x, aim_y)
@@ -682,79 +681,81 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
             play_sfx(SoundEvent.DODGE_WHOOSH)
     elif isinstance(fighter, RenMonk):
         # Ren: Grito Kiai de 360° que repele projéteis e atordoa
-        fighter.trigger_kiai_shout(particles=particles, banners=banners, opponent=opponent)
-        play_sfx(SoundEvent.DODGE_WHOOSH)
+        if fighter.trigger_kiai_shout(particles=particles, banners=banners, opponent=opponent):
+            play_sfx(SoundEvent.DODGE_WHOOSH)
     elif isinstance(fighter, ChiyoKunoichi):
         # Chiyo: Dança Mai giratória com duas Nodachis em vórtice circular
-        fighter.trigger_nodachi_mai(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        if fighter.trigger_nodachi_mai(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent):
+            play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, BenkeiSamurai):
         # Benkei: Arremesso da Naginata
-        fighter.trigger_naginata_throw(aim_x, aim_y, projectiles, particles=particles)
-        play_sfx(SoundEvent.SWORD_SLASH)
+        if fighter.trigger_naginata_throw(aim_x, aim_y, projectiles, particles=particles):
+            play_sfx(SoundEvent.SWORD_SLASH)
     elif isinstance(fighter, OrinMinstrel):
         # O-Rin: Ressonância Acústica 360°
-        fighter.trigger_resonance_shockwave(aim_x, aim_y, projectiles, particles=particles, banners=banners)
-        play_sfx(SoundEvent.SWORD_CLASH)
+        if fighter.trigger_resonance_shockwave(aim_x, aim_y, projectiles, particles=particles, banners=banners):
+            play_sfx(SoundEvent.SWORD_CLASH)
     elif isinstance(fighter, GoroFarmer):
         # Goro: Pisotão Sísmico
-        fighter.trigger_earth_stomp(aim_x, aim_y, shockwaves=projectiles, particles=particles, banners=banners)
-        play_sfx(SoundEvent.OBSTACLE_HIT)
+        if fighter.trigger_earth_stomp(aim_x, aim_y, shockwaves=projectiles, particles=particles, banners=banners):
+            play_sfx(SoundEvent.OBSTACLE_HIT)
     elif isinstance(fighter, IchiBlade):
         # Ichi: Postura de Escuta
-        fighter.trigger_listen_stance(aim_x, aim_y, banners=banners, particles=particles)
-        play_sfx(SoundEvent.DODGE_WHOOSH)
+        if fighter.trigger_listen_stance(aim_x, aim_y, banners=banners, particles=particles):
+            play_sfx(SoundEvent.DODGE_WHOOSH)
     elif isinstance(fighter, ValeriusNecromancer):
         # Valerius: Invocação de Esqueletos
-        fighter.trigger_summon_undead(aim_x, aim_y, particles=particles, opponent=opponent, banners=banners)
-        play_sfx(SoundEvent.DODGE_WHOOSH)
+        if fighter.trigger_summon_undead(aim_x, aim_y, particles=particles, opponent=opponent, banners=banners):
+            play_sfx(SoundEvent.DODGE_WHOOSH)
     elif isinstance(fighter, SeimeiOnmyoji):
         # Seimei: Selo Sagrado de Proteção e Fogo
-        fighter.trigger_sacred_ward(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners, game_map=game_map)
-        play_sfx(SoundEvent.PARRY)
+        if fighter.trigger_sacred_ward(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners, game_map=game_map):
+            play_sfx(SoundEvent.PARRY)
     elif isinstance(fighter, DaikiPilgrim):
         # Daiki: Salto com Vara (Pole Vault) e Queda Meteórica
-        fighter.trigger_pole_vault(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent, game_map=game_map)
-        play_sfx(SoundEvent.DASH_ROLL)
+        if fighter.trigger_pole_vault(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent, game_map=game_map):
+            play_sfx(SoundEvent.DASH_ROLL)
     elif isinstance(fighter, AoiHuntress):
         # Aoi: Armadilha de Urso de Ferro + Recuo Tático
-        fighter.trigger_bear_trap(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners, game_map=game_map)
-        play_sfx(SoundEvent.PARRY)
+        if fighter.trigger_bear_trap(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners, game_map=game_map):
+            play_sfx(SoundEvent.PARRY)
     elif isinstance(fighter, RaidenSumo):
         # Raiden: Tachiai Tackle semiteleguiado
-        fighter.trigger_tachiai_tackle(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent, game_map=game_map)
-        play_sfx(SoundEvent.DASH_ROLL)
+        if fighter.trigger_tachiai_tackle(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent, game_map=game_map):
+            play_sfx(SoundEvent.DASH_ROLL)
     elif isinstance(fighter, HendrikaAlchemist):
         # Hendrika: Arremesso de Frasco Químico em arco 3D
-        fighter.trigger_flask_throw(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners)
-        play_sfx(SoundEvent.OBSTACLE_HIT)
+        if fighter.trigger_flask_throw(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners):
+            play_sfx(SoundEvent.OBSTACLE_HIT)
 
 def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None, opponent=None, banners=None):
     """Executa a Terceira Ação (Roll / Dash dedicado) com invulnerabilidade temporária (i-frames)."""
-    play_sfx(SoundEvent.DASH_ROLL)
+    success = False
     if isinstance(fighter, RedSamurai):
-        fighter.trigger_dash(dwx, dwy)
+        success = fighter.trigger_dash(dwx, dwy)
     elif isinstance(fighter, Kabuki):
-        fighter.trigger_kabuki_roll(dwx, dwy, particles=particles, decoys=decoys)
+        success = fighter.trigger_kabuki_roll(dwx, dwy, particles=particles, decoys=decoys)
     elif isinstance(fighter, Rifleman):
-        fighter.trigger_tumble_roll(dwx, dwy, particles)
+        success = fighter.trigger_tumble_roll(dwx, dwy, particles)
     elif isinstance(fighter, PirateSwordswoman):
-        fighter.trigger_roll(dwx, dwy, particles)
+        success = fighter.trigger_roll(dwx, dwy, particles)
     elif isinstance(fighter, KyudoArcher):
         # Tomoe: Flecha de corda para movimentação rápida
-        fighter.start_rope_arrow_charge(aim_x, aim_y, game_map)
+        success = fighter.start_rope_arrow_charge(aim_x, aim_y, game_map)
     elif isinstance(fighter, ValeriusNecromancer):
-        fighter.trigger_mist_dash(dwx, dwy, particles=particles)
+        success = fighter.trigger_mist_dash(dwx, dwy, particles=particles)
     elif isinstance(fighter, SeimeiOnmyoji):
-        fighter.trigger_shikigami_glide(dwx, dwy, particles=particles)
+        success = fighter.trigger_shikigami_glide(dwx, dwy, particles=particles)
     elif isinstance(fighter, AoiHuntress):
-        fighter.trigger_snow_slide(dwx, dwy, particles=particles)
+        success = fighter.trigger_snow_slide(dwx, dwy, particles=particles)
     elif isinstance(fighter, YellowNinja):
-        fighter.trigger_jump(dwx, dwy)
+        success = fighter.trigger_jump(dwx, dwy)
     else:
         # Demais personagens (BlueSamurai, YellowNinja, AmericanNinja, GrayNinja, PurpleNinja, SaitouSamurai)
         if hasattr(fighter, "trigger_roll"):
-            fighter.trigger_roll(dwx, dwy, particles)
+            success = fighter.trigger_roll(dwx, dwy, particles)
+    if success:
+        play_sfx(SoundEvent.DASH_ROLL)
 
 def execute_fighter_dash(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, opponent=None, game_map=None, poison_clouds=None, powder_traps=None):
     """Compatibilidade legada: direciona para a terceira ação de roll/dash dedicado."""

@@ -239,6 +239,11 @@ class BlueSamurai(Samurai):
         self.state_timer = self.parry_duration
         self.parry_reflect_active_timer = 0.28
         self.current_pose = "cross_guard"
+        try:
+            from src.audio import play_sfx, SoundEvent
+            play_sfx(SoundEvent.PARRY)
+        except Exception:
+            pass
         return True
 
     def trigger_cross_shockwave(self, target_wx: float = None, target_wy: float = None, projectiles=None, particles=None, banners=None):
