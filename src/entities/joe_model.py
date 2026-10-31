@@ -116,26 +116,37 @@ def _hands(c):
     bx, by, tz, hz = c.base_x, c.base_y, c.torso_z, c.head_z
     fx, fy, px, py = c.fx, c.fy, c.px, c.py
 
-    # 1. Ajuste de luvas táticas (Intro - Fase 1)
-    if pose == "adjust_gloves":
-        t = _smooth(p)
-        left = (bx + fx * 0.15 - px * 0.05, by + fy * 0.15 - py * 0.05, tz + 0.14)
-        # Mão direita puxa o punho da luva esquerda
-        pull = math.sin(t * math.pi * 3.0) * 0.02
-        right = (left[0] + fx * 0.02 + px * (0.02 + pull), left[1] + fy * 0.02 + py * (0.02 + pull), left[2] - 0.02)
-        return left, right
+    # 1. Coreografia Contínua de Intro com Interpolação LERP (Sem poses estáticas)
+    if pose in ("adjust_gloves", "dog_whistle", "tactical_guard") or getattr(c, "state", "") == "INTRO":
+        intro_p = getattr(c, "atk_progress", 0.0) or extra.get("seg_u", p) or p
+        # Fase 1: Ajuste de luvas táticas com tração e micro-movimento
+        if intro_p < 0.38:
+            u = _smooth(intro_p / 0.38)
+            pull = math.sin(u * math.pi * 3.0) * 0.025
+            left = (bx + fx * (0.12 + u * 0.04) - px * 0.06, by + fy * (0.12 + u * 0.04) - py * 0.06, tz + 0.10 + u * 0.04)
+            right = (left[0] + fx * 0.02 + px * (0.02 + pull), left[1] + fy * 0.02 + py * (0.02 + pull), left[2] - 0.02)
+            return left, right
 
-    # 2. Assobio para Yamato (Intro - Fase 2)
-    if pose == "dog_whistle":
-        # Mão direita leva os dedos aos lábios sob a balaclava
-        right = (bx + fx * 0.08, by + fy * 0.08, hz + 0.04)
-        # Mão esquerda aponta para frente/chão chamando o Doberman
-        left = (bx + fx * 0.22 + px * 0.14, by + fy * 0.22 + py * 0.14, tz + 0.04)
-        return left, right
+        # Fase 2: Transição fluida da luva para o assobio tático aos lábios
+        elif intro_p < 0.70:
+            u = _smooth((intro_p - 0.38) / 0.32)
+            # Posições de partida (fim do ajuste de luva)
+            start_l = (bx + fx * 0.16 - px * 0.06, by + fy * 0.16 - py * 0.06, tz + 0.14)
+            start_r = (start_l[0] + fx * 0.02 + px * 0.02, start_l[1] + fy * 0.02 + py * 0.02, start_l[2] - 0.02)
+            # Posições-alvo do assobio (dedos aos lábios e braço esquerdo chamando o cão)
+            target_r = (bx + fx * 0.09, by + fy * 0.09, hz + 0.04)
+            target_l = (bx + fx * 0.24 + px * 0.14, by + fy * 0.24 + py * 0.14, tz + 0.04)
+            return mk.lerp(start_l, target_l, u), mk.lerp(start_r, target_r, u)
 
-    # 3. Guarda tática em alerta (Intro - Fase 3)
-    if pose == "tactical_guard":
-        return idle_arms(c)
+        # Fase 3: Transição contínua do assobio para a postura de guarda tática
+        else:
+            u = _smooth((intro_p - 0.70) / 0.30)
+            whistle_r = (bx + fx * 0.09, by + fy * 0.09, hz + 0.04)
+            whistle_l = (bx + fx * 0.24 + px * 0.14, by + fy * 0.24 + py * 0.14, tz + 0.04)
+            idle_l, idle_r = idle_arms(c)
+            guard_l = (idle_l[0] + fx * 0.06, idle_l[1] + fy * 0.06, idle_l[2] + 0.04)
+            guard_r = (idle_r[0] + fx * 0.08, idle_r[1] + fy * 0.08, idle_r[2] + 0.02)
+            return mk.lerp(whistle_l, guard_l, u), mk.lerp(whistle_r, guard_r, u)
 
     # 4. Tocar Banjo com Chapéu de Cowboy (Vitória)
     if pose in ("cowboy_banjo", "cowboy_victory"):
@@ -146,17 +157,26 @@ def _hands(c):
         right = (bx + fx * 0.17 + px * 0.03 + fx * strum, by + fy * 0.17 + py * 0.03 + fy * strum, tz + 0.08)
         return left, right
 
-    # 5. Flic-flac acrobático (Esquiva / Roll)
+    # 5. Flic-flac acrobático para frente (Esquiva / Roll 360°)
     if pose == "flic_flac" or getattr(c, "state", "") == "ROLL":
         prog = extra.get("p", p)
-        # No ápice do salto (mãos no chão)
-        if 0.35 <= prog <= 0.65:
-            fl_l = (bx - fx * 0.12 + px * 0.15, by - fy * 0.12 + py * 0.15, max(0.04, c.base_z + 0.06))
-            fl_r = (bx - fx * 0.12 - px * 0.15, by - fy * 0.12 - py * 0.15, max(0.04, c.base_z + 0.06))
+        # Transição cinemática de mãos tocando o solo e impulsionando o corpo
+        if prog < 0.30:
+            u = _smooth(prog / 0.30)
+            # Braços descem para frente buscando o solo
+            fl_l = (bx + fx * (0.08 + u * 0.14) + px * 0.14, by + fy * (0.08 + u * 0.14) + py * 0.14, tz + 0.18 - u * 0.16)
+            fl_r = (bx + fx * (0.08 + u * 0.14) - px * 0.14, by + fy * (0.08 + u * 0.14) - py * 0.14, tz + 0.18 - u * 0.16)
+            return fl_l, fl_r
+        elif prog < 0.70:
+            # Ponto de apoio no chão (mãos impulsionam o solo)
+            fl_l = (bx + fx * 0.16 + px * 0.15, by + fy * 0.16 + py * 0.15, max(0.04, c.base_z + 0.05))
+            fl_r = (bx + fx * 0.16 - px * 0.15, by + fy * 0.16 - py * 0.15, max(0.04, c.base_z + 0.05))
             return fl_l, fl_r
         else:
-            fl_l = (bx + fx * 0.10 + px * 0.18, by + fy * 0.10 + py * 0.18, tz + 0.25)
-            fl_r = (bx + fx * 0.10 - px * 0.18, by + fy * 0.10 - py * 0.18, tz + 0.25)
+            u = _smooth((prog - 0.70) / 0.30)
+            # Recolhimento para a aterrissagem em pé
+            fl_l = (bx + fx * (0.16 - u * 0.08) + px * 0.16, by + fy * (0.16 - u * 0.08) + py * 0.16, max(0.04, c.base_z + 0.05) + u * 0.22)
+            fl_r = (bx + fx * (0.16 - u * 0.08) - px * 0.16, by + fy * (0.16 - u * 0.08) - py * 0.16, max(0.04, c.base_z + 0.05) + u * 0.22)
             return fl_l, fl_r
 
     # 6. Arremesso de Shuriken Triplo (Finisher A)

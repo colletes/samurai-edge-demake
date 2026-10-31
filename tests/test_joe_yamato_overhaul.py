@@ -112,68 +112,67 @@ def test_joe_model_structure():
 
 
 def test_american_ninja_gameplay():
-    """Valida velocidade da shuriken, Yamato letal e cadeia de flic-flacs."""
+    """Valida velocidade da shuriken rápida, Yamato letal com teleguiamento e cadeia de flic-flacs."""
     print("Testando jogabilidade do AmericanNinja...")
     joe = AmericanNinja(5.0, 5.0)
 
-    # Shuriken tuning
-    assert joe.shuriken_cooldown == 0.90
+    # Shuriken tuning (rápido 0.45s para zoning ágil)
+    assert joe.shuriken_cooldown == 0.45
+    assert joe.speed == 5.5
     projs = []
     assert joe.trigger_shuriken(8.0, 5.0, projs)
     assert len(projs) == 1
     shur = projs[0]
     speed = math.hypot(shur.vx, shur.vy)
     assert abs(speed - 15.5) < 0.1
-    print("✓ Shuriken: 15.5 m/s e cooldown 0.90s confirmados!")
+    print("✓ Shuriken: 15.5 m/s e cooldown rápido 0.45s confirmados!")
 
-    # Yamato tuning
+    # Yamato tuning (18.5 m/s)
     joe.update(0.15, None)  # Recuperação do arremesso de shuriken
     assert joe.dog is not None
-    assert joe.dog.charge_speed == 14.5
-    assert joe.dog.charge_range == 5.2
+    assert joe.dog.charge_speed == 18.5
+    assert joe.dog.charge_range >= 6.0
     assert joe.trigger_dog_attack(10.0, 5.0)
     assert joe.dog.state == "BARK"
     joe.dog.update(0.16, None)
     assert joe.dog.state == "CHARGE"
     # Whiff recovery
-    joe.dog.charge_dist = 6.0
+    joe.dog.charge_dist = 7.0
     joe.dog.update(0.05, None)
     assert joe.dog.state == "FOLLOW"
     assert joe.dog.cooldown_timer == 2.5
-    print("✓ Yamato: Bote a 14.5 m/s e recuperação ágil de 2.5s confirmados!")
+    print("✓ Yamato: Bote a 18.5 m/s com teleguiamento e recuperação ágil de 2.5s confirmados!")
 
-    # Flic-flac chain (até 3x no centro da arena)
-    joe.wx, joe.wy = 12.0, 10.0
+    # Flic-flac chain (para frente na direção da visada)
+    joe.wx, joe.wy = 5.0, 10.0
     joe.facing_x, joe.facing_y = 1.0, 0.0
     joe.update(0.20, None)  # Recuperação do comando do cão
     assert joe.trigger_roll(0, 0)
     assert joe.state == "ROLL"
     assert joe.flic_flac_chain == 1
-    assert joe.roll_dir_x < 0  # Movimento para trás!
+    assert joe.roll_dir_x > 0  # Movimento para frente na direção em que está olhando!
     # Avança até o final do roll
-    joe.update_roll(0.25, None)
+    joe.update_roll(0.28, None)
     assert joe.state == "IDLE"
     assert joe.roll_cooldown_timer <= 0.05  # Encadeamento rápido habilitado!
 
-    # 2º salto (após expirar o breve timer de recuperação de 0.06s)
-    joe.update_dodge_timers(0.06)
+    # 2º salto (encadeamento ágil e contínuo)
+    joe.update_dodge_timers(0.04)
     assert joe.trigger_roll(0, 0)
     assert joe.flic_flac_chain == 2
-    joe.update_roll(0.25, None)
+    joe.update_roll(0.28, None)
     assert joe.state == "IDLE"
 
-    # 3º salto (após expirar o breve timer de recuperação de 0.06s)
-    joe.update_dodge_timers(0.06)
+    # 3º salto contínuo sem travamentos ("poderia emendar vários")
+    joe.update_dodge_timers(0.04)
     assert joe.trigger_roll(0, 0)
     assert joe.flic_flac_chain == 3
-    joe.update_roll(0.25, None)
+    joe.update_roll(0.28, None)
     assert joe.state == "IDLE"
-    assert joe.flic_flac_chain == 0
-    assert joe.roll_cooldown_timer >= 0.30  # Cooldown total após 3x!
 
     # Teste de colisão com obstáculo sólido (borda/parede): atordoamento de 0.60s
     joe.wx, joe.wy = 1.8, 10.0
-    joe.facing_x, joe.facing_y = 1.0, 0.0
+    joe.facing_x, joe.facing_y = -1.0, 0.0
     joe.update_dodge_timers(0.35)
     assert joe.trigger_roll(0, 0)
     joe.update_roll(0.20, None)

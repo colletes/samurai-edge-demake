@@ -32,16 +32,17 @@ class DobermanDog:
         self.cooldown_timer = 0.0
         self.knockout_duration = 2.0
 
-        # Atributos de corrida (Velocidade calibrada para 14.5)
-        self.follow_speed = 4.8
-        self.charge_speed = 14.5
-        self.charge_range = 5.2
+        # Atributos de corrida (Velocidade aumentada para 18.5 m/s com teleguiamento ágil)
+        self.follow_speed = 5.2
+        self.charge_speed = 18.5
+        self.charge_range = 6.2
         self.charge_dist = 0.0
+        self.target = None
 
         # Hitbox e Colisão
         self.radius = 0.35
         self.hitbox_active = False
-        self.hitbox_radius = 0.85
+        self.hitbox_radius = 0.90
         self.hitbox_center = (self.wx, self.wy)
 
         self.run_cycle = 0.0
@@ -50,11 +51,12 @@ class DobermanDog:
         """Retorna True se o cão está apto a receber o comando de ataque."""
         return self.state == STATE_DOG_FOLLOW and self.cooldown_timer <= 0
 
-    def charge(self, target_wx: float, target_wy: float):
-        """Inicia o aviso sonoro/latido antes do dash letal."""
+    def charge(self, target_wx: float, target_wy: float, target_entity=None):
+        """Inicia o aviso sonoro/latido antes do dash letal teleguiado."""
         if not self.can_attack():
             return
 
+        self.target = target_entity
         dx = target_wx - self.wx
         dy = target_wy - self.wy
         dist = math.hypot(dx, dy)
@@ -62,9 +64,9 @@ class DobermanDog:
             self.facing_x = dx / dist
             self.facing_y = dy / dist
 
-        # Windup de latido (0.15s - Entregável 4.4): alerta sonoro e visual mais ágil
+        # Windup de latido rápido (0.12s)
         self.state = STATE_DOG_BARK
-        self.state_timer = 0.15
+        self.state_timer = 0.12
         self.hitbox_active = False
 
     def knock_out(self, duration: float = 2.0):
@@ -73,6 +75,7 @@ class DobermanDog:
         self.state_timer = duration
         self.knockout_duration = duration
         self.hitbox_active = False
+        self.target = None
 
     def update(self, dt: float, game_map):
         """Atualiza a movimentação, corrida ou recuperação do Doberman."""
@@ -83,6 +86,7 @@ class DobermanDog:
 
         if self.state == STATE_DOG_FOLLOW:
             self.hitbox_active = False
+            self.target = None
             # Seguir suavemente o dono (a ~0.8 tiles de distância)
             dx = self.owner.wx - self.wx
             dy = self.owner.wy - self.wy
@@ -106,6 +110,22 @@ class DobermanDog:
                 self.hitbox_active = True
 
         elif self.state == STATE_DOG_CHARGE:
+            # Leve teleguiamento (curvatura predatória em direção ao alvo vivo)
+            if self.target and getattr(self.target, "is_alive", True):
+                tdx = self.target.wx - self.wx
+                tdy = self.target.wy - self.wy
+                tdist = math.hypot(tdx, tdy)
+                if tdist > 0.1:
+                    desired_x = tdx / tdist
+                    desired_y = tdy / tdist
+                    steer = min(1.0, 4.2 * dt)
+                    self.facing_x += (desired_x - self.facing_x) * steer
+                    self.facing_y += (desired_y - self.facing_y) * steer
+                    flen = math.hypot(self.facing_x, self.facing_y)
+                    if flen > 0.001:
+                        self.facing_x /= flen
+                        self.facing_y /= flen
+
             # Dash letal
             step = self.charge_speed * dt
             self.wx += self.facing_x * step

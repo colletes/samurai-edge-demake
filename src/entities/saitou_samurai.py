@@ -32,7 +32,7 @@ class SaitouSamurai(Samurai):
         # -------------------------------------------------------------
         self.initial_charge_speed = 5.2  # Arranque ágil imediato do Gatotsu
         self.charge_speed = self.initial_charge_speed
-        self.max_charge_speed = 13.5      # Calibrado: veloz e incisivo sem perder controle
+        self.max_charge_speed = 14.5      # Calibrado: veloz e incisivo com aceleração contínua
         self.charge_accel = 12.0          # Taxa de ganho progressivo de velocidade (tiles/s²)
 
         self.charge_dir_x = 1.0
@@ -118,11 +118,60 @@ class SaitouSamurai(Samurai):
         self.trail_points = [(self.wx, self.wy)]
         return True
 
-    def trigger_gatotsu(self, target_wx: float, target_wy: float):
-        self.trigger_gatotsu_thrust(target_wx, target_wy)
+    trigger_gatotsu = trigger_gatotsu_thrust
+    trigger_attack = trigger_gatotsu_thrust
 
-    def trigger_secondary(self, target_wx: float, target_wy: float):
-        self.trigger_zeroshiki(target_wx, target_wy)
+    def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
+        """
+        Terceira Ação: Haori Sidestep com 14 i-frames.
+        Permite cancelar a investida do Gatotsu nos primeiros 50% da duração!
+        """
+        can_cancel_gatotsu = (
+            self.state == STATE_GATOTSU_CHARGE
+            and self.gatotsu_timer <= (self.gatotsu_max_duration * 0.50)
+        )
+
+        if not can_cancel_gatotsu and not self.can_act():
+            return False
+
+        if can_cancel_gatotsu:
+            self.hitbox_active = False
+            self.trail_points.clear()
+
+        # Determina direção do sidestep
+        d_len = math.hypot(dir_x, dir_y)
+        if d_len > 0.1:
+            self.roll_dir_x = dir_x / d_len
+            self.roll_dir_y = dir_y / d_len
+        else:
+            # Deslocamento lateral (perpendicular à visada)
+            self.roll_dir_x = -self.facing_y
+            self.roll_dir_y = self.facing_x
+
+        self.state = STATE_ROLL
+        self.state_timer = self.roll_duration
+        self.is_invulnerable_dodge = True
+
+        try:
+            from src.audio.sound_manager import get_sound_manager
+            from src.audio.sound_events import SoundEvent
+            get_sound_manager().play(SoundEvent.DODGE_WHOOSH, volume_scale=0.9)
+        except Exception:
+            pass
+        return True
+
+    def on_parried(self, opponent, game_map=None, banners=None, particles=None):
+        """Reação a Parry: Recuo elástico com derrapagem de calçados mantendo postura alerta."""
+        self.state = STATE_BRAKING
+        self.hitbox_active = False
+        self.brake_speed = 6.0
+        self.charge_dir_x = -self.facing_x
+        self.charge_dir_y = -self.facing_y
+        self.state_timer = 0.22
+        self.trail_points.clear()
+        if particles is not None:
+            for _ in range(6):
+                particles.append(SparkParticle(self.wx, self.wy, 0.4))
 
     def apply_gatotsu_steering(self, dwx: float, dwy: float, dt: float):
         """
@@ -387,6 +436,18 @@ class SaitouSamurai(Samurai):
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
+        extra_props = {}
+        if self.state == STATE_ROLL:
+            prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration))))
+            extra_props = {"pose": "haori_sidestep", "p": prog}
+        elif self.state == STATE_GATOTSU_CHARGE:
+            prog = max(0.0, min(1.0, self.gatotsu_timer / max(0.001, self.gatotsu_max_duration)))
+            extra_props = {"pose": "gatotsu_lunge", "p": prog}
+        elif self.state == STATE_ZEROSHIKI:
+            total_z = self.zeroshiki_windup + self.zeroshiki_active + self.zeroshiki_recovery
+            prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, total_z))))
+            extra_props = {"pose": "zeroshiki_blast", "p": prog}
+
         render_voxel_humanoid(
             surface, camera,
             self.wx, self.wy, self.wz,
@@ -395,5 +456,6 @@ class SaitouSamurai(Samurai):
             char_type="saitou",
             walk_timer=self.walk_cycle,
             alpha=self.alpha,
-            is_moving=self.is_moving
+            is_moving=self.is_moving,
+            extra_props=extra_props
         )

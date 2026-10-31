@@ -536,10 +536,11 @@ PORTRAIT_FACE_STYLES = {
         "eye_z": 0.080, "brow_z": 0.104, "spacing": 0.036,
     },
     "saitou": {
-        "iris": (215, 168, 42), "iris_core": (245, 205, 95), "iris_limbal": (75, 55, 18),
-        "brow": (24, 28, 38), "lip": (182, 138, 124),
-        "brow_tilt": 0.30, "delicate_nose": False,
-        "eye_z": 0.080, "brow_z": 0.104, "spacing": 0.036, "mouth_w": 0.026,
+        "iris": (54, 76, 110), "iris_core": (115, 155, 210), "iris_limbal": (24, 34, 48),
+        "brow": (20, 24, 34), "lip": (178, 128, 115), "lip_lower": (196, 142, 128), "lip_shadow": (135, 90, 80),
+        "brow_tilt": 0.32, "delicate_nose": False, "hd_anime_eyes": True,
+        "eye_z": 0.080, "brow_z": 0.102, "spacing": 0.036, "mouth_w": 0.025,
+        "hairline_mid": 0.64, "hairline_lat": 0.46,
     },
     "okuni": {
         "iris": (185, 36, 52), "iris_core": (245, 120, 140), "iris_limbal": (85, 16, 24),

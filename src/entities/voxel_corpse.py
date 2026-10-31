@@ -670,22 +670,28 @@ class VoxelCorpse:
                 self._add_blood_drop(spread=0.7)
 
         elif style == "HEART_IMPALE_LUNGE":
-            # Saitou Primário: Gatotsu avança e crava lâmina perfurando o tórax
-            self.pieces.append(P(x, y, 0.0, 0.45, 0.34, 0.76, self.col_torso,
-                                 vx=dx * 3.6, vy=dy * 3.6, vz=1.4,
+            # Saitou Primário: Gatotsu empala o tórax no coração, ergue a vítima e arremessa violentamente ao solo
+            self.pieces.append(P(x, y, 0.25, 0.45, 0.34, 0.76, self.col_torso,
+                                 vx=dx * 3.8, vy=dy * 3.8, vz=2.6,
                                  piece_type="impaled_body", region=lambda c: c.band(None, None),
-                                 rot_target=FALL_DEG, rot_speed=240.0))
-            for _ in range(28):
-                self._add_blood_drop(spread=0.8)
+                                 rot_target=FALL_DEG, rot_speed=260.0))
+            for _ in range(35):
+                self._add_blood_drop(spread=0.9)
 
         elif style == "TORSO_BLAST_THRUST":
-            # Saitou Secundário: Zeroshiki à queima-roupa projeta a vítima voando pelo ar
-            self.pieces.append(P(x, y, 0.0, 0.44, 0.34, 0.72, self.col_torso,
-                                 vx=dx * 5.4, vy=dy * 5.4, vz=2.8,
-                                 piece_type="fallen_body", region=lambda c: c.band(None, None),
-                                 rot_target=FALL_DEG, rot_speed=300.0))
-            for _ in range(30):
-                self._add_blood_drop(spread=0.95)
+            # Saitou Secundário: Zeroshiki à queima-roupa com corte horizontal em 2 partes;
+            # o tronco superior é arremessado voando para trás enquanto as pernas colapsam de joelhos
+            self.top_torso = P(x, y, WAIST_Z + 0.05, 0.42, 0.32, 0.52, self.col_torso,
+                               vx=dx * 5.2, vy=dy * 5.2, vz=2.4,
+                               piece_type="bisected_upper_torso", region=lambda c: c.band(None, WAIST_Z),
+                               rot_target=-FALL_DEG, rot_speed=280.0)
+            self.bottom_legs = P(x, y, 0.0, 0.38, 0.28, 0.46, self.col_pants,
+                                 vx=dx * 0.6, vy=dy * 0.6, vz=0.3,
+                                 piece_type="collapsed_lower_legs", region=lambda c: c.band(WAIST_Z, None),
+                                 rot_target=65.0, rot_speed=120.0, rot_delay=0.15)
+            self.pieces.extend([self.top_torso, self.bottom_legs])
+            for _ in range(45):
+                self._add_blood_drop(spread=1.1)
 
         elif style == "FOREHEAD_PIN":
             # Hanzo Ranged: Kunai fincada na testa entre os olhos; impacto tomba a vítima estatelada

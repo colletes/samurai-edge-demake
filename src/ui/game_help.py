@@ -245,46 +245,46 @@ FIGHTERS_GUIDE_DATA = [
                 "cão de combate Doberman. Sua doutrina se baseia no ataque em pinça e na distração estratégica."
             ),
             "habilidades": (
-                "• Shuriken [E]: Estrela de metal arremessada a 15.5 m/s (cooldown 0.90s); atordoa no impacto.\n"
-                "• Yamato Dash [R]: O leal Doberman Yamato dispara a 14.5 m/s com mordida letal de 1-Hit Kill.\n"
-                "• Flic-Flac [Espaço]: Salto acrobático para trás encadeável até 3x (atenção com choques em obstáculos sólidos)."
+                "• Shuriken [E]: Estrela de metal veloz a 15.5 m/s (cooldown ágil 0.45s); inflige micro-stun e quebra golpes.\n"
+                "• Yamato Dash [R]: O leal Doberman Yamato dispara a 18.5 m/s com teleguiamento predatório e mordida fatal de 1-Hit Kill.\n"
+                "• Flic-Flac [Espaço]: Salto acrobático 360° para frente, encadeável continuamente com extrema agilidade."
             ),
             "estrategia_ofensiva": (
-                "• A estratégia clássica de pinça: lance a Shuriken a 15.5 m/s para paralisar o alvo com stun.\n"
-                "• Com o oponente atordoado, pressione [R] para Yamato liquidar a luta com mordida fatal na jugular!\n"
-                "• Use o Flic-Flac triplo para recuar com acrobacia tática e manter a distância ideal de arremesso."
+                "• A estratégia de pinça tática: dispare a Shuriken a curta ou média distância para cancelar ataques rivais com micro-stun.\n"
+                "• Com o oponente atordoado, comande o bote predatório de Yamato [R] para finalizar a luta!\n"
+                "• Use o Flic-Flac contínuo na direção desejada para atravessar o combate e flanquear o inimigo."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Joe: Yamato avança em linha reta a 14.5 m/s e pode ser aparado com Parry (atordoando o cão por 2.0s). "
-                "Cuidado ao encurralar Joe: se ele errar o flic-flac contra rochas ou poços, ficará atordoado por 0.60s!"
+                "• Como vencer Joe: Yamato tem velocidade extrema (18.5 m/s) mas ainda pode ser aparado com Parry (atordoando o cão por 2.0s). "
+                "Cuidado ao pressionar Joe contra rochas e paredes: bater em obstáculos sólidos durante o flic-flac o atordoa por 0.60s!"
             )
         },
         "en": {
             "name": "JOE",
             "title": "American Ninja",
             "style": "Tactical Combat & Doberman",
-            "vel": "[4/5] Tactical & Quick",
-            "dano": "Metal Shuriken (Stun)",
+            "vel": "[5/5] Tactical & Agile",
+            "dano": "Metal Shuriken (Micro-Stun)",
             "especial": "Doberman Attack (1-Hit Kill)",
             "keys_p1": "[E] Shuriken (Attack)",
             "keys_p2": "[R] Dog Dash (Special)",
             "conceito": (
                 "Western tactical operative trained in secret ninjutsu arts, fighting alongside his trained "
-                "combat Doberman Yamato. Specializes in pincer maneuvers, acrobatic backflips, and tactical zoning."
+                "combat Doberman Yamato. Specializes in pincer maneuvers, forward acrobatic rolls, and rapid zoning."
             ),
             "habilidades": (
-                "• Shuriken [E]: Rapid 15.5 m/s throwing star (0.90s cooldown); inflicts hitstun on impact.\n"
-                "• Yamato Dash [R]: Loyal combat Doberman sprints at 14.5 m/s delivering a fatal 1-Hit Kill bite.\n"
-                "• Flic-Flac [Space]: Acrobatic back handspring chainable up to 3 times (careful with solid obstacles)."
+                "• Shuriken [E]: Rapid 15.5 m/s throwing star with 0.45s cooldown; cancels enemy startup attacks with micro-stun.\n"
+                "• Yamato Dash [R]: Loyal combat Doberman sprints at 18.5 m/s with predatory homing steering for a lethal 1-Hit Kill.\n"
+                "• Flic-Flac [Space]: Forward 360° somersault handspring chainable continuously with high agility."
             ),
             "estrategia_ofensiva": (
-                "• Classic pincer maneuver: throw your Shuriken at 15.5 m/s to freeze the rival in hitstun.\n"
-                "• While the enemy is stunned, immediately command Yamato [R] to deliver the lethal jugular bite!\n"
-                "• Use the 3x Flic-Flac chain to rapidly reposition and control zoning space."
+                "• Tactical pincer maneuver: throw rapid Shurikens to freeze and interrupt the rival with micro-stun.\n"
+                "• While the enemy flinches, command Yamato's [R] homing charge to close the distance and strike!\n"
+                "• Use chained Flic-Flacs in any direction to outmaneuver opponents."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Joe: Yamato charges in a straight line and can be parried, stunning the dog for 2.0s. "
-                "Cornering Joe near solid obstacles (rocks, wells) can cause his flic-flac to crash, stunning him for 0.60s!"
+                "• How to defeat Joe: Yamato is faster than ever (18.5 m/s) but can still be parried, stunning the dog for 2.0s. "
+                "Cornering Joe near solid obstacles (rocks, walls) can cause his flic-flac to crash, stunning him for 0.60s!"
             )
         }
     },
@@ -295,55 +295,57 @@ FIGHTERS_GUIDE_DATA = [
         "pt": {
             "name": "SAITOU",
             "title": "O Lobo de Mibu",
-            "style": "Shinsengumi (Gatotsu Shinsen)",
+            "style": "Shinsengumi (Gatotsu Ishiki)",
             "vel": "[5/5] Impulso Explosivo",
             "dano": "Estocada Letal Acelerada (1-Hit)",
-            "especial": "Zeroshiki (Gatotsu Queima-Roupa)",
-            "keys_p1": "[E] Gatotsu Shinsen (Ataque)",
+            "especial": "Zeroshiki (Gatotsu Queima-Roupa / Chip Damage)",
+            "keys_p1": "[E] Gatotsu Ishiki (Ataque)",
             "keys_p2": "[R] Zeroshiki (Especial)",
             "conceito": (
-                "Líder de divisão do Shinsengumi, frio, impiedoso e guiado pelo lema Aku Soku Zan (Corte o Mal Imediatamente). "
+                "Capitão da 3ª Divisão do Shinsengumi, frio, impiedoso e guiado pelo lema Aku Soku Zan (Corte o Mal Imediatamente). "
                 "Sua postura única com a mão esquerda gera a mais temida e penetrante estocada da era feudal: o Gatotsu."
             ),
             "habilidades": (
-                "• Gatotsu Shinsen [E]: Disparo em carga ultra-rápida. Pode ser guiado no volante direcional na corrida.\n"
-                "• Zeroshiki [R]: Estocada explosiva de queima-roupa sem corrida prévia, punindo aproximações."
+                "• Gatotsu Ishiki [E]: Carga frontal acelerada (5.2 -> 14.5 m/s) com alta prioridade frontal. Cancelável em Haori Sidestep nos primeiros 50%.\n"
+                "• Zeroshiki [R]: Explosão de queima-roupa com 1 de Dano Garantido (Chip Damage através do Parry inimigo).\n"
+                "• Haori Sidestep [Espaço]: Esquiva tática ágil com 14 frames de invencibilidade."
             ),
             "estrategia_ofensiva": (
-                "• O Gatotsu tem altíssima prioridade frontal. Ao ver o oponente iniciar um ataque, dispare a carga!\n"
-                "• Você pode curvar a trajetória do Gatotsu usando os direcionais enquanto corre para perseguir o alvo.\n"
-                "• Se o inimigo tentar colar em você no corpo a corpo, aperte [R] para o Zeroshiki instantâneo."
+                "• O Gatotsu Ishiki acelera até 14.5 m/s com prioridade frontal absoluta contra ataques convencionais.\n"
+                "• Se o oponente antecipar o golpe ou armar defesa, cancele a corrida em Haori Sidestep nos primeiros 50% para flanqueá-lo.\n"
+                "• Contra defensores passivos em Parry, aperte [R] no corpo a corpo: o Zeroshiki perfura o Parry causando 1 de dano garantido!"
             ),
             "estrategia_defensiva": (
                 "• Como vencer Saitou: O Gatotsu ricocheteia com faíscas se colidir com rochas, poço ou árvores! "
-                "Lute perto de obstáculos e desvie lateralmente na hora em que ele acelerar. A recuperação é longa."
+                "Lute perto de obstáculos e desvie lateralmente na hora em que ele acelerar. Cuidado com o Zeroshiki a queima-roupa."
             )
         },
         "en": {
             "name": "SAITOU",
             "title": "The Wolf of Mibu",
-            "style": "Shinsengumi (Gatotsu Shinsen)",
+            "style": "Shinsengumi (Gatotsu Ishiki)",
             "vel": "[5/5] Explosive Lunge",
             "dano": "Accelerated Lethal Thrust (1-Hit)",
-            "especial": "Zeroshiki (Point-Blank Thrust)",
-            "keys_p1": "[E] Gatotsu Shinsen (Attack)",
+            "especial": "Zeroshiki (Point-Blank Thrust / Chip Damage)",
+            "keys_p1": "[E] Gatotsu Ishiki (Attack)",
             "keys_p2": "[R] Zeroshiki (Special)",
             "conceito": (
-                "Feared Shinsengumi division captain, cold, merciless, living by Aku Soku Zan (Slay Evil Immediately). "
+                "Feared Shinsengumi 3rd Division Captain, cold, merciless, living by Aku Soku Zan (Slay Evil Immediately). "
                 "His left-handed stance yields the deadliest thrust in feudal history."
             ),
             "habilidades": (
-                "• Gatotsu Shinsen [E]: Devastating accelerated charge with absolute frontal priority; can be steered mid-sprint.\n"
-                "• Zeroshiki [R]: Explosive point-blank Gatotsu thrust with no windup, punishing close-range rushes."
+                "• Gatotsu Ishiki [E]: Devastating accelerated charge (5.2 -> 14.5 m/s) with frontal priority; cancelable into Haori Sidestep in first 50%.\n"
+                "• Zeroshiki [R]: Explosive point-blank thrust guaranteeing 1 Chip Damage even through the opponent's Parry.\n"
+                "• Haori Sidestep [Space]: Swift tactical evasion with 14 invulnerability frames."
             ),
             "estrategia_ofensiva": (
-                "• Gatotsu has overwhelming forward priority. When you spot an enemy windup, launch the charge!\n"
-                "• You can steer your charge using movement keys to curve toward a dodging opponent.\n"
-                "• If the enemy crowds you in melee, press [R] for an instant Zeroshiki point-blank kill."
+                "• Gatotsu accelerates up to 14.5 m/s with overwhelming forward priority against regular strikes.\n"
+                "• If the rival expects the thrust, cancel the charge into Haori Sidestep in the first 50% to flank them.\n"
+                "• Against parry turtles, strike with Zeroshiki [R] at point-blank range to pierce the parry for guaranteed 1 chip damage!"
             ),
             "estrategia_defensiva": (
-                "• How to defeat Saitou: Gatotsu violently ricochets off rocks, well, and trees with sparks! "
-                "Fight near obstacles and dodge sideways when he charges. His whiff recovery is lengthy."
+                "• How to defeat Saitou: Gatotsu bounces off solid terrain (rocks, well, trees) with heavy recoil! "
+                "Stay near obstacles and dodge sideways as he sprints. Never hold parry close to him: Zeroshiki pierces guard for 1 damage."
             )
         }
     },

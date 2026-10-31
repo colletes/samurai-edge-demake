@@ -116,8 +116,12 @@ INTRO = {
         _idle(0.40, 0.70, pose="dog_whistle"),
         _idle(0.70, 1.0, pose="tactical_guard"),
     ],
-    # Postura do Gatotsu: lâmina apontada à frente
-    "saitou": [_idle(0.0, 0.2), _seg(0.2, 0.75, "GATOTSU_CHARGE", 0.2, 0.7), _idle(0.75, 1.0)],
+    # Saitou (2.5): Traga do kiseru com baforada de fumaça -> destrava o koiguchi com estalo metálico -> postura mortal do Gatotsu
+    "saitou": [
+        _idle(0.0, 0.38, pose="kiseru_smoke"),
+        _idle(0.38, 0.70, pose="koiguchi_unlock"),
+        _idle(0.70, 1.0, pose="gatotsu_stance"),
+    ],
     # Coronhada do arcabuz
     "rifleman": [_idle(0.0, 0.2), _seg(0.2, 0.6, "ATTACK", 0.0, 1.0), _idle(0.6, 1.0)],
     # Dois giros da bola da corrente
@@ -224,7 +228,12 @@ VICTORY = {
     "american": [
         _idle(0.0, 1.0, pose="cowboy_banjo", cowboy_hat=True),
     ],
-    "saitou": [_idle(0.0, 0.1), _seg(0.1, 0.8, "GATOTSU_CHARGE", 0.2, 0.7), _idle(0.8, 1.0)],
+    # Saitou (2.5): Chiburi marcial com sacudida rápida de sangue -> embainhamento fluido (Noto) -> acendimento solene do kiseru
+    "saitou": [
+        _idle(0.0, 0.35, pose="chiburi_flick"),
+        _idle(0.35, 0.70, pose="noto_sheath"),
+        _idle(0.70, 1.0, pose="kiseru_light"),
+    ],
     "rifleman": [_idle(0.0, 0.15), _seg(0.15, 0.55, "ATTACK", 0.0, 1.0), _idle(0.55, 1.0)],
     "murasaki": [_idle(0.0, 0.1), _seg(0.1, 0.5, "ATTACK", 0.0, 1.0), _seg(0.5, 0.9, "ATTACK", 0.0, 1.0), _idle(0.9, 1.0)],
     # Some em fumaça e reaparece, depois arremessa a bomba
@@ -311,7 +320,7 @@ BEATS = {
         "musashi": [(0.26, "sfx:sword_slash"), (0.42, "sfx:parry"), (0.44, "fx:sparks")],
         "ninja": [(0.02, "fx:petals"), (0.36, "sfx:parry"), (0.38, "fx:sparks"), (0.68, "sfx:sword_slash")],
         "american": [(0.42, "sfx:dog_bark"), (0.72, "sfx:dodge_whoosh")],
-        "saitou": [(0.22, "sfx:sword_slash")],
+        "saitou": [(0.12, "fx:smoke"), (0.40, "sfx:parry"), (0.72, "sfx:sword_slash")],
         "rifleman": [(0.28, "sfx:obstacle_hit")],
         "murasaki": [(0.12, "sfx:chain_spin"), (0.47, "sfx:chain_spin")],
         "kasumi": [(0.02, "fx:smoke"), (0.02, "sfx:smoke_puff"), (0.52, "sfx:bomb_fuse")],
@@ -336,7 +345,7 @@ BEATS = {
         "musashi": [(0.14, "sfx:sword_slash"), (0.20, "fx:blood"), (0.50, "sfx:parry")],
         "ninja": [(0.15, "sfx:dodge_whoosh"), (0.46, "fx:smoke"), (0.48, "sfx:smoke_puff")],
         "american": [(0.10, "sfx:joe_banjo"), (0.50, "sfx:dog_bark")],
-        "saitou": [(0.12, "sfx:sword_slash")],
+        "saitou": [(0.10, "sfx:sword_slash"), (0.15, "fx:blood"), (0.65, "sfx:parry"), (0.80, "fx:smoke")],
         "rifleman": [(0.2, "sfx:obstacle_hit")],
         "murasaki": [(0.12, "sfx:chain_spin"), (0.52, "sfx:chain_spin")],
         "kasumi": [(0.02, "fx:smoke"), (0.3, "fx:smoke"), (0.57, "sfx:bomb_fuse")],

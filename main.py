@@ -646,7 +646,7 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
     elif isinstance(fighter, YellowNinja):
         fighter.trigger_kunai_snipe(aim_x, aim_y, projectiles)
     elif isinstance(fighter, AmericanNinja):
-        fighter.trigger_dog_attack(aim_x, aim_y)
+        fighter.trigger_dog_attack(aim_x, aim_y, target_entity=opponent)
         play_sfx(SoundEvent.DOG_BARK)
     elif isinstance(fighter, GrayNinja):
         all_f = [fighter, opponent] if opponent else [fighter]

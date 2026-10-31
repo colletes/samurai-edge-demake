@@ -620,10 +620,14 @@ class CombatSystem:
                                 proj.is_active = False
                         else:
                             is_target_moving = getattr(target, "is_moving", False) or target.state in ("WALK", "RUN", "ROLL", "DASH", "SHUKUCHI")
-                            target.stun(0.24)  # Atordoamento tático calibrado!
+                            # Micro-stun tático perceptível de 0.42s (interrompe ataques ativos)
+                            target.stun(0.42)
+                            camera.add_shake(5.5)
+                            for _ in range(10):
+                                particles.append(SparkParticle(target.wx, target.wy, 0.6))
+
                             if is_target_moving:
                                 hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=1)
-                                camera.add_shake(6.0)
                                 for _ in range(12):
                                     particles.append(BloodParticle(target.wx, target.wy, 0.5))
                                 if dead:
@@ -633,10 +637,8 @@ class CombatSystem:
                                         death_style = _get_death_style_for_attacker(proj.owner, weapon="shuriken")
                                         cinematic_director.trigger_fatal_strike(proj.owner, target, death_style, (proj.dir_x, proj.dir_y))
                             else:
-                                camera.add_shake(4.0)
-                                banners.append(FloatingBanner("STUNNED!", target.wx, target.wy, wz=1.7, color=(200, 220, 255)))
-                                for _ in range(8):
-                                    particles.append(SparkParticle(target.wx, target.wy, 0.6))
+                                if banners is not None:
+                                    banners.append(FloatingBanner("MICRO-STUN!", target.wx, target.wy, wz=1.7, color=(140, 220, 255)))
                             self._play_sound("obstacle_hit")
                             proj.is_active = False
 
@@ -1437,21 +1439,44 @@ class CombatSystem:
                 p1.hitbox_active = False
 
                 if p2.state == STATE_PARRY and p1.state != "POLE_VAULT":
-                    for _ in range(12):
-                        particles.append(SparkParticle(p2.wx, p2.wy, 0.7))
-                    parry_msg = "PARRY GATOTSU!" if p1.state == "GATOTSU_CHARGE" else "PARRY!"
-                    banners.append(FloatingBanner(parry_msg, p2.wx, p2.wy, wz=1.7, color=(100, 200, 255)))
-                    camera.add_shake(8.0)
-                    if hasattr(p2, "on_parry_successful"):
-                        p2.on_parry_successful(p1, particles=particles, banners=banners)
-                    if hasattr(p1, "on_parried"):
-                        p1.on_parried(p2, game_map=game_map, banners=banners, particles=particles)
+                    if p1.state == "ZEROSHIKI":
+                        # ZEROSHIKI GUARD PIERCE: Causa 1 de dano de estilhaço mesmo contra parry!
+                        for _ in range(16):
+                            particles.append(SparkParticle(p2.wx, p2.wy, 0.7, color=(255, 200, 100)))
+                        for _ in range(8):
+                            particles.append(BloodParticle(p2.wx, p2.wy, 0.5))
+                        if banners is not None:
+                            banners.append(FloatingBanner("ZEROSHIKI GUARD PIERCE! -1 HP", p2.wx, p2.wy, wz=1.75, color=(255, 120, 60)))
+                        camera.add_shake(10.0)
+                        self._play_sound("flesh_cleave")
+                        hit, dead = p2.take_hit((p1.facing_x, p1.facing_y), damage=1)
+                        if dead:
+                            winner = "P1_WINS"
+                            self.hitstop_timer = 0.14
+                            self._play_sound("fatal_strike")
+                            if cinematic_director:
+                                cinematic_director.trigger_fatal_strike(p1, p2, "TORSO_BLAST_THRUST", (p1.facing_x, p1.facing_y))
+                        else:
+                            p2.stun(0.35)
+                        if ctrl_mgr:
+                            ctrl_mgr.rumble_player(0, 0.6, 0.9, 220)
+                            ctrl_mgr.rumble_player(1, 0.8, 1.0, 250)
                     else:
-                        p1.stun(0.85)
-                    self._play_sound("parry")
-                    if ctrl_mgr:
-                        ctrl_mgr.rumble_player(0, 0.5, 0.8, 200)
-                        ctrl_mgr.rumble_player(1, 0.6, 0.8, 180)
+                        for _ in range(12):
+                            particles.append(SparkParticle(p2.wx, p2.wy, 0.7))
+                        parry_msg = "PARRY GATOTSU!" if p1.state == "GATOTSU_CHARGE" else "PARRY!"
+                        banners.append(FloatingBanner(parry_msg, p2.wx, p2.wy, wz=1.7, color=(100, 200, 255)))
+                        camera.add_shake(8.0)
+                        if hasattr(p2, "on_parry_successful"):
+                            p2.on_parry_successful(p1, particles=particles, banners=banners)
+                        if hasattr(p1, "on_parried"):
+                            p1.on_parried(p2, game_map=game_map, banners=banners, particles=particles)
+                        else:
+                            p1.stun(0.85)
+                        self._play_sound("parry")
+                        if ctrl_mgr:
+                            ctrl_mgr.rumble_player(0, 0.5, 0.8, 200)
+                            ctrl_mgr.rumble_player(1, 0.6, 0.8, 180)
                 elif p2.state == "CAPE_FLOURISH":
                     for _ in range(12):
                         particles.append(SparkParticle(p2.wx, p2.wy, 0.65, color=(100, 180, 255)))
@@ -1582,21 +1607,44 @@ class CombatSystem:
                 p2.hitbox_active = False
 
                 if p1.state == STATE_PARRY and p2.state != "POLE_VAULT":
-                    for _ in range(12):
-                        particles.append(SparkParticle(p1.wx, p1.wy, 0.7))
-                    parry_msg = "PARRY GATOTSU!" if p2.state == "GATOTSU_CHARGE" else "PARRY!"
-                    banners.append(FloatingBanner(parry_msg, p1.wx, p1.wy, wz=1.7, color=(100, 200, 255)))
-                    camera.add_shake(8.0)
-                    if hasattr(p1, "on_parry_successful"):
-                        p1.on_parry_successful(p2, particles=particles, banners=banners)
-                    if hasattr(p2, "on_parried"):
-                        p2.on_parried(p1, game_map=game_map, banners=banners, particles=particles)
+                    if p2.state == "ZEROSHIKI":
+                        # ZEROSHIKI GUARD PIERCE: Causa 1 de dano de estilhaço mesmo contra parry!
+                        for _ in range(16):
+                            particles.append(SparkParticle(p1.wx, p1.wy, 0.7, color=(255, 200, 100)))
+                        for _ in range(8):
+                            particles.append(BloodParticle(p1.wx, p1.wy, 0.5))
+                        if banners is not None:
+                            banners.append(FloatingBanner("ZEROSHIKI GUARD PIERCE! -1 HP", p1.wx, p1.wy, wz=1.75, color=(255, 120, 60)))
+                        camera.add_shake(10.0)
+                        self._play_sound("flesh_cleave")
+                        hit, dead = p1.take_hit((p2.facing_x, p2.facing_y), damage=1)
+                        if dead:
+                            winner = "P2_WINS"
+                            self.hitstop_timer = 0.14
+                            self._play_sound("fatal_strike")
+                            if cinematic_director:
+                                cinematic_director.trigger_fatal_strike(p2, p1, "TORSO_BLAST_THRUST", (p2.facing_x, p2.facing_y))
+                        else:
+                            p1.stun(0.35)
+                        if ctrl_mgr:
+                            ctrl_mgr.rumble_player(1, 0.6, 0.9, 220)
+                            ctrl_mgr.rumble_player(0, 0.8, 1.0, 250)
                     else:
-                        p2.stun(0.85)
-                    self._play_sound("parry")
-                    if ctrl_mgr:
-                        ctrl_mgr.rumble_player(1, 0.5, 0.8, 200)
-                        ctrl_mgr.rumble_player(0, 0.6, 0.8, 180)
+                        for _ in range(12):
+                            particles.append(SparkParticle(p1.wx, p1.wy, 0.7))
+                        parry_msg = "PARRY GATOTSU!" if p2.state == "GATOTSU_CHARGE" else "PARRY!"
+                        banners.append(FloatingBanner(parry_msg, p1.wx, p1.wy, wz=1.7, color=(100, 200, 255)))
+                        camera.add_shake(8.0)
+                        if hasattr(p1, "on_parry_successful"):
+                            p1.on_parry_successful(p2, particles=particles, banners=banners)
+                        if hasattr(p2, "on_parried"):
+                            p2.on_parried(p1, game_map=game_map, banners=banners, particles=particles)
+                        else:
+                            p2.stun(0.85)
+                        self._play_sound("parry")
+                        if ctrl_mgr:
+                            ctrl_mgr.rumble_player(1, 0.5, 0.8, 200)
+                            ctrl_mgr.rumble_player(0, 0.6, 0.8, 180)
                 elif p1.state == "CAPE_FLOURISH":
                     for _ in range(12):
                         particles.append(SparkParticle(p1.wx, p1.wy, 0.65, color=(100, 180, 255)))

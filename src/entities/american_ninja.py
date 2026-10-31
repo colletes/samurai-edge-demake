@@ -21,23 +21,23 @@ class AmericanNinja(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Joe")
         self.char_type = "joe"
-        self.speed = 4.8
+        self.speed = 5.5
 
         # O Cão Doberman companheiro (Yamato)
         self.dog = DobermanDog(self)
 
-        # Timings de Shuriken e Comando (Calibrado para 0.90s para zoning ágil)
-        self.shuriken_cooldown = 0.90
+        # Timings de Shuriken e Comando (Disparo rápido 0.45s com micro-stun)
+        self.shuriken_cooldown = 0.45
         self.shuriken_timer = 0.0
 
-        # Terceira Ação: Sequência de Flic-Flacs Acrobáticos para trás (Encadeável até 3x)
+        # Terceira Ação: Sequência de Flic-Flacs Acrobáticos para frente (Encadeamento ágil e contínuo)
         self.is_agile_dodge = True
-        self.roll_speed = 8.8
-        self.roll_duration = 0.22
-        self.roll_recovery_duration = 0.08
-        self.roll_cooldown_duration = 0.06
+        self.roll_speed = 9.8
+        self.roll_duration = 0.26
+        self.roll_recovery_duration = 0.03
+        self.roll_cooldown_duration = 0.02
         self.flic_flac_chain = 0
-        self.roll_dir_x = -1.0
+        self.roll_dir_x = 1.0
         self.roll_dir_y = 0.0
 
     def can_act(self) -> bool:
@@ -50,14 +50,14 @@ class AmericanNinja(Samurai):
         )
 
     def trigger_shuriken(self, target_wx: float, target_wy: float, projectiles: list):
-        """Arremessa uma shuriken rápida a 15.5 m/s (atordoa por 0.48s sem matar)."""
+        """Arremessa uma shuriken rápida a 16.5 m/s com alta cadência e micro-stun."""
         if not self.can_act() or self.shuriken_timer > 0:
             return False
 
         self.set_facing(target_wx, target_wy)
         self.shuriken_timer = self.shuriken_cooldown
         self.state = STATE_RECOVERY
-        self.state_timer = 0.12
+        self.state_timer = 0.08
 
         shuriken = ShurikenProjectile(
             wx=self.wx + self.facing_x * 0.4,
@@ -70,36 +70,47 @@ class AmericanNinja(Samurai):
         projectiles.append(shuriken)
         return True
 
-    def trigger_dog_attack(self, target_wx: float, target_wy: float):
-        """Ordena o Doberman a disparar em um bote letal (1-hit kill fatal)."""
+    def trigger_dog_attack(self, target_wx: float, target_wy: float, target_entity=None):
+        """Ordena o Doberman a disparar em um bote veloz com teleguiamento (1-hit kill fatal)."""
         if not self.can_act():
             return False
         if self.dog and self.dog.can_attack():
             self.set_facing(target_wx, target_wy)
             self.state = STATE_RECOVERY
-            self.state_timer = 0.15
-            self.dog.charge(target_wx, target_wy)
+            self.state_timer = 0.12
+            self.dog.charge(target_wx, target_wy, target_entity=target_entity)
             return True
         return False
 
     def trigger_roll(self, dir_x: float, dir_y: float, particles: list = None):
         """
-        Flic-Flac Acrobático para trás:
-        - Salto acrobático de mãos no chão recuando em linha oposta à visada.
-        - Encadeável até 3 vezes consecutivas.
+        Flic-Flac Acrobático na direção do movimento/visada:
+        - Salto acrobático 360° fluido para frente na direção em que o jogador olha.
+        - Encadeável sem travamentos para atravessar o combate com extrema agilidade.
         """
         if (
             not self.is_alive
-            or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK, STATE_RECOVERY)
-            or getattr(self, "wz", 0.0) > 0.40
-            or self.roll_recovery_timer > 0
-            or self.roll_cooldown_timer > 0
+            or self.state in (STATE_STUNNED, STATE_DEAD, STATE_ATTACK)
+            or getattr(self, "wz", 0.0) > 0.45
         ):
             return False
 
-        # Direção do salto é sempre para trás (away from facing)
-        self.roll_dir_x = -self.facing_x
-        self.roll_dir_y = -self.facing_y
+        # Se já estiver em ROLL, permite encadear se estiver nos últimos 35% do salto
+        if self.state == STATE_ROLL:
+            if self.state_timer > 0.09:
+                return False
+
+        # Direção do salto: se houver entrada direcional, segue a entrada; senão, segue o facing atual
+        d_len = math.hypot(dir_x, dir_y)
+        if d_len > 0.1:
+            self.roll_dir_x = dir_x / d_len
+            self.roll_dir_y = dir_y / d_len
+            self.facing_x = self.roll_dir_x
+            self.facing_y = self.roll_dir_y
+        else:
+            self.roll_dir_x = self.facing_x
+            self.roll_dir_y = self.facing_y
+
         self.state = STATE_ROLL
         self.state_timer = self.roll_duration
         self.is_invulnerable_dodge = True
@@ -123,7 +134,7 @@ class AmericanNinja(Samurai):
         prog = max(0.0, min(1.0, 1.0 - (self.state_timer / self.roll_duration)))
 
         # Arco parabólico de altura no salto
-        self.wz = math.sin(prog * math.pi) * 0.35
+        self.wz = math.sin(prog * math.pi) * 0.42
 
         step = self.roll_speed * dt
         dx = self.roll_dir_x * step
@@ -140,8 +151,8 @@ class AmericanNinja(Samurai):
             self.wz = 0.0
             self.is_invulnerable_dodge = False
             self.flic_flac_chain = 0
-            self.roll_recovery_timer = 0.40
-            self.roll_cooldown_timer = 0.50
+            self.roll_recovery_timer = 0.30
+            self.roll_cooldown_timer = 0.40
             try:
                 from src.audio.sound_manager import get_sound_manager
                 from src.audio.sound_events import SoundEvent
@@ -156,17 +167,10 @@ class AmericanNinja(Samurai):
             self.state = STATE_IDLE
             self.wz = 0.0
             self.is_invulnerable_dodge = False
-            if self.flic_flac_chain >= 3:
-                # Esgotou os 3 saltos da cadeia: descanso tático normal
-                self.flic_flac_chain = 0
-                self.roll_recovery_timer = 0.16
-                self.roll_cooldown_timer = 0.32
-                self.dash_recovery_timer = 0.16
-            else:
-                # Permite encadeamento ágil do próximo flic-flac
-                self.roll_recovery_timer = 0.06
-                self.roll_cooldown_timer = 0.04
-                self.dash_recovery_timer = 0.06
+            # Intervalo mínimo de recuperação para permitir encadeamento fluido e infinito
+            self.roll_recovery_timer = 0.02
+            self.roll_cooldown_timer = 0.01
+            self.dash_recovery_timer = 0.02
 
     def update(self, dt: float, game_map):
         """Atualiza o Ninja e seu Doberman."""
@@ -205,7 +209,12 @@ class AmericanNinja(Samurai):
         extra_props = {}
         if self.state == STATE_ROLL:
             prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration))))
-            extra_props = {"pose": "flic_flac", "p": prog}
+            extra_props = {
+                "pose": "flic_flac",
+                "p": prog,
+                "somersault_angle": 360.0 * prog,
+                "flic_flac": True,
+            }
 
         render_voxel_humanoid(
             surface, camera,

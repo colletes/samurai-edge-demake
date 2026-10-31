@@ -483,14 +483,30 @@ CHARACTER_ANIM_BUTTONS = {
         ("WALK", "2. Marcha Operacional", 0.0),
         ("ATTACK", "3. Kunai Estocada Rápida", 0.35),
         ("SHURIKEN", "4. Shuriken de Combate (15.5m/s)", 0.40),
-        ("FLIC_FLAC", "5. Flic-Flac Acrobático (3x)", 0.66),
+        ("FLIC_FLAC", "5. Flic-Flac Acrobático (Frente / 360°)", 0.66),
         ("YAMATO_CHARGE", "6. Yamato Bote Letal", 0.70),
         ("INTRO", "7. Intro: Luvas, Assobio & Alerta", 2.00),
         ("VICTORY", "8. Vitória: Chapéu & Banjo Clássico", 2.20),
         ("FINISHER_1", "F1. Finisher 1: 3x Shurikens (Membros & Cabeça)", 1.25),
         ("FINISHER_2", "F2. Finisher 2: Fuma Shuriken Moinho Gigante", 1.25),
     ],
+    "saitou": [
+        ("IDLE", "1. Idle (Postura Mibu & Kiseru)", 0.0),
+        ("WALK", "2. Walk (Suriashi Rápido)", 0.0),
+        ("GATOTSU_ISHIKI", "3. Golpe 1: Gatotsu Ishiki (Aceleração 14.5 m/s)", 0.70),
+        ("GATOTSU_ZEROSHIKI", "4. Golpe 2: Gatotsu Zeroshiki (Queima-Roupa / Chip)", 0.55),
+        ("HAORI_SIDESTEP", "5. Esquiva: Haori Sidestep (14 i-frames)", 0.45),
+        ("GATOTSU_CANCEL", "6. Cancel: Gatotsu -> Sidestep (50%)", 0.65),
+        ("PARRY_RECOIL", "7. Guarda/Parry: Frenagem & Recuo Elástico", 0.55),
+        ("INTRO", "8. Intro: Traga no Kiseru & Saque Koiguchi", 2.20),
+        ("VICTORY", "9. Vitória: Chiburi, Noto & Kiseru", 2.20),
+        ("FINISHER_1", "F1. Finisher A: Gatotsu Shinkan (Empalamento)", 1.25),
+        ("FINISHER_2", "F2. Finisher B: Zeroshiki Bakutotsu (Bissecção 2 Partes)", 1.35),
+    ],
 }
+# Aliases para chaves alternativas do catálogo
+CHARACTER_ANIM_BUTTONS["joe"] = CHARACTER_ANIM_BUTTONS["american"]
+CHARACTER_ANIM_BUTTONS["hanzo"] = CHARACTER_ANIM_BUTTONS["ninja"]
 
 DEFAULT_ANIM_BUTTONS = [
     ("IDLE", "1. Idle (Respiração)", 0.0),
@@ -535,10 +551,20 @@ OVERHAUL_DE_PARA_NOTES = {
         "Olhos Marciais Masculinos HD (Olhar focado sem vazamento sob balaclava)",
         "Materiais: Farda Camuflada Ripstop, Couro, Tricô Balaclava, Madeira e Aço",
         "Flic-Flacs Acrobáticos: Encadeável até 3x com colisão em obstáculos sólidos",
-        "Yamato Letal (1-Hit Kill fatal a 14.5 m/s) + Banjo e Chapéu de Cowboy na Vitória",
+        "Yamato Letal (1-Hit Kill fatal a 18.5 m/s com perseguição) + Banjo na Vitória",
         "Finishers: 3x Shurikens Desmembradoras & Fuma Shuriken Decapitadora",
     ],
+    "saitou": [
+        "SSAA 2x Offscreen (Zero serrilhado no haori Asagi-iro e padrão Dandara)",
+        "Olhos Marciais Sanpaku HD (Olhar severo do Lobo de Mibu com anel limbal de aço)",
+        "Materiais: Seda Asagi-iro, Linho Branco com Kanji 誠, Laca Urushi, Fumo de Kiseru 3D",
+        "Gatotsu Ishiki: Aceleração contínua (5.2 -> 14.5 m/s) + Cancelamento em Haori Sidestep aos 50%",
+        "Gatotsu Zeroshiki: Explosão a queima-roupa com 1 de Dano Garantido (Chip Damage através do Parry)",
+        "Finishers: Gatotsu Shinkan (Empalamento Cardíaco) & Zeroshiki Bakutotsu (Bissecção Horizontal)",
+    ],
 }
+OVERHAUL_DE_PARA_NOTES["joe"] = OVERHAUL_DE_PARA_NOTES["american"]
+OVERHAUL_DE_PARA_NOTES["hanzo"] = OVERHAUL_DE_PARA_NOTES["ninja"]
 
 
 # =============================================================================
@@ -1197,13 +1223,50 @@ class ModelInspector:
             extra_props["pose"] = "shuriken_throw"
             extra_props["progress"] = prog
         elif act == "FLIC_FLAC":
-            # Joe Flic-Flac Acrobático para trás (3x)
+            # Joe Flic-Flac Acrobático para frente com cambalhota 360° (encadeável)
             state = "ROLL"
-            wz = math.sin(prog * math.pi) * 0.35
-            wx = -0.42 * prog
-            wy = -0.42 * prog
+            wz = math.sin(prog * math.pi) * 0.42
+            wx = 0.45 * prog
+            wy = 0.45 * prog
             extra_props["pose"] = "flic_flac"
             extra_props["p"] = prog
+            extra_props["somersault_angle"] = 360.0 * prog
+        elif act == "GATOTSU_ISHIKI":
+            state = "GATOTSU"
+            extra_props["gatotsu_lunge"] = True
+            extra_props["p"] = prog
+            wx = 0.55 * prog
+            wy = 0.55 * prog
+        elif act == "GATOTSU_ZEROSHIKI":
+            state = "ZEROSHIKI"
+            extra_props["zeroshiki_blast"] = True
+            extra_props["p"] = prog
+            wx = 0.15 * math.sin(prog * math.pi)
+            wy = 0.15 * math.sin(prog * math.pi)
+        elif act == "HAORI_SIDESTEP":
+            state = "ROLL"
+            extra_props["haori_sidestep"] = True
+            extra_props["p"] = prog
+            wx = 0.30 * math.sin(prog * math.pi)
+            wy = -0.30 * math.sin(prog * math.pi)
+        elif act == "GATOTSU_CANCEL":
+            if prog < 0.50:
+                state = "GATOTSU"
+                extra_props["gatotsu_lunge"] = True
+                extra_props["p"] = prog / 0.50
+                wx = 0.30 * (prog / 0.50)
+                wy = 0.30 * (prog / 0.50)
+            else:
+                u = (prog - 0.50) / 0.50
+                state = "ROLL"
+                extra_props["haori_sidestep"] = True
+                extra_props["p"] = u
+                wx = 0.30 + 0.20 * math.sin(u * math.pi)
+                wy = 0.30 - 0.30 * math.sin(u * math.pi)
+        elif act == "PARRY_RECOIL":
+            state = "PARRIED_STAGGER"
+            wx = -0.22 * math.sin(prog * math.pi)
+            wy = -0.22 * math.sin(prog * math.pi)
         elif act == "YAMATO_CHARGE":
             # Joe Comando com Assobio e Yamato
             state = "RECOVERY"
@@ -1213,7 +1276,7 @@ class ModelInspector:
         elif act in ("INTRO", "VICTORY"):
             kind = "intro" if act == "INTRO" else "victory"
             p_sample = prog if dur > 0.0 else ((self.anim_time * 0.42) % 1.0)
-            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american"):
+            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american", "joe", "saitou"):
                 # Roteiro legado pré-Fase 2 (apenas IDLE + ATTACK simples)
                 if p_sample < 0.25 or p_sample > 0.75:
                     state = "IDLE"
@@ -1246,7 +1309,7 @@ class ModelInspector:
                     extra_props["pose"] = "finisher_1"
                     extra_props["p"] = prog
                     wx, wy = 0.15 * prog, 0.15 * prog
-            elif char_type == "ninja":
+            elif char_type in ("ninja", "hanzo"):
                 if is_legacy:
                     state = "ATTACK"
                     state_timer = 0.10
@@ -1254,7 +1317,7 @@ class ModelInspector:
                     state = "IDLE"
                     extra_props["pose"] = "finisher_1"
                     wx, wy = 0.18 * prog, 0.18 * prog
-            elif char_type == "american":
+            elif char_type in ("american", "joe"):
                 if is_legacy:
                     state = "ATTACK"
                     state_timer = 0.10
@@ -1263,6 +1326,16 @@ class ModelInspector:
                     extra_props["pose"] = "triple_shuriken"
                     extra_props["progress"] = prog
                     wx, wy = 0.12 * prog, 0.12 * prog
+            elif char_type == "saitou":
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "GATOTSU"
+                    extra_props["pose"] = "finisher_gatotsu"
+                    extra_props["gatotsu_lunge"] = True
+                    extra_props["p"] = prog
+                    wx, wy = 0.35 * prog, 0.35 * prog
             else:
                 # 2.1.4a: Ittou Ryoudan
                 state = "RECOVERY"
@@ -1299,7 +1372,7 @@ class ModelInspector:
                     extra_props["p"] = prog
                     extra_props["cross_shockwave"] = True
                     wx, wy = 0.12 * prog, 0.12 * prog
-            elif char_type == "ninja":
+            elif char_type in ("ninja", "hanzo"):
                 if is_legacy:
                     state = "ATTACK"
                     state_timer = 0.10
@@ -1308,7 +1381,7 @@ class ModelInspector:
                     extra_props["pose"] = "finisher_2"
                     wz = math.sin(prog * math.pi) * 0.60
                     wx, wy = 0.22 * prog, 0.22 * prog
-            elif char_type == "american":
+            elif char_type in ("american", "joe"):
                 if is_legacy:
                     state = "ATTACK"
                     state_timer = 0.10
@@ -1317,6 +1390,16 @@ class ModelInspector:
                     extra_props["pose"] = "fuma_throw"
                     extra_props["progress"] = prog
                     wx, wy = 0.15 * prog, 0.15 * prog
+            elif char_type == "saitou":
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ZEROSHIKI"
+                    extra_props["pose"] = "finisher_zeroshiki"
+                    extra_props["zeroshiki_blast"] = True
+                    extra_props["p"] = prog
+                    wx, wy = 0.18 * prog, 0.18 * prog
             else:
                 # 2.1.4b: Divisão Celestial de Bambu (Ápice + Queda Meteórica)
                 if prog < 0.42:
