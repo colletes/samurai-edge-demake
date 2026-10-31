@@ -190,7 +190,8 @@ jobs:
             butler push release_assets/Samurai-Edge-Demake-Windows.zip "$TARGET:windows" --userversion "$TAG"
           fi
           
-          if [ -f "release_assets/Samurai-Edge-Demake-macOS.zip" ]; then
+          # Only push macOS if explicitly requested in workflow_dispatch to avoid overwriting local signed releases
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -f "release_assets/Samurai-Edge-Demake-macOS.zip" ]; then
             echo "Pushing macOS build to itch.io ($TARGET:osx)..."
             butler push release_assets/Samurai-Edge-Demake-macOS.zip "$TARGET:osx" --userversion "$TAG"
           fi

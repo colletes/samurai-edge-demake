@@ -43,6 +43,10 @@ if [ -f "Samurai-Edge-Demake-macOS.zip" ]; then
   echo "📦 Enviando build macOS para canal :osx..."
   butler push Samurai-Edge-Demake-macOS.zip "$ITCH_TARGET:osx" "${USERVERSION_FLAG[@]}"
   PUSHED_COUNT=$((PUSHED_COUNT + 1))
+elif [ -f "dist/releases/Samurai-Edge-Demake-macOS.zip" ]; then
+  echo "📦 Enviando dist/releases/Samurai-Edge-Demake-macOS.zip para canal :osx..."
+  butler push dist/releases/Samurai-Edge-Demake-macOS.zip "$ITCH_TARGET:osx" "${USERVERSION_FLAG[@]}"
+  PUSHED_COUNT=$((PUSHED_COUNT + 1))
 elif [ -d "dist/SamuraiEdge.app" ]; then
   echo "📦 Enviando dist/SamuraiEdge.app para canal :osx..."
   butler push dist/SamuraiEdge.app "$ITCH_TARGET:osx" "${USERVERSION_FLAG[@]}"
@@ -54,6 +58,10 @@ if [ -f "Samurai-Edge-Demake-Windows.zip" ]; then
   echo "📦 Enviando build Windows para canal :windows..."
   butler push Samurai-Edge-Demake-Windows.zip "$ITCH_TARGET:windows" "${USERVERSION_FLAG[@]}"
   PUSHED_COUNT=$((PUSHED_COUNT + 1))
+elif [ -f "dist/releases/Samurai-Edge-Demake-Windows.zip" ]; then
+  echo "📦 Enviando dist/releases/Samurai-Edge-Demake-Windows.zip para canal :windows..."
+  butler push dist/releases/Samurai-Edge-Demake-Windows.zip "$ITCH_TARGET:windows" "${USERVERSION_FLAG[@]}"
+  PUSHED_COUNT=$((PUSHED_COUNT + 1))
 elif [ -d "dist/SamuraiEdge" ] && [ -f "dist/SamuraiEdge/SamuraiEdge.exe" ]; then
   echo "📦 Enviando dist/SamuraiEdge para canal :windows..."
   butler push dist/SamuraiEdge "$ITCH_TARGET:windows" "${USERVERSION_FLAG[@]}"
@@ -64,6 +72,10 @@ fi
 if [ -f "Samurai-Edge-Demake-Linux.tar.gz" ]; then
   echo "📦 Enviando build Linux para canal :linux..."
   butler push Samurai-Edge-Demake-Linux.tar.gz "$ITCH_TARGET:linux" "${USERVERSION_FLAG[@]}"
+  PUSHED_COUNT=$((PUSHED_COUNT + 1))
+elif [ -f "dist/releases/Samurai-Edge-Demake-Linux.tar.gz" ]; then
+  echo "📦 Enviando dist/releases/Samurai-Edge-Demake-Linux.tar.gz para canal :linux..."
+  butler push dist/releases/Samurai-Edge-Demake-Linux.tar.gz "$ITCH_TARGET:linux" "${USERVERSION_FLAG[@]}"
   PUSHED_COUNT=$((PUSHED_COUNT + 1))
 fi
 

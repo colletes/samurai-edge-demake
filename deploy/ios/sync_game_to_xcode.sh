@@ -12,7 +12,14 @@ mkdir -p "$TARGET_APP"
 
 cp "$PROJECT_ROOT/main.py" "$TARGET_APP/__main__.py"
 rsync -av --delete "$PROJECT_ROOT/src/" "$TARGET_APP/src/"
-rsync -av --delete "$PROJECT_ROOT/assets/" "$TARGET_APP/assets/"
+rsync -av --delete \
+    --exclude="sound_drafts/" \
+    --exclude="Opening Videos/Take*" \
+    --exclude="concepts/HD2D_Concept_Art.pdf" \
+    --exclude="concepts/*_gameplay_mockup.jpg" \
+    --exclude="promotional/" \
+    --exclude=".DS_Store" \
+    "$PROJECT_ROOT/assets/" "$TARGET_APP/assets/"
 
 for config in settings.json controls_config.json arcade_save.json; do
     if [ -f "$PROJECT_ROOT/$config" ]; then
