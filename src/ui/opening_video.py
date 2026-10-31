@@ -37,19 +37,19 @@ class OpeningVideoScreen:
         self.is_ios_native = False
         self.hold_pos = (SCREEN_WIDTH - 140, SCREEN_HEIGHT - 60)
 
-        if not video_path and not self.video_path:
+        if video_path:
+            self.video_path = video_path
+        elif not self.video_path:
             candidates = [
                 get_asset_path("assets/Opening Videos/Samurai_Edge_Opening_Final.mp4"),
                 get_asset_path("assets/Opening Videos/Samurai_Edge_Opening.mp4"),
             ]
             for c_path in candidates:
                 if os.path.exists(c_path):
-                    video_path = c_path
+                    self.video_path = c_path
                     break
-            if not video_path:
-                video_path = candidates[0]
-        elif video_path:
-            self.video_path = video_path
+            if not self.video_path:
+                self.video_path = candidates[0]
 
         # Em ambiente headless ou se arquivo não existir, encerrar de imediato
         if os.environ.get("SDL_VIDEODRIVER") == "dummy" or not self.video_path or not os.path.exists(self.video_path):

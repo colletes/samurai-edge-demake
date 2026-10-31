@@ -18,6 +18,13 @@ from src.ui.opening_video import OpeningVideoScreen
 
 
 class TestOpeningVideo(unittest.TestCase):
+    def test_default_video_path_resolution(self):
+        """Verify that default OpeningVideoScreen() resolves to the existing final mp4 video path."""
+        screen = OpeningVideoScreen()
+        self.assertIsNotNone(screen.video_path)
+        self.assertTrue(os.path.exists(screen.video_path))
+        self.assertTrue(screen.video_path.endswith(".mp4"))
+
     def test_headless_auto_finish(self):
         """In headless mode (dummy driver), opening video should automatically finish without error."""
         screen = OpeningVideoScreen()
