@@ -183,6 +183,14 @@ class _Ctx:
             return [(0, 0), (self.w, 0), (self.w, yr), (0, yl)]
         return [(0, yl), (self.w, yr), (self.w, self.h), (0, self.h)]
 
+    def half_vertical(self, left: bool, z_top: float | None = None, z_bottom: float | None = None):
+        """Metade lateral esquerda ou direita delimitada verticalmente entre z_top e z_bottom (zero duplicação de membros/cabeça)."""
+        x0 = 0.0 if left else self.cx
+        x1 = self.cx if left else float(self.w)
+        top = 0.0 if z_top is None else self.y_of(z_top)
+        bottom = float(self.h) if z_bottom is None else self.y_of(z_bottom)
+        return [(x0, top), (x1, top), (x1, bottom), (x0, bottom)]
+
 
 class VoxelCorpsePiece:
     """Pedaço do corpo com física 3D de queda, rotação e quique; pode exibir um recorte do modelo do lutador."""
@@ -348,25 +356,25 @@ class VoxelCorpse:
 
         elif style == "DUAL_IMPALE_X_SPREAD":
             # Musashi Finisher 1 (Entregável 2.2.4a — Niten Ichi-ryu):
-            # Empalamento sequencial duplo e abertura violenta em leque rasgando o torso em 3 partes!
+            # Empalamento sequencial duplo e abertura violenta em leque rasgando o torso em 3 partes sem duplicatas!
             self.severed_head = P(x, y, NECK_Z + 0.12, 0.16, 0.16, 0.16, self.col_hair,
                                   vx=dx * 2.4 + random.uniform(-0.4, 0.4), vy=dy * 2.4 + random.uniform(-0.4, 0.4),
                                   vz=3.8, rot_speed=340.0, piece_type="head", region=lambda c: c.band(None, NECK_Z),
                                   pivot="center", floor_z=0.15)
-            # Parte 1 do Torso: Ombro e peitoral esquerdo projetado lateralmente
+            # Parte 1 do Torso: Ombro e peitoral esquerdo projetado lateralmente (apenas metade esquerda do torso, sem cabeça nem pernas)
             self.torso_left = P(x, y, WAIST_Z + 0.08, 0.22, 0.18, 0.38, self.col_torso,
                                 vx=dx * 2.2 - dy * 2.6, vy=dy * 2.2 + dx * 2.6, vz=2.4,
-                                piece_type="top", region=lambda c: c.diagonal(upper=True),
+                                piece_type="top_left", region=lambda c: c.half_vertical(left=True, z_top=NECK_Z, z_bottom=WAIST_Z),
                                 rot_target=115.0, rot_speed=280.0)
-            # Parte 2 do Torso: Ombro e peitoral direito projetado lateralmente
+            # Parte 2 do Torso: Ombro e peitoral direito projetado lateralmente (apenas metade direita do torso, sem cabeça nem pernas)
             self.torso_right = P(x, y, WAIST_Z + 0.08, 0.22, 0.18, 0.38, self.col_torso,
                                  vx=dx * 2.2 + dy * 2.6, vy=dy * 2.2 - dx * 2.6, vz=2.4,
-                                 piece_type="top", region=lambda c: c.diagonal(upper=True),
+                                 piece_type="top_right", region=lambda c: c.half_vertical(left=False, z_top=NECK_Z, z_bottom=WAIST_Z),
                                  rot_target=-115.0, rot_speed=280.0)
             # Parte 3 do Torso: Tronco inferior e pelve desabando
             self.torso_base = P(x, y, 0.0, 0.32, 0.24, 0.50, self.col_pants,
                                 vx=-dx * 0.9, vy=-dy * 0.9, vz=0.3,
-                                piece_type="bottom", region=lambda c: c.diagonal(upper=False),
+                                piece_type="bottom", region=lambda c: c.band(WAIST_Z, None),
                                 rot_target=FALL_DEG, rot_speed=140.0, rot_delay=0.15)
             self.pieces.extend([self.severed_head, self.torso_left, self.torso_right, self.torso_base])
             # Géiser arterial e chuva de sangue violenta
@@ -381,26 +389,26 @@ class VoxelCorpse:
 
         elif style in ("CROSS_VACUUM_SLICER", "REFLECTED_TORSO_CLEAVE"):
             # Musashi Finisher 2 (Entregável 2.2.4b — Cross Vacuum Slicer / 十字真空波):
-            # Onda de vácuo em 'X' divide o oponente em 4 partes simétricas (quadrantes)!
+            # Onda de vácuo em 'X' divide o oponente em 4 partes simétricas (quadrantes disjuntos sem duplicação)!
             # 1. Quadrante Superior Esquerdo
             self.pieces.append(P(x, y, WAIST_Z + 0.10, 0.22, 0.16, 0.38, self.col_torso,
                                  vx=dx * 2.5 - dy * 2.2, vy=dy * 2.5 + dx * 2.2, vz=2.6,
-                                 piece_type="top", region=lambda c: c.band(None, WAIST_Z),
+                                 piece_type="top_left", region=lambda c: c.half_vertical(left=True, z_top=None, z_bottom=WAIST_Z),
                                  rot_target=120.0, rot_speed=300.0))
             # 2. Quadrante Superior Direito
             self.pieces.append(P(x, y, WAIST_Z + 0.10, 0.22, 0.16, 0.38, self.col_torso,
                                  vx=dx * 2.5 + dy * 2.2, vy=dy * 2.5 - dx * 2.2, vz=2.6,
-                                 piece_type="top", region=lambda c: c.band(None, WAIST_Z),
+                                 piece_type="top_right", region=lambda c: c.half_vertical(left=False, z_top=None, z_bottom=WAIST_Z),
                                  rot_target=-120.0, rot_speed=300.0))
             # 3. Quadrante Inferior Esquerdo
             self.pieces.append(P(x, y, 0.0, 0.20, 0.16, 0.44, self.col_pants,
                                  vx=-dx * 1.6 - dy * 1.8, vy=-dy * 1.6 + dx * 1.8, vz=1.0,
-                                 piece_type="bottom", region=lambda c: c.band(WAIST_Z, None),
+                                 piece_type="bottom_left", region=lambda c: c.half_vertical(left=True, z_top=WAIST_Z, z_bottom=None),
                                  rot_target=75.0, rot_speed=180.0, rot_delay=0.10))
             # 4. Quadrante Inferior Direito
             self.pieces.append(P(x, y, 0.0, 0.20, 0.16, 0.44, self.col_pants,
                                  vx=-dx * 1.6 + dy * 1.8, vy=-dy * 1.6 - dx * 1.8, vz=1.0,
-                                 piece_type="bottom", region=lambda c: c.band(WAIST_Z, None),
+                                 piece_type="bottom_right", region=lambda c: c.half_vertical(left=False, z_top=WAIST_Z, z_bottom=None),
                                  rot_target=-75.0, rot_speed=180.0, rot_delay=0.10))
             for _ in range(32):
                 angle = random.uniform(0, math.pi * 2)
@@ -671,12 +679,22 @@ class VoxelCorpse:
 
         elif style == "HEART_IMPALE_LUNGE":
             # Saitou Primário: Gatotsu empala o tórax no coração, ergue a vítima e arremessa violentamente ao solo
-            self.pieces.append(P(x, y, 0.25, 0.45, 0.34, 0.76, self.col_torso,
-                                 vx=dx * 3.8, vy=dy * 3.8, vz=2.6,
+            # Explosão cinematográfica massiva de sangue em jato saindo pelas costas do rival (Chambara clássico)!
+            self.pieces.append(P(x, y, 0.32, 0.45, 0.34, 0.76, self.col_torso,
+                                 vx=dx * 4.2, vy=dy * 4.2, vz=2.8,
                                  piece_type="impaled_body", region=lambda c: c.band(None, None),
                                  rot_target=FALL_DEG, rot_speed=260.0))
-            for _ in range(35):
-                self._add_blood_drop(spread=0.9)
+            for _ in range(55):
+                angle = random.uniform(-0.45, 0.45)
+                cos_a, sin_a = math.cos(angle), math.sin(angle)
+                v_dir_x = dx * cos_a - dy * sin_a
+                v_dir_y = dy * cos_a + dx * sin_a
+                sp = random.uniform(3.2, 7.5)
+                self.pieces.append(P(x, y, CHEST_Z + 0.10, 0.07, 0.07, 0.07, random.choice([COLOR_BLOOD, (160, 15, 20), (120, 10, 15)]),
+                                     vx=v_dir_x * sp, vy=v_dir_y * sp, vz=random.uniform(2.5, 6.0),
+                                     rot_speed=random.uniform(-360, 360), piece_type="blood_gib"))
+            for _ in range(50):
+                self._add_blood_drop(spread=1.2)
 
         elif style == "TORSO_BLAST_THRUST":
             # Saitou Secundário: Zeroshiki à queima-roupa com corte horizontal em 2 partes;
@@ -996,14 +1014,14 @@ class VoxelCorpse:
         self.timer += dt
 
         # Spawn de geiser de sangue contínuo nos primeiros momentos da morte
-        geyser_limit = 2.4 if self.death_style in ("FOREHEAD_PIN", "HEART_THROAT_STAB") else 1.2
+        geyser_limit = 2.4 if self.death_style in ("FOREHEAD_PIN", "HEART_THROAT_STAB", "HEART_IMPALE_LUNGE") else 1.2
         if self.timer < geyser_limit and particles is not None:
             self.geyser_timer += dt
-            interval = 0.03 if self.death_style == "FOREHEAD_PIN" else 0.04
+            interval = 0.03 if self.death_style in ("FOREHEAD_PIN", "HEART_IMPALE_LUNGE") else 0.04
             if self.geyser_timer > interval:
                 self.geyser_timer = 0.0
                 from src.effects.particles import BloodParticle
-                count = 6 if self.death_style == "FOREHEAD_PIN" else 4
+                count = 7 if self.death_style == "HEART_IMPALE_LUNGE" else (6 if self.death_style == "FOREHEAD_PIN" else 4)
 
                 # Origem dinâmica do sangue acompanhando a cabeça/peito durante a rotação da queda
                 if self.death_style == "FOREHEAD_PIN" and self.pieces:
@@ -1020,6 +1038,11 @@ class VoxelCorpse:
                     bx_base = p_body.wx + self.dx * math.sin(rad) * throat_dist
                     by_base = p_body.wy + self.dy * math.sin(rad) * throat_dist
                     bz_base = max(0.06, p_body.wz + math.cos(rad) * throat_dist)
+                elif self.death_style == "HEART_IMPALE_LUNGE" and self.pieces:
+                    p_body = self.pieces[0]
+                    bx_base = p_body.wx + self.dx * 0.12
+                    by_base = p_body.wy + self.dy * 0.12
+                    bz_base = max(0.12, p_body.wz + 0.40)
                 else:
                     bx_base = self.wx
                     by_base = self.wy
@@ -1036,6 +1059,11 @@ class VoxelCorpse:
                         bp.vz = random.uniform(2.0, 3.8) * max(0.35, math.cos(rad))
                         bp.vx = -self.dx * random.uniform(0.8, 2.2) + random.uniform(-0.4, 0.4)
                         bp.vy = -self.dy * random.uniform(0.8, 2.2) + random.uniform(-0.4, 0.4)
+                    elif self.death_style == "HEART_IMPALE_LUNGE":
+                        # Jato arterial violento saindo em leque contínuo pelas costas perfuradas
+                        bp.vz = random.uniform(2.8, 5.5)
+                        bp.vx = self.dx * random.uniform(3.4, 6.5) + random.uniform(-0.8, 0.8)
+                        bp.vy = self.dy * random.uniform(3.4, 6.5) + random.uniform(-0.8, 0.8)
                     particles.append(bp)
 
         # Atualizar física das peças individuais

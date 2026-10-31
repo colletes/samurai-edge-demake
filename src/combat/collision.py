@@ -28,6 +28,8 @@ def _get_death_style_for_attacker(attacker, weapon: str | None = None, victim=No
     if weapon in ("kunai", "shuriken"):
         if "ninja" in char_type or "hanzo" in char_type:
             return "FOREHEAD_PIN"
+        if "joe" in char_type or "american" in char_type:
+            return "TRIPLE_SHURIKEN_DISMEMBER"
         return "KUNAI_PIN"
     if weapon == "arrow":
         return "PINNED_TO_EARTH"
@@ -89,7 +91,7 @@ def _get_death_style_for_attacker(attacker, weapon: str | None = None, victim=No
     elif "joe" in char_type or "american" in char_type:
         if weapon in ("dog", "yamato") or state in ("DOG_ATTACK", "YAMATO"):
             return "WINDMILL_SHURIKEN_DECAP"
-        return "STAB_FALL"
+        return "TRIPLE_SHURIKEN_DISMEMBER"
     elif "gray" in char_type or "kasumi" in char_type or "kemuri" in char_type:
         return "STAB_FALL"
     elif "rifle" in char_type or "teppo" in char_type:

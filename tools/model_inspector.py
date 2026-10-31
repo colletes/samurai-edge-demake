@@ -1232,26 +1232,30 @@ class ModelInspector:
             extra_props["p"] = prog
             extra_props["somersault_angle"] = 360.0 * prog
         elif act == "GATOTSU_ISHIKI":
-            state = "GATOTSU"
+            state = "GATOTSU_CHARGE"
+            extra_props["pose"] = "gatotsu_lunge"
             extra_props["gatotsu_lunge"] = True
             extra_props["p"] = prog
             wx = 0.55 * prog
             wy = 0.55 * prog
         elif act == "GATOTSU_ZEROSHIKI":
             state = "ZEROSHIKI"
+            extra_props["pose"] = "zeroshiki_blast"
             extra_props["zeroshiki_blast"] = True
             extra_props["p"] = prog
             wx = 0.15 * math.sin(prog * math.pi)
             wy = 0.15 * math.sin(prog * math.pi)
         elif act == "HAORI_SIDESTEP":
             state = "ROLL"
+            extra_props["pose"] = "haori_sidestep"
             extra_props["haori_sidestep"] = True
             extra_props["p"] = prog
             wx = 0.30 * math.sin(prog * math.pi)
             wy = -0.30 * math.sin(prog * math.pi)
         elif act == "GATOTSU_CANCEL":
             if prog < 0.50:
-                state = "GATOTSU"
+                state = "GATOTSU_CHARGE"
+                extra_props["pose"] = "gatotsu_lunge"
                 extra_props["gatotsu_lunge"] = True
                 extra_props["p"] = prog / 0.50
                 wx = 0.30 * (prog / 0.50)
@@ -1259,6 +1263,7 @@ class ModelInspector:
             else:
                 u = (prog - 0.50) / 0.50
                 state = "ROLL"
+                extra_props["pose"] = "haori_sidestep"
                 extra_props["haori_sidestep"] = True
                 extra_props["p"] = u
                 wx = 0.30 + 0.20 * math.sin(u * math.pi)
@@ -1334,8 +1339,8 @@ class ModelInspector:
                     state = "ATTACK"
                     state_timer = 0.10
                 else:
-                    state = "GATOTSU"
-                    extra_props["pose"] = "finisher_gatotsu"
+                    state = "GATOTSU_CHARGE"
+                    extra_props["pose"] = "gatotsu_lunge"
                     extra_props["gatotsu_lunge"] = True
                     extra_props["p"] = prog
                     wx, wy = 0.35 * prog, 0.35 * prog

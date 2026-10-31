@@ -55,6 +55,7 @@ class CinematicDirector:
         self.joe_triple_victim = None
         self.joe_triple_timer = 0.0
         self.joe_triple_shots = 0
+        self.joe_triple_shurikens = []
         self.joe_pin_timer = 0.0
         self.joe_throw_timer = 0.0
         self.shuriken_proj_x = 0.0
@@ -62,10 +63,13 @@ class CinematicDirector:
         self.shuriken_active = False
         self.joe_sound_played = False
         self.joe_throw_sound_played = False
-        self.joe_triple_attacker = None
-        self.joe_triple_victim = None
-        self.joe_triple_timer = 0.0
-        self.joe_triple_shots = 0
+
+        # Saitou: Gatotsu Shinkan (Empalamento no Coração e Fonte Arterial nas Costas)
+        self.saitou_attacker = None
+        self.saitou_victim = None
+        self.saitou_timer = 0.0
+        self.saitou_blood_timer = 0.0
+        self.saitou_sound_played = False
 
         # Julie: Rapier Flurry & Point-blank Flintlock
         self.julie_attacker = None
@@ -376,6 +380,12 @@ class CinematicDirector:
         self.joe_triple_victim = None
         self.joe_triple_timer = 0.0
         self.joe_triple_shots = 0
+        self.joe_triple_shurikens = []
+        self.saitou_attacker = None
+        self.saitou_victim = None
+        self.saitou_timer = 0.0
+        self.saitou_blood_timer = 0.0
+        self.saitou_sound_played = False
         self.julie_attacker = None
         self.julie_victim = None
         self.goro_attacker = None
@@ -549,6 +559,26 @@ class CinematicDirector:
             self.bw_flash_timer = 1.60
             self.delayed_death_timer = 1.20
             self._arm_closeup_finisher_strike(attacker, victim, duration=1.20)
+
+        elif death_style == "HEART_IMPALE_LUNGE":
+            # Saitou Primário: Gatotsu Shinkan (Estocada do Lobo de Mibu)
+            # Avanço fulminante, empalamento no coração, ergue a vítima no ar com fonte arterial jorrando pelas costas!
+            self.saitou_attacker = attacker
+            self.saitou_victim = victim
+            dur = 1.15
+            self.saitou_timer = dur
+            self.saitou_blood_timer = 0.0
+            self.saitou_sound_played = False
+            self.freeze_timer = dur
+            self.bw_flash_duration = dur + 0.20
+            self.bw_flash_timer = dur + 0.20
+            self.delayed_death_timer = dur
+            self.cinematic_zoom_target = 1.95
+            if attacker is not None and victim is not None:
+                attacker.set_facing(victim.wx, victim.wy)
+                attacker.state = "GATOTSU_CHARGE"
+                attacker.gatotsu_timer = 0.0
+                attacker.extra_props = {"pose": "gatotsu_lunge", "p": 0.35, "gatotsu_lunge": True}
 
         elif death_style == "SOUL_REAP":
             # Valerius (Ciclo 4): Ceifada decapita a cabeça do rival, prende na ponta da foice, recolhe e reanima o esqueleto decapitado!
@@ -1006,6 +1036,30 @@ class CinematicDirector:
                 extra["progress"] = tp
                 atk.extra_props = extra
 
+                # Atualiza posições das 3 shurikens em voo em direção ao rival
+                self.joe_triple_shurikens.clear()
+                if 0.08 <= tp <= 0.32:
+                    u = min(1.0, (tp - 0.08) / 0.20)
+                    self.joe_triple_shurikens.append({
+                        "wx": atk.wx + (vic.wx + 0.14 - atk.wx) * u,
+                        "wy": atk.wy + (vic.wy - 0.05 - atk.wy) * u,
+                        "wz": 0.65 + (0.62 - 0.65) * u,
+                    })
+                if 0.38 <= tp <= 0.62:
+                    u = min(1.0, (tp - 0.38) / 0.20)
+                    self.joe_triple_shurikens.append({
+                        "wx": atk.wx + (vic.wx - 0.14 - atk.wx) * u,
+                        "wy": atk.wy + (vic.wy + 0.05 - atk.wy) * u,
+                        "wz": 0.65 + (0.62 - 0.65) * u,
+                    })
+                if 0.68 <= tp <= 0.92:
+                    u = min(1.0, (tp - 0.68) / 0.20)
+                    self.joe_triple_shurikens.append({
+                        "wx": atk.wx + (vic.wx - atk.wx) * u,
+                        "wy": atk.wy + (vic.wy - atk.wy) * u,
+                        "wz": 0.65 + (0.84 - 0.65) * u,
+                    })
+
                 # Disparo 1: braço direito (tp >= 0.22)
                 if tp >= 0.22 and self.joe_triple_shots < 1:
                     self.joe_triple_shots = 1
@@ -1018,9 +1072,9 @@ class CinematicDirector:
                         pass
                     if particles is not None:
                         from src.effects.particles import SparkParticle, BloodParticle
-                        for _ in range(12):
-                            particles.append(BloodParticle(vic.wx + 0.10, vic.wy, 0.65))
-                            particles.append(SparkParticle(vic.wx + 0.10, vic.wy, 0.70))
+                        for _ in range(16):
+                            particles.append(BloodParticle(vic.wx + 0.12, vic.wy, 0.65))
+                            particles.append(SparkParticle(vic.wx + 0.12, vic.wy, 0.70))
 
                 # Disparo 2: braço esquerdo (tp >= 0.52)
                 elif tp >= 0.52 and self.joe_triple_shots < 2:
@@ -1034,9 +1088,9 @@ class CinematicDirector:
                         pass
                     if particles is not None:
                         from src.effects.particles import SparkParticle, BloodParticle
-                        for _ in range(14):
-                            particles.append(BloodParticle(vic.wx - 0.10, vic.wy, 0.65))
-                            particles.append(SparkParticle(vic.wx - 0.10, vic.wy, 0.70))
+                        for _ in range(18):
+                            particles.append(BloodParticle(vic.wx - 0.12, vic.wy, 0.65))
+                            particles.append(SparkParticle(vic.wx - 0.12, vic.wy, 0.70))
 
                 # Disparo 3: decapitação da cabeça (tp >= 0.82)
                 elif tp >= 0.82 and self.joe_triple_shots < 3:
@@ -1050,8 +1104,69 @@ class CinematicDirector:
                         pass
                     if particles is not None:
                         from src.effects.particles import BloodParticle
-                        for _ in range(24):
+                        for _ in range(32):
                             particles.append(BloodParticle(vic.wx, vic.wy, 0.85))
+
+        # 4c. Saitou Gatotsu Shinkan (Heart Impale & Back-blood Fountain)
+        if self.saitou_timer > 0:
+            self.saitou_timer = max(0.0, self.saitou_timer - effective_dt)
+            atk = self.saitou_attacker
+            vic = self.saitou_victim
+            dur = 1.15
+            tp = 1.0 - (self.saitou_timer / dur)
+            if atk is not None and vic is not None:
+                dx = vic.wx - atk.wx
+                dy = vic.wy - atk.wy
+                dist = math.hypot(dx, dy) or 1.0
+                fx, fy = dx / dist, dy / dist
+                atk.set_facing(vic.wx, vic.wy)
+
+                if tp < 0.25:
+                    # Fase 1: Avanço fulminante do Gatotsu até o empalamento
+                    u = tp / 0.25
+                    atk.state = "GATOTSU_CHARGE"
+                    atk.extra_props = {"pose": "gatotsu_lunge", "p": u, "gatotsu_lunge": True}
+                    vic.wz = 0.0
+                elif tp < 0.85:
+                    # Fase 2: Vítima empalada erguida no ar pela katana do Gatotsu;
+                    # Explosão brutal contínua de sangue arterial jorrando pelas costas (Chambara clássico)!
+                    atk.state = "GATOTSU_CHARGE"
+                    atk.extra_props = {"pose": "gatotsu_lunge", "p": 1.0, "gatotsu_lunge": True}
+                    hoist_p = math.sin(((tp - 0.25) / 0.60) * math.pi)
+                    vic.wz = 0.38 * hoist_p
+                    vic.wx = atk.wx + fx * 0.78
+                    vic.wy = atk.wy + fy * 0.78
+
+                    if not self.saitou_sound_played:
+                        self.saitou_sound_played = True
+                        try:
+                            from src.audio.sound_manager import get_sound_manager
+                            from src.audio.sound_events import SoundEvent
+                            get_sound_manager().play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
+                            get_sound_manager().play(SoundEvent.SWORD_SLASH, volume_scale=0.9)
+                        except Exception:
+                            pass
+
+                    # Jato arterial massivo contínuo explodindo pelas costas perfuradas
+                    self.saitou_blood_timer += effective_dt
+                    if particles is not None and self.saitou_blood_timer >= 0.02:
+                        self.saitou_blood_timer = 0.0
+                        from src.effects.particles import BloodParticle, SparkParticle
+                        for _ in range(6):
+                            back_x = vic.wx + fx * 0.15 + random.uniform(-0.06, 0.06)
+                            back_y = vic.wy + fy * 0.15 + random.uniform(-0.06, 0.06)
+                            bp = BloodParticle(back_x, back_y, vic.wz + 0.42 + random.uniform(-0.04, 0.04))
+                            bp.vx = fx * random.uniform(3.5, 7.0) + random.uniform(-0.7, 0.7)
+                            bp.vy = fy * random.uniform(3.5, 7.0) + random.uniform(-0.7, 0.7)
+                            bp.vz = random.uniform(2.6, 5.5)
+                            particles.append(bp)
+                        if random.random() < 0.35:
+                            particles.append(SparkParticle(vic.wx + fx * 0.10, vic.wy + fy * 0.10, vic.wz + 0.45, color=(255, 230, 160)))
+                else:
+                    # Fase 3: Desfecho violento arrancando a lâmina para baixo
+                    atk.state = "ATTACK"
+                    atk.state_timer = 0.15
+                    vic.wz = max(0.0, vic.wz - 8.0 * effective_dt)
 
         # 5. Julie Rapier Flurry & Point-blank
         if self.julie_flurry_timer > 0:
@@ -1603,6 +1718,20 @@ class CinematicDirector:
                 if self.seimei_victim is not None:
                     self.seimei_victim.state = "CORPSE_SLICED"
                     self.seimei_victim = None
+                if self.saitou_attacker is not None:
+                    self.saitou_attacker.state = "IDLE"
+                    self.saitou_attacker.extra_props = {}
+                    self.saitou_attacker = None
+                if self.saitou_victim is not None:
+                    self.saitou_victim.wz = 0.0
+                    self.saitou_victim = None
+                if self.joe_triple_attacker is not None:
+                    self.joe_triple_attacker.state = "IDLE"
+                    self.joe_triple_attacker.extra_props = {}
+                    self.joe_triple_attacker = None
+                if self.joe_triple_victim is not None:
+                    self.joe_triple_victim = None
+                self.joe_triple_shurikens.clear()
                 self.finisher_attacker = None
                 self.finisher_victim = None
                 self.corpses.append(self.pending_corpse)
@@ -1631,6 +1760,8 @@ class CinematicDirector:
             or self.sonic_silence_timer > 0
             or self.joe_pin_timer > 0
             or self.joe_throw_timer > 0
+            or self.joe_triple_timer > 0
+            or self.saitou_timer > 0
             or self.julie_flurry_timer > 0
             or self.goro_windup_timer > 0
             or self.goro_cleaved_timer > 0
@@ -1741,6 +1872,35 @@ class CinematicDirector:
             pygame.draw.circle(shuriken_surf, (225, 240, 255, 55), (cx, cy), int(radius * 0.92), 1)
 
             surface.blit(shuriken_surf, (gx - cx, gy - cy))
+
+        # 1b. Joe: Shurikens táticas triplas em voo (TRIPLE_SHURIKEN_DISMEMBER)
+        for s_data in self.joe_triple_shurikens:
+            gx, gy = camera.apply(s_data["wx"], s_data["wy"], s_data["wz"])
+            sx, sy = camera.apply(s_data["wx"], s_data["wy"], 0.0)
+            spin_angle = self.sumie_anim_timer * 42.0
+            radius = int(10 * camera.zoom)
+
+            # Sombra no solo
+            shadow_surf = pygame.Surface((radius * 2, radius), pygame.SRCALPHA)
+            pygame.draw.ellipse(shadow_surf, (15, 18, 15, 90), (0, 0, radius * 2, radius))
+            surface.blit(shadow_surf, (sx - radius, sy - radius // 2))
+
+            # Shuriken ninja de 4 pontas afiadas
+            sh_surf = pygame.Surface((radius * 2 + 6, radius * 2 + 6), pygame.SRCALPHA)
+            cx, cy = radius + 3, radius + 3
+            for i in range(4):
+                blade_angle = spin_angle + i * (math.pi / 2.0)
+                tip_x = cx + math.cos(blade_angle) * radius
+                tip_y = cy + math.sin(blade_angle) * radius
+                left_x = cx + math.cos(blade_angle + 0.38) * (radius * 0.40)
+                left_y = cy + math.sin(blade_angle + 0.38) * (radius * 0.40)
+                right_x = cx + math.cos(blade_angle - 0.38) * (radius * 0.40)
+                right_y = cy + math.sin(blade_angle - 0.38) * (radius * 0.40)
+                b_pts = [(cx, cy), (left_x, left_y), (tip_x, tip_y), (right_x, right_y)]
+                pygame.draw.polygon(sh_surf, (220, 230, 245), b_pts)
+                pygame.draw.polygon(sh_surf, (80, 95, 110), b_pts, 1)
+            pygame.draw.circle(sh_surf, (40, 45, 52), (cx, cy), max(2, int(2.5 * camera.zoom)))
+            surface.blit(sh_surf, (gx - cx, gy - cy))
 
         # 2. Valerius: Cabeça decepada na foice / erguida na mão e esqueleto decapitado reanimado
         if (self.valerius_decap_timer > 0 or self.valerius_hook_timer > 0 or self.valerius_reanimate_timer > 0) and self.valerius_victim is not None:

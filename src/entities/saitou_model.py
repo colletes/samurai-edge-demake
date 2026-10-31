@@ -82,19 +82,25 @@ def _sheath(c):
 
 
 def _is_blade_in_hand(c) -> bool:
-    """Verifica se a katana está empunhada nas mãos (deixando a bainha vazia sem espada duplicada)."""
+    """
+    Verifica se a katana está empunhada nas mãos (deixando a bainha vazia sem espada duplicada).
+    Saitou luta SEMPRE com a espada empunhada na postura do Gatotsu.
+    A espada só está na bainha durante a intro (antes do saque) e na vitória (após o noto).
+    """
     extra = getattr(c, "extra_props", {}) or {}
     pose = extra.get("pose", "")
     state = getattr(c, "state", "IDLE")
 
-    if c.is_melee or state in ("GATOTSU_CHARGE", "ZEROSHIKI", "ATTACK", "BRAKING"):
-        return True
-    if pose in ("gatotsu_stance", "chiburi_flick", "gatotsu_lunge", "zeroshiki_blast"):
-        return True
     if pose == "noto_sheath":
         prog = extra.get("noto_prog", extra.get("seg_u", 0.0))
         return prog < 0.85
-    return False
+    if state == "VICTORY":
+        vic_p = getattr(c, "atk_progress", 0.0) or extra.get("seg_u", extra.get("p", 0.0))
+        return vic_p < 0.65
+    if state == "INTRO" or pose in ("kiseru_smoke", "kiseru_light"):
+        intro_p = getattr(c, "atk_progress", 0.0) or extra.get("seg_u", extra.get("p", 0.0))
+        return intro_p >= 0.38
+    return True
 
 
 def _draw_sheath(c):
@@ -213,11 +219,11 @@ def _back_panel(c, P):
 
 
 def idle_arms(c):
-    """Guarda firme e austera do Shinsengumi: mão esquerda na empunhadura e mão direita relaxada."""
+    """Guarda autêntica do Lobo de Mibu: Katana empunhada horizontalmente na altura dos olhos na clássica postura do Gatotsu."""
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
-    bob = math.sin(c.walk_timer * 3.0) * 0.008
-    left = (bx + fx * 0.24 + px * 0.08, by + fy * 0.24 + py * 0.08, tz + 0.14 + bob)
-    right = (bx + fx * 0.10 - px * 0.16, by + fy * 0.10 - py * 0.16, tz + 0.06 + bob)
+    bob = math.sin(c.walk_timer * (4.5 if c.is_moving else 2.5)) * 0.006
+    left = (bx + fx * 0.36 - px * 0.02, by + fy * 0.36 - py * 0.02, tz + 0.17 + bob)
+    right = (bx + fx * 0.18 - px * 0.10, by + fy * 0.18 - py * 0.10, tz + 0.15 + bob)
     return left, right
 
 
@@ -294,10 +300,10 @@ def _hands(c):
             return left, mk.lerp(start_r, target_r, u)
 
     # 3. Ataque Primário: Gatotsu Lunge (Estocada Crescente)
-    if pose == "gatotsu_lunge" or getattr(c, "state", "") == "GATOTSU_CHARGE":
+    if pose in ("gatotsu_lunge", "finisher_gatotsu") or getattr(c, "state", "") in ("GATOTSU_CHARGE", "GATOTSU") or extra.get("gatotsu_lunge"):
         u = _smooth(p)
-        reach = 0.28 + u * 0.22
-        left = (bx + fx * (0.34 + reach), by + fy * (0.34 + reach), tz + 0.18)
+        reach = 0.28 + u * 0.26
+        left = (bx + fx * (0.34 + reach) - px * 0.02, by + fy * (0.34 + reach) - py * 0.02, tz + 0.18)
         right = (bx + fx * 0.18 - px * 0.08, by + fy * 0.18 - py * 0.08, tz + 0.15)
         return left, right
 

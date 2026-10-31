@@ -320,20 +320,13 @@ def _draw_cowboy_hat(c):
     """
     Chapéu de cowboy clássico de couro marrom com aba modelada e vinco na copa.
     Diretiva 8: Aba estritamente horizontal (dir_z = 0.0) a partir da coroa (crown_z >= hz + 0.145).
+    Montagem rígida e unificada com o crânio (zero deformação ou deslocamento de vértices).
     """
     P = pal()
     bx, by, hz, fx, fy, px, py = c.base_x, c.base_y, c.head_z, c.fx, c.fy, c.px, c.py
-    extra = getattr(c, "extra_props", {}) or {}
-    pose = extra.get("pose", "")
-    vic_p = extra.get("p", 0.0)
-    t_tick = getattr(c, "walk_timer", 0.0) * 16.0 + getattr(c, "state_timer", 0.0) * 12.0
-    t_strum = (vic_p * 46.0) + t_tick
-    head_bop = math.sin(t_strum * 0.5) * 0.012 if (pose in ("cowboy_banjo", "cowboy_victory") or vic_p >= 0.45) else 0.0
-    tip_drop = 0.0
-    if pose == "hat_tip" or (extra.get("intro_victory_state") == "VICTORY" and vic_p < 0.22):
-        u = _smooth(extra.get("seg_u", vic_p / 0.22))
-        tip_drop = math.sin(u * math.pi) * 0.016
-    crown_z = hz + 0.150 + head_bop - tip_drop
+    
+    # Altura fixa e segura da coroa: repousa perfeitamente sobre o topo do crânio sem cisalhamento
+    crown_z = hz + 0.158
 
     # 1. Aba larga ovalada com laterais curvadas para cima (Aba do chapéu)
     brim_center = (bx, by, crown_z)
