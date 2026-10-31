@@ -135,5 +135,7 @@ jobs:
           TAG="${{ steps.release_tag.outputs.tag }}"
           TARGET="colletes/samurai-edge-bakumatsu"
           butler push release_assets/Samurai-Edge-Demake-Demo-Windows.zip "$TARGET:windows-demo" --userversion "$TAG"
-          butler push release_assets/Samurai-Edge-Demake-Demo-macOS.zip "$TARGET:osx-demo" --userversion "$TAG"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            butler push release_assets/Samurai-Edge-Demake-Demo-macOS.zip "$TARGET:osx-demo" --userversion "$TAG"
+          fi
           butler push release_assets/Samurai-Edge-Demake-Demo-Linux.tar.gz "$TARGET:linux-demo" --userversion "$TAG"

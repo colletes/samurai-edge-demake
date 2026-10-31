@@ -36,46 +36,54 @@ if [ -n "$VERSION" ]; then
   USERVERSION_FLAG=("--userversion" "$VERSION")
 fi
 
+CHANNEL_SUFFIX=""
+ZIP_PREFIX="Samurai-Edge-Demake"
+if [[ "$*" == *"--demo"* ]] || [[ "$VERSION" == *"-demo"* ]]; then
+  CHANNEL_SUFFIX="-demo"
+  ZIP_PREFIX="Samurai-Edge-Demake-Demo"
+  echo "🌟 Modo DEMO ativado para itch.io (canais :*-demo)!"
+fi
+
 PUSHED_COUNT=0
 
 # macOS package
-if [ -f "Samurai-Edge-Demake-macOS.zip" ]; then
-  echo "📦 Enviando build macOS para canal :osx..."
-  butler push Samurai-Edge-Demake-macOS.zip "$ITCH_TARGET:osx" "${USERVERSION_FLAG[@]}"
+if [ -f "${ZIP_PREFIX}-macOS.zip" ]; then
+  echo "📦 Enviando build macOS para canal :osx${CHANNEL_SUFFIX}..."
+  butler push "${ZIP_PREFIX}-macOS.zip" "$ITCH_TARGET:osx${CHANNEL_SUFFIX}" "${USERVERSION_FLAG[@]}"
   PUSHED_COUNT=$((PUSHED_COUNT + 1))
-elif [ -f "dist/releases/Samurai-Edge-Demake-macOS.zip" ]; then
-  echo "📦 Enviando dist/releases/Samurai-Edge-Demake-macOS.zip para canal :osx..."
-  butler push dist/releases/Samurai-Edge-Demake-macOS.zip "$ITCH_TARGET:osx" "${USERVERSION_FLAG[@]}"
+elif [ -f "dist/releases/${ZIP_PREFIX}-macOS.zip" ]; then
+  echo "📦 Enviando dist/releases/${ZIP_PREFIX}-macOS.zip para canal :osx${CHANNEL_SUFFIX}..."
+  butler push "dist/releases/${ZIP_PREFIX}-macOS.zip" "$ITCH_TARGET:osx${CHANNEL_SUFFIX}" "${USERVERSION_FLAG[@]}"
   PUSHED_COUNT=$((PUSHED_COUNT + 1))
-elif [ -d "dist/SamuraiEdge.app" ]; then
+elif [ -d "dist/SamuraiEdge.app" ] && [ -z "$CHANNEL_SUFFIX" ]; then
   echo "📦 Enviando dist/SamuraiEdge.app para canal :osx..."
   butler push dist/SamuraiEdge.app "$ITCH_TARGET:osx" "${USERVERSION_FLAG[@]}"
   PUSHED_COUNT=$((PUSHED_COUNT + 1))
 fi
 
 # Windows package
-if [ -f "Samurai-Edge-Demake-Windows.zip" ]; then
-  echo "📦 Enviando build Windows para canal :windows..."
-  butler push Samurai-Edge-Demake-Windows.zip "$ITCH_TARGET:windows" "${USERVERSION_FLAG[@]}"
+if [ -f "${ZIP_PREFIX}-Windows.zip" ]; then
+  echo "📦 Enviando build Windows para canal :windows${CHANNEL_SUFFIX}..."
+  butler push "${ZIP_PREFIX}-Windows.zip" "$ITCH_TARGET:windows${CHANNEL_SUFFIX}" "${USERVERSION_FLAG[@]}"
   PUSHED_COUNT=$((PUSHED_COUNT + 1))
-elif [ -f "dist/releases/Samurai-Edge-Demake-Windows.zip" ]; then
-  echo "📦 Enviando dist/releases/Samurai-Edge-Demake-Windows.zip para canal :windows..."
-  butler push dist/releases/Samurai-Edge-Demake-Windows.zip "$ITCH_TARGET:windows" "${USERVERSION_FLAG[@]}"
+elif [ -f "dist/releases/${ZIP_PREFIX}-Windows.zip" ]; then
+  echo "📦 Enviando dist/releases/${ZIP_PREFIX}-Windows.zip para canal :windows${CHANNEL_SUFFIX}..."
+  butler push "dist/releases/${ZIP_PREFIX}-Windows.zip" "$ITCH_TARGET:windows${CHANNEL_SUFFIX}" "${USERVERSION_FLAG[@]}"
   PUSHED_COUNT=$((PUSHED_COUNT + 1))
-elif [ -d "dist/SamuraiEdge" ] && [ -f "dist/SamuraiEdge/SamuraiEdge.exe" ]; then
+elif [ -d "dist/SamuraiEdge" ] && [ -f "dist/SamuraiEdge/SamuraiEdge.exe" ] && [ -z "$CHANNEL_SUFFIX" ]; then
   echo "📦 Enviando dist/SamuraiEdge para canal :windows..."
   butler push dist/SamuraiEdge "$ITCH_TARGET:windows" "${USERVERSION_FLAG[@]}"
   PUSHED_COUNT=$((PUSHED_COUNT + 1))
 fi
 
 # Linux package
-if [ -f "Samurai-Edge-Demake-Linux.tar.gz" ]; then
-  echo "📦 Enviando build Linux para canal :linux..."
-  butler push Samurai-Edge-Demake-Linux.tar.gz "$ITCH_TARGET:linux" "${USERVERSION_FLAG[@]}"
+if [ -f "${ZIP_PREFIX}-Linux.tar.gz" ]; then
+  echo "📦 Enviando build Linux para canal :linux${CHANNEL_SUFFIX}..."
+  butler push "${ZIP_PREFIX}-Linux.tar.gz" "$ITCH_TARGET:linux${CHANNEL_SUFFIX}" "${USERVERSION_FLAG[@]}"
   PUSHED_COUNT=$((PUSHED_COUNT + 1))
-elif [ -f "dist/releases/Samurai-Edge-Demake-Linux.tar.gz" ]; then
-  echo "📦 Enviando dist/releases/Samurai-Edge-Demake-Linux.tar.gz para canal :linux..."
-  butler push dist/releases/Samurai-Edge-Demake-Linux.tar.gz "$ITCH_TARGET:linux" "${USERVERSION_FLAG[@]}"
+elif [ -f "dist/releases/${ZIP_PREFIX}-Linux.tar.gz" ]; then
+  echo "📦 Enviando dist/releases/${ZIP_PREFIX}-Linux.tar.gz para canal :linux${CHANNEL_SUFFIX}..."
+  butler push "dist/releases/${ZIP_PREFIX}-Linux.tar.gz" "$ITCH_TARGET:linux${CHANNEL_SUFFIX}" "${USERVERSION_FLAG[@]}"
   PUSHED_COUNT=$((PUSHED_COUNT + 1))
 fi
 

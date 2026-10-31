@@ -797,6 +797,10 @@ class SettingsMenu:
             self.current_subscreen = "CONTROLS"
             SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
         elif idx == 3:
+            from src.edition import is_demo
+            if is_demo():
+                SoundManager.get_instance().play(SoundEvent.UI_CANCEL)
+                return
             from src.arcade import arcade_save
             if arcade_save.is_gallery_unlocked(arcade_save.load()):
                 SoundManager.get_instance().play(SoundEvent.MENU_SELECT)
@@ -946,8 +950,8 @@ class SettingsMenu:
                 self.gallery_btn_rect,
                 t("settings_hub_gallery_title"),
                 t("settings_hub_gallery_desc"),
-                t("gallery_btn_label") if unlocked else t("gallery_locked_label"),
-                unlocked,
+                t("demo_locked_sub") if is_demo() else (t("gallery_btn_label") if unlocked else t("gallery_locked_label")),
+                False if is_demo() else unlocked,
             ),
         ]
 

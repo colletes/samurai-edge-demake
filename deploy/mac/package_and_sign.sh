@@ -13,12 +13,25 @@ IDENTITY="${CODESIGN_IDENTITY:-Apple Development: colletes@gmail.com (D7YJU7724A
 ENTITLEMENTS="$SCRIPT_DIR/entitlements.plist"
 APP_PATH="dist/SamuraiEdge.app"
 RELEASES_DIR="dist/releases"
-ZIP_NAME="Samurai-Edge-Demake-macOS.zip"
+IS_DEMO_BUILD="${IS_DEMO_BUILD:-0}"
+if [ "${1:-}" = "--demo" ] || [ "$IS_DEMO_BUILD" -eq 1 ]; then
+    IS_DEMO_BUILD=1
+    ZIP_NAME="Samurai-Edge-Demake-Demo-macOS.zip"
+    echo "🌟 Modo DEMO ativado!"
+else
+    ZIP_NAME="Samurai-Edge-Demake-macOS.zip"
+fi
 TARGET_ZIP="$RELEASES_DIR/$ZIP_NAME"
 
 PYTHON_BIN="venv/bin/python"
 if [ ! -x "$PYTHON_BIN" ]; then
     PYTHON_BIN="python3"
+fi
+
+if [ "$IS_DEMO_BUILD" -eq 1 ]; then
+    # Garantir restauração de IS_DEMO ao sair
+    trap 'sed -i "" "s/IS_DEMO = True/IS_DEMO = False/g" src/edition.py || true' EXIT
+    sed -i "" "s/IS_DEMO = False/IS_DEMO = True/g" src/edition.py
 fi
 
 echo "===================================================="
