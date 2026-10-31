@@ -2,10 +2,11 @@
 import sys
 import os
 
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
 block_cipher = None
 
+# Coleta de assets do jogo
 def get_runtime_assets():
     datas = []
     exclude_patterns = [
@@ -26,12 +27,28 @@ def get_runtime_assets():
             datas.append((rel_path, dest_dir))
     return datas
 
+# Coleta de dados e binários do FFmpeg empacotado (imageio_ffmpeg)
+extra_datas = []
+extra_binaries = []
+try:
+    extra_datas += collect_data_files('imageio_ffmpeg')
+except Exception:
+    pass
+
+try:
+    import imageio_ffmpeg
+    f_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    if f_exe and os.path.isfile(f_exe):
+        extra_binaries.append((f_exe, 'imageio_ffmpeg/binaries'))
+except Exception:
+    pass
+
 a = Analysis(
     ['main.py'],
     pathex=['.'],
-    binaries=[],
-    datas=get_runtime_assets(),
-    hiddenimports=collect_submodules('src') + collect_submodules('pyvidplayer2') + [
+    binaries=extra_binaries,
+    datas=get_runtime_assets() + extra_datas,
+    hiddenimports=collect_submodules('src') + collect_submodules('pyvidplayer2') + collect_submodules('imageio_ffmpeg') + [
         'pygame',
         'pygame._sdl2',
         'pygame._sdl2.audio',
@@ -89,8 +106,8 @@ if sys.platform == 'darwin':
         info_plist={
             'CFBundleName': 'Samurai Edge Demake',
             'CFBundleDisplayName': 'Samurai Edge Demake',
-            'CFBundleVersion': '3.0.0alpha',
-            'CFBundleShortVersionString': '3.0.0alpha',
+            'CFBundleVersion': '3.0.1alpha',
+            'CFBundleShortVersionString': '3.0.1alpha',
             'NSHighResolutionCapable': 'True',
             'LSApplicationCategoryType': 'public.app-category.action-games',
             'LSMinimumSystemVersion': '10.13.0',

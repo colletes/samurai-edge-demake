@@ -65,10 +65,13 @@ fi
 echo "🧹 Limpando atributos estendidos e quarentena (xattr)..."
 xattr -cr "$APP_PATH" || true
 
-echo "✍️  Assinando binários, frameworks e bibliotecas dinâmicas (.dylib, .so)..."
-find "$APP_PATH/Contents" -type f \( -name "*.dylib" -o -name "*.so" \) | while read -r lib; do
-    codesign --force --options runtime --timestamp --sign "$IDENTITY" "$lib" 2>/dev/null || \
-    codesign --force --sign - "$lib"
+echo "✍️  Assinando binários, frameworks e bibliotecas dinâmicas (.dylib, .so, ffmpeg)..."
+find "$APP_PATH/Contents" -type f \( -name "*.dylib" -o -name "*.so" -o -name "*ffmpeg*" \) | while read -r lib; do
+    if [ "$lib" != "$APP_PATH/Contents/MacOS/SamuraiEdge" ]; then
+        chmod +x "$lib" 2>/dev/null || true
+        codesign --force --options runtime --timestamp --sign "$IDENTITY" "$lib" 2>/dev/null || \
+        codesign --force --sign - "$lib"
+    fi
 done
 
 echo "✍️  Assinando executável principal com entitlements de Hardened Runtime..."

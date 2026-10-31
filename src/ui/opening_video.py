@@ -77,92 +77,13 @@ class OpeningVideoScreen:
             self.is_ios_native = False
 
         try:
-            # 1. Expandir PATH do processo para localizar ffmpeg em /opt/homebrew/bin ou /usr/local/bin
-            for extra_path in ("/opt/homebrew/bin", "/usr/local/bin", "/opt/local/bin"):
-                if os.path.isdir(extra_path) and extra_path not in os.environ.get("PATH", ""):
-                    os.environ["PATH"] = extra_path + os.pathsep + os.environ.get("PATH", "")
-
-            import shutil
-            ffmpeg_bin = shutil.which("ffmpeg")
-            ffprobe_bin = shutil.which("ffprobe")
-
-            import pyvidplayer2
-            if ffmpeg_bin:
-                try:
-                    pyvidplayer2.set_ffmpeg_path(ffmpeg_bin)
-                    if ffprobe_bin:
-                        pyvidplayer2.set_ffprobe_path(ffprobe_bin)
-                except Exception:
-                    pass
+            from src.ui.video_utils import setup_pyvidplayer2
+            has_pyvid, ffmpeg_bin = setup_pyvidplayer2()
+            if not has_pyvid:
+                self.is_finished = True
+                return
 
             from pyvidplayer2 import Video
-            import pyvidplayer2.mixer_handler
-
-            # Blindagem defensiva do MixerHandler contra quedas de driver, CoreAudio reset e hotplug de gamepad
-            def _safe_mixer_get_busy(handler_self):
-                try:
-                    if not pygame.mixer.get_init():
-                        try:
-                            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
-                        except Exception:
-                            return False
-                    return bool(pygame.mixer.music.get_busy())
-                except Exception:
-                    return False
-
-            def _safe_mixer_get_pos(handler_self):
-                if not getattr(handler_self, "loaded", False):
-                    return 0.0
-                try:
-                    if not pygame.mixer.get_init():
-                        try:
-                            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
-                        except Exception:
-                            return 0.0
-                    return max(0.0, pygame.mixer.music.get_pos() / 1000.0)
-                except Exception:
-                    return 0.0
-
-            def _safe_mixer_load(handler_self, audio_chunk):
-                try:
-                    if not pygame.mixer.get_init():
-                        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
-                    from io import BytesIO
-                    pygame.mixer.music.load(BytesIO(audio_chunk), "wav")
-                    handler_self.loaded = True
-                except Exception:
-                    handler_self.loaded = False
-
-            def _safe_mixer_play(handler_self):
-                try:
-                    if not pygame.mixer.get_init():
-                        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
-                    pygame.mixer.music.play()
-                except Exception:
-                    pass
-
-            def _safe_mixer_stop(handler_self):
-                try:
-                    if pygame.mixer.get_init():
-                        pygame.mixer.music.stop()
-                except Exception:
-                    pass
-
-            def _safe_mixer_unload(handler_self):
-                try:
-                    handler_self.stop()
-                    if pygame.mixer.get_init():
-                        pygame.mixer.music.unload()
-                except Exception:
-                    pass
-                handler_self.loaded = False
-
-            pyvidplayer2.mixer_handler.MixerHandler.get_busy = _safe_mixer_get_busy
-            pyvidplayer2.mixer_handler.MixerHandler.get_pos = _safe_mixer_get_pos
-            pyvidplayer2.mixer_handler.MixerHandler.load = _safe_mixer_load
-            pyvidplayer2.mixer_handler.MixerHandler.play = _safe_mixer_play
-            pyvidplayer2.mixer_handler.MixerHandler.stop = _safe_mixer_stop
-            pyvidplayer2.mixer_handler.MixerHandler.unload = _safe_mixer_unload
 
             # Parar qualquer música de fundo anterior antes de inicializar o player
             try:
@@ -171,27 +92,31 @@ class OpeningVideoScreen:
             except Exception:
                 pass
 
-            # Tentativa 1: use_pygame_audio=True com ffmpeg
+            # Tentativa 1: use_pygame_audio=True com ffmpeg (extrai e toca o áudio abridged embutido do vídeo)
             if ffmpeg_bin:
                 try:
                     self.video = Video(self.video_path, use_pygame_audio=True, chunk_size=120, max_chunks=1)
                 except Exception as ex_ffmpeg:
-                    print(f"[OpeningVideoScreen] FFmpeg falhou ({ex_ffmpeg}), acionando fallback nativo...")
+                    print(f"[OpeningVideoScreen] FFmpeg falhou ({ex_ffmpeg}), acionando fallback...")
                     self.video = None
 
-            # Tentativa 2 (Fallback Universal): OpenCV decodifica vídeo (sem ffmpeg) + Pygame mixer toca a trilha
+            # Tentativa 2 (Fallback Universal): OpenCV decodifica vídeo (sem ffmpeg) + Pygame mixer toca a trilha exata
             if not self.video:
                 self.video = Video(self.video_path, no_audio=True)
-                audio_file = "Samurai Edge - Closing Theme.mp3" if ("Credits" in self.video_path or "Closing" in self.video_path) else "Samurai Edge- Opening Theme.mp3"
-                audio_candidate = get_asset_path(f"assets/sounds/music/{audio_file}")
-                if os.path.exists(audio_candidate):
-                    try:
-                        if not pygame.mixer.get_init():
-                            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
-                        pygame.mixer.music.load(audio_candidate)
-                        pygame.mixer.music.play()
-                    except Exception as e_music:
-                        print(f"[OpeningVideoScreen] Erro no mixer de fallback: {e_music}")
+                audio_candidates = [
+                    get_asset_path("assets/Opening Videos/Samurai_Edge_Opening_Audio.mp3"),
+                    get_asset_path("assets/sounds/music/Samurai Edge- Opening Theme.mp3"),
+                ]
+                for cand in audio_candidates:
+                    if os.path.exists(cand):
+                        try:
+                            if not pygame.mixer.get_init():
+                                pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                            pygame.mixer.music.load(cand)
+                            pygame.mixer.music.play()
+                            break
+                        except Exception as e_music:
+                            print(f"[OpeningVideoScreen] Erro no mixer de fallback: {e_music}")
 
             if self.video and self.video.original_size != (SCREEN_WIDTH, SCREEN_HEIGHT):
                 self.video.resize((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -202,6 +127,8 @@ class OpeningVideoScreen:
                 pass
         except Exception as e:
             print(f"[OpeningVideoScreen] Falha ao carregar video: {e}")
+            self.video = None
+            self.is_finished = True
             self.is_finished = True
             if self.video:
                 try:

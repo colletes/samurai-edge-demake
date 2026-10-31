@@ -11,3 +11,5 @@ numpy>=1.26
 # variante com GUI:
 #   pip install --no-deps opencv-python-headless==4.10.0.84 sounddevice numpy
 #   pip install --no-deps pyvidplayer2==0.9.37
+imageio-ffmpeg>=0.5.1
+

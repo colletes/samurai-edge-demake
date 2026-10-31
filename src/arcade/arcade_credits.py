@@ -545,112 +545,62 @@ class ArcadeCreditsScreen:
         self.video = None
         if self.video_path and os.environ.get("SDL_VIDEODRIVER") != "dummy":
             try:
-                from pyvidplayer2 import Video
-                import pyvidplayer2.mixer_handler
-                from src.audio.sound_manager import SoundManager
-                # Para reprodução de trilha de fundo para não misturar áudios
-                SoundManager.get_instance().stop_music()
-                try:
-                    if pygame.mixer.get_init():
-                        pygame.mixer.music.stop()
-                        pygame.mixer.music.unload()
-                except Exception:
-                    pass
+                from src.ui.video_utils import setup_pyvidplayer2
+                has_pyvid, ffmpeg_bin = setup_pyvidplayer2()
+                if has_pyvid:
+                    from pyvidplayer2 import Video
+                    from src.audio.sound_manager import SoundManager
 
-                def _safe_mixer_get_busy(handler_self):
-                    try:
-                        if not pygame.mixer.get_init():
-                            try:
-                                pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
-                            except Exception:
-                                return False
-                        return bool(pygame.mixer.music.get_busy())
-                    except Exception:
-                        return False
-
-                def _safe_mixer_get_pos(handler_self):
-                    if not getattr(handler_self, "loaded", False):
-                        return 0.0
-                    try:
-                        if not pygame.mixer.get_init():
-                            try:
-                                pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
-                            except Exception:
-                                return 0.0
-                        return max(0.0, pygame.mixer.music.get_pos() / 1000.0)
-                    except Exception:
-                        return 0.0
-
-                def _safe_mixer_load(handler_self, audio_chunk):
-                    try:
-                        if not pygame.mixer.get_init():
-                            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
-                        from io import BytesIO
-                        pygame.mixer.music.load(BytesIO(audio_chunk), "wav")
-                        handler_self.loaded = True
-                    except Exception:
-                        handler_self.loaded = False
-
-                def _safe_mixer_play(handler_self):
-                    try:
-                        if not pygame.mixer.get_init():
-                            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
-                        pygame.mixer.music.play()
-                    except Exception:
-                        pass
-
-                def _safe_mixer_stop(handler_self):
+                    # Parar reprodução de trilha de fundo para não misturar áudios
+                    SoundManager.get_instance().stop_music()
                     try:
                         if pygame.mixer.get_init():
                             pygame.mixer.music.stop()
-                    except Exception:
-                        pass
-
-                def _safe_mixer_unload(handler_self):
-                    try:
-                        handler_self.stop()
-                        if pygame.mixer.get_init():
                             pygame.mixer.music.unload()
                     except Exception:
                         pass
-                    handler_self.loaded = False
 
-                pyvidplayer2.mixer_handler.MixerHandler.get_busy = _safe_mixer_get_busy
-                pyvidplayer2.mixer_handler.MixerHandler.get_pos = _safe_mixer_get_pos
-                pyvidplayer2.mixer_handler.MixerHandler.load = _safe_mixer_load
-                pyvidplayer2.mixer_handler.MixerHandler.play = _safe_mixer_play
-                pyvidplayer2.mixer_handler.MixerHandler.stop = _safe_mixer_stop
-                pyvidplayer2.mixer_handler.MixerHandler.unload = _safe_mixer_unload
+                    # Tentativa 1: áudio embutido via ffmpeg
+                    if ffmpeg_bin:
+                        try:
+                            self.video = Video(
+                                self.video_path,
+                                use_pygame_audio=True,
+                                chunk_size=120,
+                                max_chunks=1,
+                            )
+                        except Exception:
+                            self.video = None
 
-                # Tenta primeiro com áudio embutido via ffmpeg
-                import shutil
-                ffmpeg_bin = shutil.which("ffmpeg")
-                if ffmpeg_bin:
+                    # Tentativa 2: vídeo via OpenCV sem ffmpeg + áudio abridged exato
+                    if not self.video:
+                        try:
+                            self.video = Video(self.video_path, no_audio=True)
+                            audio_candidates = [
+                                get_asset_path("assets/Opening Videos/Samurai_Edge_Credits_Audio.mp3"),
+                                get_asset_path("assets/sounds/music/Samurai Edge - Closing Theme.mp3"),
+                            ]
+                            for cand in audio_candidates:
+                                if os.path.exists(cand):
+                                    try:
+                                        if not pygame.mixer.get_init():
+                                            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                                        pygame.mixer.music.load(cand)
+                                        pygame.mixer.music.play()
+                                        break
+                                    except Exception:
+                                        pass
+                        except Exception as e_noaudio:
+                            print(f"[ArcadeCredits] Vídeo não pôde ser carregado ({e_noaudio}), usando modo de slides.")
+                            self.video = None
+
+                    if self.video and self.video.original_size != (SCREEN_WIDTH, SCREEN_HEIGHT):
+                        self.video.resize((SCREEN_WIDTH, SCREEN_HEIGHT))
                     try:
-                        self.video = Video(
-                            self.video_path,
-                            use_pygame_audio=True,
-                            chunk_size=120,
-                            max_chunks=1,
-                        )
+                        if self.video:
+                            self.video.set_volume(1.0)
                     except Exception:
-                        self.video = None
-
-                # Fallback para vídeo via OpenCV sem ffmpeg
-                if not self.video:
-                    try:
-                        self.video = Video(self.video_path, no_audio=True)
-                    except Exception as e_noaudio:
-                        print(f"[ArcadeCredits] Vídeo não pôde ser carregado ({e_noaudio}), usando modo de slides.")
-                        self.video = None
-
-                if self.video and self.video.original_size != (SCREEN_WIDTH, SCREEN_HEIGHT):
-                    self.video.resize((SCREEN_WIDTH, SCREEN_HEIGHT))
-                try:
-                    if self.video:
-                        self.video.set_volume(1.0)
-                except Exception:
-                    pass
+                        pass
             except Exception as e:
                 print(f"[ArcadeCredits] Falha geral no player de vídeo: {e}")
                 self.video = None
