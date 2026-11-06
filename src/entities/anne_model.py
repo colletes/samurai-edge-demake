@@ -62,6 +62,8 @@ MATERIALS = {
     "hat": "velvet", "steel": "steel", "gold": "gold"
 }
 
+LEGACY_MATERIALS = {k: "matte" for k in MATERIALS}
+
 
 def pal() -> dict:
     return PALETTE
@@ -73,8 +75,13 @@ def pal() -> dict:
 
 def idle_arms(c):
     """Postura confiante de capitã: alfanje erguido em guarda diagonal no ombro direito, bomba na mão esquerda."""
-    tz = c.torso_z + math.sin(c.walk_timer * 2.8) * 0.010
-    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
+    tz = getattr(c, "torso_z", 0.40) + math.sin(getattr(c, "walk_timer", 0.0) * 2.8) * 0.010
+    bx = getattr(c, "base_x", 0.0)
+    by = getattr(c, "base_y", 0.0)
+    fx = getattr(c, "fx", 1.0)
+    fy = getattr(c, "fy", 0.0)
+    px = getattr(c, "px", 0.0)
+    py = getattr(c, "py", 1.0)
     right = (bx + fx * 0.12 - px * 0.14, by + fy * 0.12 - py * 0.14, tz + 0.12)
     left = (bx + fx * 0.10 + px * 0.15, by + fy * 0.10 + py * 0.15, tz - 0.02)
     return left, right
@@ -82,8 +89,16 @@ def idle_arms(c):
 
 def attack_arms(c):
     """Golpe rodopiante com o alfanje e recuo da mão da bomba."""
-    p = c.atk_progress if c.atk_progress is not None else 0.0
-    bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
+    p = getattr(c, "atk_progress", 0.0)
+    if p is None:
+        p = 0.0
+    bx = getattr(c, "base_x", 0.0)
+    by = getattr(c, "base_y", 0.0)
+    tz = getattr(c, "torso_z", 0.40)
+    fx = getattr(c, "fx", 1.0)
+    fy = getattr(c, "fy", 0.0)
+    px = getattr(c, "px", 0.0)
+    py = getattr(c, "py", 1.0)
     sw_a = -1.60 + p * 3.20
     right = (bx + fx * math.cos(sw_a) * 0.30 - px * math.sin(sw_a) * 0.30,
              by + fy * math.cos(sw_a) * 0.30 - py * math.sin(sw_a) * 0.30,
@@ -94,17 +109,167 @@ def attack_arms(c):
     return left, right
 
 
-def _current_hands(c):
-    if c.is_melee and c.atk_progress is not None:
+def _smooth(t: float) -> float:
+    t = max(0.0, min(1.0, t))
+    return t * t * (3.0 - 2.0 * t)
+
+
+def _hands(c):
+    """Cinemática completa dos braços de Anne cobrindo todas as 12 poses e sequências cinematográficas."""
+    extra = getattr(c, "extra_props", {}) or {}
+    pose = extra.get("pose") or getattr(c, "pose_name", None)
+    state = getattr(c, "state", "IDLE")
+    p = extra.get("p", 0.0)
+    seg_u = extra.get("seg_u", p)
+    tz = getattr(c, "torso_z", 0.40)
+    bx = getattr(c, "base_x", 0.0)
+    by = getattr(c, "base_y", 0.0)
+    fx = getattr(c, "fx", 1.0)
+    fy = getattr(c, "fy", 0.0)
+    px = getattr(c, "px", 0.0)
+    py = getattr(c, "py", 1.0)
+
+    # 1. Intro - Roteiro de Pilhagem Naval (3 Fases com C0 contínuo)
+    if pose == "spin_cutlass" or (state == "INTRO" and p < 0.35):
+        u = _smooth(seg_u if pose == "spin_cutlass" else min(1.0, max(0.0, p / 0.35)))
+        p0_left = (bx + fx * 0.06 + px * 0.15, by + fy * 0.06 + py * 0.15, tz - 0.02)
+        p0_right = (bx + fx * 0.12 - px * 0.14, by + fy * 0.12 - py * 0.14, tz + 0.12)
+        target_r = (bx + fx * 0.16 - px * 0.10, by + fy * 0.16 - py * 0.10, tz + 0.16)
+        target_l = (bx - fx * 0.02 + px * 0.16, by - fy * 0.02 + py * 0.16, tz + 0.01)
+        spin_ang = u * math.tau * 2.0
+        spin_decay = 0.035 * (1.0 - u * 0.4)
+        base_r = mk.lerp(p0_right, target_r, u)
+        right = (base_r[0] + math.cos(spin_ang) * spin_decay,
+                 base_r[1] + math.sin(spin_ang) * spin_decay,
+                 base_r[2] + math.sin(u * math.pi) * 0.025)
+        left = mk.lerp(p0_left, target_l, u)
+        return left, right
+
+    if pose == "aim_rival" or (state == "INTRO" and p < 0.70):
+        u = _smooth(seg_u if pose == "aim_rival" else min(1.0, max(0.0, (p - 0.35) / 0.35)))
+        p1_right = (bx + fx * 0.16 - px * 0.10, by + fy * 0.16 - py * 0.10, tz + 0.16)
+        p1_left = (bx - fx * 0.02 + px * 0.16, by - fy * 0.02 + py * 0.16, tz + 0.01)
+        p2_right = (bx + fx * 0.34 - px * 0.04, by + fy * 0.34 - py * 0.04, tz + 0.16)
+        p2_left = (bx - fx * 0.02 + px * 0.16, by - fy * 0.02 + py * 0.16, tz + 0.01)
+        right = mk.lerp(p1_right, p2_right, u)
+        left = mk.lerp(p1_left, p2_left, u)
+        return left, right
+
+    if pose == "pirate_guard" or (state == "INTRO" and p >= 0.70):
+        u = _smooth(seg_u if pose == "pirate_guard" else min(1.0, max(0.0, (p - 0.70) / 0.30)))
+        p2_right = (bx + fx * 0.34 - px * 0.04, by + fy * 0.34 - py * 0.04, tz + 0.16)
+        p2_left = (bx - fx * 0.02 + px * 0.16, by - fy * 0.02 + py * 0.16, tz + 0.01)
+        p3_right = (bx + fx * 0.18 - px * 0.12, by + fy * 0.18 - py * 0.12, tz + 0.12)
+        p3_left = (bx + fx * 0.06 + px * 0.15, by + fy * 0.06 + py * 0.15, tz - 0.02)
+        glo_p = float(extra.get("p", 0.70 + 0.30 * u))
+        breathe = math.sin(glo_p * 12.0) * 0.010
+        sway = math.cos(glo_p * 8.0) * 0.008
+        cur_r = mk.lerp(p2_right, p3_right, u)
+        cur_l = mk.lerp(p2_left, p3_left, u)
+        right = (cur_r[0] + sway, cur_r[1] + sway, cur_r[2] + breathe)
+        left = (cur_l[0] - sway, cur_l[1] - sway, cur_l[2] + breathe * 0.6)
+        return left, right
+
+    # 2. Vitória - Roteiro de Pilhagem Naval (3 Fases com C0 contínuo)
+    if pose == "swig_rum" or (state in ("VICTORY", "VICTORY_SHORT") and p < 0.35):
+        u = _smooth(seg_u if pose == "swig_rum" else min(1.0, max(0.0, p / 0.35)))
+        v0_right = (bx - px * 0.14 + fx * 0.06, by - py * 0.14 + fy * 0.06, tz + 0.04)
+        v0_left = (bx + fx * 0.06 + px * 0.14, by + fy * 0.06 + py * 0.14, tz + 0.06)
+        v1_left = (bx + fx * 0.12 + px * 0.04, by + fy * 0.12 + py * 0.04, tz + 0.28)
+        v1_right = (bx - px * 0.14 + fx * 0.06, by - py * 0.14 + fy * 0.06, tz + 0.04)
+        left = mk.lerp(v0_left, v1_left, u)
+        right = mk.lerp(v0_right, v1_right, u)
+        return left, right
+
+    if pose == "raise_jolly_roger" or (state in ("VICTORY", "VICTORY_SHORT") and p < 0.70):
+        u = _smooth(seg_u if pose == "raise_jolly_roger" else min(1.0, max(0.0, (p - 0.35) / 0.35)))
+        v1_left = (bx + fx * 0.12 + px * 0.04, by + fy * 0.12 + py * 0.04, tz + 0.28)
+        v1_right = (bx - px * 0.14 + fx * 0.06, by - py * 0.14 + fy * 0.06, tz + 0.04)
+        v2_left = (bx + fx * 0.10 + px * 0.12, by + fy * 0.10 + py * 0.12, tz + 0.38)
+        v2_right = (bx - px * 0.15 + fx * 0.04, by - py * 0.15 + fy * 0.04, tz + 0.04)
+        left = mk.lerp(v1_left, v2_left, u)
+        right = mk.lerp(v1_right, v2_right, u)
+        return left, right
+
+    if pose == "triumphant_laugh" or (state in ("VICTORY", "VICTORY_SHORT") and p >= 0.70):
+        u = _smooth(seg_u if pose == "triumphant_laugh" else min(1.0, max(0.0, (p - 0.70) / 0.30)))
+        v2_left = (bx + fx * 0.10 + px * 0.12, by + fy * 0.10 + py * 0.12, tz + 0.38)
+        v2_right = (bx - px * 0.15 + fx * 0.04, by - py * 0.15 + fy * 0.04, tz + 0.04)
+        glo_p = float(extra.get("p", 0.70 + 0.30 * u))
+        laugh = math.sin(glo_p * 16.0) * 0.015
+        sway = math.cos(glo_p * 10.0) * 0.008
+        left = (v2_left[0] + sway, v2_left[1] + sway, v2_left[2] + laugh)
+        right = (v2_right[0] - sway, v2_right[1] - sway, v2_right[2] + laugh * 0.6)
+        return left, right
+
+    # 3. Ataque Primário (Cutlass Cleave)
+    if state in ("ATTACK", "CUTLASS_CLEAVE") or pose == "attack":
         return attack_arms(c)
-    if c.is_moving and hasattr(c, "walk_timer"):
-        tz = c.torso_z
-        bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
+
+    # 4. Ataque Secundário (Naval Artillery Strike - Mira & Sinal de Bombardeio)
+    if state in ("CANNON_STRIKE", "CANNON_AIM", "SECONDARY_ATTACK") or pose in ("aim_cannon", "secondary"):
+        # Mão esquerda erguida sinalizando para os céus
+        left = (bx + fx * 0.06 + px * 0.14, by + fy * 0.06 + py * 0.14, tz + 0.34)
+        right = (bx + fx * 0.08 - px * 0.14, by + fy * 0.08 - py * 0.14, tz + 0.05)
+        return left, right
+
+    # 5. Esquiva (Black Powder Dash)
+    if state in ("DODGE", "ROLL", "STATE_ROLL", "DASH") or pose in ("swashbuckle_dash", "dodge"):
+        prog = extra.get("roll_prog", p if p is not None else 0.5)
+        tuck = math.sin(prog * math.pi)
+        right = (bx + fx * (0.08 - tuck * 0.04) - px * (0.10 - tuck * 0.04),
+                 by + fy * (0.08 - tuck * 0.04) - py * (0.10 - tuck * 0.04),
+                 tz + 0.08 - tuck * 0.14)
+        left = (bx + fx * (0.08 - tuck * 0.04) + px * (0.10 - tuck * 0.04),
+                by + fy * (0.08 - tuck * 0.04) + py * (0.10 - tuck * 0.04),
+                tz + 0.08 - tuck * 0.14)
+        return left, right
+
+    # 6. Defesa / Parry
+    if state in ("PARRY", "STATE_PARRY", "GUARD") or pose == "parry":
+        right = (bx + fx * 0.16 + px * 0.02, by + fy * 0.16 + py * 0.02, tz + 0.18)
+        left = (bx + fx * 0.12 - px * 0.12, by + fy * 0.12 - py * 0.12, tz + 0.14)
+        return left, right
+
+    # 7. Reação a Golpe / Flinch / Stun
+    if state in ("STUNNED", "FLINCH", "HIT") or pose in ("hit", "flinch"):
+        right = (bx - fx * 0.10 - px * 0.18, by - fy * 0.10 - py * 0.18, tz + 0.06)
+        left = (bx + fx * 0.08 + px * 0.10, by + fy * 0.08 + py * 0.10, tz + 0.20)
+        return left, right
+
+    # 8. Finishers A & B
+    if state == "FINISHER_A" or pose == "finisher_a":
+        # Aranami Cleave: corte ascendente poderoso
+        prog = getattr(c, "atk_progress", 0.0) or 0.0
+        right = (bx + fx * (0.10 + prog * 0.25) - px * (0.16 - prog * 0.28),
+                 by + fy * (0.10 + prog * 0.25) - py * (0.16 - prog * 0.28),
+                 tz - 0.05 + prog * 0.35)
+        left = (bx - fx * 0.12 + px * 0.14, by - fy * 0.12 + py * 0.14, tz + 0.05)
+        return left, right
+
+    if state == "FINISHER_B" or pose == "finisher_b":
+        # Kanpou Senmetsu: mão espalmada sinalizando o disparo e passo para trás
+        right = (bx + fx * 0.04 - px * 0.15, by + fy * 0.04 - py * 0.15, tz + 0.05)
+        left = (bx + fx * 0.12 + px * 0.16, by + fy * 0.12 + py * 0.16, tz + 0.36)
+        return left, right
+
+    # Padrão: andar ou repouso
+    if getattr(c, "is_moving", False) and hasattr(c, "walk_timer"):
         sw = math.sin(c.walk_timer * 7.5) * 0.035
         right = (bx + fx * 0.08 - px * 0.12 - fx * sw, by + fy * 0.08 - py * 0.12 - fy * sw, tz + 0.02)
         left = (bx + fx * 0.06 + px * 0.14 + fx * sw, by + fy * 0.06 + py * 0.14 + fy * sw, tz - 0.04)
         return left, right
+
     return idle_arms(c)
+
+
+def _current_hands(c):
+    return _hands(c)
+
+
+def get_arms(c):
+    """Exposição modular da cinemática dos braços para sincronização com o renderizador humanoide."""
+    return _current_hands(c)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -128,29 +293,57 @@ def _draw_cutlass(c, hand, d, up):
 
 def _draw_weapons(c, hand_l, hand_r):
     P = pal()
-    if c.is_melee:
-        info = calc_blade_slash_3d("pirate", "ATTACK", c.atk_progress, c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py)
+    extra = getattr(c, "extra_props", {}) or {}
+    pose = extra.get("pose") or getattr(c, "pose_name", None)
+    state = getattr(c, "state", "IDLE")
+    p = extra.get("p", 0.0)
+    seg_u = extra.get("seg_u", p)
+    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
+
+    # Direção e orientação do alfanje
+    if c.is_melee or state in ("ATTACK", "CUTLASS_CLEAVE") or pose == "attack":
+        prog = getattr(c, "atk_progress", 0.0) or 0.0
+        info = calc_blade_slash_3d("pirate", "ATTACK", prog, bx, by, c.torso_z, fx, fy, px, py)
         d = mk.norm(tuple(info["dir"]))
         up = (0.0, 0.0, -0.6)
+    elif pose == "spin_cutlass" or (state == "INTRO" and p < 0.35):
+        u = seg_u if pose == "spin_cutlass" else min(1.0, max(0.0, p / 0.35))
+        spin_ang = u * math.tau * 2.0
+        d = mk.norm((fx * math.sin(spin_ang) + px * math.cos(spin_ang),
+                     fy * math.sin(spin_ang) + py * math.cos(spin_ang),
+                     math.cos(spin_ang) * 0.8))
+        up = (0.0, 0.0, 1.0)
+    elif pose == "aim_rival" or (state == "INTRO" and p < 0.70):
+        # Lâmina apontada reta para a garganta do adversário
+        d = mk.norm((fx * 0.98, fy * 0.98, 0.04))
+        up = (0.0, 0.0, 1.0)
+    elif pose == "pirate_guard" or (state == "INTRO" and p >= 0.70):
+        d = mk.norm((fx * 0.70 - px * 0.35, fy * 0.70 - py * 0.35, 0.45))
+        up = (0.0, 0.0, 1.0)
+    elif pose == "finisher_a" or state == "FINISHER_A":
+        prog = getattr(c, "atk_progress", 0.0) or 0.0
+        d = mk.norm((fx * 0.80 - px * (0.40 - prog * 0.80), fy * 0.80 - py * (0.40 - prog * 0.80), -0.50 + prog * 1.40))
+        up = (-px, -py, 0.5)
     elif c.is_moving:
-        d, up = mk.norm((c.fx * 0.4, c.fy * 0.4, -0.75)), (c.fx * 0.3, c.fy * 0.3, 0.2)
+        d, up = mk.norm((fx * 0.4, fy * 0.4, -0.75)), (fx * 0.3, fy * 0.3, 0.2)
     else:
-        d, up = mk.norm((-c.fx * 0.65 - c.px * 0.3, -c.fy * 0.65 - c.py * 0.3, 0.60)), (c.fx * 0.4, c.fy * 0.4, 0.2)
+        d, up = mk.norm((-fx * 0.65 - px * 0.3, -fy * 0.65 - py * 0.3, 0.60)), (fx * 0.4, fy * 0.4, 0.2)
 
     _draw_cutlass(c, hand_r, d, up)
 
     # Rastro incandescente durante o ataque
-    if c.is_melee and c.atk_progress >= 0.25:
+    prog_melee = getattr(c, "atk_progress", 0.0) or 0.0
+    if (c.is_melee or state in ("ATTACK", "CUTLASS_CLEAVE") or pose in ("attack", "finisher_a")) and prog_melee >= 0.20:
         ghosts = []
         for j in range(5):
-            pj = c.atk_progress - 0.07 * j
+            pj = prog_melee - 0.07 * j
             if pj < 0.1:
                 break
             ang = -1.60 + pj * 3.20
-            h = (c.base_x + c.fx * math.cos(ang) * 0.30 - c.px * math.sin(ang) * 0.30,
-                 c.base_y + c.fy * math.cos(ang) * 0.30 - c.py * math.sin(ang) * 0.30,
+            h = (bx + fx * math.cos(ang) * 0.30 - px * math.sin(ang) * 0.30,
+                 by + fy * math.cos(ang) * 0.30 - py * math.sin(ang) * 0.30,
                  c.torso_z + 0.16)
-            dj = mk.norm(tuple(calc_blade_slash_3d("pirate", "ATTACK", pj, c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py)["dir"]))
+            dj = mk.norm(tuple(calc_blade_slash_3d("pirate", "ATTACK", pj, bx, by, c.torso_z, fx, fy, px, py)["dir"]))
             ghosts.append((mk.add(h, dj, 0.42), mk.add(h, dj, 0.62)))
         for j in range(len(ghosts) - 1):
             fade = 1.0 - j / 5.0
@@ -158,8 +351,42 @@ def _draw_weapons(c, hand_l, hand_r):
             mk.band(c, (a0, a1, b1, b0), P["aura"] + (int(215 * fade),))
             mk.band(c, (mk.lerp(a0, a1, 0.5), a1, b1, mk.lerp(b0, b1, 0.5)), P["aura_core"] + (int(240 * fade),))
 
-    # Bomba redonda na mão esquerda
-    if not c.is_melee:
+    # Objeto na Mão Esquerda (Cantil de Rum na Vitória 1, Jolly Roger na Vitória 2/3, ou Bomba de Pólvora em combate)
+    if pose == "swig_rum" or (state in ("VICTORY", "VICTORY_SHORT") and p < 0.35):
+        # Cantil de peltre cinza
+        flask = (hand_l[0], hand_l[1], hand_l[2])
+        mk.cbox(c, flask[0], flask[1], flask[2], 0.060, 0.045, 0.075, (140, 145, 155))
+        mk.cbox(c, flask[0], flask[1], flask[2] + 0.045, 0.024, 0.024, 0.025, (175, 180, 190), outline=False)
+    elif pose in ("raise_jolly_roger", "triumphant_laugh") or (state in ("VICTORY", "VICTORY_SHORT") and p >= 0.35):
+        # Mastro de madeira escura da bandeira Jolly Roger
+        staff_top = (hand_l[0], hand_l[1], hand_l[2] + 0.38)
+        staff_bot = (hand_l[0], hand_l[1], hand_l[2] - 0.45)
+        mk.limb(c, staff_bot, staff_top, 0.024, (55, 38, 26), outline=False)
+
+        # Tecido negro da bandeira tremulando com vento
+        u_flag = seg_u if pose in ("raise_jolly_roger", "triumphant_laugh") else p
+        sway = math.sin(u_flag * math.tau * 2.0) * 0.04
+        p0 = (staff_top[0], staff_top[1], staff_top[2] - 0.04)
+        p1 = (p0[0] + px * 0.22 + fx * 0.05 + sway, p0[1] + py * 0.22 + fy * 0.05, p0[2] - 0.02)
+        p2 = (p1[0] + px * 0.18 - fx * 0.04 - sway, p1[1] + py * 0.18 - fy * 0.04, p1[2] - 0.03)
+
+        draw_ribbon_mesh_3d(
+            c.surface, c.camera,
+            spine_points=[p0, p1, p2],
+            widths=[0.20, 0.18, 0.15],
+            depth_thick=0.015,
+            colors=[(22, 22, 24), (32, 32, 36)],
+            side_vec=(0.0, 0.0, -1.0),
+            normal_vec=(fx, fy, 0.0),
+            outline=True,
+            alpha=c.alpha,
+        )
+        # Caveira branca estilizada Jolly Roger estampada no centro da bandeira
+        mk.cbox(c, p1[0], p1[1], p1[2] - 0.09, 0.055, 0.055, 0.050, (245, 245, 250), outline=False)
+        # Ossos cruzados sob a caveira
+        mk.cbox(c, p1[0], p1[1], p1[2] - 0.13, 0.080, 0.030, 0.022, (230, 230, 235), outline=False)
+    elif not c.is_melee and pose not in ("aim_rival",):
+        # Bomba redonda na mão esquerda
         bomb = (hand_l[0], hand_l[1], hand_l[2] - 0.03)
         mk.cbox(c, bomb[0], bomb[1], bomb[2], 0.075, 0.075, 0.075, P["bomb"])
         mk.cbox(c, bomb[0], bomb[1], bomb[2] + 0.045, 0.018, 0.018, 0.045, P["fuse"], outline=False)

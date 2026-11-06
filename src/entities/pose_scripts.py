@@ -122,33 +122,59 @@ INTRO = {
         _idle(0.38, 0.70, pose="koiguchi_unlock"),
         _idle(0.70, 1.0, pose="gatotsu_stance"),
     ],
-    # Coronhada do arcabuz
-    "rifleman": [_idle(0.0, 0.2), _seg(0.2, 0.6, "ATTACK", 0.0, 1.0), _idle(0.6, 1.0)],
-    # Dois giros da bola da corrente
-    "murasaki": [_idle(0.0, 0.1), _seg(0.1, 0.45, "ATTACK", 0.0, 1.0), _seg(0.45, 0.8, "ATTACK", 0.0, 1.0), _idle(0.8, 1.0)],
-    # Surge da fumaça (alfa 0 a 1) e arremessa a bomba
-    "kasumi": [_idle(0.0, 0.5, alpha=(0.0, 1.0)), _seg(0.5, 0.82, "ATTACK", 0.0, 1.0), _idle(0.82, 1.0)],
-    # Leques e a pose "mie" congelada
-    "okuni": [_idle(0.0, 0.15), _seg(0.15, 0.5, "ATTACK", 0.0, 0.5), _seg(0.5, 0.82, "ATTACK", 0.5, 0.5), _idle(0.82, 1.0)],
-    # Arco levantado, flecha encaixada e corda esticada
-    "tomoe": [_idle(0.0, 0.15), _seg(0.15, 0.82, "ATTACK", 0.2, 0.8, is_drawing=True), _idle(0.82, 1.0)],
-    # Corte do alfanje
-    "pirate": [_idle(0.0, 0.15), _seg(0.15, 0.55, "CUTLASS_CLEAVE", 0.0, 1.0), _idle(0.55, 1.0)],
-    # Estocada do florete e floreio da capa
-    "musketeer": [_idle(0.0, 0.15), _seg(0.15, 0.5, "FLECHE", 0.0, 1.0), _seg(0.5, 0.82, "CAPE_FLOURISH", 0.5, 0.5), _idle(0.82, 1.0)],
+    # Teppo (2.6): Sopro na brasa da mecha acesa -> verificação do fecho e serpentina -> pontaria resoluta à frente
+    "rifleman": [
+        _idle(0.0, 0.38, pose="match_blow"),
+        _idle(0.38, 0.70, pose="lock_check"),
+        _idle(0.70, 1.0, pose="ready_aim"),
+    ],
+    # Murasaki (2.7): Giro orbital no dedo indicador -> parada na palma e saque -> postura kunoichi
+    "murasaki": [
+        _idle(0.0, 0.35, pose="finger_spin"),
+        _idle(0.35, 0.70, pose="palm_catch"),
+        _idle(0.70, 1.0, pose="kunoichi_stance"),
+    ],
+    # Kasumi (2.8): Queda do teto shinobi -> centelha de pavio e saque de Tanto -> postura furtiva da névoa
+    "kasumi": [
+        _idle(0.0, 0.35, pose="drop_shinobi"),
+        _idle(0.35, 0.70, pose="fuse_draw"),
+        _idle(0.70, 1.0, pose="mist_stance"),
+    ],
+    # Okuni (2.9): Passadas cerimoniais Kumadori -> Giro de quimono com mangas esvoaçantes -> Guarda cruzada Tessen em X
+    "okuni": [
+        _idle(0.0, 0.35, pose="kumadori_steps"),
+        _idle(0.35, 0.70, pose="kimono_spin"),
+        _idle(0.70, 1.0, pose="tessen_cross_guard"),
+    ],
+    # Tomoe (2.10): Ergue o arco Yumi contra o vento -> Testa a tensão da corda Tsuru com os dedos -> Guarda Kyudo Zen
+    "tomoe": [
+        _idle(0.0, 0.35, pose="draw_sky_wind"),
+        _idle(0.35, 0.70, pose="test_tsuru_tension"),
+        _idle(0.70, 1.0, pose="serene_kyudo_stance"),
+    ],
+    # Anne (Corsária): Giro hábil do sabre -> Aponta a lâmina contra o rival -> Guarda desafiadora
+    "pirate": [
+        _idle(0.0, 0.35, pose="spin_cutlass"),
+        _idle(0.35, 0.70, pose="aim_rival"),
+        _idle(0.70, 1.0, pose="pirate_guard"),
+    ],
+    # Julie (Mosqueteira): Vênia aristocrática tirando o chapéu cavalier -> Reverência nobre -> Postura En Garde
+    "musketeer": [
+        _idle(0.0, 0.35, pose="cavalier_hat_bow"),
+        _idle(0.35, 0.70, pose="noble_reverence"),
+        _idle(0.70, 1.0, pose="en_garde"),
+    ],
     # Ren (Shaolin): Saudação Baoquan (punho na palma), Jab Direto, Chute Alto do Dragão com Chi e guarda Shaolin
     "ren": [
-        _seg(0.0, 0.25, "IDLE", 0.0, 1.0, pose="shaolin_salute"),
-        _seg(0.25, 0.48, "ATTACK", 0.0, 1.0, combo_step=1),
-        _seg(0.48, 0.78, "ATTACK", 0.0, 1.0, combo_step=3),
-        _idle(0.78, 1.0),
+        _idle(0.0, 0.35, pose="shaolin_salute"),
+        _seg(0.35, 0.70, "ATTACK", 0.0, 1.0, pose="shaolin_opening_flurry", combo_step=1),
+        _idle(0.70, 1.0, pose="three_dragons_stance"),
     ],
-    # Chiyo (Duas Kodachi): Surge da fumaça sacando as duas Kodachi das costas, corte diagonal, tesoura cruzada em 'X' e guarda
+    # Chiyo (Duas Kodachi): Surge da fumaça sacando as duas Kodachi das costas, giro entre dedos em pegada invertida e guarda felina
     "chiyo": [
-        _seg(0.0, 0.28, "IDLE", 0.0, 1.0, alpha=(0.15, 1.0), pose="kodachi_draw"),
-        _seg(0.28, 0.54, "ATTACK", 0.0, 1.0, combo_step=1),
-        _seg(0.54, 0.82, "ATTACK", 0.0, 1.0, combo_step=3),
-        _idle(0.82, 1.0),
+        _seg(0.0, 0.35, "IDLE", 0.0, 1.0, alpha=(0.20, 1.0), pose="kodachi_draw", sheathed=True),
+        _seg(0.35, 0.70, "IDLE", 0.0, 1.0, pose="kodachi_spin_twirl", sheathed=False),
+        _idle(0.70, 1.0, pose="kunoichi_feline_stance", sheathed=False),
     ],
     # Benkei (Sōhei Warrior Monk): Bate o cabo de ferro da naginata no chão, ergue a manopla em desafio e assume guarda inabalável
     "benkei": [
@@ -236,26 +262,59 @@ VICTORY = {
         _idle(0.35, 0.70, pose="noto_sheath"),
         _idle(0.70, 1.0, pose="kiseru_light"),
     ],
-    "rifleman": [_idle(0.0, 0.15), _seg(0.15, 0.55, "ATTACK", 0.0, 1.0), _idle(0.55, 1.0)],
-    "murasaki": [_idle(0.0, 0.1), _seg(0.1, 0.5, "ATTACK", 0.0, 1.0), _seg(0.5, 0.9, "ATTACK", 0.0, 1.0), _idle(0.9, 1.0)],
-    # Some em fumaça e reaparece, depois arremessa a bomba
-    "kasumi": [_idle(0.0, 0.3, alpha=(1.0, 0.25)), _idle(0.3, 0.55, alpha=(0.25, 1.0)), _seg(0.55, 0.9, "ATTACK", 0.0, 1.0), _idle(0.9, 1.0)],
-    "okuni": [_idle(0.0, 0.1), _seg(0.1, 0.4, "ATTACK", 0.0, 0.5), _seg(0.4, 0.9, "ATTACK", 0.5, 0.5), _idle(0.9, 1.0)],
-    # Arco erguido sem flecha
-    "tomoe": [_idle(0.0, 0.1), _seg(0.1, 0.85, "ATTACK", 0.2, 0.8, is_drawing=False), _idle(0.85, 1.0)],
-    "pirate": [_idle(0.0, 0.1), _seg(0.1, 0.3, "CUTLASS_CLEAVE", 0.0, 0.3), _seg(0.3, 0.85, "CUTLASS_CLEAVE", 0.3, 0.6), _idle(0.85, 1.0)],
-    "musketeer": [_idle(0.0, 0.1), _seg(0.1, 0.35, "FLECHE", 0.0, 1.0), _seg(0.35, 0.85, "CAPE_FLOURISH", 0.5, 0.5), _idle(0.85, 1.0)],
+    # Teppo (2.6): Descanso do arcabuz no ombro esquerdo -> acendimento do Kiseru na brasa da mecha -> baforada relaxada e risada de veterano
+    "rifleman": [
+        _idle(0.0, 0.35, pose="shoulder_rest"),
+        _idle(0.35, 0.68, pose="kiseru_light"),
+        _idle(0.68, 1.0, pose="kiseru_puff"),
+    ],
+    # Murasaki (2.7): Recolhimento espiral da corrente -> foice no ombro -> sumiço em névoa shinobi
+    "murasaki": [
+        _idle(0.0, 0.40, pose="chain_reel"),
+        _idle(0.40, 0.75, pose="kama_rest"),
+        _idle(0.75, 1.0, pose="shadow_vanish", alpha=(1.0, 0.0)),
+    ],
+    # Kasumi (2.8): Chiburi rápido e embainhamento -> quebra da cápsula de fumaça -> sumiço completo na névoa
+    "kasumi": [
+        _idle(0.0, 0.35, pose="chiburi_sheath"),
+        _idle(0.35, 0.70, pose="smoke_drop"),
+        _idle(0.70, 1.0, pose="mist_vanish", alpha=(1.0, 0.0)),
+    ],
+    # Okuni (2.9): Ondulação e floreio alto de leques -> Pose estatuária Mie -> Leque ocultando o sorriso
+    "okuni": [
+        _idle(0.0, 0.35, pose="theatrical_flourish"),
+        _idle(0.35, 0.70, pose="mie_pose"),
+        _idle(0.70, 1.0, pose="fan_hide_smile"),
+    ],
+    # Tomoe (2.10): Apoia a ponteira inferior do Yumi no solo -> Vênia solene aos Kami da guerra -> Respiração zen profunda
+    "tomoe": [
+        _idle(0.0, 0.35, pose="lower_yumi_rest"),
+        _idle(0.35, 0.70, pose="solemn_kami_bow"),
+        _idle(0.70, 1.0, pose="steady_breath_zen"),
+    ],
+    # Anne (Corsária): Gole no cantil de rum -> Ergue a Jolly Roger -> Gargalhada triunfante
+    "pirate": [
+        _idle(0.0, 0.35, pose="swig_rum"),
+        _idle(0.35, 0.70, pose="raise_jolly_roger"),
+        _idle(0.70, 1.0, pose="triumphant_laugh"),
+    ],
+    # Julie (Mosqueteira): Embainhar cego do florete -> Ajuste de luva e saca pederneira -> Sopra fumaça com sorriso superior
+    "musketeer": [
+        _idle(0.0, 0.35, pose="blind_sheath"),
+        _idle(0.35, 0.70, pose="adjust_glove_flintlock"),
+        _idle(0.70, 1.0, pose="blow_smoke_smirk"),
+    ],
     # Ren (Shaolin): Chute Alto do Dragão, Rugido de Kiai com aura dourada e Reverência Gassho de paz
     "ren": [
-        _seg(0.0, 0.32, "ATTACK", 0.0, 1.0, combo_step=3),
-        _seg(0.32, 0.64, "IDLE", 0.0, 1.0, pose="kiai_roar"),
-        _seg(0.64, 1.0, "IDLE", 0.0, 1.0, pose="shaolin_bow"),
+        _seg(0.0, 0.35, "ATTACK", 0.0, 1.0, pose="dragon_kick_landing", combo_step=3),
+        _idle(0.35, 0.70, pose="kiai_roar"),
+        _idle(0.70, 1.0, pose="shaolin_bow"),
     ],
-    # Chiyo (Duas Kodachi): Giro de Dança Mai, Cruzamento em 'X' das Kodachis e Pose Final Kunoichi com pétalas
+    # Chiyo (Duas Kodachi): Giro de espiral sincronizado sobre os pulsos, embainhamento duplo nas costas e guarda vitoriosa
     "chiyo": [
-        _seg(0.0, 0.35, "ATTACK", 0.0, 1.0, combo_step=2),
-        _seg(0.35, 0.65, "IDLE", 0.0, 1.0, pose="kodachi_x_pose"),
-        _seg(0.65, 1.0, "IDLE", 0.0, 1.0, pose="kodachi_victory"),
+        _seg(0.0, 0.40, "IDLE", 0.0, 1.0, pose="kodachi_wrist_spiral", sheathed=False),
+        _seg(0.40, 0.75, "IDLE", 0.0, 1.0, pose="kodachi_reverse_sheath", sheathed=False),
+        _idle(0.75, 1.0, pose="kunoichi_triumphant", sheathed=True),
     ],
     # Benkei: Apoia a naginata sobre os ombros, cruza os braços com presença de fortaleza
     "benkei": [
@@ -323,13 +382,13 @@ BEATS = {
         "ninja": [(0.02, "fx:petals"), (0.36, "sfx:parry"), (0.38, "fx:sparks"), (0.68, "sfx:sword_slash")],
         "american": [(0.42, "sfx:dog_bark"), (0.72, "sfx:dodge_whoosh")],
         "saitou": [(0.12, "fx:smoke"), (0.40, "sfx:parry"), (0.72, "sfx:sword_slash")],
-        "rifleman": [(0.28, "sfx:obstacle_hit")],
-        "murasaki": [(0.12, "sfx:chain_spin"), (0.47, "sfx:chain_spin")],
-        "kasumi": [(0.02, "fx:smoke"), (0.02, "sfx:smoke_puff"), (0.52, "sfx:bomb_fuse")],
-        "okuni": [(0.17, "fx:petals"), (0.5, "fx:petals")],
-        "tomoe": [(0.8, "sfx:bow_release")],
-        "pirate": [(0.2, "sfx:sword_slash")],
-        "musketeer": [(0.2, "sfx:sword_slash"), (0.52, "sfx:dodge_whoosh")],
+        "rifleman": [(0.15, "fx:smoke"), (0.42, "sfx:parry"), (0.72, "sfx:dodge_whoosh")],
+        "murasaki": [(0.12, "sfx:chain_spin"), (0.36, "sfx:parry"), (0.72, "sfx:dodge_whoosh")],
+        "kasumi": [(0.05, "sfx:dodge_whoosh"), (0.35, "sfx:bomb_fuse"), (0.70, "sfx:sword_slash")],
+        "okuni": [(0.15, "sfx:obstacle_hit"), (0.45, "sfx:parry"), (0.75, "fx:petals")],
+        "tomoe": [(0.15, "sfx:dodge_whoosh"), (0.45, "sfx:bow_release"), (0.75, "sfx:parry")],
+        "pirate": [(0.18, "sfx:sword_slash"), (0.42, "sfx:parry"), (0.72, "fx:sparks")],
+        "musketeer": [(0.15, "sfx:dodge_whoosh"), (0.45, "sfx:parry"), (0.75, "sfx:sword_slash")],
         "ren": [(0.26, "sfx:dodge_whoosh"), (0.50, "sfx:sword_slash"), (0.58, "fx:sparks")],
         "chiyo": [(0.02, "fx:smoke"), (0.02, "sfx:smoke_puff"), (0.30, "sfx:sword_slash"), (0.56, "sfx:sword_slash"), (0.60, "fx:petals")],
         "benkei": [(0.24, "sfx:obstacle_hit"), (0.45, "sfx:sword_slash"), (0.50, "fx:sparks")],
@@ -348,13 +407,13 @@ BEATS = {
         "ninja": [(0.15, "sfx:dodge_whoosh"), (0.46, "fx:smoke"), (0.48, "sfx:smoke_puff")],
         "american": [(0.06, "sfx:dodge_whoosh"), (0.34, "sfx:joe_banjo"), (0.72, "sfx:dog_bark")],
         "saitou": [(0.10, "sfx:sword_slash"), (0.15, "fx:blood"), (0.65, "sfx:parry"), (0.80, "fx:smoke")],
-        "rifleman": [(0.2, "sfx:obstacle_hit")],
-        "murasaki": [(0.12, "sfx:chain_spin"), (0.52, "sfx:chain_spin")],
-        "kasumi": [(0.02, "fx:smoke"), (0.3, "fx:smoke"), (0.57, "sfx:bomb_fuse")],
-        "okuni": [(0.12, "fx:petals"), (0.4, "fx:petals")],
-        "tomoe": [(0.5, "sfx:bow_release")],
-        "pirate": [(0.12, "sfx:sword_slash")],
-        "musketeer": [(0.12, "sfx:sword_slash"), (0.36, "sfx:dodge_whoosh")],
+        "rifleman": [(0.10, "fx:smoke"), (0.38, "sfx:bomb_fuse"), (0.75, "fx:smoke")],
+        "murasaki": [(0.15, "sfx:chain_spin"), (0.42, "sfx:parry"), (0.75, "fx:smoke"), (0.75, "sfx:smoke_puff")],
+        "kasumi": [(0.12, "sfx:sword_slash"), (0.40, "sfx:smoke_puff"), (0.42, "fx:smoke")],
+        "okuni": [(0.12, "fx:petals"), (0.45, "sfx:parry"), (0.75, "fx:petals")],
+        "tomoe": [(0.15, "sfx:dodge_whoosh"), (0.40, "sfx:obstacle_hit"), (0.75, "fx:petals")],
+        "pirate": [(0.18, "sfx:obstacle_hit"), (0.45, "sfx:sword_slash"), (0.75, "fx:smoke")],
+        "musketeer": [(0.20, "sfx:parry"), (0.48, "sfx:flintlock_shot"), (0.75, "fx:smoke")],
         "ren": [(0.08, "sfx:dodge_whoosh"), (0.34, "sfx:sword_clash"), (0.36, "fx:sparks"), (0.68, "fx:petals")],
         "chiyo": [(0.08, "sfx:sword_slash"), (0.38, "sfx:parry"), (0.42, "fx:petals"), (0.72, "fx:petals")],
         "benkei": [(0.28, "sfx:parry"), (0.35, "fx:sparks")],

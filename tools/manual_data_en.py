@@ -197,6 +197,7 @@ APPENDIX_EN = {
     "credits": [
         ("Game Designer, Songwriter & Artist", "Colletes"),
         ("Development Toolset", "Gemini / Antigravity, Suno, Google Flow"),
+        ("Community Supporters", "itchzaya, Tiago Fraga, Tobias C."),
         ("Dedication", "To Lorena. Always to Lorena, who supports me in my madness.")
     ],
     "dedication_production": "Inspired by the great masterworks and manga of Feudal Japan."

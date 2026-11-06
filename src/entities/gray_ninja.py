@@ -19,7 +19,7 @@ class GrayNinja(Samurai):
         super().__init__(wx, wy, name="Kasumi")
         self.char_type = "kasumi"
         self.speed = 4.8
-        self.bomb_cooldown = 0.50
+        self.bomb_cooldown = 2.0
         self.bomb_timer = 0.0
         self.smoke_cooldown = 2.0
         self.smoke_timer = 0.0
@@ -30,11 +30,14 @@ class GrayNinja(Samurai):
         self.fog_nodes: list[tuple[float, float, float]] = []  # nós de névoa pedidos; o main os entrega ao FogVolume
         self._last_node = (wx, wy)
 
-        # Terceira Ação: Esquiva Ágil Ninja
+        # Transição Orgânica LERP e SSAA 2x
+        self.pose_lerp_tracker = {"lerp_duration": 0.08, "blend_timer": 0.0, "pose_key": None}
+
+        # Terceira Ação: Esquiva Ágil Ninja / Rolo de Fumaça
         self.is_agile_dodge = True
-        self.roll_speed = 10.5
-        self.roll_duration = 0.22
-        self.roll_recovery_duration = 0.12
+        self.roll_speed = 9.5
+        self.roll_duration = 0.28
+        self.roll_recovery_duration = 0.10
         self.roll_cooldown_duration = 0.35
 
     def can_act(self) -> bool:
@@ -45,8 +48,42 @@ class GrayNinja(Samurai):
             and self.dash_recovery_timer <= 0
         )
 
+    def trigger_hybrid_attack(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None, opponent = None):
+        """
+        Ataque Primário Híbrido da Kunoichi:
+        - Curta distância (<= 2.20m do rival ou mira próxima), quando 1 bomba já está em campo ou durante cooldown (2.0s):
+          Corte relâmpago de adaga Tanto (alcance 1.20m, 2 de dano, clash).
+        - Média/longa distância (> 2.20m) com bomba pronta: Arremesso de Bomba Horoku em arco 3D parabólico.
+        """
+        # Quantidade de bombas ativas no cenário
+        active_bombs = sum(1 for p in projectiles if isinstance(p, TimedBombEntity) and p.owner == self and p.is_active)
+
+        is_close_combat = False
+        if opponent is not None and getattr(opponent, "is_alive", True):
+            dist_opp = math.hypot(opponent.wx - self.wx, opponent.wy - self.wy)
+            if dist_opp <= 2.20:
+                is_close_combat = True
+        else:
+            aim_dist = math.hypot(target_wx - self.wx, target_wy - self.wy)
+            if aim_dist <= 2.20:
+                is_close_combat = True
+
+        # Se o oponente está em alcance corpo a corpo, há bomba ativa OU em cooldown: golpeia com Tanto!
+        if is_close_combat or active_bombs >= 1 or self.bomb_timer > 0:
+            if self.trigger_tanto_slash(target_wx, target_wy, particles):
+                return "tanto"
+            return None
+        else:
+            # À distância e pronta: arremessa a bomba Horoku em arco
+            if self.trigger_throw_bomb(target_wx, target_wy, projectiles):
+                return "bomb"
+            # Fallback para corte se arremesso falhar
+            elif self.trigger_tanto_slash(target_wx, target_wy, particles):
+                return "tanto"
+        return None
+
     def trigger_tanto_slash(self, target_wx: float, target_wy: float, particles: list = None) -> bool:
-        """Golpe Melee Defensivo: Corte relâmpago de adaga Tanto shinobi para curta distância."""
+        """Golpe Melee Defensivo: Corte relâmpago de adaga Tanto shinobi para curta distância (alcance 1.20m, 2 dano)."""
         if not self.can_act():
             return False
         self.set_facing(target_wx, target_wy)
@@ -54,8 +91,8 @@ class GrayNinja(Samurai):
         self.state_timer = 0.14
         self.hitbox_active = True
         self.hitbox_damage = 2
-        self.hitbox_radius = 1.15
-        self.hitbox_center = (self.wx + self.facing_x * 1.15, self.wy + self.facing_y * 1.15)
+        self.hitbox_radius = 1.20
+        self.hitbox_center = (self.wx + self.facing_x * 1.20, self.wy + self.facing_y * 1.20)
         self.slash_dir = (self.facing_x, self.facing_y)
         if particles is not None:
             for _ in range(6):
@@ -63,12 +100,12 @@ class GrayNinja(Samurai):
         return True
 
     def trigger_throw_bomb(self, target_wx: float, target_wy: float, projectiles: list):
-        """Ataque Primário: Arremessa bomba em arco 3D (até 2 ativas). Detona por contato ou tempo."""
+        """Ataque Primário: Arremessa bomba em arco 3D (limite de 1 ativa, 2.0s cooldown). Detona por contato ou tempo."""
         if not self.can_act() or self.bomb_timer > 0:
             return False
 
         active_bombs = sum(1 for p in projectiles if isinstance(p, TimedBombEntity) and p.owner == self and p.is_active)
-        if active_bombs >= 2:
+        if active_bombs >= 1:
             return False
 
         self.stealth_timer = 0.0
@@ -222,18 +259,37 @@ class GrayNinja(Samurai):
         return nodes
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza o Ninja Cinza no autêntico estilo Voxel 3D Isométrico."""
+        """Renderiza Kasumi no autêntico estilo Voxel 3D Isométrico com SSAA 2x e Pose LERP."""
         if self.is_hidden:
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
+
+        extra_props = {
+            "ssaa_2x": True,
+            "pose_lerp_tracker": self.pose_lerp_tracker,
+        }
+
+        if self.state == STATE_ROLL:
+            roll_prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration))))
+            extra_props["roll_prog"] = roll_prog
+            extra_props["pose"] = "smoke_roll"
+            extra_props["somersault_angle"] = 360.0 * roll_prog
+            extra_props["somersault_pivot_z"] = self.wz + 0.30
+            extra_props["is_roll"] = True
+
+        elif self.state == STATE_ATTACK:
+            prog = max(0.0, min(1.0, 1.0 - (self.state_timer / 0.14)))
+            extra_props["pose"] = "tanto_slash"
+            extra_props["p"] = prog
 
         render_voxel_humanoid(
             surface, camera,
             self.wx, self.wy, self.wz,
             self.facing_x, self.facing_y,
             self.state, self.state_timer, self.is_alive,
-            char_type="gray",
+            char_type="kasumi",
             walk_timer=self.walk_cycle,
             alpha=self.alpha,
-            is_moving=self.is_moving
+            is_moving=self.is_moving,
+            extra_props=extra_props
         )

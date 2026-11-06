@@ -78,7 +78,7 @@ def test_hanzo_two_step_combo():
     assert hanzo.state == "ATTACK"
     assert hanzo.combo_step == 1
     assert hanzo.hitbox_active is True
-    assert hanzo.hitbox_radius == 1.30
+    assert hanzo.hitbox_radius == 1.55
     assert hanzo.hitbox_damage == 1
 
     # Buffer do segundo golpe durante o primeiro

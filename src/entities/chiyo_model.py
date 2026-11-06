@@ -87,6 +87,8 @@ MATERIALS = {
     "gold_bright": "gold",
 }
 
+LEGACY_MATERIALS = {k: "matte" for k in MATERIALS}
+
 
 def pal() -> dict:
     return PALETTE
@@ -101,128 +103,233 @@ def _smooth(x):
 # Poses de Braços e Combate com Duas Kodachi
 # ---------------------------------------------------------------------------------------------------------------------
 
-def idle_arms(c):
+def _hands(c):
     """
-    Postura marcial de guarda da Dança das Duas Kodachi e poses especiais (Intro/Victory):
-    - 'kodachi_draw': Mãos levadas acima dos ombros sacando as Kodachi gêmeas das bainhas nas costas.
-    - 'kodachi_x_pose': Ambas as mãos à frente cruzando as duas Kodachi em 'X' diante do peito.
-    - 'kodachi_victory': Mão esquerda erguida ao alto com a Kodachi apontando para o céu e direita aberta em guarda baixa.
-    - Padrão: Mão direita baixa/recuada e mão esquerda alta em guarda de interceptação.
+    Cinemática e poses de braços da Dança das Duas Kodachi e poses especiais (Intro/Vitória/Finishers/Esquivas).
     """
-    breathe = math.sin(c.walk_timer * 2.8) * 0.015
-    tz = c.torso_z + breathe
-    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
-    pose = c.extra_props.get("pose") if c.extra_props else None
+    bx = getattr(c, "base_x", 0.0)
+    by = getattr(c, "base_y", 0.0)
+    tz = getattr(c, "torso_z", 0.80)
+    fx = getattr(c, "fx", 1.0)
+    fy = getattr(c, "fy", 0.0)
+    px = getattr(c, "px", 0.0)
+    py = getattr(c, "py", 1.0)
+    extra = getattr(c, "extra_props", None) or {}
+    pose = extra.get("pose")
+    state = getattr(c, "state", "IDLE")
+    p = getattr(c, "atk_progress", None)
+    if p is None:
+        p = extra.get("p", None)
 
-    if c.state == "MAI_DANCE":
-        spin = c.extra_props.get("mai_spin_angle", 0.0) if c.extra_props else 0.0
+    # 1. Esquiva: Shadow Step Slip (braços recolhidos e estendidos para trás em baixa altitude)
+    if state == "SHADOW_STEP" or pose in ("shadow_step", "dodge", "roll") or extra.get("is_roll", False):
+        prog = float(extra.get("roll_prog", p if p is not None else 0.5))
+        slip = math.sin(prog * math.pi)
+        left = (bx - fx * 0.16 + px * 0.15, by - fy * 0.16 + py * 0.15, tz + 0.02 - slip * 0.06)
+        right = (bx - fx * 0.16 - px * 0.15, by - fy * 0.16 - py * 0.15, tz + 0.02 - slip * 0.06)
+        return left, right
+
+    # 2. Dança Mai Evasiva (giro veloz com Kodachis abertas)
+    if state == "MAI_DANCE" or pose == "mai_dance":
+        spin = extra.get("mai_spin_angle", (c.anim_time * 12.0) if hasattr(c, "anim_time") else 0.0)
         wave = math.sin(spin * 2.0) * 0.06
         left = (bx + fx * 0.14 + px * 0.24, by + fy * 0.14 + py * 0.24, tz + 0.22 + wave)
         right = (bx - fx * 0.14 - px * 0.24, by - fy * 0.14 - py * 0.24, tz + 0.14 - wave)
         return left, right
 
-    if c.extra_props and c.extra_props.get("mai_exhausted"):
+    if extra.get("mai_exhausted"):
         left = (bx + fx * 0.06 + px * 0.16, by + fy * 0.06 + py * 0.16, tz + 0.02)
         right = (bx + fx * 0.04 - px * 0.16, by + fy * 0.04 - py * 0.16, tz + 0.01)
         return left, right
 
-    if pose == "kodachi_draw":
-        left = (bx - fx * 0.04 + px * 0.14, by - fy * 0.04 + py * 0.14, tz + 0.28)
-        right = (bx - fx * 0.04 - px * 0.14, by - fy * 0.04 - py * 0.14, tz + 0.28)
-        return left, right
-    if pose == "kodachi_x_pose":
-        left = (bx + fx * 0.20 + px * 0.08, by + fy * 0.20 + py * 0.08, tz + 0.14)
-        right = (bx + fx * 0.22 - px * 0.08, by + fy * 0.22 - py * 0.08, tz + 0.16)
-        return left, right
-    if pose == "kodachi_victory":
-        left = (bx + fx * 0.08 + px * 0.16, by + fy * 0.08 + py * 0.16, tz + 0.36)
-        right = (bx - fx * 0.10 - px * 0.22, by - fy * 0.10 - py * 0.22, tz + 0.05)
+    # 3. Salto Acrobático Lunge (Acrobat Lunge 3.2m com estocada dupla frontal)
+    if state == "ACROBAT_LUNGE" or pose == "acrobat_lunge":
+        u = _smooth(float(p if p is not None else 0.5))
+        lunge_reach = math.sin(u * math.pi) * 0.26
+        left = (bx + fx * (0.24 + lunge_reach) + px * 0.08, by + fy * (0.24 + lunge_reach) + py * 0.08, tz + 0.14)
+        right = (bx + fx * (0.24 + lunge_reach) - px * 0.08, by + fy * (0.24 + lunge_reach) - py * 0.08, tz + 0.16)
         return left, right
 
-    # Mão direita baixa e recuada
+    # 4. Intro Fase 1: Saque das Kodachis nas Costas
+    if pose == "kodachi_draw":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        start_l = (bx - fx * 0.05 + px * 0.12, by - fy * 0.05 + py * 0.12, tz + 0.26)
+        start_r = (bx - fx * 0.05 - px * 0.12, by - fy * 0.05 - py * 0.12, tz + 0.26)
+        end_l = (bx + fx * 0.08 + px * 0.18, by + fy * 0.08 + py * 0.18, tz + 0.28)
+        end_r = (bx + fx * 0.08 - px * 0.18, by + fy * 0.08 - py * 0.18, tz + 0.28)
+        return mk.lerp(start_l, end_l, u), mk.lerp(start_r, end_r, u)
+
+    # 5. Intro Fase 2: Giro e Finta de Lâminas
+    if pose == "kodachi_spin_twirl":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        start_l = (bx + fx * 0.08 + px * 0.18, by + fy * 0.08 + py * 0.18, tz + 0.28)
+        start_r = (bx + fx * 0.08 - px * 0.18, by + fy * 0.08 - py * 0.18, tz + 0.28)
+        peak_l = (bx + fx * 0.22 + px * 0.10, by + fy * 0.22 + py * 0.10, tz + 0.18)
+        peak_r = (bx + fx * 0.22 - px * 0.10, by + fy * 0.22 - py * 0.10, tz + 0.18)
+        end_l = (bx + fx * 0.16 + px * 0.10, by + fy * 0.16 + py * 0.10, tz + 0.20)
+        end_r = (bx - fx * 0.12 - px * 0.14, by - fy * 0.12 - py * 0.14, tz + 0.04)
+        if u < 0.5:
+            w = u / 0.5
+            return mk.lerp(start_l, peak_l, w), mk.lerp(start_r, peak_r, w)
+        else:
+            w = (u - 0.5) / 0.5
+            return mk.lerp(peak_l, end_l, w), mk.lerp(peak_r, end_r, w)
+
+    # 6. Intro Fase 3: Postura Felina Feline Stance (Respiração contínua)
+    if pose in ("kunoichi_feline_stance", "kodachi_feline_stance"):
+        u = float(extra.get("seg_u", p if p is not None else 0.5))
+        breathe = math.sin(u * math.pi * 3.0) * 0.012
+        left = (bx + fx * 0.16 + px * 0.10, by + fy * 0.16 + py * 0.10, tz + 0.20 + breathe)
+        right = (bx - fx * 0.12 - px * 0.14, by - fy * 0.12 - py * 0.14, tz + 0.04 + breathe * 0.6)
+        return left, right
+
+    # 7. Vitória Fase 1: Espiral Sincronizada dos Pulsos
+    if pose == "kodachi_wrist_spiral":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        start_l = (bx + fx * 0.16 + px * 0.10, by + fy * 0.16 + py * 0.10, tz + 0.20)
+        start_r = (bx - fx * 0.12 - px * 0.14, by - fy * 0.12 - py * 0.14, tz + 0.04)
+        end_l = (bx + fx * 0.12 + px * 0.16, by + fy * 0.12 + py * 0.16, tz + 0.16)
+        end_r = (bx + fx * 0.12 - px * 0.16, by + fy * 0.12 - py * 0.16, tz + 0.14)
+        return mk.lerp(start_l, end_l, u), mk.lerp(start_r, end_r, u)
+
+    # 8. Vitória Fase 2: Embainhar Reverso nas Costas
+    if pose == "kodachi_reverse_sheath":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        start_l = (bx + fx * 0.12 + px * 0.16, by + fy * 0.12 + py * 0.16, tz + 0.16)
+        start_r = (bx + fx * 0.12 - px * 0.16, by + fy * 0.12 - py * 0.16, tz + 0.14)
+        sheath_l = (bx - fx * 0.05 + px * 0.12, by - fy * 0.05 + py * 0.12, tz + 0.26)
+        sheath_r = (bx - fx * 0.05 - px * 0.12, by - fy * 0.05 - py * 0.12, tz + 0.26)
+        return mk.lerp(start_l, sheath_l, u), mk.lerp(start_r, sheath_r, u)
+
+    # 9. Vitória Fase 3: Postura Triunfante Triumphant Kunoichi
+    if pose in ("kunoichi_triumphant", "kodachi_victory"):
+        u = float(extra.get("seg_u", p if p is not None else 0.5))
+        breathe = math.sin(u * math.pi * 3.0) * 0.012
+        left = (bx + fx * 0.04 + px * 0.15, by + fy * 0.04 + py * 0.15, tz + 0.02 + breathe)
+        right = (bx + fx * 0.04 - px * 0.15, by + fy * 0.04 - py * 0.15, tz + 0.02 + breathe)
+        return left, right
+
+    # 10. Finishers e Parries
+    if pose in ("finisher_scissor_leap", "finisher_scissor_spin", "finisher_scissor_land"):
+        u = float(extra.get("p", p if p is not None else 0.5))
+        if u < 0.35:
+            # Salto e elevação
+            left = (bx + fx * 0.12 + px * 0.14, by + fy * 0.12 + py * 0.14, tz + 0.30)
+            right = (bx + fx * 0.12 - px * 0.14, by + fy * 0.12 - py * 0.14, tz + 0.30)
+        elif u < 0.70:
+            # Tesoura horizontal no ar
+            left = (bx + fx * 0.26 - px * 0.12, by + fy * 0.26 - py * 0.12, tz + 0.18)
+            right = (bx + fx * 0.26 + px * 0.12, by + fy * 0.26 + py * 0.12, tz + 0.18)
+        else:
+            # Pouso com lâminas abertas nas laterais
+            left = (bx - fx * 0.08 + px * 0.24, by - fy * 0.08 + py * 0.24, tz + 0.06)
+            right = (bx - fx * 0.08 - px * 0.24, by - fy * 0.08 - py * 0.24, tz + 0.06)
+        return left, right
+
+    if pose == "finisher_lotus_flurry":
+        u = float(extra.get("p", p if p is not None else 0.5))
+        flurry = math.sin(u * math.pi * 8.0)
+        left = (bx + fx * (0.24 + flurry * 0.10) + px * 0.08, by + fy * (0.24 + flurry * 0.10) + py * 0.08, tz + 0.16)
+        right = (bx + fx * (0.24 - flurry * 0.10) - px * 0.08, by + fy * (0.24 - flurry * 0.10) - py * 0.08, tz + 0.14)
+        return left, right
+
+    if pose in ("kodachi_x_pose", "parry_reaction", "ground_parry", "air_parry"):
+        left = (bx + fx * 0.18 + px * 0.08, by + fy * 0.18 + py * 0.08, tz + 0.14)
+        right = (bx + fx * 0.20 - px * 0.08, by + fy * 0.20 - py * 0.08, tz + 0.16)
+        return left, right
+
+    # 11. Ataques Melee (Combo 3-Hit Dança das Duas Kodachi)
+    if c.is_melee and p is not None:
+        step = _step(c)
+        if step == 1:
+            arc_a = -1.2 + p * 2.4
+            right = (
+                bx + fx * math.cos(arc_a) * 0.28 - px * math.sin(arc_a) * 0.22,
+                by + fy * math.cos(arc_a) * 0.28 - py * math.sin(arc_a) * 0.22,
+                tz + 0.02 + p * 0.36
+            )
+            left = (
+                bx + px * 0.16 - fx * 0.06,
+                by + py * 0.16 - fy * 0.06,
+                tz + 0.18
+            )
+            return left, right
+        elif step == 2:
+            arc_l = 1.4 - p * 2.8
+            left = (
+                bx + fx * math.cos(arc_l) * 0.30 + px * math.sin(arc_l) * 0.26,
+                by + fy * math.cos(arc_l) * 0.30 + py * math.sin(arc_l) * 0.26,
+                tz + 0.16
+            )
+            right = (
+                bx - px * 0.16 - fx * 0.08,
+                by - py * 0.16 - fy * 0.08,
+                tz + 0.08
+            )
+            return left, right
+        else:
+            cross_t = math.sin(p * math.pi)
+            right = (
+                bx + fx * (0.18 + cross_t * 0.24) - px * (0.16 - p * 0.26),
+                by + fy * (0.18 + cross_t * 0.24) - py * (0.16 - p * 0.26),
+                tz + 0.22 - p * 0.10
+            )
+            left = (
+                bx + fx * (0.18 + cross_t * 0.24) + px * (0.16 - p * 0.26),
+                by + fy * (0.18 + cross_t * 0.24) + py * (0.16 - p * 0.26),
+                tz + 0.12 + p * 0.10
+            )
+            return left, right
+
+    # 12. Caminhada / Movimentação
+    if c.is_moving and hasattr(c, "walk_timer"):
+        sw = math.sin(c.walk_timer * 9.0)
+        right = (
+            bx - fx * 0.08 - px * (0.16 + sw * 0.03),
+            by - fy * 0.08 - py * (0.16 + sw * 0.03),
+            tz + 0.06 + abs(sw) * 0.02
+        )
+        left = (
+            bx + fx * 0.10 + px * (0.12 - sw * 0.03),
+            by + fy * 0.10 + py * (0.12 - sw * 0.03),
+            tz + 0.14 + abs(sw) * 0.02
+        )
+        return left, right
+
+    # 13. Postura Padrão (Idle - Guarda Feline Stance)
+    breathe = math.sin(c.walk_timer * 2.8) * 0.015 if hasattr(c, "walk_timer") else 0.0
     right = (
         bx - fx * 0.12 - px * 0.14,
         by - fy * 0.12 - py * 0.14,
-        tz + 0.04
+        tz + 0.04 + breathe * 0.6
     )
-    # Mão esquerda alta na frente do torso
     left = (
         bx + fx * 0.16 + px * 0.10,
         by + fy * 0.16 + py * 0.10,
-        tz + 0.20
+        tz + 0.20 + breathe
     )
     return left, right
+
+
+def get_arms(c):
+    """Exposição modular da cinemática dos braços para sincronização com o renderizador humanoide."""
+    return _hands(c)
+
+
+def idle_arms(c):
+    return _hands(c)
 
 
 def walk_arms(c):
-    """Caminhada ágil e furtiva com as Kodachi balanceadas nas laterais."""
-    sw = math.sin(c.walk_timer * 9.0)
-    tz = c.torso_z
-    right = (
-        c.base_x - c.fx * 0.08 - c.px * (0.16 + sw * 0.03),
-        c.base_y - c.fy * 0.08 - c.py * (0.16 + sw * 0.03),
-        tz + 0.06 + abs(sw) * 0.02
-    )
-    left = (
-        c.base_x + c.fx * 0.10 + c.px * (0.12 - sw * 0.03),
-        c.base_y + c.fy * 0.10 + c.py * (0.12 - sw * 0.03),
-        tz + 0.14 + abs(sw) * 0.02
-    )
-    return left, right
+    return _hands(c)
+
+
+def attack_arms(c):
+    return _hands(c)
 
 
 def _step(c):
     return c.extra_props.get("combo_step", 1) if c.extra_props else 1
-
-
-def attack_arms(c):
-    """
-    Dança das Duas Kodachi (Combo 3-Hit com arcos amplos):
-    - Passo 1: Corte ascendente diagonal com a Kodachi direita.
-    - Passo 2: Giro horizontal rasante com a Kodachi esquerda.
-    - Passo 3: Corte em tesoura cruzada com ambas as Kodachis se encontrando.
-    """
-    p = c.atk_progress
-    step = _step(c)
-    bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
-
-    if step == 1:
-        arc_a = -1.2 + p * 2.4
-        right = (
-            bx + fx * math.cos(arc_a) * 0.28 - px * math.sin(arc_a) * 0.22,
-            by + fy * math.cos(arc_a) * 0.28 - py * math.sin(arc_a) * 0.22,
-            tz + 0.02 + p * 0.36
-        )
-        left = (
-            bx + px * 0.16 - fx * 0.06,
-            by + py * 0.16 - fy * 0.06,
-            tz + 0.18
-        )
-    elif step == 2:
-        arc_l = 1.4 - p * 2.8
-        left = (
-            bx + fx * math.cos(arc_l) * 0.30 + px * math.sin(arc_l) * 0.26,
-            by + fy * math.cos(arc_l) * 0.30 + py * math.sin(arc_l) * 0.26,
-            tz + 0.16
-        )
-        right = (
-            bx - px * 0.16 - fx * 0.08,
-            by - py * 0.16 - fy * 0.08,
-            tz + 0.08
-        )
-    else:
-        cross_t = math.sin(p * math.pi)
-        right = (
-            bx + fx * (0.18 + cross_t * 0.24) - px * (0.16 - p * 0.26),
-            by + fy * (0.18 + cross_t * 0.24) - py * (0.16 - p * 0.26),
-            tz + 0.22 - p * 0.10
-        )
-        left = (
-            bx + fx * (0.18 + cross_t * 0.24) + px * (0.16 - p * 0.26),
-            by + fy * (0.18 + cross_t * 0.24) + py * (0.16 - p * 0.26),
-            tz + 0.12 + p * 0.10
-        )
-    return left, right
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -342,17 +449,28 @@ def draw_behind(c):
     # Bainhas das Kodachi cruzadas nas costas
     (orig1, dir1), (orig2, dir2) = _sheath_frames(c)
     kodachi_sheath_len = 0.44
+    sheathed = c.extra_props.get("sheathed", False) if c.extra_props else False
 
     for orig, d in ((orig1, dir1), (orig2, dir2)):
         mk.obox(c, orig, d, kodachi_sheath_len, 0.038, 0.038, P["saya"], outline=True)
         mk.obox(c, orig, d, 0.035, 0.044, 0.044, P["saya_gold"], outline=False)
         mk.obox(c, mk.add(orig, d, kodachi_sheath_len - 0.035), d, 0.035, 0.042, 0.042, P["saya_gold"], outline=False)
+        # Se as armas estiverem embainhadas nas costas, renderiza a empunhadura (tsuka) projetando-se da boca da bainha
+        if sheathed:
+            tsuka_dir = mk.norm((-d[0], -d[1], -d[2]))
+            mk.obox(c, orig, tsuka_dir, 0.10, 0.030, 0.030, P["ito_black"], outline=True)
+            mk.obox(c, mk.add(orig, tsuka_dir, 0.035), tsuka_dir, 0.030, 0.032, 0.032, P["ito_red"], outline=False)
+            mk.obox(c, mk.add(orig, tsuka_dir, 0.090), tsuka_dir, 0.014, 0.034, 0.034, P["gold"], outline=False)
 
     # Ordenação dinâmica: se as mãos estiverem atrás do tronco ao encarar de costas
-    hand_l, hand_r = idle_arms(c)
+    hand_l, hand_r = get_arms(c)
     w_mid = ((hand_l[0] + hand_r[0]) * 0.5, (hand_l[1] + hand_r[1]) * 0.5)
     if mk.depth(c, w_mid[0], w_mid[1]) < d_torso:
-        _render_weapons(c, hand_l, hand_r)
+        if not sheathed:
+            _render_weapons(c, hand_l, hand_r)
+        else:
+            for hand in (hand_l, hand_r):
+                mk.cbox(c, hand[0], hand[1], hand[2] - 0.015, 0.052, 0.052, 0.050, P["leather_dark"], outline=True)
 
 
 def draw_legs(c):
@@ -484,9 +602,11 @@ def draw_head(c):
     - Franja acima das sobrancelhas para manter os olhos luminosos limpos.
     - Presilha Kanzashi dourada com pingente carmim no lado visível.
     - Mechas laterais renderizadas no lado visível.
+    - Feições faciais esculpidas em 3D estilo anime com olhos de âmbar luminosos.
     """
     P = pal()
     bx, by, hz, fx, fy, px, py, hw = c.base_x, c.base_y, c.head_z, c.fx, c.fy, c.px, c.py, c.head_w
+    legacy_mode = c.extra_props.get("legacy_mode", False) if c.extra_props else False
 
     # Mechas laterais no lado voltado para a câmera
     for s in (-1.0, 1.0):
@@ -516,6 +636,10 @@ def draw_head(c):
         pin_z = hz + 0.125
         mk.cbox(c, pin_x, pin_y, pin_z, 0.030, 0.030, 0.024, P["gold_bright"], outline=False)
         mk.cbox(c, pin_x + px * 0.008, pin_y + py * 0.008, pin_z - 0.025, 0.016, 0.016, 0.032, P["kanzashi_red"], outline=False)
+
+        if not legacy_mode:
+            draw_portrait_face_3d(c, char_type="chiyo")
+            c._face_drawn = True
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -600,7 +724,7 @@ def _render_weapons(c, left_hand, right_hand):
                 mk.band(c, (mk.lerp(mid1, tip1, 0.6), tip1, tip2, mk.lerp(mid2, tip2, 0.6)), P["trail_core"] + (240,))
     else:
         pose = c.extra_props.get("pose") if c.extra_props else None
-        if c.state == "MAI_DANCE":
+        if c.state == "MAI_DANCE" or pose == "mai_dance":
             dir_r = mk.norm((-fx * 0.45 - px * 0.85, -fy * 0.45 - py * 0.85, 0.20))
             dir_l = mk.norm((fx * 0.45 + px * 0.85, fy * 0.45 + py * 0.85, 0.35))
             tip1 = _draw_kodachi_blade(c, right_hand, dir_r, length=0.46)
@@ -617,12 +741,20 @@ def _render_weapons(c, left_hand, right_hand):
             prev_mid2 = (mid2[0] + fx * 0.16 - px * 0.08, mid2[1] + fy * 0.16 - py * 0.08, mid2[2] + 0.04)
             mk.band(c, (mid2, tip2, prev_tip2, prev_mid2), P["trail"] + (195,))
             mk.band(c, (mk.lerp(mid2, tip2, 0.6), tip2, prev_tip2, mk.lerp(prev_mid2, prev_tip2, 0.6)), P["trail_core"] + (235,))
-        elif pose == "kodachi_draw":
+        elif pose in ("kodachi_draw", "kodachi_reverse_sheath"):
             dir_r = mk.norm((-fx * 0.25 + px * 0.55, -fy * 0.25 + py * 0.55, -0.78))
             dir_l = mk.norm((-fx * 0.25 - px * 0.55, -fy * 0.25 - py * 0.55, -0.78))
             _draw_kodachi_blade(c, right_hand, dir_r, length=0.40)
             _draw_kodachi_blade(c, left_hand, dir_l, length=0.40)
-        elif pose == "kodachi_x_pose":
+        elif pose == "kodachi_spin_twirl":
+            dir_r = mk.norm((fx * 0.65 + px * 0.35, fy * 0.65 + py * 0.35, 0.35))
+            dir_l = mk.norm((fx * 0.65 - px * 0.35, fy * 0.65 - py * 0.35, 0.35))
+            tip1 = _draw_kodachi_blade(c, right_hand, dir_r, length=0.45)
+            tip2 = _draw_kodachi_blade(c, left_hand, dir_l, length=0.45)
+            mid1 = mk.lerp(right_hand, tip1, 0.55)
+            mid2 = mk.lerp(left_hand, tip2, 0.55)
+            mk.band(c, (mid1, tip1, tip2, mid2), P["trail"] + (160,))
+        elif pose in ("kodachi_x_pose", "parry_reaction", "ground_parry", "air_parry"):
             dir_r = mk.norm((fx * 0.35 + px * 0.72, fy * 0.35 + py * 0.72, 0.58))
             dir_l = mk.norm((fx * 0.35 - px * 0.72, fy * 0.35 - py * 0.72, 0.58))
             tip1 = _draw_kodachi_blade(c, right_hand, dir_r, length=0.45)
@@ -630,11 +762,47 @@ def _render_weapons(c, left_hand, right_hand):
             mid1 = mk.lerp(right_hand, tip1, 0.55)
             mid2 = mk.lerp(left_hand, tip2, 0.55)
             mk.band(c, (mid1, tip1, tip2, mid2), P["trail"] + (135,))
+        elif pose in ("shadow_step", "dodge", "roll"):
+            dir_r = mk.norm((-fx * 0.85 - px * 0.25, -fy * 0.85 - py * 0.25, -0.15))
+            dir_l = mk.norm((-fx * 0.85 + px * 0.25, -fy * 0.85 + py * 0.25, -0.15))
+            _draw_kodachi_blade(c, right_hand, dir_r, length=0.42)
+            _draw_kodachi_blade(c, left_hand, dir_l, length=0.42)
+        elif pose == "acrobat_lunge" or c.state == "ACROBAT_LUNGE":
+            dir_r = mk.norm((fx * 0.88 - px * 0.12, fy * 0.88 - py * 0.12, -0.05))
+            dir_l = mk.norm((fx * 0.88 + px * 0.12, fy * 0.88 + py * 0.12, -0.05))
+            tip1 = _draw_kodachi_blade(c, right_hand, dir_r, length=0.45)
+            tip2 = _draw_kodachi_blade(c, left_hand, dir_l, length=0.45)
+            mid1 = mk.lerp(right_hand, tip1, 0.55)
+            mid2 = mk.lerp(left_hand, tip2, 0.55)
+            mk.band(c, (mid1, tip1, tip2, mid2), P["trail"] + (190,))
+        elif pose in ("finisher_scissor_leap", "finisher_scissor_spin", "finisher_scissor_land"):
+            dir_r = mk.norm((fx * 0.60 + px * 0.60, fy * 0.60 + py * 0.60, 0.15))
+            dir_l = mk.norm((fx * 0.60 - px * 0.60, fy * 0.60 - py * 0.60, 0.15))
+            tip1 = _draw_kodachi_blade(c, right_hand, dir_r, length=0.46)
+            tip2 = _draw_kodachi_blade(c, left_hand, dir_l, length=0.46)
+            mid1 = mk.lerp(right_hand, tip1, 0.5)
+            mid2 = mk.lerp(left_hand, tip2, 0.5)
+            mk.band(c, (mid1, tip1, tip2, mid2), P["trail"] + (210,))
+        elif pose == "finisher_lotus_flurry":
+            dir_r = mk.norm((fx * 0.85 - px * 0.15, fy * 0.85 - py * 0.15, 0.05))
+            dir_l = mk.norm((fx * 0.85 + px * 0.15, fy * 0.85 + py * 0.15, 0.05))
+            tip1 = _draw_kodachi_blade(c, right_hand, dir_r, length=0.45)
+            tip2 = _draw_kodachi_blade(c, left_hand, dir_l, length=0.45)
+            mid1 = mk.lerp(right_hand, tip1, 0.5)
+            mid2 = mk.lerp(left_hand, tip2, 0.5)
+            mk.band(c, (mid1, tip1, tip2, mid2), P["trail"] + (185,))
+        elif pose == "kodachi_wrist_spiral":
+            dir_r = mk.norm((-fx * 0.25 + px * 0.70, -fy * 0.25 + py * 0.70, 0.40))
+            dir_l = mk.norm((-fx * 0.25 - px * 0.70, -fy * 0.25 - py * 0.70, 0.40))
+            _draw_kodachi_blade(c, right_hand, dir_r, length=0.44)
+            _draw_kodachi_blade(c, left_hand, dir_l, length=0.44)
         elif pose == "kodachi_victory":
             dir_r = mk.norm((-fx * 0.35 - px * 0.75, -fy * 0.35 - py * 0.75, -0.55))
             dir_l = mk.norm((-fx * 0.15 + px * 0.22, -fy * 0.15 + py * 0.22, 0.96))
             _draw_kodachi_blade(c, right_hand, dir_r, length=0.45)
             _draw_kodachi_blade(c, left_hand, dir_l, length=0.46)
+        elif pose == "kunoichi_triumphant":
+            pass
         else:
             dir_r = mk.norm((-fx * 0.55 - px * 0.35, -fy * 0.55 - py * 0.35, -0.75))
             dir_l = mk.norm((fx * 0.45 + px * 0.25, fy * 0.45 + py * 0.25, 0.85))
@@ -646,5 +814,11 @@ def draw_front(c, left_hand, right_hand):
     """Camada frontal: lâminas e manoplas se estiverem à frente do tronco."""
     d_torso = mk.depth(c, c.base_x, c.base_y)
     w_mid = ((left_hand[0] + right_hand[0]) * 0.5, (left_hand[1] + right_hand[1]) * 0.5)
+    sheathed = c.extra_props.get("sheathed", False) if c.extra_props else False
     if mk.depth(c, w_mid[0], w_mid[1]) >= d_torso:
-        _render_weapons(c, left_hand, right_hand)
+        if not sheathed:
+            _render_weapons(c, left_hand, right_hand)
+        else:
+            P = pal()
+            for hand in (left_hand, right_hand):
+                mk.cbox(c, hand[0], hand[1], hand[2] - 0.015, 0.052, 0.052, 0.050, P["leather_dark"], outline=True)

@@ -184,10 +184,12 @@ def victory_arms(c, p, pose):
         right = (bx - px * (0.14 + snap * 0.18) - fx * 0.04, by - py * (0.14 + snap * 0.18) - fy * 0.04, tz + 0.06 - snap * 0.12)
         return left, right
     else:
-        # Elevação na Postura dos Dois Céus: Katana apontada para o céu, Wakizashi na cintura
+        # Elevação na Postura dos Dois Céus: Katana apontada para o céu, Wakizashi na cintura (100% Animado)
         u = min(1.0, (p - 0.45) / 0.55)
-        left = (bx + fx * 0.10 + px * 0.14, by + fy * 0.10 + py * 0.14, tz + 0.02)
-        right = (bx + fx * (0.12 - u * 0.04) - px * (0.08 + u * 0.04), by + fy * (0.12 - u * 0.04) - py * (0.08 + u * 0.04), tz + 0.10 + u * 0.32)
+        sway = math.sin(p * 14.0 + getattr(c, "walk_timer", 0.0) * 2.5) * 0.010
+        breathe = math.cos(p * 8.0) * 0.012
+        left = (bx + fx * 0.10 + px * 0.14, by + fy * 0.10 + py * 0.14, tz + 0.02 + breathe * 0.6)
+        right = (bx + fx * (0.12 - u * 0.04) - px * (0.08 + u * 0.04), by + fy * (0.12 - u * 0.04) - py * (0.08 + u * 0.04), tz + 0.10 + u * 0.32 + sway + breathe)
         return left, right
 
 

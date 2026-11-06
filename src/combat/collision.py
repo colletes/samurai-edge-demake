@@ -53,10 +53,10 @@ def _get_death_style_for_attacker(attacker, weapon: str | None = None, victim=No
             return "WALL_SMASH_FATAL"
         return "HYAKURETSU_BODY_EXPLOSION"
 
-    # 4. Chiyo (Kunoichi 2 Kodachi): Tesoura Dupla (TRIPLE_SCISSOR_CLEAVE) vs Dança Mai (MAI_X_CLEAVE)
+    # 4. Chiyo (Kunoichi 2 Kodachi): Tesoura Dupla (TRIPLE_SCISSOR_CLEAVE) vs Lótus das Sombras (SHADOW_LOTUS_FLURRY)
     elif "chiyo" in char_type or "kodachi" in char_type or "nodachi" in char_type:
-        if state in ("MAI_DANCE", "MAI_RIPOSTE"):
-            return "MAI_X_CLEAVE"
+        if state in ("MAI_DANCE", "MAI_RIPOSTE", "ACROBAT_LUNGE", "SHADOW_LOTUS"):
+            return "SHADOW_LOTUS_FLURRY"
         return "TRIPLE_SCISSOR_CLEAVE"
 
     # 5. Goro (Ciclo 3): Clivagem da Kuwa vs Pisotão Sísmico
@@ -84,19 +84,29 @@ def _get_death_style_for_attacker(attacker, weapon: str | None = None, victim=No
         return "HEART_THROAT_STAB"
 
     elif "murasaki" in char_type or "purple" in char_type:
-        return "MURASAKI_DECAP"
+        if weapon in ("chain", "drag", "hook", "pull", "kusarigama"):
+            return "SENPUU_CHAIN_SHRED"
+        return "KAMAITACHI_CHAIN_DECAP"
     elif "pirate" in char_type or "anne" in char_type:
-        return "PIRATE_CLEAVE"
+        if weapon in ("cannon", "bomb", "artillery", "cannonball") or state in ("CANNON", "CANNON_STRIKE", "AIM_CANNON"):
+            return "KANPOU_SENMETSU"
+        return "ARANAMI_CLEAVE"
     elif "musketeer" in char_type or "julie" in char_type:
-        return "RAPIER_FLURRY_POINTBLANK"
+        if weapon in ("flintlock", "bullet", "gun", "musket") or state in ("FLINTLOCK", "FLINTLOCK_SHOT"):
+            return "FLINTLOCK_EXECUTION"
+        return "RAPIER_BLOOD_FOUNTAIN"
     elif "joe" in char_type or "american" in char_type:
         if weapon in ("dog", "yamato") or state in ("DOG_ATTACK", "YAMATO"):
             return "WINDMILL_SHURIKEN_DECAP"
         return "TRIPLE_SHURIKEN_DISMEMBER"
     elif "gray" in char_type or "kasumi" in char_type or "kemuri" in char_type:
-        return "STAB_FALL"
+        if weapon in ("bomb", "mine", "horoku", "remote_mine", "timed_bomb", "powder"):
+            return "BAKUEN_FUNSAI"
+        return "MOUJIN_SHUNDAN"
     elif "rifle" in char_type or "teppo" in char_type:
-        return "BLUNT_FALL"
+        if weapon in ("hayago", "keg", "trap", "butt") or getattr(attacker, "is_rifle_butt", False):
+            return "HAYAGO_KEG_BLAST"
+        return "HEADSHOT_EXPLODE"
     elif "tomoe" in char_type or "archer" in char_type:
         if weapon in ("hamaya", "sacred_volley"):
             return "HAMAYA_HOLY_PIERCE"
@@ -118,7 +128,7 @@ def _get_death_style_for_attacker(attacker, weapon: str | None = None, victim=No
             return "OFUDA_PURIFICATION_PILLAR"
         return "SEAL_STASIS_COLLAPSE"
     elif "kabuki" in char_type or "okuni" in char_type:
-        if weapon == "poison":
+        if weapon in ("poison", "dokukiri", "cloud", "mist") or state == "DOKUKIRI":
             return "DOKUKIRI_MELT"
         return "TESSEN_DECAP"
     elif "daiki" in char_type or "pilgrim" in char_type:
@@ -158,17 +168,25 @@ HIT_KNOCKBACK_DISTANCE = 3.6
 
 def is_fighter_evading(target) -> bool:
     """
-    Retorna True se o combatente estiver em estado de esquiva ativa com i-frames.
-    (Roll universal, dash, floreio de capa, shukuchi, kawarimi roll, esquiva ágil).
+    Retorna True se o combatente estiver em estado de esquiva ativa com i-frames
+    ou em janela de transição/recuperação imediata pós-esquiva contra projéteis cinéticos.
+    (Roll universal, dash, deslize ágil na neve, floreio de capa, shukuchi, kawarimi roll, esquiva ágil, salto acrobático).
     """
     if not getattr(target, "is_alive", False):
         return False
-    return (
-        getattr(target, "state", None) in (
-            "ROLL", "DASH", "CAPE_FLOURISH", "SHUKUCHI", "KAWARIMI_ROLL", "DODGE", "PARRY_BACKHOP"
-        )
-        and getattr(target, "is_invulnerable_dodge", False)
-    )
+    if getattr(target, "is_invulnerable_dodge", False):
+        return True
+    state = getattr(target, "state", None)
+    if state in (
+        "ROLL", "DASH", "CAPE_FLOURISH", "SHUKUCHI", "KAWARIMI_ROLL", "DODGE",
+        "PARRY_BACKHOP", "RIFLE_ROLL", "KABUKI_ROLL", "SHIKIGAMI_GLIDE"
+    ):
+        return True
+    if state == "JUMP" and (getattr(target, "wz", 0.0) > 0.15 or getattr(target, "is_invulnerable_dodge", False)):
+        return True
+    if getattr(target, "roll_recovery_timer", 0.0) > 0 or getattr(target, "dash_recovery_timer", 0.0) > 0:
+        return True
+    return False
 
 def _is_vertical_hit(attacker, defender) -> bool:
     """
@@ -202,6 +220,12 @@ class CombatSystem:
             return True
 
         if is_fighter_evading(target):
+            # Murasaki: Escudo vertical de corrente giratória (Chain Whirl Backflip) deflete/destrói projéteis leves
+            if getattr(target, "char_type", "") in ("murasaki", "purple") and target.state == STATE_ROLL:
+                if isinstance(proj, (KunaiProjectile, ShurikenProjectile, OfudaProjectile)):
+                    proj.is_active = False
+                    self._play_sound("parry")
+                    return True
             if evaded_set is None:
                 proj.evaded_targets = set()
             proj.evaded_targets.add(target)
@@ -363,32 +387,21 @@ class CombatSystem:
                             camera.add_shake(5.0)
                             self._play_sound("sword_clash")
 
-            # 8. Ichi: Postura de Escuta (cone frontal) reflete projéteis com velocidade aumentada (+35%)
+            # 8. Ichi: Postura de Escuta (cone frontal) apara/deflete projéteis sem refletir
             elif (char_t == "ichi" or getattr(def_fighter, "is_listening", False)) and (def_fighter.state == "LISTEN" or getattr(def_fighter, "counter_active", False)):
                 for proj in projectiles:
-                    if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter and not getattr(proj, "has_been_reflected_by_ichi", False):
+                    if getattr(proj, "is_active", True) and getattr(proj, "owner", None) != def_fighter:
                         dist = world_distance(def_fighter.wx, def_fighter.wy, proj.wx, proj.wy)
                         if dist <= 1.85:
                             proj_dx = proj.wx - def_fighter.wx
                             proj_dy = proj.wy - def_fighter.wy
                             dot = (proj_dx * def_fighter.facing_x + proj_dy * def_fighter.facing_y) / max(0.001, dist)
                             if dot > 0.0:  # Cone frontal de parry direcional
-                                # Inverter direção do projétil e aumentar velocidade (+35%)
-                                if hasattr(proj, "dir_x") and hasattr(proj, "dir_y"):
-                                    proj.dir_x = -proj.dir_x
-                                    proj.dir_y = -proj.dir_y
-                                if hasattr(proj, "vx") and hasattr(proj, "vy"):
-                                    proj.vx = -proj.vx * 1.35
-                                    proj.vy = -proj.vy * 1.35
-                                if hasattr(proj, "speed"):
-                                    proj.speed *= 1.35
-                                proj.owner = def_fighter
-                                proj.has_been_reflected_by_ichi = True
-                                proj.dist_traveled = 0
+                                proj.is_active = False
                                 for _ in range(16):
                                     particles.append(SparkParticle(proj.wx, proj.wy, 0.6, color=(140, 200, 255)))
-                                banners.append(FloatingBanner("BLIND REFLECT!", def_fighter.wx, def_fighter.wy, wz=1.8, color=(160, 215, 255)))
-                                camera.add_shake(5.5)
+                                banners.append(FloatingBanner("BLIND PARRY!", def_fighter.wx, def_fighter.wy, wz=1.8, color=(160, 215, 255)))
+                                camera.add_shake(5.0)
                                 self._play_sound("parry")
 
             # 9. Daiki: Salto com Vara (frames iniciais desviam projéteis girando o Bō)
@@ -515,43 +528,24 @@ class CombatSystem:
                 if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.45 + target.radius):
                     if not self.check_projectile_dodge_evasion(proj, target):
                         if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
-                            # Musashi (primeiros 0.28s), Chiyo (Dança Mai) ou Ichi (Postura de Escuta) refletem projéteis
-                            can_reflect = (
-                                target.state == "MAI_DANCE" or
-                                (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0) or
-                                (target.state == "LISTEN" and hasattr(target, "is_facing_target") and target.is_facing_target(proj.wx, proj.wy))
-                            )
-                            if can_reflect and not getattr(proj, "has_been_reflected", False):
-                                # REFLETE: inverte direção e muda dono
-                                proj.vx = -proj.vx
-                                proj.vy = -proj.vy
-                                proj.dir_x = -proj.dir_x
-                                proj.dir_y = -proj.dir_y
-                                proj.owner = target
-                                proj.has_been_reflected = True
-                                proj.dist_traveled = 0  # Reset distance to allow full range travel after reflection
-                                if hasattr(proj, "evaded_targets"):
-                                    proj.evaded_targets.clear()
-                                if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
-                                    target.on_mai_parry_success()
-                                    banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
-                                elif target.state == "LISTEN":
-                                    banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
-                                    if hasattr(target, "trigger_counter_thrust"):
-                                        target.trigger_counter_thrust(proj.owner.wx, proj.owner.wy, banners=banners, particles=particles)
-                                else:
-                                    banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
-                                camera.add_shake(6.0)
-                                self._play_sound("parry")
+                            # Absorção e deflexão de parry sem reflexão
+                            for _ in range(10):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
+                            if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
+                                target.on_mai_parry_success()
+                                banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                            elif target.state == "LISTEN":
+                                banners.append(FloatingBanner("BLIND PARRY!", target.wx, target.wy, wz=1.7, color=(160, 215, 255)))
                             else:
-                                # Absorção normal de parry
-                                for _ in range(10):
-                                    particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
                                 banners.append(FloatingBanner("PARRY KUNAI!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
-                                camera.add_shake(5.0)
-                                self._play_sound("parry")
-                                proj.state = "ON_GROUND"
-                                proj.wz = 0.05
+                            camera.add_shake(5.0)
+                            self._play_sound("parry")
+                            proj.state = "ON_GROUND"
+                            proj.wz = 0.05
+                            proj.vx = 0.0
+                            proj.vy = 0.0
+                            proj.vz = 0.0
+                            proj.pickup_delay = 0.8
                         else:
                             hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=2)
                             # Interrompe o vôo imediatamente para não perfurar o alvo repetidamente em múltiplos frames
@@ -587,40 +581,18 @@ class CombatSystem:
                 if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.45 + target.radius):
                     if not self.check_projectile_dodge_evasion(proj, target):
                         if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
-                            can_reflect = (
-                                target.state == "MAI_DANCE" or
-                                (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0) or
-                                (target.state == "LISTEN" and hasattr(target, "is_facing_target") and target.is_facing_target(proj.wx, proj.wy))
-                            )
-                            if can_reflect and not getattr(proj, "has_been_reflected", False):
-                                # REFLETE: inverte direção e muda dono
-                                proj.vx = -proj.vx
-                                proj.vy = -proj.vy
-                                proj.dir_x = -proj.dir_x
-                                proj.dir_y = -proj.dir_y
-                                proj.owner = target
-                                proj.has_been_reflected = True
-                                proj.dist_traveled = 0  # Reset distance to allow full range travel after reflection
-                                if hasattr(proj, "evaded_targets"):
-                                    proj.evaded_targets.clear()
-                                if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
-                                    target.on_mai_parry_success()
-                                    banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
-                                elif target.state == "LISTEN":
-                                    banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
-                                    if hasattr(target, "trigger_counter_thrust"):
-                                        target.trigger_counter_thrust(proj.owner.wx, proj.owner.wy, banners=banners, particles=particles)
-                                else:
-                                    banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
-                                camera.add_shake(6.0)
-                                self._play_sound("parry")
+                            # Absorção e deflexão de parry sem reflexão
+                            for _ in range(8):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
+                            if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
+                                target.on_mai_parry_success()
+                                banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                            elif target.state == "LISTEN":
+                                banners.append(FloatingBanner("BLIND PARRY!", target.wx, target.wy, wz=1.6, color=(160, 215, 255)))
                             else:
-                                # Absorção normal de parry
-                                for _ in range(8):
-                                    particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
                                 banners.append(FloatingBanner("PARRY!", target.wx, target.wy, wz=1.6, color=(100, 200, 255)))
-                                self._play_sound("parry")
-                                proj.is_active = False
+                            self._play_sound("parry")
+                            proj.is_active = False
                         else:
                             is_target_moving = getattr(target, "is_moving", False) or target.state in ("WALK", "RUN", "ROLL", "DASH", "SHUKUCHI")
                             # Micro-stun tático perceptível de 0.42s (interrompe ataques ativos)
@@ -711,7 +683,7 @@ class CombatSystem:
                             for _ in range(25 if p1_dead else 10):
                                 particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                             if p1_dead and cinematic_director:
-                                cinematic_director.trigger_fatal_strike(proj.owner, p1, "KASUMI_EXPLODE", (0, 0))
+                                cinematic_director.trigger_fatal_strike(proj.owner, p1, "BAKUEN_FUNSAI", (0, 0))
                         else:
                             p1.stun(0.20)
                             camera.add_shake(5.0)
@@ -722,7 +694,7 @@ class CombatSystem:
                             for _ in range(25 if p2_dead else 10):
                                 particles.append(BloodParticle(p2.wx, p2.wy, 0.6))
                             if p2_dead and cinematic_director:
-                                cinematic_director.trigger_fatal_strike(proj.owner, p2, "KASUMI_EXPLODE", (0, 0))
+                                cinematic_director.trigger_fatal_strike(proj.owner, p2, "BAKUEN_FUNSAI", (0, 0))
                         else:
                             p2.stun(0.20)
                             camera.add_shake(5.0)
@@ -749,43 +721,37 @@ class CombatSystem:
             elif isinstance(proj, MusketBulletProjectile) and proj.is_active:
                 target = p2 if proj.owner == p1 else p1
                 winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
-                if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.55 + target.radius):
+                bullet_rad = getattr(proj, "radius", 0.45)
+                if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (bullet_rad + 0.25 + target.radius):
                     if not self.check_projectile_dodge_evasion(proj, target):
                         if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
-                            can_reflect = (
-                                target.state == "MAI_DANCE" or
-                                (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0) or
-                                (target.state == "LISTEN" and hasattr(target, "is_facing_target") and target.is_facing_target(proj.wx, proj.wy))
-                            )
-                            if can_reflect and not getattr(proj, "has_been_reflected", False):
-                                # REFLETE: inverte direção e muda dono
-                                proj.vx = -proj.vx
-                                proj.vy = -proj.vy
-                                proj.dir_x = -proj.dir_x
-                                proj.dir_y = -proj.dir_y
-                                proj.owner = target
-                                proj.has_been_reflected = True
-                                proj.dist_traveled = 0  # Reset distance to allow full range travel after reflection
-                                if hasattr(proj, "evaded_targets"):
-                                    proj.evaded_targets.clear()
-                                if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
-                                    target.on_mai_parry_success()
-                                    banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
-                                elif target.state == "LISTEN":
-                                    banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
-                                    if hasattr(target, "trigger_counter_thrust"):
-                                        target.trigger_counter_thrust(proj.owner.wx, proj.owner.wy, banners=banners, particles=particles)
-                                else:
-                                    banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
-                                camera.add_shake(6.0)
-                                self._play_sound("parry")
+                            # Absorção e deflexão de parry sem reflexão
+                            proj.is_active = False
+                            for _ in range(20):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.70))
+
+                            # Impacto cinético de bala pesada: empurrão de 1.0m sem atordoamento
+                            b_speed = math.hypot(getattr(proj, "vx", 0.0), getattr(proj, "vy", 0.0))
+                            if b_speed > 0.01:
+                                push_ux = proj.vx / b_speed
+                                push_uy = proj.vy / b_speed
                             else:
-                                # Absorção normal de parry
-                                proj.is_active = False
-                                banners.append(FloatingBanner("PARRY BULLET!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
-                                for _ in range(14):
-                                    particles.append(SparkParticle(proj.wx, proj.wy, 0.7))
-                                self._play_sound("parry")
+                                push_ux = getattr(proj, "dir_x", target.facing_x * -1.0)
+                                push_uy = getattr(proj, "dir_y", target.facing_y * -1.0)
+
+                            if hasattr(target, "apply_forced_displacement"):
+                                target.apply_forced_displacement(push_ux * 1.0, push_uy * 1.0, game_map)
+
+                            if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
+                                target.on_mai_parry_success()
+                                banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                            elif target.state == "LISTEN":
+                                banners.append(FloatingBanner("BLIND PARRY DEFLECTION!", target.wx, target.wy, wz=1.7, color=(160, 215, 255)))
+                            else:
+                                banners.append(FloatingBanner("HEAVY DEFLECTION!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
+                            camera.add_shake(7.0)
+                            self._play_sound("parry")
+                            self._play_sound("sword_clash")
                         else:
                             proj.is_active = False
                             hit, dead = target.take_hit((proj.vx, proj.vy), damage=2)
@@ -823,40 +789,19 @@ class CombatSystem:
                 if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.50 + target.radius):
                     if not self.check_projectile_dodge_evasion(proj, target):
                         if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
-                            can_reflect = (
-                                target.state == "MAI_DANCE" or
-                                (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0) or
-                                (target.state == "LISTEN" and hasattr(target, "is_facing_target") and target.is_facing_target(proj.wx, proj.wy))
-                            )
-                            if can_reflect and not getattr(proj, "has_been_reflected", False):
-                                # REFLETE: inverte direção e muda dono
-                                proj.vx = -proj.vx
-                                proj.vy = -proj.vy
-                                proj.dir_x = -proj.dir_x
-                                proj.dir_y = -proj.dir_y
-                                proj.owner = target
-                                proj.has_been_reflected = True
-                                proj.dist_traveled = 0  # Reset distance to allow full range travel after reflection
-                                if hasattr(proj, "evaded_targets"):
-                                    proj.evaded_targets.clear()
-                                if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
-                                    target.on_mai_parry_success()
-                                    banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
-                                elif target.state == "LISTEN":
-                                    banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
-                                    if hasattr(target, "trigger_counter_thrust"):
-                                        target.trigger_counter_thrust(proj.owner.wx, proj.owner.wy, banners=banners, particles=particles)
-                                else:
-                                    banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
-                                camera.add_shake(6.0)
-                                self._play_sound("parry")
+                            # Absorção e deflexão de parry sem reflexão
+                            proj.is_active = False
+                            for _ in range(10):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
+                            if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
+                                target.on_mai_parry_success()
+                                banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                            elif target.state == "LISTEN":
+                                banners.append(FloatingBanner("BLIND PARRY!", target.wx, target.wy, wz=1.7, color=(160, 215, 255)))
                             else:
-                                # Absorção normal de parry
-                                proj.is_active = False
                                 banners.append(FloatingBanner("PARRY ARROW!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
-                                for _ in range(10):
-                                    particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
-                                self._play_sound("parry")
+                            camera.add_shake(5.0)
+                            self._play_sound("parry")
                         else:
                             proj.is_active = False
                             hit, dead = target.take_hit((proj.vx, proj.vy), damage=2)
@@ -913,9 +858,10 @@ class CombatSystem:
                             else:
                                 proj.state = "HOOKED_PULLING"
                                 proj.target = target
-                                target.stun(0.35)
-                                # Entregável 4.2: Dano de 1 HP no impacto do hook
+                                # Dano de 1 HP no impacto do hook (Sub-fase 2.7)
                                 hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=1)
+                                if not dead:
+                                    target.stun(0.45)
                                 camera.add_shake(6.0)
                                 for _ in range(12):
                                     particles.append(BloodParticle(target.wx, target.wy, 0.4))
@@ -924,8 +870,7 @@ class CombatSystem:
                                     winner = "P1_WINS" if proj.owner == p1 else "P2_WINS"
                                     self._play_sound("fatal_strike")
                                     if cinematic_director:
-                                        death_style = _get_death_style_for_attacker(proj.owner)
-                                        cinematic_director.trigger_fatal_strike(proj.owner, target, death_style, (proj.dir_x, proj.dir_y))
+                                        cinematic_director.trigger_fatal_strike(proj.owner, target, "SENPUU_CHAIN_SHRED", (proj.dir_x, proj.dir_y))
 
             # Se for ONDA DO MUSASHI (MusashiWaveProjectile)
             elif isinstance(proj, MusashiWaveProjectile) and proj.is_active:
@@ -936,30 +881,13 @@ class CombatSystem:
                     if not self.check_projectile_dodge_evasion(proj, target):
                         # Onda pode ser refletida durante parry
                         if target.state == STATE_PARRY:
-                            if (target.__class__.__name__ == "BlueSamurai" and 
-                                getattr(target, "parry_reflect_active_timer", 0) > 0 and 
-                                not getattr(proj, "has_been_reflected", False)):
-                                # REFLETE: inverte direção e muda dono
-                                proj.vx = -proj.vx
-                                proj.vy = -proj.vy
-                                proj.dir_x = -proj.dir_x
-                                proj.dir_y = -proj.dir_y
-                                proj.owner = target
-                                proj.has_been_reflected = True
-                                proj.dist_traveled = 0
-                                if hasattr(proj, "evaded_targets"):
-                                    proj.evaded_targets.clear()
-                                banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
-                                camera.add_shake(6.0)
-                                self._play_sound("parry")
-                            else:
-                                # Absorção normal de parry
-                                for _ in range(12):
-                                    particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
-                                banners.append(FloatingBanner("PARRY WAVE!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
-                                camera.add_shake(5.0)
-                                self._play_sound("parry")
-                                proj.is_active = False
+                            # Absorção e deflexão de parry sem reflexão
+                            for _ in range(12):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
+                            banners.append(FloatingBanner("PARRY WAVE!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
+                            camera.add_shake(5.0)
+                            self._play_sound("parry")
+                            proj.is_active = False
                         else:
                             # Onda causa 2 danos
                             hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=2)
@@ -998,7 +926,7 @@ class CombatSystem:
                                         winner = win_id
                                     self._play_sound("fatal_strike")
                                     if cinematic_director:
-                                        cinematic_director.trigger_fatal_strike(proj.owner, target, "KASUMI_EXPLODE", (0, 0))
+                                        cinematic_director.trigger_fatal_strike(proj.owner, target, "BAKUEN_FUNSAI", (0, 0))
 
             # Se for CHUVA DE FLECHAS SAGRADAS EM ARCO (SacredArrowVolleyProjectile)
             elif isinstance(proj, SacredArrowVolleyProjectile) and proj.is_active:
@@ -1008,19 +936,20 @@ class CombatSystem:
                     for target, win_id in ((p1, "P2_WINS"), (p2, "P1_WINS")):
                         if target.is_alive and target != proj.owner:
                             if world_distance(proj.target_wx, proj.target_wy, target.wx, target.wy) < (proj.radius + target.radius):
-                                hit, dead = target.take_hit((0, 0), damage=2)
-                                if dead:
-                                    camera.add_shake(20.0)
-                                    for _ in range(35):
-                                        particles.append(BloodParticle(target.wx, target.wy, 0.7))
-                                    for _ in range(20):
-                                        particles.append(SparkParticle(target.wx, target.wy, 0.6, color=(255, 230, 100)))
-                                    self.hitstop_timer = 0.16
-                                    if winner is None:
-                                        winner = win_id
-                                    self._play_sound("fatal_strike")
-                                    if cinematic_director:
-                                        cinematic_director.trigger_fatal_strike(proj.owner, target, "HAMAYA_HOLY_PIERCE", (0, 0))
+                                if not self.check_projectile_dodge_evasion(proj, target):
+                                    hit, dead = target.take_hit((0, 0), damage=2)
+                                    if dead:
+                                        camera.add_shake(20.0)
+                                        for _ in range(35):
+                                            particles.append(BloodParticle(target.wx, target.wy, 0.7))
+                                        for _ in range(20):
+                                            particles.append(SparkParticle(target.wx, target.wy, 0.6, color=(255, 230, 100)))
+                                        self.hitstop_timer = 0.16
+                                        if winner is None:
+                                            winner = win_id
+                                        self._play_sound("fatal_strike")
+                                        if cinematic_director:
+                                            cinematic_director.trigger_fatal_strike(proj.owner, target, "HAMAYA_HOLY_PIERCE", (0, 0))
 
             # Se for ARREMESSO DE NAGINATA (NaginataProjectile)
             elif isinstance(proj, NaginataProjectile) and proj.is_active and proj.state == "FLYING":
@@ -1062,39 +991,19 @@ class CombatSystem:
                 if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.55 + target.radius):
                     if not self.check_projectile_dodge_evasion(proj, target):
                         if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN"):
-                            can_reflect = (
-                                target.state == "MAI_DANCE" or
-                                (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0) or
-                                (target.state == "LISTEN" and hasattr(target, "is_facing_target") and target.is_facing_target(proj.wx, proj.wy))
-                            )
-                            if can_reflect and not getattr(proj, "has_been_reflected", False):
-                                proj.vx = -proj.vx
-                                proj.vy = -proj.vy
-                                proj.dir_x = -proj.dir_x
-                                proj.dir_y = -proj.dir_y
-                                proj.owner = target
-                                proj.has_been_reflected = True
-                                proj.dist_traveled = 0
-                                if hasattr(proj, "evaded_targets"):
-                                    proj.evaded_targets.clear()
-                                if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
-                                    target.on_mai_parry_success()
-                                    banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
-                                elif target.state == "LISTEN":
-                                    banners.append(FloatingBanner("LISTEN REFLECT!", target.wx, target.wy, wz=1.8, color=(215, 140, 230)))
-                                    if hasattr(target, "trigger_counter_thrust"):
-                                        target.trigger_counter_thrust(proj.owner.wx, proj.owner.wy, banners=banners, particles=particles)
-                                else:
-                                    banners.append(FloatingBanner("PARRY REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
-                                camera.add_shake(6.0)
-                                self._play_sound("parry")
+                            # Absorção e deflexão de parry sem reflexão
+                            for _ in range(10):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
+                            if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
+                                target.on_mai_parry_success()
+                                banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                            elif target.state == "LISTEN":
+                                banners.append(FloatingBanner("BLIND PARRY!", target.wx, target.wy, wz=1.7, color=(160, 215, 255)))
                             else:
-                                for _ in range(10):
-                                    particles.append(SparkParticle(proj.wx, proj.wy, 0.6))
                                 banners.append(FloatingBanner("PARRY!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
-                                camera.add_shake(5.0)
-                                self._play_sound("parry")
-                                proj.is_active = False
+                            camera.add_shake(5.0)
+                            self._play_sound("parry")
+                            proj.is_active = False
                         else:
                             proj_damage = 1 if isinstance(proj, KamaitachiProjectile) else 2
                             hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=proj_damage)
@@ -1119,41 +1028,32 @@ class CombatSystem:
             elif isinstance(proj, OfudaProjectile) and proj.is_active:
                 target = p2 if proj.owner == p1 else p1
                 winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
-                if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.50 + target.radius):
+                ofuda_rad = getattr(proj, "radius", 0.40)
+                if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (ofuda_rad + 0.25 + target.radius):
                     if not self.check_projectile_dodge_evasion(proj, target):
                         el = getattr(proj, "element", "wood")
                         is_metal_break = (el == "metal")
 
                         if target.state in (STATE_PARRY, "MAI_DANCE", "LISTEN") and not is_metal_break:
-                            can_reflect = (
-                                target.state == "MAI_DANCE" or
-                                (target.__class__.__name__ == "BlueSamurai" and getattr(target, "parry_reflect_active_timer", 0) > 0) or
-                                (target.state == "LISTEN" and hasattr(target, "is_facing_target") and target.is_facing_target(proj.wx, proj.wy))
-                            )
-                            if can_reflect and not getattr(proj, "has_been_reflected", False):
-                                proj.dir_x = -proj.dir_x
-                                proj.dir_y = -proj.dir_y
-                                proj.owner = target
-                                proj.has_been_reflected = True
-                                proj.dist_traveled = 0
-                                if hasattr(proj, "evaded_targets"):
-                                    proj.evaded_targets.clear()
-                                banners.append(FloatingBanner("OFUDA REFLECT!", target.wx, target.wy, wz=1.8, color=(255, 100, 255)))
-                                camera.add_shake(6.0)
-                                self._play_sound("parry")
+                            # Absorção e deflexão de parry sem reflexão
+                            for _ in range(10):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6, color=(140, 205, 255)))
+                            if target.state == "MAI_DANCE" and hasattr(target, "on_mai_parry_success"):
+                                target.on_mai_parry_success()
+                                banners.append(FloatingBanner(t("banner_mai_deflect"), target.wx, target.wy, wz=1.8, color=(235, 55, 75)))
+                            elif target.state == "LISTEN":
+                                banners.append(FloatingBanner("BLIND PARRY!", target.wx, target.wy, wz=1.7, color=(160, 215, 255)))
                             else:
-                                for _ in range(10):
-                                    particles.append(SparkParticle(proj.wx, proj.wy, 0.6, color=(140, 205, 255)))
                                 banners.append(FloatingBanner("PARRY OFUDA!", target.wx, target.wy, wz=1.7, color=(100, 200, 255)))
-                                camera.add_shake(5.0)
-                                self._play_sound("parry")
-                                proj.is_active = False
+                            camera.add_shake(5.0)
+                            self._play_sound("parry")
+                            proj.is_active = False
                         else:
                             dmg = getattr(proj, "damage", 2)
                             hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=dmg)
 
                             # Efeitos especiais elementais distintos e viscerais no acerto
-                            if not dead and getattr(target, "is_alive", True):
+                            if hit and not dead and getattr(target, "is_alive", True):
                                 if el == "wood":
                                     target.root_timer = 2.0
                                     target.is_rooted = True
@@ -1197,12 +1097,17 @@ class CombatSystem:
                                 finisher_style = f"SEIMEI_FATAL_{el.upper()}" if el in ("wood", "fire", "earth", "metal", "water", "yinyang") else "SEAL_STASIS_COLLAPSE"
                                 if cinematic_director:
                                     cinematic_director.trigger_fatal_strike(proj.owner, target, finisher_style, (proj.dir_x, proj.dir_y))
-                            else:
+                            elif hit:
                                 camera.add_shake(7.0)
                                 for _ in range(12):
                                     particles.append(BloodParticle(target.wx, target.wy, 0.5))
                                 self._play_sound("sword_slash")
-                            proj.is_active = False
+                            if hit or dead:
+                                proj.is_active = False
+                            else:
+                                if getattr(proj, "evaded_targets", None) is None:
+                                    proj.evaded_targets = set()
+                                proj.evaded_targets.add(target)
 
             if proj.is_active:
                 active_projectiles.append(proj)
@@ -1551,7 +1456,7 @@ class CombatSystem:
                         self._play_sound("fatal_strike")
                         if cinematic_director:
                             align_finisher_pair(p1, p2, game_map)
-                            cinematic_director.trigger_fatal_strike(p1, p2, "BLUNT_FALL", p1.slash_dir)
+                            cinematic_director.trigger_fatal_strike(p1, p2, "HAYAGO_KEG_BLAST", p1.slash_dir)
                 else:
                     if p2.state == STATE_PARRY and p1.state == "POLE_VAULT":
                         banners.append(FloatingBanner("GUARD CRUSH!", p2.wx, p2.wy, wz=1.8, color=(255, 195, 70)))
@@ -1719,7 +1624,7 @@ class CombatSystem:
                         self._play_sound("fatal_strike")
                         if cinematic_director:
                             align_finisher_pair(p2, p1, game_map)
-                            cinematic_director.trigger_fatal_strike(p2, p1, "BLUNT_FALL", p2.slash_dir)
+                            cinematic_director.trigger_fatal_strike(p2, p1, "HAYAGO_KEG_BLAST", p2.slash_dir)
                 else:
                     if p1.state == STATE_PARRY and p2.state == "POLE_VAULT":
                         banners.append(FloatingBanner("GUARD CRUSH!", p1.wx, p1.wy, wz=1.8, color=(255, 195, 70)))

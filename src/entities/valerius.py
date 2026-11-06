@@ -126,7 +126,7 @@ class SkeletonSummon:
                 # Dano e imobilização espectral calibrada
                 hit, dead = self.opponent.take_hit((self.facing_x, self.facing_y), damage=1)
                 if getattr(self.opponent, "is_alive", True):
-                    self.opponent.stun(0.45)
+                    self.opponent.stun(0.25)
                 if banners is not None:
                     banners.append(FloatingBanner("CORPSE GRAB!", self.opponent.wx, self.opponent.wy, wz=1.6, color=(140, 70, 180)))
                 self.take_hit(damage=1, particles=particles)
@@ -219,7 +219,7 @@ class ValeriusNecromancer(Samurai):
         self.scythe_timer = 0.0
 
         # Ação Secundária: Evocar Mortos (Summon Skeleton)
-        self.summon_cooldown = 6.2
+        self.summon_cooldown = 7.2  # Cooldown expandido para espaçamento justo de invocações
         self.summon_timer = 0.0
         self.summon: SkeletonSummon | None = None
 

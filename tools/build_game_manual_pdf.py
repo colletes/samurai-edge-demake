@@ -1841,6 +1841,7 @@ def build_back_cover_page(story, styles, lang="PT"):
     credits_rows = [
         ("Game Designer, Songwriter, Artist", "Colletes"),
         ("Toolset de Desenvolvimento" if lang == "PT" else "Development Toolset", "Gemini / Antigravity, Suno, Google Flow"),
+        ("Apoiadores da Comunidade" if lang == "PT" else "Community Supporters", "itchzaya, Tiago Fraga, Tobias C."),
         ("Dedicatória" if lang == "PT" else "Dedication", "À Lorena. Sempre à Lorena, que me apoia nas minhas loucuras." if lang == "PT" else "To Lorena. Always to Lorena, who supports me in my madness.")
     ]
     t_credits_data = []

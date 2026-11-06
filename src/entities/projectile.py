@@ -21,7 +21,7 @@ class KunaiProjectile:
         self.vz = vz
 
         # Velocidade de arremesso
-        speed = 24.0  # Velocidade aumentada para tornar a kunai veloz e difícil de parriar a média distância
+        speed = 28.0  # Velocidade calibrada de kunai de elite ninja
         self.vx = dir_x * speed
         self.vy = dir_y * speed
         self.dir_x = dir_x
@@ -492,7 +492,7 @@ class RemoteMineEntity:
                     else:
                         hit, dead = f.take_hit((0.0, 0.0), damage=2)
                         if dead and cinematic_director:
-                            cinematic_director.trigger_fatal_strike(self.owner, f, "KASUMI_EXPLODE", (0.0, 0.0))
+                            cinematic_director.trigger_fatal_strike(self.owner, f, "BAKUEN_FUNSAI", (0.0, 0.0))
             if hasattr(f, "dog") and f.dog and f.dog.state != "KNOCKED_OUT":
                 if world_distance(self.wx, self.wy, f.dog.wx, f.dog.wy) <= (self.radius + f.dog.radius):
                     f.dog.knock_out(2.0)
@@ -543,7 +543,7 @@ class KusarigamaChainEntity:
 
         self.speed = 17.0
         self.pull_speed = 11.0
-        self.max_reach = 5.2
+        self.max_reach = 3.80
         self.reach_traveled = 0.0
 
         self.state = "FLYING"  # "FLYING", "HOOKED_PULLING", "RETRACTING"
@@ -670,14 +670,15 @@ class KusarigamaChainEntity:
 
 class MusketBulletProjectile:
     """Bala de chumbo supersônica disparada pelo Rifleman Tanegashima ou Pederneira da Mosqueteira. 1-Hit Kill."""
-    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, max_range: float = 18.0):
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, max_range: float = 18.0, speed: float = 31.2):
         self.wx = wx
         self.wy = wy
         self.wz = wz
         self.dir_x = dir_x
         self.dir_y = dir_y
         self.owner = owner
-        speed = 26.0  # Velocidade balística supersônica de arcabuz / pederneira
+        self.speed = speed  # 31.2 m/s (+20% de aceleração supersônica)
+        self.radius = 0.45  # Hitbox calibrada e ampliada para acerto mais consistente
         self.vx = dir_x * speed
         self.vy = dir_y * speed
         self.is_active = True
@@ -694,9 +695,9 @@ class MusketBulletProjectile:
         self.wy += self.vy * dt
         self.dist_traveled += step
 
-        # Fumaça no rastro da bala
-        if particles is not None and random.random() < 0.4:
-            particles.append(SparkParticle(self.wx, self.wy, self.wz))
+        # Rastro contínuo e vibrante de faíscas de pólvora e fumaça
+        if particles is not None and random.random() < 0.65:
+            particles.append(SparkParticle(self.wx, self.wy, self.wz, color=(255, random.randint(180, 240), 50)))
 
         # Cortar bambus no caminho
         for b in game_map.bamboos:
@@ -734,10 +735,40 @@ class MusketBulletProjectile:
         if not self.is_active:
             return
         from src.isometric.voxel_renderer import draw_voxel_box
-        draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.05, self.wz, 0.10, 0.10, 0.10, (230, 220, 180))
-        # Brilho do tiro de pólvora
-        sx, sy = camera.apply(self.wx, self.wy, self.wz)
-        pygame.draw.circle(surface, (255, 235, 120), (sx, sy), 3)
+
+        # 1. Posições de tela da ogiva e cauda do rastro luminoso (Tracer Trail)
+        head_sx, head_sy = camera.apply(self.wx, self.wy, self.wz)
+        tail_wx = self.wx - self.dir_x * 0.95
+        tail_wy = self.wy - self.dir_y * 0.95
+        tail_sx, tail_sy = camera.apply(tail_wx, tail_wy, self.wz)
+
+        # 2. Rastro de fogo supersônico (Tracer Streak multicamadas)
+        # Camada externa: halo laranja incandescente
+        pygame.draw.line(surface, (255, 120, 20), (tail_sx, tail_sy), (head_sx, head_sy), 6)
+        # Camada média: núcleo dourado brilhante
+        mid_wx = self.wx - self.dir_x * 0.65
+        mid_wy = self.wy - self.dir_y * 0.65
+        mid_sx, mid_sy = camera.apply(mid_wx, mid_wy, self.wz)
+        pygame.draw.line(surface, (255, 215, 60), (mid_sx, mid_sy), (head_sx, head_sy), 4)
+        # Camada interna: feixe branco quente de alta visibilidade
+        core_wx = self.wx - self.dir_x * 0.35
+        core_wy = self.wy - self.dir_y * 0.35
+        core_sx, core_sy = camera.apply(core_wx, core_wy, self.wz)
+        pygame.draw.line(surface, (255, 255, 240), (core_sx, core_sy), (head_sx, head_sy), 2)
+
+        # 3. Projétil Voxel 3D (Bala de chumbo/latão incandescente)
+        bw = 0.12
+        draw_voxel_box(surface, camera, self.wx - bw * 0.5, self.wy - bw * 0.5, self.wz - 0.02, bw, bw, bw, (245, 215, 110))
+
+        # 4. Clarão/Halo radiante frontal da ogiva
+        halo_rad = 14
+        halo_surf = pygame.Surface((halo_rad * 2, halo_rad * 2), pygame.SRCALPHA)
+        pygame.draw.circle(halo_surf, (255, 160, 30, 110), (halo_rad, halo_rad), halo_rad)
+        pygame.draw.circle(halo_surf, (255, 230, 80, 180), (halo_rad, halo_rad), halo_rad // 2)
+        surface.blit(halo_surf, (head_sx - halo_rad, head_sy - halo_rad))
+
+        # Ponto focal branco puro no ápice
+        pygame.draw.circle(surface, (255, 255, 255), (head_sx, head_sy), 3)
 
 
 class PoisonCloudProjectile:
@@ -808,6 +839,7 @@ class KyudoArrowProjectile:
         self.dir_x = dir_x
         self.dir_y = dir_y
         self.owner = owner
+        self.radius = 0.18
         speed = 32.0  # Velocidade calibrada da flecha Yumi para pressionar esquivas reativas a média distância
         self.vx = dir_x * speed
         self.vy = dir_y * speed
@@ -815,58 +847,177 @@ class KyudoArrowProjectile:
         self.max_range = 16.0
         self.is_active = True
         self.has_been_reflected = False  # Anti-spam: previne reflexão infinita
+        self.trail = []  # Histórico recente de posições para esteira aerodinâmica (slipstream)
+        self.evaded_targets = set()
 
     def update(self, dt: float, game_map, particles: list = None) -> bool:
         if not self.is_active:
             return False
-        step = math.hypot(self.vx * dt, self.vy * dt)
-        self.wx += self.vx * dt
-        self.wy += self.vy * dt
-        self.dist_traveled += step
 
-        # Cortar bambus no caminho
-        for b in game_map.bamboos:
-            if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.45:
-                part = b.cut((self.dir_x, self.dir_y))
-                if part and particles is not None:
-                    particles.append(part)
+        # Registrar rastro recente
+        self.trail.append((self.wx, self.wy, self.wz))
+        if len(self.trail) > 5:
+            self.trail.pop(0)
 
-        # Colisão com rochas ou poço
+        step_dist = math.hypot(self.vx * dt, self.vy * dt)
+        sub_steps = max(1, int(step_dist / 0.12))
+        sub_dt = dt / sub_steps
+
         hit_obstacle = False
-        for r in getattr(game_map, "rocks", []):
-            if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
-                if world_distance(self.wx, self.wy, r.wx, r.wy) < (getattr(r, "radius", 0.5) + 0.15):
-                    r.break_panel((self.dir_x, self.dir_y), particles)
-                    hit_obstacle = True
-                    break
-            elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < getattr(r, "radius", 0.6):
+        for _ in range(sub_steps):
+            self.wx += self.vx * sub_dt
+            self.wy += self.vy * sub_dt
+            self.dist_traveled += math.hypot(self.vx * sub_dt, self.vy * sub_dt)
+
+            # 1. Cortar bambus no caminho
+            if game_map and hasattr(game_map, "bamboos"):
+                for b in game_map.bamboos:
+                    if not getattr(b, "is_cut", False) and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.45:
+                        part = b.cut((self.dir_x, self.dir_y))
+                        if part and particles is not None:
+                            particles.append(part)
+
+            # 2. Colisão com rochas, sebes (HedgeBlock), estátuas e biombos quebráveis
+            if game_map is not None:
+                for r in getattr(game_map, "rocks", []):
+                    if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                        if world_distance(self.wx, self.wy, r.wx, r.wy) < (getattr(r, "radius", 0.5) + self.radius):
+                            r.break_panel((self.dir_x, self.dir_y), particles)
+                            hit_obstacle = True
+                            break
+                    elif not getattr(r, "is_broken", False):
+                        if hasattr(r, "check_collision"):
+                            coll, _, _ = r.check_collision(self.wx, self.wy, self.radius)
+                            if coll:
+                                hit_obstacle = True
+                                break
+                        else:
+                            r_wx = r[0] if isinstance(r, (tuple, list)) else getattr(r, "wx", 0.0)
+                            r_wy = r[1] if isinstance(r, (tuple, list)) else getattr(r, "wy", 0.0)
+                            r_rad = r[2] if isinstance(r, (tuple, list)) and len(r) > 2 else getattr(r, "radius", 0.5)
+                            if world_distance(self.wx, self.wy, r_wx, r_wy) < (r_rad + self.radius):
+                                hit_obstacle = True
+                                break
+
+                # 3. Construções sólidas (palisadas, barris, cabanas, machiya)
+                if not hit_obstacle:
+                    for b in getattr(game_map, "buildings", []):
+                        if hasattr(b, "check_collision"):
+                            coll, _, _ = b.check_collision(self.wx, self.wy, self.radius)
+                            if coll:
+                                hit_obstacle = True
+                                break
+                        elif world_distance(self.wx, self.wy, getattr(b, "wx", 0.0), getattr(b, "wy", 0.0)) < (getattr(b, "radius", 0.6) + self.radius):
+                            hit_obstacle = True
+                            break
+
+                # 4. Poço central
+                if not hit_obstacle and getattr(game_map, "well", None) is not None:
+                    well = game_map.well
+                    if hasattr(well, "check_collision"):
+                        coll, _, _ = well.check_collision(self.wx, self.wy, self.radius)
+                        if coll:
+                            hit_obstacle = True
+                    elif world_distance(self.wx, self.wy, well.wx, well.wy) < (well.radius + self.radius):
+                        hit_obstacle = True
+
+                # 5. Árvores e pinheiros sólidos
+                if not hit_obstacle:
+                    for t in getattr(game_map, "trees", []):
+                        if hasattr(t, "check_collision"):
+                            coll, _, _ = t.check_collision(self.wx, self.wy, self.radius)
+                            if coll:
+                                hit_obstacle = True
+                                break
+                        elif world_distance(self.wx, self.wy, getattr(t, "wx", 0.0), getattr(t, "wy", 0.0)) < (getattr(t, "radius", 0.5) + self.radius):
+                            hit_obstacle = True
+                            break
+
+                # 6. Lanternas e adereços sólidos
+                if not hit_obstacle:
+                    for prop in getattr(game_map, "solid_props", []) + getattr(game_map, "lanterns", []):
+                        if hasattr(prop, "check_collision"):
+                            coll, _, _ = prop.check_collision(self.wx, self.wy, self.radius)
+                            if coll:
+                                hit_obstacle = True
+                                break
+
+            # 7. Limites externos da arena
+            min_x = 0.5
+            max_x = (game_map.cols - 0.5) if (game_map and hasattr(game_map, "cols")) else 25.0
+            min_y = 0.5
+            max_y = (game_map.rows - 0.5) if (game_map and hasattr(game_map, "rows")) else 25.0
+            if self.wx <= min_x or self.wx >= max_x or self.wy <= min_y or self.wy >= max_y:
                 hit_obstacle = True
+
+            if hit_obstacle or self.dist_traveled >= self.max_range:
                 break
-        if game_map and getattr(game_map, "well", None) and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
-            hit_obstacle = True
 
         if hit_obstacle or self.dist_traveled >= self.max_range:
             self.is_active = False
             if particles is not None:
+                for _ in range(8):
+                    particles.append(SparkParticle(self.wx, self.wy, self.wz, color=(235, 195, 110)))
                 for _ in range(4):
-                    particles.append(SparkParticle(self.wx, self.wy, 0.3))
+                    particles.append(SparkParticle(self.wx, self.wy, self.wz, color=(240, 240, 245)))
+            try:
+                from src.audio.sound_manager import get_sound_manager
+                from src.audio.sound_events import SoundEvent
+                get_sound_manager().play(SoundEvent.OBSTACLE_HIT, volume_scale=0.85)
+            except Exception:
+                pass
             return False
+
+        # Partículas ocasionais de ar/vento sagrado ao longo do trajeto
+        if particles is not None and random.random() < 0.25:
+            particles.append(SparkParticle(self.wx - self.dir_x * 0.15, self.wy - self.dir_y * 0.15, self.wz, color=(245, 242, 235)))
+
         return True
 
     def render(self, surface: pygame.Surface, camera):
         if not self.is_active:
             return
-        from src.isometric.voxel_renderer import draw_voxel_box
-        # Ponta de ferro
-        draw_voxel_box(surface, camera, self.wx - 0.04, self.wy - 0.04, self.wz, 0.08, 0.08, 0.08, COLOR_STEEL)
-        # Haste de bambu
-        hx = self.wx - self.dir_x * 0.16
-        hy = self.wy - self.dir_y * 0.16
-        draw_voxel_box(surface, camera, hx - 0.03, hy - 0.03, self.wz, 0.06, 0.06, 0.06, (180, 140, 80))
-        # Penas brancas
-        fx = self.wx - self.dir_x * 0.30
-        fy = self.wy - self.dir_y * 0.30
-        draw_voxel_box(surface, camera, fx - 0.04, fy - 0.04, self.wz, 0.08, 0.08, 0.08, COLOR_WHITE)
+
+        # 1. Sombra no solo correspondente à flecha em voo
+        sx_g, sy_g = camera.apply(self.wx, self.wy, 0.0)
+        sh_progress = max(0.15, 1.0 - (self.wz / 3.0))
+        sh_r = max(2, int(4 * sh_progress))
+        pygame.draw.ellipse(surface, (12, 12, 14, int(130 * sh_progress)), (sx_g - sh_r * 2, sy_g - sh_r, sh_r * 4, sh_r * 2))
+
+        # 2. Esteira aerodinâmica / Slipstream translúcido de vento e velocidade
+        if len(self.trail) >= 2:
+            pts_screen = [camera.apply(p[0], p[1], p[2]) for p in self.trail]
+            pts_screen.append(camera.apply(self.wx, self.wy, self.wz))
+            for i in range(len(pts_screen) - 1):
+                p1 = pts_screen[i]
+                p2 = pts_screen[i + 1]
+                t_ratio = (i + 1) / len(pts_screen)
+                alpha_val = int(70 * t_ratio)
+                thick = max(1, int(2 * t_ratio))
+                line_surf = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+                pygame.draw.line(line_surf, (250, 248, 235, alpha_val), (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), thick)
+                surface.blit(line_surf, (0, 0))
+
+        # 3. Posições na tela da ponta, haste e penas (fletching)
+        tip_x, tip_y = camera.apply(self.wx, self.wy, self.wz)
+        tail_wx = self.wx - self.dir_x * 0.42
+        tail_wy = self.wy - self.dir_y * 0.42
+        tail_x, tail_y = camera.apply(tail_wx, tail_wy, self.wz)
+
+        # Haste de bambu/madeira escura
+        pygame.draw.line(surface, (155, 115, 65), (int(tail_x), int(tail_y)), (int(tip_x), int(tip_y)), 3)
+        pygame.draw.line(surface, (215, 175, 105), (int(tail_x), int(tail_y)), (int(tip_x), int(tip_y)), 1)
+
+        # Ponta de ferro laminado afiada (broadhead)
+        pygame.draw.circle(surface, COLOR_STEEL, (int(tip_x), int(tip_y)), 3)
+        pygame.draw.circle(surface, (255, 255, 255), (int(tip_x), int(tip_y)), 1)
+
+        # Penas brancas cerimoniais de falcão (fletching) com detalhe vermelho sagrado
+        fletch_wx = self.wx - self.dir_x * 0.32
+        fletch_wy = self.wy - self.dir_y * 0.32
+        fl_x, fl_y = camera.apply(fletch_wx, fletch_wy, self.wz)
+        pygame.draw.line(surface, COLOR_WHITE, (int(tail_x), int(tail_y)), (int(fl_x), int(fl_y)), 4)
+        pygame.draw.line(surface, (210, 35, 45), (int(tail_x), int(tail_y)), (int(fl_x), int(fl_y)), 1)
 
 
 class HamayaArrowProjectile:
@@ -988,6 +1139,7 @@ class SacredArrowVolleyProjectile:
         self.has_impacted = False
         self.damage_dealt = False
         self.has_been_reflected = False
+        self.evaded_targets = set()
         self.elapsed = 0.0
         self.flight_duration = 0.42
         self.linger_duration = 0.38
@@ -1089,7 +1241,14 @@ class SacredArrowVolleyProjectile:
                     if getattr(f, "is_alive", False) and f is not self.owner:
                         dist = math.hypot(f.wx - self.target_wx, f.wy - self.target_wy)
                         if dist < (self.radius + getattr(f, "radius", 0.35)):
-                            f.take_hit((0.0, 0.0), damage=self.damage)
+                            from src.combat.collision import is_fighter_evading
+                            if is_fighter_evading(f):
+                                self.evaded_targets.add(f)
+                            else:
+                                if hasattr(f, "take_hit"):
+                                    f.take_hit((0.0, 0.0), damage=self.damage)
+                                elif hasattr(f, "take_damage"):
+                                    f.take_damage(self.damage, self.owner)
 
         if self.has_impacted:
             self.impact_flash_timer -= dt
@@ -1113,22 +1272,22 @@ class SacredArrowVolleyProjectile:
         if not self.has_impacted:
             progress = min(1.0, self.elapsed / self.flight_duration)
             aura_surf = pygame.Surface((rx * 2 + 16, ry * 2 + 16), pygame.SRCALPHA)
-            alpha = int(40 + 50 * progress)
+            alpha = int(50 + 70 * progress)
             pygame.draw.ellipse(aura_surf, (255, 220, 80, alpha), (8, 8, rx * 2, ry * 2))
-            pygame.draw.ellipse(aura_surf, (255, 240, 180, alpha + 30), (8, 8, rx * 2, ry * 2), 2)
+            pygame.draw.ellipse(aura_surf, (255, 245, 190, min(255, alpha + 45)), (8, 8, rx * 2, ry * 2), 2)
             surface.blit(aura_surf, (cx - rx - 8, cy - ry - 8))
         else:
             # Clarão de impacto inicial e anel de purificação xintoísta expandindo
             progress = max(0.0, min(1.0, 1.0 - (self.impact_flash_timer / 0.35)))
-            exp_w = int(self.radius * 32 * (0.8 + 0.4 * progress))
+            exp_w = int(self.radius * 34 * (0.8 + 0.4 * progress))
             exp_h = max(2, exp_w // 2)
-            alpha_val = max(0, min(255, int((1.0 - progress) * 220)))
+            alpha_val = max(0, min(255, int((1.0 - progress) * 230)))
             exp_surf = pygame.Surface((exp_w * 2 + 16, exp_h * 2 + 16), pygame.SRCALPHA)
             pygame.draw.ellipse(exp_surf, (255, 230, 80, alpha_val), (8, 8, exp_w * 2, exp_h * 2))
-            pygame.draw.ellipse(exp_surf, (255, 255, 240, min(255, alpha_val + 35)), (8 + exp_w // 4, 8 + exp_h // 4, int(exp_w * 1.5), int(exp_h * 1.5)))
+            pygame.draw.ellipse(exp_surf, (255, 255, 240, min(255, alpha_val + 40)), (8 + exp_w // 4, 8 + exp_h // 4, int(exp_w * 1.5), int(exp_h * 1.5)))
             surface.blit(exp_surf, (cx - exp_w - 8, cy - exp_h - 8))
 
-        # 2. Renderização de cada flecha sagrada individual
+        # 2. Renderização de cada flecha sagrada individual com alta visibilidade
         for a in self.arrows:
             if self.elapsed < a["stagger"]:
                 continue
@@ -1138,9 +1297,9 @@ class SacredArrowVolleyProjectile:
             if not a["landed"]:
                 # Sombra no solo correspondente à flecha em voo
                 sx_g, sy_g = camera.apply(wx, wy, 0.0)
-                sh_progress = max(0.1, 1.0 - (wz / 6.0))
-                sh_r = max(2, int(5 * sh_progress))
-                pygame.draw.ellipse(surface, (10, 10, 12, int(140 * sh_progress)), (sx_g - sh_r, sy_g - sh_r // 2, sh_r * 2, sh_r))
+                sh_progress = max(0.15, 1.0 - (wz / 6.0))
+                sh_r = max(2, int(6 * sh_progress))
+                pygame.draw.ellipse(surface, (10, 10, 12, int(150 * sh_progress)), (sx_g - sh_r, sy_g - sh_r // 2, sh_r * 2, sh_r))
 
                 # Posição da flecha na tela
                 sx, sy = camera.apply(wx, wy, wz)
@@ -1154,23 +1313,29 @@ class SacredArrowVolleyProjectile:
                 else:
                     dir_x, dir_y, dir_z = 0.0, 0.0, -1.0
 
-                sx_tail, sy_tail = camera.apply(wx - dir_x * 0.35, wy - dir_y * 0.35, wz - dir_z * 0.35)
+                sx_tail, sy_tail = camera.apply(wx - dir_x * 0.45, wy - dir_y * 0.45, wz - dir_z * 0.45)
 
-                # Haste branca sagrada
-                pygame.draw.line(surface, (250, 248, 240), (int(sx_tail), int(sy_tail)), (int(sx), int(sy)), 2)
-                # Ponta dourada de purificação
-                pygame.draw.circle(surface, COLOR_GOLD, (int(sx), int(sy)), 3)
-                # Brilho sagrado
-                pygame.draw.circle(surface, (255, 255, 230), (int(sx), int(sy)), 1)
+                # Rastro de luz dourada sagrada brilhante (slipstream)
+                pygame.draw.line(surface, (255, 235, 120), (int(sx_tail), int(sy_tail)), (int(sx), int(sy)), 3)
+                pygame.draw.line(surface, (255, 255, 245), (int(sx_tail), int(sy_tail)), (int(sx), int(sy)), 1)
+
+                # Ponta sagrada cintilante
+                pygame.draw.circle(surface, (255, 225, 80), (int(sx), int(sy)), 4)
+                pygame.draw.circle(surface, (255, 255, 250), (int(sx), int(sy)), 2)
+
                 # Penas cerimoniais douradas na cauda
-                pygame.draw.circle(surface, (255, 230, 120), (int(sx_tail), int(sy_tail)), 2)
+                pygame.draw.circle(surface, (255, 215, 100), (int(sx_tail), int(sy_tail)), 3)
             else:
                 # Flecha cravada no solo
                 sx_tip, sy_tip = camera.apply(a["dest_x"], a["dest_y"], 0.0)
-                sx_tail, sy_tail = camera.apply(a["dest_x"] - 0.15, a["dest_y"] - 0.15, 0.40)
-                # Haste no chão
-                pygame.draw.line(surface, (240, 235, 220), (int(sx_tail), int(sy_tail)), (int(sx_tip), int(sy_tip)), 2)
+                sx_tail, sy_tail = camera.apply(a["dest_x"] - 0.15, a["dest_y"] - 0.15, 0.42)
+                # Haste cravada
+                pygame.draw.line(surface, (245, 240, 225), (int(sx_tail), int(sy_tail)), (int(sx_tip), int(sy_tip)), 2)
+                pygame.draw.line(surface, (255, 215, 80), (int(sx_tail), int(sy_tail)), (int(sx_tip), int(sy_tip)), 1)
                 # Ponta de ouro fincada
+                pygame.draw.circle(surface, COLOR_GOLD, (int(sx_tip), int(sy_tip)), 3)
+                # Penas sagradas
+                pygame.draw.circle(surface, (255, 230, 120), (int(sx_tail), int(sy_tail)), 2)
                 pygame.draw.circle(surface, COLOR_GOLD, (int(sx_tip), int(sy_tip)), 2)
                 # Penas sagradas
                 pygame.draw.circle(surface, (255, 225, 110), (int(sx_tail), int(sy_tail)), 2)
@@ -1209,7 +1374,7 @@ class RopeArrowProjectile:
             self.wy += self.vy * dt
             self.dist_traveled += step
 
-            # Cravar em obstáculos rígidos da arena (rochas e poço)
+            # Cravar em obstáculos rígidos da arena (rochas, sebes, estátuas, poço, construções, árvores)
             hit = False
             if game_map:
                 for r in getattr(game_map, "rocks", []):
@@ -1218,15 +1383,41 @@ class RopeArrowProjectile:
                             r.break_panel((self.dir_x, self.dir_y), particles)
                             hit = True
                             break
-                    elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius + 0.2:
+                    elif not getattr(r, "is_broken", False):
+                        if hasattr(r, "check_collision"):
+                            coll, _, _ = r.check_collision(self.wx, self.wy, 0.2)
+                            if coll:
+                                hit = True
+                                break
+                        elif world_distance(self.wx, self.wy, r.wx, r.wy) < r.radius + 0.2:
+                            hit = True
+                            break
+                if not hit and game_map.well:
+                    if hasattr(game_map.well, "check_collision"):
+                        coll, _, _ = game_map.well.check_collision(self.wx, self.wy, 0.2)
+                        if coll:
+                            hit = True
+                    elif world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius + 0.2:
                         hit = True
-                        break
-                if not hit and game_map.well and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius + 0.2:
-                    hit = True
+                if not hit:
+                    for b in getattr(game_map, "buildings", []):
+                        if hasattr(b, "check_collision") and b.check_collision(self.wx, self.wy, 0.2)[0]:
+                            hit = True
+                            break
+                if not hit:
+                    for t in getattr(game_map, "trees", []):
+                        if hasattr(t, "check_collision") and t.check_collision(self.wx, self.wy, 0.2)[0]:
+                            hit = True
+                            break
+                if not hit:
+                    for prop in getattr(game_map, "solid_props", []) + getattr(game_map, "lanterns", []):
+                        if hasattr(prop, "check_collision") and prop.check_collision(self.wx, self.wy, 0.2)[0]:
+                            hit = True
+                            break
 
                 # Cortar bambus no trajeto sem ser interrompida
-                for b in game_map.bamboos:
-                    if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.5:
+                for b in getattr(game_map, "bamboos", []):
+                    if not getattr(b, "is_cut", False) and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.5:
                         part = b.cut((self.dir_x, self.dir_y))
                         if part and particles is not None:
                             particles.append(part)
@@ -1747,7 +1938,7 @@ class KamaitachiProjectile:
         self.dir_x = dir_x
         self.dir_y = dir_y
 
-        speed = 17.5
+        speed = 21.0
         self.vx = dir_x * speed
         self.vy = dir_y * speed
 
@@ -1755,7 +1946,7 @@ class KamaitachiProjectile:
         self.dist_traveled = 0.0
         self.is_active = True
         self.damage = 1
-        self.width = 1.3
+        self.width = 1.5
         self.pulse_timer = 0.0
         self.has_been_reflected = False
 
@@ -2366,6 +2557,93 @@ class OfudaProjectile:
             for b in game_map.bamboos:
                 if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.55:
                     b.cut((self.dir_x, self.dir_y))
+
+        # Colisão com obstáculos sólidos (cercas vivas, rochas, biombos, estátuas, fontes, construções, poço)
+        hit_obstacle = False
+        if game_map is not None:
+            # 1. Rochas, sebes (HedgeBlock), estátuas (MarbleStatue), fontes (Fountain), biombos (ScreenPanel)
+            for r in getattr(game_map, "rocks", []):
+                if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                    if world_distance(self.wx, self.wy, r.wx, r.wy) < (getattr(r, "radius", 0.5) + self.radius):
+                        r.break_panel((self.dir_x, self.dir_y), particles)
+                        hit_obstacle = True
+                        break
+                elif not getattr(r, "is_broken", False):
+                    if hasattr(r, "check_collision"):
+                        coll, _, _ = r.check_collision(self.wx, self.wy, self.radius)
+                        if coll:
+                            hit_obstacle = True
+                            break
+                    elif world_distance(self.wx, self.wy, r.wx, r.wy) < (getattr(r, "radius", 0.5) + self.radius):
+                        hit_obstacle = True
+                        break
+
+            # 2. Construções sólidas (palisadas, barris, canhões, cabanas, tendas, etc.)
+            if not hit_obstacle:
+                for b in getattr(game_map, "buildings", []):
+                    if hasattr(b, "check_collision"):
+                        coll, _, _ = b.check_collision(self.wx, self.wy, self.radius)
+                        if coll:
+                            hit_obstacle = True
+                            break
+                    elif world_distance(self.wx, self.wy, getattr(b, "wx", 0.0), getattr(b, "wy", 0.0)) < (getattr(b, "radius", 0.6) + self.radius):
+                        hit_obstacle = True
+                        break
+
+            # 3. Poço central
+            if not hit_obstacle and getattr(game_map, "well", None) is not None:
+                well = game_map.well
+                if hasattr(well, "check_collision"):
+                    coll, _, _ = well.check_collision(self.wx, self.wy, self.radius)
+                    if coll:
+                        hit_obstacle = True
+                elif world_distance(self.wx, self.wy, well.wx, well.wy) < (well.radius + self.radius):
+                    hit_obstacle = True
+
+            # 4. Árvores sólidas
+            if not hit_obstacle:
+                for t in getattr(game_map, "trees", []):
+                    if hasattr(t, "check_collision"):
+                        coll, _, _ = t.check_collision(self.wx, self.wy, self.radius)
+                        if coll:
+                            hit_obstacle = True
+                            break
+                    elif world_distance(self.wx, self.wy, getattr(t, "wx", 0.0), getattr(t, "wy", 0.0)) < (getattr(t, "radius", 0.5) + self.radius):
+                        hit_obstacle = True
+                        break
+
+        if hit_obstacle:
+            self.is_active = False
+            if particles is not None:
+                from src.effects.particles import SparkParticle, SmokeParticle, FlameVoxelParticle
+                if self.element == "fire":
+                    for _ in range(12):
+                        particles.append(FlameVoxelParticle(
+                            self.wx + random.uniform(-0.15, 0.15),
+                            self.wy + random.uniform(-0.15, 0.15),
+                            random.uniform(0.15, 0.65),
+                            color=random.choice([(255, 80, 35), (255, 170, 45), (255, 235, 95)])
+                        ))
+                    if hasattr(game_map, "interactives"):
+                        for prop in game_map.interactives:
+                            prop.ignite(self.wx, self.wy, 1.2)
+                elif self.element == "wood":
+                    for _ in range(8):
+                        particles.append(SparkParticle(self.wx, self.wy, random.uniform(0.2, 0.5), color=random.choice([(45, 225, 120), (120, 245, 150), (200, 255, 180)])))
+                elif self.element == "earth":
+                    for _ in range(8):
+                        particles.append(SmokeParticle(self.wx, self.wy, wz=0.25, color=(165, 125, 65), radius=0.20, lifetime=0.40))
+                elif self.element == "metal":
+                    for _ in range(10):
+                        particles.append(SparkParticle(self.wx, self.wy, random.uniform(0.2, 0.5), color=random.choice([(250, 252, 255), (185, 205, 235), (255, 245, 200)])))
+                elif self.element == "water":
+                    for _ in range(10):
+                        particles.append(SparkParticle(self.wx, self.wy, random.uniform(0.2, 0.5), color=random.choice([(70, 185, 255), (140, 225, 255), (225, 245, 255)])))
+                else:  # yinyang
+                    for _ in range(8):
+                        particles.append(SparkParticle(self.wx, self.wy, random.uniform(0.2, 0.5), color=random.choice([(235, 180, 255), (35, 25, 45), (255, 255, 255)])))
+            return False
+
         return True
 
     def render(self, surface: pygame.Surface, camera):
@@ -2530,6 +2808,10 @@ class TalismanWard:
             if fighters:
                 for f in fighters:
                     if f is not self.owner and getattr(f, "is_alive", True):
+                        from src.combat.collision import is_fighter_evading
+                        if is_fighter_evading(f):
+                            self.hit_fighters.add(id(f))
+                            continue
                         dist = world_distance(self.wx, self.wy, f.wx, f.wy)
                         if dist <= self.trigger_radius:
                             if self.element == "metal":
@@ -2584,20 +2866,27 @@ class TalismanWard:
             if fighters:
                 for f in fighters:
                     if f is not self.owner and getattr(f, "is_alive", True) and id(f) not in self.hit_fighters:
+                        from src.combat.collision import is_fighter_evading
+                        is_evading = is_fighter_evading(f)
                         dist = world_distance(self.wx, self.wy, f.wx, f.wy)
                         if dist <= self.pillar_radius:
+                            # Se o combatente estiver esquivando e o feitiço for não-explosivo (todos exceto pilar de fogo):
+                            # desvia completamente da barreira e é registrado para não sofrer dano posterior desta detonação
+                            if is_evading and self.element != "fire":
+                                self.hit_fighters.add(id(f))
+                                continue
                             self.hit_fighters.add(id(f))
                             dx = f.wx - self.wx
                             dy = f.wy - self.wy
                             mag = math.hypot(dx, dy) or 1.0
                             ndx, ndy = dx / mag, dy / mag
                             if dist <= 0.85:
-                                f.take_hit((ndx, ndy), damage=2)
+                                hit, dead = f.take_hit((ndx, ndy), damage=2)
                             else:
-                                if game_map is not None:
-                                    f.apply_forced_displacement(ndx * 0.55, ndy * 0.55, game_map)
-                                f.take_hit((ndx, ndy), damage=1)
-                                if getattr(f, "is_alive", True):
+                                hit, dead = f.take_hit((ndx, ndy), damage=1)
+                                if hit and not dead and getattr(f, "is_alive", True):
+                                    if game_map is not None:
+                                        f.apply_forced_displacement(ndx * 0.55, ndy * 0.55, game_map)
                                     f.stun(0.90)
 
             if self.detonate_timer >= self.detonate_duration:

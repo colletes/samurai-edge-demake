@@ -125,17 +125,12 @@ def test_complete_roster():
     assert bomb1.wz > 0.0  # Em arco balístico 3D
     assert bomb1.vz > 0.0
 
-    # Arremessar 2ª bomba
+    # Tentar arremessar 2ª bomba enquanto a 1ª está ativa (deve ser bloqueado pelo limite de 1 bomba ativa e cooldown de 2.0s!)
     kemuri.state = "IDLE"
-    kemuri.bomb_timer = 0.0
+    assert kemuri.bomb_timer == 2.0, "Cooldown de 2.0s não aplicado ao arremessar!"
+    kemuri.bomb_timer = 0.0  # Simula tempo decorrido, mas bomba 1 ainda está ativa
     kemuri.trigger_throw_bomb(kenshin_target.wx, kenshin_target.wy, projectiles)
-    assert len(projectiles) == 2
-
-    # Tentar arremessar 3ª bomba (deve ser bloqueado pelo limite de 2 bombas ativas!)
-    kemuri.state = "IDLE"
-    kemuri.bomb_timer = 0.0
-    kemuri.trigger_throw_bomb(kenshin_target.wx, kenshin_target.wy, projectiles)
-    assert len(projectiles) == 2, "Limite de 2 bombas ativas violado!"
+    assert len(projectiles) == 1, "Limite de 1 bomba ativa violado!"
 
     # Testar Auto-Dano: Kasumi possui 50% de blindagem contra sua própria bomba (toma 1 dano e sobrevive, matando o rival!)
     projectiles.clear()
@@ -158,7 +153,7 @@ def test_complete_roster():
     projectiles[0].fuse_timer = 0.0
     combat.process_combat(bomb_suicide, suicide_target, game_map, particles, banners, camera, projectiles, 0.016)
     assert bomb_suicide.is_alive == True and bomb_suicide.hp == 1, "Kasumi não deve morrer por auto-dano com <= 1 HP (Entregável 4.3)!"
-    print("Teste 3: Kasumi Bomba em Arco 3D (Limite de 2, Auto-Dano com 50% Blast Armor e Imunidade a Suicídio) OK!")
+    print("Teste 3: Kasumi Bomba em Arco 3D (Limite de 1, Cooldown 2.0s, Auto-Dano com 50% Blast Armor e Imunidade a Suicídio) OK!")
 
     # 4. Testar Rifleman (Teppo): Início Carregado, Coleta de Pólvora no Chão, Coronhada e Salto Evasivo
     projectiles.clear()
@@ -167,19 +162,13 @@ def test_complete_roster():
     assert rifleman.has_ammo == True, "Teppo deve começar municiado!"
     rifleman.has_ammo = False
 
-    # Criação de um PowderPouch na posição do Teppo
-    pouch = PowderPouch(wx=6.0, wy=11.0)
-    assert pouch.is_active == True
-    picked = rifleman.check_powder_pickup([pouch])
-    assert picked == True, "Teppo deve coletar a pólvora ao passar por cima!"
-    assert pouch.is_active == False, "Pouch deve ficar inativo após coleta!"
-    assert rifleman.cocking_timer > 0.0
+    # Recarga automática fluida por vareta (ramrod)
+    rifleman.reload_timer = 0.10
+    rifleman.update(0.15, game_map)
+    assert rifleman.has_ammo == True, "Teppo deve recarregar automaticamente via vareta de ferro (ramrod)!"
+    rifleman.cocking_timer = 0.0
 
-    # Engatilhar em 0.40s
-    rifleman.update(0.45, game_map)
-    assert rifleman.has_ammo == True, "Teppo deve estar municiado após engatilhar!"
-
-    # Disparo com arma carregada (mira com windup de 0.24s antes do tiro fatal)
+    # Disparo com arma carregada (mira com windup antes do tiro fatal)
     rifleman.trigger_shoot(samurai_target.wx, samurai_target.wy, projectiles)
     assert rifleman.state == "RIFLE_AIM", "Teppo deve entrar em estado de visada de mira ao apertar o botão!"
     rifleman.update(0.26, game_map)
@@ -215,12 +204,19 @@ def test_complete_roster():
     rifleman.update(0.1, game_map)
     assert rifleman.wx < initial_wx  # Recuou na direção oposta ao olhar
 
-    # Testar spawn de arena com 1 pouch garantido a média distância do Teppo (Opção 2)
-    arena_pouches = PowderPouch.create_arena_pouches(game_map, [rifleman], total_pouches=3)
-    assert len(arena_pouches) == 3
-    dist_to_pouch = math.hypot(rifleman.wx - arena_pouches[0].wx, rifleman.wy - arena_pouches[0].wy)
-    assert 3.5 <= dist_to_pouch <= 5.5, f"Pouch deve nascer a média distância ({dist_to_pouch:.2f}m) do Teppo!"
-    print("Teste 4: Tanegashima Rifleman (Coleta de Pólvora, Tiro Fatal, Coronhada, Salto e Spawn a Média Distância) OK!")
+    # Testar Terceira Ação: Trench Ashigaru Dive com recarga imediata
+    rifleman.has_ammo = False
+    rifleman.trigger_trench_dive(1.0, 0.0)
+    assert rifleman.state == "RIFLE_ROLL"
+    rifleman.update(0.30, game_map)
+    assert rifleman.has_ammo == True, "Mergulho de trincheira deve recarregar arma ao levantar!"
+    rifleman.update(0.30, game_map)
+
+    # Testar Ação Secundária: Mina de Pólvora Feudal (PowderTrap)
+    traps = []
+    planted = rifleman.trigger_powder_trap(traps=traps)
+    assert planted == True and len(traps) == 1, "Teppo deve plantar a mina de pólvora no solo!"
+    print("Teste 4: Tanegashima Rifleman (Recarga Vareta, Tiro Fatal, Coronhada, Trench Dive e Mina Feudal) OK!")
 
     # 5. Testar Okuni: Leques de Aço (Tessen) e Finta Teatral Kawarimi com Whiff Stun
     projectiles.clear()
@@ -455,19 +451,23 @@ def test_complete_roster():
     assert hanzo_p1.is_alive == True
     print("Teste 14: Seleção Direta de IA, Render de Coronhada Teppo e Hanzo Kunai Snipe OK!")
 
-    # 15. Testar Novo Asset de Pólvora Voxel do Teppo com Seta Indicadora Flutuante
-    pouch_test = PowderPouch(wx=10.0, wy=10.0)
-    assert pouch_test.is_active == True
-    # Renderizar com camera e font sem erros
-    font_test = pygame.font.Font(None, 20)
-    pouch_test.render(screen, camera, font_test)
-    # Atualizar animação de glow/bobbing
-    pouch_test.update(0.1, game_map)
-    assert pouch_test.glow_timer > 0.0
-    print("Teste 15: Novo Asset de Pólvora Voxel do Teppo com Seta Indicadora Flutuante OK!")
+    # 15. Testar Mina Feudal de Pólvora Voxel do Teppo (Taru de Pólvora 3D + Pavio e Brasa)
+    from src.entities.rifleman import PowderTrap
+    trap_test = PowderTrap(wx=10.0, wy=10.0, owner=rifleman)
+    assert trap_test.is_active == True
+    assert trap_test.is_ignited == False
+    # Renderizar com camera sem erros (barril voxel, aros de ferro, selo carmesim e brasa)
+    trap_test.render(screen, camera)
+    # Acendimento e explosão ao contato
+    dummy_victim = RedSamurai(wx=10.2, wy=10.0)
+    trap_test.update(0.1, [dummy_victim])
+    assert trap_test.is_ignited == True, "Mina deve acender ao detectar rival no raio de proximidade!"
+    trap_test.render(screen, camera)
+    print("Teste 15: Mina Feudal de Pólvora Voxel do Teppo (Taru de Pólvora 3D) OK!")
 
     # 16. Testar Sistema Completo de Ajuda (GameHelpModal) e Estratégia dos 12 Lutadores
     from src.ui.game_help import GameHelpModal, FIGHTERS_GUIDE_DATA
+    font_test = pygame.font.Font(None, 20)
     help_modal = GameHelpModal()
     assert not help_modal.is_open
 
@@ -738,13 +738,9 @@ def test_complete_roster():
     legacy_fighter_labels = [label for key, label, col in settings_menu.items if any(n in label for n in ["Kenshin", "Kenshi", "Musashi"])]
     assert len(legacy_fighter_labels) == 0, f"Nenhuma string deve conter nomes de lutadores específicos no SettingsMenu! Encontradas: {legacy_fighter_labels}"
 
-    # Pólvora condicional: SEM teppo = lista vazia
-    pouches_no_teppo = PowderPouch.create_arena_pouches(game_map, [kenshi_fighter, dummy_p2], total_pouches=3)
-    assert len(pouches_no_teppo) == 0, "Sem combatente de arma de fogo, não deve gerar saquinhos de pólvora!"
-
-    # Pólvora condicional: COM teppo = 3 saquinhos
-    pouches_with_teppo = PowderPouch.create_arena_pouches(game_map, [kenshi_fighter, rifleman], total_pouches=3)
-    assert len(pouches_with_teppo) == 3, "Com Teppo presente, deve gerar a quantidade correta de pólvora!"
+    # Remoção de coleta de pólvora em arena (Teppo recarrega sozinho / via dive)
+    pouches = PowderPouch.create_arena_pouches(game_map, [kenshi_fighter, rifleman], total_pouches=3)
+    assert len(pouches) == 0, "Mecânica de coleta de pólvora em arena deve estar desativada (0 pouches)!"
 
     # Portraits Conceituais da Seleção de Arena
     assert arena_sel.preview_surfs.get(ARENA_BAMBOO) is not None, "Portrait da Floresta de Bambu deve estar carregado!"

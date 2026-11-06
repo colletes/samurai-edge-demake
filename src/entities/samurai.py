@@ -58,12 +58,10 @@ def slide_movement_against_obstacles(
     Desloca a entidade de (start_x, start_y) por (dx, dy), aplicando deslizamento tangencial suave
     e separação física contra rochas, fachadas machiya, poços, árvores, lanternas, portais torii e props sólidos.
     """
-    target_x = start_x + dx
-    target_y = start_y + dy
-
     min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
-    target_x = max(min_x, min(max_x, target_x))
-    target_y = max(min_y, min(max_y, target_y))
+    move_mag = math.hypot(dx, dy)
+    if move_mag < 1e-6:
+        return max(min_x, min(max_x, start_x)), max(min_y, min(max_y, start_y))
 
     obstacles = list(getattr(game_map, "rocks", []))
     obstacles.extend(getattr(game_map, "buildings", []))
@@ -74,10 +72,11 @@ def slide_movement_against_obstacles(
     obstacles.extend(getattr(game_map, "torii_gates", []))
     obstacles.extend(getattr(game_map, "solid_props", []))
 
-    cur_x, cur_y = target_x, target_y
-    move_mag = math.hypot(dx, dy)
+    cur_dx, cur_dy = dx, dy
+    cur_x = max(min_x, min(max_x, start_x + cur_dx))
+    cur_y = max(min_y, min(max_y, start_y + cur_dy))
 
-    for _ in range(2):
+    for _ in range(3):
         any_collision = False
         for obs in obstacles:
             check_fn = getattr(obs, "check_collision", None)
@@ -89,17 +88,20 @@ def slide_movement_against_obstacles(
                 cur_x += push_x
                 cur_y += push_y
                 push_mag = math.hypot(push_x, push_y)
-                if push_mag > 1e-5 and move_mag > 1e-5:
+                if push_mag > 1e-5:
                     nx = push_x / push_mag
                     ny = push_y / push_mag
-                    dot = dx * nx + dy * ny
+                    dot = cur_dx * nx + cur_dy * ny
                     if dot < 0:
-                        tangent_x = dx - dot * nx
-                        tangent_y = dy - dot * ny
+                        # Decomposição tangencial completa: remove componente normal e desliza ao longo da superfície
+                        tangent_x = cur_dx - dot * nx
+                        tangent_y = cur_dy - dot * ny
                         t_mag = math.hypot(tangent_x, tangent_y)
                         if t_mag > 1e-5:
-                            cur_x += (tangent_x / t_mag) * min(abs(dot), 0.04)
-                            cur_y += (tangent_y / t_mag) * min(abs(dot), 0.04)
+                            cur_dx, cur_dy = tangent_x, tangent_y
+                            slide_amount = min(abs(dot), t_mag)
+                            cur_x += (tangent_x / t_mag) * slide_amount
+                            cur_y += (tangent_y / t_mag) * slide_amount
         if not any_collision:
             break
 
@@ -386,8 +388,9 @@ class Samurai:
             return False, False
 
         # Se estiver em esquiva / roll com i-frames ativos (incluindo Floreio de Capa da Julie e Recuo Acrobático de Parry)
-        if (self.state in (STATE_ROLL, STATE_DASH, "SHUKUCHI", "KAWARIMI_ROLL", "DODGE", "CAPE_FLOURISH", "PARRY_BACKHOP")
-                and (self.is_invulnerable_dodge or getattr(self, "is_invulnerable_dodge", False))):
+        if (getattr(self, "is_invulnerable_dodge", False) or
+            (self.state in (STATE_ROLL, STATE_DASH, "SHUKUCHI", "KAWARIMI_ROLL", "DODGE", "CAPE_FLOURISH", "PARRY_BACKHOP", "RIFLE_ROLL", "KABUKI_ROLL", "JUMP")
+             and (self.is_invulnerable_dodge or getattr(self, "is_invulnerable_dodge", False)))):
             return False, False
 
         # Se estiver em postura de parry e de frente para o ataque

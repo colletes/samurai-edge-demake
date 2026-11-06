@@ -92,13 +92,13 @@ def _is_blade_in_hand(c) -> bool:
     state = getattr(c, "state", "IDLE")
 
     if pose == "noto_sheath":
-        prog = extra.get("noto_prog", extra.get("seg_u", 0.0))
+        prog = float(extra.get("noto_prog", extra.get("seg_u", 0.0)))
         return prog < 0.85
     if state == "VICTORY":
-        vic_p = getattr(c, "atk_progress", 0.0) or extra.get("seg_u", extra.get("p", 0.0))
+        vic_p = float(extra.get("p", 0.0))
         return vic_p < 0.65
     if state == "INTRO" or pose in ("kiseru_smoke", "kiseru_light"):
-        intro_p = getattr(c, "atk_progress", 0.0) or extra.get("seg_u", extra.get("p", 0.0))
+        intro_p = float(extra.get("p", 0.0))
         return intro_p >= 0.38
     return True
 
@@ -237,51 +237,48 @@ def _hands(c):
 
     # 1. Coreografia Contínua de Intro: Kiseru -> Destravar Koiguchi -> Postura Gatotsu
     if pose in ("kiseru_smoke", "koiguchi_unlock", "gatotsu_stance") or getattr(c, "state", "") == "INTRO":
-        intro_p = getattr(c, "atk_progress", 0.0) or extra.get("seg_u", p) or p
+        glo_p = float(extra.get("p", p if p is not None else 0.5))
         # Fase 1: Traga solene do Kiseru com a mão direita
-        if intro_p < 0.38:
-            u = _smooth(intro_p / 0.38)
-            # Mão direita segura o Kiseru próximo à boca
+        if pose == "kiseru_smoke" or (not pose and glo_p < 0.38):
+            u = _smooth(float(extra.get("seg_u", (glo_p / 0.38) if glo_p < 0.38 else 1.0)))
             right = (bx + fx * (0.12 + u * 0.02) - px * 0.04, by + fy * (0.12 + u * 0.02) - py * 0.04, hz + 0.02 + math.sin(u * math.pi) * 0.015)
-            # Mão esquerda repousa na cintura sobre a bainha
             left = (bx + fx * 0.06 + px * 0.16, by + fy * 0.06 + py * 0.16, tz + 0.08)
             return left, right
 
         # Fase 2: Guarda o Kiseru e destrava a tsuba com o polegar (Koiguchi-kiri)
-        elif intro_p < 0.70:
-            u = _smooth((intro_p - 0.38) / 0.32)
-            # Mão direita desce para empunhar o cabo da katana
+        elif pose == "koiguchi_unlock" or (not pose and glo_p < 0.70):
+            u = _smooth(float(extra.get("seg_u", ((glo_p - 0.38) / 0.32) if glo_p < 0.70 else 1.0)))
             target_r = (bx + fx * 0.16 + px * 0.08, by + fy * 0.16 + py * 0.08, tz + 0.14)
             start_r = (bx + fx * 0.14 - px * 0.04, by + fy * 0.14 - py * 0.04, hz + 0.02)
-            # Mão esquerda sobe firme destravando o koiguchi
             left = (bx + fx * 0.18 + px * 0.12, by + fy * 0.18 + py * 0.12, tz + 0.16)
             return left, mk.lerp(start_r, target_r, u)
 
-        # Fase 3: Transição estonteante para a postura horizontal definitiva do Gatotsu
+        # Fase 3: Transição estonteante para a postura horizontal definitiva do Gatotsu (100% Animado)
         else:
-            u = _smooth((intro_p - 0.70) / 0.30)
+            u = _smooth(float(extra.get("seg_u", ((glo_p - 0.70) / 0.30))))
             start_l = (bx + fx * 0.18 + px * 0.12, by + fy * 0.18 + py * 0.12, tz + 0.16)
             start_r = (bx + fx * 0.16 + px * 0.08, by + fy * 0.16 + py * 0.08, tz + 0.14)
-            # Gatotsu: mão esquerda estende a lâmina paralela aos olhos; mão direita apoia
             target_l = (bx + fx * 0.36, by + fy * 0.36, tz + 0.18)
             target_r = (bx + fx * 0.20 - px * 0.08, by + fy * 0.20 - py * 0.08, tz + 0.16)
-            return mk.lerp(start_l, target_l, u), mk.lerp(start_r, target_r, u)
+            cur_l = mk.lerp(start_l, target_l, u)
+            cur_r = mk.lerp(start_r, target_r, u)
+            breathe = math.sin(glo_p * 12.0 + c.walk_timer * 2.0) * 0.010
+            return (cur_l[0], cur_l[1], cur_l[2] + breathe), (cur_r[0], cur_r[1], cur_r[2] + breathe)
 
-    # 2. Coreografia Contínua de Vitória: Chiburi -> Noto -> Acende Kiseru
+    # 2. Coreografia Contínua de Vitória: Chiburi -> Noto -> Acende Kiseru (100% Animado)
     if pose in ("chiburi_flick", "noto_sheath", "kiseru_light") or getattr(c, "state", "") == "VICTORY":
-        vic_p = getattr(c, "atk_progress", 0.0) or extra.get("seg_u", p) or p
+        glo_p = float(extra.get("p", p if p is not None else 0.5))
         # Fase 1: Chiburi marcial (giro seco lateral para sacudir o sangue)
-        if vic_p < 0.35:
-            u = _smooth(vic_p / 0.35)
+        if pose == "chiburi_flick" or (not pose and glo_p < 0.35):
+            u = _smooth(float(extra.get("seg_u", (glo_p / 0.35) if glo_p < 0.35 else 1.0)))
             flick_angle = math.sin(u * math.pi) * 0.30
             left = (bx + fx * 0.24 - px * (0.10 + flick_angle), by + fy * 0.24 - py * (0.10 + flick_angle), tz + 0.12 - u * 0.04)
             right = (bx + fx * 0.12 - px * 0.14, by + fy * 0.12 - py * 0.14, tz + 0.08)
             return left, right
 
         # Fase 2: Noto ceremonial (embainhamento fluido na saya sem olhar)
-        elif vic_p < 0.70:
-            u = _smooth((vic_p - 0.35) / 0.35)
-            # Mão esquerda traz a lâmina de volta em direção ao koiguchi na cintura
+        elif pose == "noto_sheath" or (not pose and glo_p < 0.70):
+            u = _smooth(float(extra.get("seg_u", ((glo_p - 0.35) / 0.35) if glo_p < 0.70 else 1.0)))
             k, b = _sheath(c)
             koiguchi_pos = (k[0] + fx * 0.02, k[1] + fy * 0.02, k[2] + 0.02)
             start_l = (bx + fx * 0.24 - px * 0.10, by + fy * 0.24 - py * 0.10, tz + 0.08)
@@ -289,15 +286,17 @@ def _hands(c):
             right = (bx + fx * 0.12 - px * 0.14, by + fy * 0.12 - py * 0.14, tz + 0.08)
             return left, right
 
-        # Fase 3: Pega o Kiseru e o contempla solenemente
+        # Fase 3: Pega o Kiseru e o contempla solenemente (100% Animado)
         else:
-            u = _smooth((vic_p - 0.70) / 0.30)
+            u = _smooth(float(extra.get("seg_u", ((glo_p - 0.70) / 0.30))))
             k, b = _sheath(c)
             left = (k[0], k[1], k[2] + 0.02)
-            # Mão direita leva o Kiseru aos lábios
             target_r = (bx + fx * 0.14 - px * 0.04, by + fy * 0.14 - py * 0.04, hz + 0.02)
             start_r = (bx + fx * 0.12 - px * 0.14, by + fy * 0.12 - py * 0.14, tz + 0.08)
-            return left, mk.lerp(start_r, target_r, u)
+            base_r = mk.lerp(start_r, target_r, u)
+            puff = math.sin(glo_p * 18.0) * 0.012
+            breathe = math.cos(glo_p * 8.0) * 0.010
+            return (left[0], left[1], left[2] + breathe * 0.5), (base_r[0], base_r[1] + breathe, base_r[2] + puff)
 
     # 3. Ataque Primário: Gatotsu Lunge (Estocada Crescente)
     if pose in ("gatotsu_lunge", "finisher_gatotsu") or getattr(c, "state", "") in ("GATOTSU_CHARGE", "GATOTSU") or extra.get("gatotsu_lunge"):

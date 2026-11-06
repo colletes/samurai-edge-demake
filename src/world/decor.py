@@ -264,22 +264,108 @@ class SupplyCrate(Rock):
         draw_voxel_box(surface, camera, x - 0.30, y - 0.30, 0.82, 0.6, 0.6, 0.12, (150, 108, 64), outline=True)
 
 
-class Campfire:
-    """Fogueira do acampamento: brasas, chamas e fumaça (só visual, sem colisão)."""
+class FireHazardMixin:
+    """
+    Mixin para props com fogo aberto (fogueiras, braseiros).
+    Causa 1 de dano por contato/colisão aos combatentes, com cooldown individual,
+    partículas de brasas/fogo, efeitos sonoros e leve repulsão para fora das chamas.
+    """
+
+    def init_fire_hazard(self, flame_z: float = 0.35, damage: int = 1, cooldown: float = 0.85):
+        self.flame_z = flame_z
+        self.fire_damage = damage
+        self.burn_cooldown = cooldown
+        self.burn_cooldowns: dict[int, float] = {}
+
+    def update_fire_contact(self, arena, dt: float, fighters: list, particles: list, max_wz: float = 0.70):
+        # Atualiza os cooldowns de queimação por lutador
+        if not hasattr(self, "burn_cooldowns"):
+            self.burn_cooldowns = {}
+        for fid in list(self.burn_cooldowns.keys()):
+            self.burn_cooldowns[fid] -= dt
+            if self.burn_cooldowns[fid] <= 0.0:
+                del self.burn_cooldowns[fid]
+
+        if not fighters:
+            return
+
+        for f in fighters:
+            if f is None or not getattr(f, "is_alive", False):
+                continue
+            # Se o combatente estiver saltando alto acima do fogo
+            if getattr(f, "wz", 0.0) > max_wz:
+                continue
+
+            dist = math.hypot(f.wx - self.wx, f.wy - self.wy)
+            f_radius = getattr(f, "radius", 0.30)
+            prop_radius = getattr(self, "radius", 0.45)
+            # Colisão com o raio do fogo / braseiro
+            if dist <= prop_radius + f_radius + 0.08:
+                fid = id(f)
+                if self.burn_cooldowns.get(fid, 0.0) <= 0.0:
+                    hit, killed = f.take_hit((0.0, 0.0), damage=self.fire_damage)
+                    if hit:
+                        self.burn_cooldowns[fid] = self.burn_cooldown
+                        fz = getattr(self, "flame_z", 0.35)
+                        if particles is not None:
+                            from src.effects.particles import FlameVoxelParticle, SparkParticle
+                            for _ in range(5):
+                                particles.append(FlameVoxelParticle(self.wx, self.wy, wz=fz))
+                            for _ in range(8):
+                                particles.append(SparkParticle(f.wx, f.wy, wz=min(0.5, fz), color=(255, 150, 40)))
+                        try:
+                            from src.audio.sound_manager import play_sfx
+                            from src.audio.sound_events import SoundEvent
+                            play_sfx(SoundEvent.OBSTACLE_HIT, 0.8)
+                            play_sfx(SoundEvent.FLESH_CLEAVE, 0.5)
+                        except Exception:
+                            pass
+                        if arena is not None and f.is_alive and hasattr(f, "apply_forced_displacement"):
+                            dx = f.wx - self.wx
+                            dy = f.wy - self.wy
+                            d = math.hypot(dx, dy)
+                            if d > 0.001:
+                                nx, ny = dx / d, dy / d
+                            else:
+                                nx, ny = 1.0, 0.0
+                            f.apply_forced_displacement(nx * 0.45, ny * 0.45, arena)
+
+
+class Campfire(FireHazardMixin):
+    """Fogueira do acampamento: brasas, chamas e fumaça. Causa 1 de dano de fogo ao colidir."""
 
     def __init__(self, wx: float, wy: float):
         self.wx = wx
         self.wy = wy
+        self.radius = 0.50
+        self.height = 0.65
+        self.spawn_clearance = 1.2
         self._carry = random.random()
+        self.init_fire_hazard(flame_z=0.30, damage=1, cooldown=0.85)
+
+    def check_collision(self, px: float, py: float, p_radius: float = 0.3) -> tuple[bool, float, float]:
+        """Retorna se colidiu com a fogueira e o vetor de repulsão normalizado."""
+        dist = math.hypot(px - self.wx, py - self.wy)
+        min_dist = self.radius + p_radius
+        if dist < min_dist:
+            overlap = min_dist - dist
+            if dist > 0.0001:
+                nx = (px - self.wx) / dist
+                ny = (py - self.wy) / dist
+            else:
+                nx, ny = 1.0, 0.0
+            return True, nx * overlap, ny * overlap
+        return False, 0.0, 0.0
 
     def tick(self, arena, dt: float, fighters: list, camera, particles: list, banners: list):
-        if particles is None:
-            return
-        self._carry += dt * 6.0
-        while self._carry >= 1.0:
-            self._carry -= 1.0
-            from src.effects.particles import SmokeParticle
-            particles.append(SmokeParticle(self.wx, self.wy, wz=0.7, color=(150, 150, 154), radius=0.28, lifetime=random.uniform(1.4, 2.2)))
+        if particles is not None:
+            self._carry += dt * 6.0
+            while self._carry >= 1.0:
+                self._carry -= 1.0
+                from src.effects.particles import SmokeParticle
+                particles.append(SmokeParticle(self.wx, self.wy, wz=0.7, color=(150, 150, 154), radius=0.28, lifetime=random.uniform(1.4, 2.2)))
+
+        self.update_fire_contact(arena, dt, fighters, particles, max_wz=0.65)
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         x, y = self.wx, self.wy
@@ -915,16 +1001,30 @@ class GojoRailing:
         return False, 0.0, 0.0
 
 
-class KagaribiBrazier(Rock):
+class KagaribiBrazier(Rock, FireHazardMixin):
     """Braseiro de ferro suspenso com fogo crepitante e brasas na noite de Kyoto."""
+    animated = True
 
     def __init__(self, wx: float, wy: float, radius: float = 0.35, height: float = 1.3):
         super().__init__(wx, wy, radius, height)
+        self.spawn_clearance = 1.1
         self.iron_dark = (36, 36, 42)
         self.iron_rim = (52, 54, 62)
         self.embers = (210, 75, 20)
         self.fire_core = (255, 195, 55)
         self.fire_tip = (255, 110, 25)
+        self._smoke_timer = random.uniform(0.0, 0.3)
+        self.init_fire_hazard(flame_z=1.05, damage=1, cooldown=0.85)
+
+    def tick(self, arena, dt: float, fighters: list, camera, particles: list, banners: list):
+        if particles is not None:
+            self._smoke_timer += dt
+            if self._smoke_timer >= 0.28:
+                self._smoke_timer = 0.0
+                from src.effects.particles import SmokeParticle
+                particles.append(SmokeParticle(self.wx, self.wy, wz=1.2, color=(160, 155, 165), radius=0.22, lifetime=random.uniform(1.0, 1.6)))
+
+        self.update_fire_contact(arena, dt, fighters, particles, max_wz=1.4)
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         # 1. Haste/Tripé de sustentação de ferro forjado
@@ -1813,17 +1913,30 @@ class SacredSaltMound(Rock):
         draw_voxel_box(surface, camera, self.wx - 0.10, self.wy - 0.10, 0.28, 0.20, 0.20, 0.16, self.salt_white, outline=False)
 
 
-class DohyoBrazier(Rock):
+class DohyoBrazier(Rock, FireHazardMixin):
     """Braseiro cerimonial de bronze em tripé de ferro para rituais noturnos de Sumô."""
     animated = True
 
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, radius=0.34, height=1.2)
+        self.spawn_clearance = 1.1
         self.bronze_dark = (58, 48, 40)
         self.bronze_rim = (108, 92, 72)
         self.ember_col = (220, 78, 24)
         self.fire_core = (255, 215, 68)
         self.fire_tip = (255, 115, 30)
+        self._smoke_timer = random.uniform(0.0, 0.3)
+        self.init_fire_hazard(flame_z=0.92, damage=1, cooldown=0.85)
+
+    def tick(self, arena, dt: float, fighters: list, camera, particles: list, banners: list):
+        if particles is not None:
+            self._smoke_timer += dt
+            if self._smoke_timer >= 0.28:
+                self._smoke_timer = 0.0
+                from src.effects.particles import SmokeParticle
+                particles.append(SmokeParticle(self.wx, self.wy, wz=1.1, color=(160, 155, 165), radius=0.20, lifetime=random.uniform(1.0, 1.5)))
+
+        self.update_fire_contact(arena, dt, fighters, particles, max_wz=1.3)
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         # Tripé de sustentação de ferro escuro

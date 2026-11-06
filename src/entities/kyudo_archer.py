@@ -13,7 +13,7 @@ from src.config import (
     COLOR_BOW_WOOD, COLOR_STEEL, COLOR_WHITE, COLOR_GOLD
 )
 from src.entities.samurai import (
-    Samurai, STATE_IDLE, STATE_WALK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD
+    Samurai, STATE_IDLE, STATE_WALK, STATE_RECOVERY, STATE_STUNNED, STATE_DEAD, STATE_ROLL
 )
 from src.entities.projectile import (
     KyudoArrowProjectile, RopeArrowProjectile, HamayaArrowProjectile,
@@ -51,9 +51,9 @@ class KyudoArcher(Samurai):
         self.arrow_cooldown = 1.60  # Cooldown calibrado (era 1.20) para dar janela de avanço aos rivais
         self.arrow_cooldown_timer = 0.0
 
-        # Ação Secundária: Chuva de Flechas Sagradas em Arco (Salva Sagrada - Mecanismo de mira e cooldown idênticos à Anne)
-        self.volley_cooldown = 4.5
-        self.volley_cooldown_timer = 4.5  # Inicia com 4.5s no round para evitar nuke instantâneo no spawn (idêntico à Anne)
+        # Ação Secundária: Chuva de Flechas Sagradas em Arco (Salva Sagrada)
+        self.volley_cooldown = 3.0
+        self.volley_cooldown_timer = 3.0  # Cooldown calibrado para 3.0s (inicia com 3.0s no round)
         self.is_aiming_volley = False
         self.volley_target_wx = self.wx + 3.0
         self.volley_target_wy = self.wy
@@ -62,7 +62,7 @@ class KyudoArcher(Samurai):
         # Ação Secundária Retrocompatível: Barreira dos Ventos Kami (Ofuda Barrier)
         self.ofuda_barrier_timer = 0.0
         self.ofuda_barrier_duration = 0.85
-        self.ofuda_cooldown = 3.2
+        self.ofuda_cooldown = 3.0
         self.ofuda_cooldown_timer = 0.0
         self.ofuda_orbit_angle = 0.0
 
@@ -280,14 +280,35 @@ class KyudoArcher(Samurai):
                 cy = max(min_y, min(max_y, ny))
                 break
 
-            # Trava em obstáculos sólidos da arena (rochas e poço - bambus são transpassados)
+            # Trava em obstáculos sólidos da arena (rochas, sebes, estátuas, poço, construções, árvores)
             hit = False
             if game_map:
-                for r in game_map.rocks:
-                    if math.hypot(nx - r.wx, ny - r.wy) < (r.radius + 0.2):
+                for r in getattr(game_map, "rocks", []):
+                    if hasattr(r, "check_collision") and r.check_collision(nx, ny, 0.2)[0]:
                         hit = True; break
-                if not hit and game_map.well and math.hypot(nx - game_map.well.wx, ny - game_map.well.wy) < (game_map.well.radius + 0.2):
-                    hit = True
+                    else:
+                        r_wx = r[0] if isinstance(r, (tuple, list)) else getattr(r, "wx", 0.0)
+                        r_wy = r[1] if isinstance(r, (tuple, list)) else getattr(r, "wy", 0.0)
+                        r_rad = r[2] if isinstance(r, (tuple, list)) and len(r) > 2 else getattr(r, "radius", 0.5)
+                        if math.hypot(nx - r_wx, ny - r_wy) < (r_rad + 0.2):
+                            hit = True; break
+                if not hit and getattr(game_map, "well", None):
+                    if hasattr(game_map.well, "check_collision") and game_map.well.check_collision(nx, ny, 0.2)[0]:
+                        hit = True
+                    elif math.hypot(nx - game_map.well.wx, ny - game_map.well.wy) < (game_map.well.radius + 0.2):
+                        hit = True
+                if not hit:
+                    for b in getattr(game_map, "buildings", []):
+                        if hasattr(b, "check_collision") and b.check_collision(nx, ny, 0.2)[0]:
+                            hit = True; break
+                if not hit:
+                    for t in getattr(game_map, "trees", []):
+                        if hasattr(t, "check_collision") and t.check_collision(nx, ny, 0.2)[0]:
+                            hit = True; break
+                if not hit:
+                    for prop in getattr(game_map, "solid_props", []) + getattr(game_map, "lanterns", []):
+                        if hasattr(prop, "check_collision") and prop.check_collision(nx, ny, 0.2)[0]:
+                            hit = True; break
             if hit:
                 cx, cy = nx, ny
                 break
@@ -324,18 +345,23 @@ class KyudoArcher(Samurai):
         self.state_timer = 0.08
         self.rope_timer = self.rope_cooldown
 
-    def trigger_rope_arrow(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None, game_map=None):
+    def trigger_rope_arrow(self, target_wx: float, target_wy: float, projectiles: list, particles: list = None, game_map=None) -> bool:
         """
-        Ação Secundária: Flecha de Corda direta (compatibilidade com IA e testes).
+        Ação de Mobilidade: Flecha de Corda direta (compatibilidade com IA e testes).
+        Se estiver em cooldown da corda, executa a esquiva padrão (mergulho ao chão com i-frames).
         """
-        if not self.can_act() or self.rope_timer > 0:
-            return
+        if not self.can_act():
+            return False
+
+        if self.rope_timer > 0:
+            return self.trigger_roll(self.facing_x, self.facing_y, particles)
 
         self.set_facing(target_wx, target_wy)
         self.is_charging_rope = True
         self.rope_charge_time = self.rope_charge_duration
         self._calculate_rope_target(game_map)
         self.release_rope_arrow(projectiles, particles, game_map)
+        return True
 
     def update(self, dt: float, game_map, particles: list = None, projectiles: list = None):
         if not self.is_alive:
@@ -533,6 +559,20 @@ class KyudoArcher(Samurai):
             pygame.draw.circle(surface, (255, 245, 180), (cx, cy), 3)
             pygame.draw.circle(surface, (220, 40, 30), (cx, cy), 1)
 
+        extra_props = {
+            "ssaa_2x": True,
+            "pose_lerp_tracker": getattr(self, "pose_lerp_tracker", None),
+            "is_drawing": (self.state == STATE_BOW_DRAW or self.is_charging_rope or getattr(self, "is_aiming_volley", False)),
+        }
+
+        if self.state == STATE_ROLL:
+            roll_prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration))))
+            extra_props["roll_prog"] = roll_prog
+            extra_props["pose"] = "miko_roll"
+            extra_props["somersault_angle"] = 360.0 * roll_prog
+            extra_props["somersault_pivot_z"] = self.wz + 0.28
+            extra_props["is_roll"] = True
+
         render_voxel_humanoid(
             surface, camera,
             self.wx, self.wy, self.wz,
@@ -542,7 +582,7 @@ class KyudoArcher(Samurai):
             walk_timer=self.walk_cycle,
             alpha=self.alpha,
             is_moving=self.is_moving,
-            extra_props={"is_drawing": (self.state == STATE_BOW_DRAW or self.is_charging_rope or getattr(self, "is_aiming_volley", False))}
+            extra_props=extra_props
         )
 
         # Indicador de retesamento do arco Yumi (mira precisa)

@@ -21,6 +21,7 @@ class Musketeer(Samurai):
         super().__init__(wx, wy, name="Julie")
         self.char_type = "musketeer"
         self.speed = 4.4
+        self.pose_lerp_tracker = {"lerp_duration": 0.08, "blend_timer": 0.0, "pose_key": None}
 
         # Ataque Primário: Fleche Thrust (+25% alcance, bote linear cirúrgico de esgrima)
         self.thrust_cooldown = 0.48
@@ -245,13 +246,51 @@ class Musketeer(Samurai):
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
+        pose_key = None
+        pose_progress = 0.0
+        render_wz = self.wz
+        somersault_angle = 0.0
+        somersault_pivot_z = self.wz + 0.28
+        roll_prog = 0.0
+
+        if self.state == STATE_ATTACK:
+            pose_key = "fleche_thrust"
+            pose_progress = 1.0 - max(0.0, self.state_timer / max(0.001, 0.20))
+        elif self.state == "CAPE_FLOURISH":
+            pose_key = "cape_flourish"
+            flourish_p = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, 0.16))))
+            pose_progress = flourish_p
+            somersault_angle = -50.0 * math.sin(flourish_p * math.pi)
+            render_wz = max(0.0, self.wz + 0.08 * math.sin(flourish_p * math.pi))
+        elif self.state == STATE_ROLL:
+            pose_key = "cape_swirl_backhop"
+            roll_prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration))))
+            pose_progress = roll_prog
+            somersault_angle = 360.0 * roll_prog
+            dip = math.sin(roll_prog * math.pi) * 0.12
+            render_wz = max(0.0, self.wz - dip)
+
+        extra_props = {
+            "ssaa_2x": True,
+            "pose_lerp_tracker": self.pose_lerp_tracker,
+            "pose": pose_key,
+            "active_pose": pose_key,
+            "pose_progress": pose_progress,
+            "p": pose_progress,
+            "roll_prog": roll_prog,
+            "is_roll": (self.state == STATE_ROLL),
+            "somersault_angle": somersault_angle,
+            "somersault_pivot_z": somersault_pivot_z,
+        }
+
         render_voxel_humanoid(
             surface, camera,
-            self.wx, self.wy, self.wz,
+            self.wx, self.wy, render_wz,
             self.facing_x, self.facing_y,
             self.state, self.state_timer, self.is_alive,
             char_type="musketeer",
             walk_timer=self.walk_cycle,
             alpha=self.alpha,
-            is_moving=self.is_moving
+            is_moving=self.is_moving,
+            extra_props=extra_props
         )

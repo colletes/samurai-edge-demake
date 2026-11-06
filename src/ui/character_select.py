@@ -387,15 +387,16 @@ class CharacterSelectScreen:
         self.p1_ready = False
         self.p2_ready = False
 
-    def __init__(self, ai_difficulty: str = "normal"):
+    def __init__(self, ai_difficulty: str = "normal", rounds_to_win: int = 2):
         self.p1_choice_idx = ROSTER_ORDER.index(DEMO_FIGHTERS[0]) if is_demo() else 0  # Kenshin (na demo, Ren)
         self.p2_choice_idx = ROSTER_ORDER.index(DEMO_FIGHTERS[1]) if is_demo() else 1  # Musashi (na demo, Chiyo)
         self.p1_ready = False
         self.p2_ready = False
         self._match_mode = self.MODE_PVE
         self.ai_difficulty = ai_difficulty if ai_difficulty in ("easy", "normal", "hard") else "normal"
+        self.rounds_to_win = rounds_to_win
         self.selection_step = "P1"  # "P1" -> "AI" (no modo 1P vs IA ou IA vs IA)
-        self.focus_zone = "GRID"    # "GRID" ou "MODE_BTN"
+        self.focus_zone = "GRID"
         self._axis_x_held_p1 = False
         self._axis_y_held_p1 = False
         self._axis_x_held_p2 = False
@@ -408,7 +409,7 @@ class CharacterSelectScreen:
         self.help_modal = GameHelpModal()
         self.help_btn_rect = pygame.Rect(SCREEN_WIDTH - 64, 14, 36, 36)
         self.lang_btn_rect = pygame.Rect(SCREEN_WIDTH - 170, 14, 96, 32)
-        self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 190, 52, 380, 32)
+        self.mode_btn_rect = pygame.Rect(0, 0, 0, 0)
         self.difficulty_btn_rect = pygame.Rect(0, 0, 0, 0)
         self.start_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 210, SCREEN_HEIGHT - 64, 420, 44)
         self.card_rects: list[pygame.Rect] = []
@@ -968,18 +969,7 @@ class CharacterSelectScreen:
         def move_cursor(player: str, dx: int, dy: int):
             from src.input.device_info import is_mobile_device
             if player == "P1":
-                if self.focus_zone == "MODE_BTN":
-                    if dy != 0:
-                        self.focus_zone = "GRID"
-                    elif dx != 0:
-                        self.cycle_vs_mode()
-                    return
-
                 active_idx = self.p1_choice_idx if (not self.vs_ai or self.selection_step == "P1") else self.p2_choice_idx
-                if dy < 0 and active_idx < cols and not self.arcade_mode and not is_mobile_device():
-                    self.focus_zone = "MODE_BTN"
-                    return
-
                 new_idx = self._grid_step(active_idx, dx, dy)
 
                 if not self.vs_ai:
@@ -1017,10 +1007,6 @@ class CharacterSelectScreen:
                         pass
 
         def handle_confirm(player: str) -> str | bool:
-            if self.focus_zone == "MODE_BTN":
-                self.cycle_vs_mode()
-                return False
-
             target_idx = self.p1_choice_idx if (self.vs_ai and self.selection_step == "P1") or (not self.vs_ai and player == "P1") else self.p2_choice_idx
             if self.is_locked(target_idx):
                 try:
@@ -1049,10 +1035,6 @@ class CharacterSelectScreen:
             return False
 
         def handle_cancel(player: str) -> str | bool:
-            if self.focus_zone == "MODE_BTN":
-                self.focus_zone = "GRID"
-                return False
-
             if self.vs_ai:
                 if self.selection_step == "AI":
                     self.selection_step = "P1"
@@ -1104,13 +1086,6 @@ class CharacterSelectScreen:
                 res = handle_cancel(target_player)
                 if res:
                     return res
-                return False
-            # Alternar modo 1P vs IA / 2P Versus: Select / Touchpad / L1 / R1
-            elif event.button in (4, 9, 10):
-                self.vs_ai = not self.vs_ai
-                self.selection_step = "P1"
-                self.p1_ready = False
-                self.p2_ready = False
                 return False
             # Abrir Guia / Ajuda: Botão 3 (△ Triângulo / Y)
             elif event.button == 3:
@@ -1191,10 +1166,7 @@ class CharacterSelectScreen:
 
         # --- 2. KEYBOARD EVENTS ---
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_TAB:
-                self.cycle_vs_mode()
-                return False
-            elif event.key == pygame.K_h:
+            if event.key == pygame.K_h:
                 self.help_modal.open(GameHelpModal.TAB_RULES)
                 return False
             elif event.key == pygame.K_f:
@@ -1204,9 +1176,6 @@ class CharacterSelectScreen:
                 return False
             elif event.key == pygame.K_l:
                 toggle_lang()
-                return False
-            elif event.key == pygame.K_g:
-                self.cycle_ai_difficulty()
                 return False
 
             # Teclado P1 (WASD)
@@ -1316,12 +1285,6 @@ class CharacterSelectScreen:
                     char_id = self.characters[idx]["id"] if idx < len(self.characters) else None
                     self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=idx, char_id=char_id)
                     return False
-            if self.mode_btn_rect.collidepoint(vx, vy):
-                self.cycle_vs_mode()
-                return False
-            if self.vs_ai and self.difficulty_btn_rect.collidepoint(vx, vy):
-                self.cycle_ai_difficulty()
-                return False
             for idx, rect in enumerate(self.card_rects):
                 if rect.collidepoint(vx, vy):
                     if self.vs_ai:
@@ -1388,12 +1351,6 @@ class CharacterSelectScreen:
                         char_id = self.characters[idx]["id"] if idx < len(self.characters) else None
                         self.help_modal.open(GameHelpModal.TAB_FIGHTERS, fighter_idx=idx, char_id=char_id)
                         return False
-                if self.mode_btn_rect.collidepoint(mx, my):
-                    self.cycle_vs_mode()
-                    return False
-                if self.vs_ai and self.difficulty_btn_rect.collidepoint(mx, my):
-                    self.cycle_ai_difficulty()
-                    return False
                 for idx, rect in enumerate(self.card_rects):
                     if rect.collidepoint(mx, my):
                         if self.vs_ai:
@@ -1465,7 +1422,7 @@ class CharacterSelectScreen:
     def _render_random_card(self, surface, rect, idx, char_info, parch, font_name, font_small, font_tiny, font_stamp):
         """Faixa do sorteio: círculo com interrogação, nome e dica; durante a roleta pulsa em dourado."""
         is_p1 = (self.p1_choice_idx == idx)
-        is_p2 = (self.p2_choice_idx == idx)
+        is_p2 = (self.p2_choice_idx == idx) and not self.arcade_mode
         spinning = self.reveal is not None
         if parch:
             pm.draw_paper_card(surface, rect, seed=97)
@@ -1476,7 +1433,7 @@ class CharacterSelectScreen:
             draw_sumie_card(surface, rect, is_p1, is_p2, self.vs_ai, self.selection_step, self.anim_timer)
 
         cx, cy = rect.x + 24, rect.centery
-        ring = COLOR_HANKO_RED if is_p1 else (COLOR_HANKO_BLUE if is_p2 else char_info["color"])
+        ring = COLOR_HANKO_RED if is_p1 else ((COLOR_HANKO_BLUE if is_p2 else char_info["color"]) if not self.arcade_mode else char_info["color"])
         draw_enso_circle(surface, cx, cy, 14, ring, self.anim_timer)
         q_font = get_title_font(18)
         q = q_font.render("?", True, pm.darken(char_info["color"], 0.55) if parch else char_info["color"])
@@ -1495,7 +1452,7 @@ class CharacterSelectScreen:
         p2_label = "IA 2" if self.match_mode == self.MODE_WATCH else ("IA" if self.vs_ai else "P2")
         if is_p1:
             draw_hanko_stamp(surface, font_stamp, p1_label, rect.right - 54, rect.y + 6, size=24, color=COLOR_HANKO_RED, border_w=1)
-        if is_p2:
+        if is_p2 and not self.arcade_mode:
             draw_hanko_stamp(surface, font_stamp, p2_label, rect.right - 28, rect.y + 6, size=24, color=COLOR_HANKO_BLUE, border_w=1)
 
     def _render_mobile(self, surface: pygame.Surface, font_large, font_mid, font_small):
@@ -1540,10 +1497,11 @@ class CharacterSelectScreen:
         s_title = render_text_fx(font_oriental_title, step_title, COLOR_GOLD, outline=True, outline_color=(20, 16, 12), outline_width=1, shadow=True, shadow_offset=(2, 2))
         surface.blit(s_title, (SCREEN_WIDTH // 2 - 145, 20))
 
-        # Botão Modo (Versus / IA)
-        self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH - 280, 16, 170, 42)
-        pygame.draw.rect(surface, (28, 24, 26), self.mode_btn_rect, border_radius=8)
-        pygame.draw.rect(surface, (140, 115, 60), self.mode_btn_rect, 1, border_radius=8)
+        # Rótulo de Modo (Informativo, não interativo)
+        self.mode_btn_rect = pygame.Rect(0, 0, 0, 0)
+        mode_badge_rect = pygame.Rect(SCREEN_WIDTH - 280, 16, 170, 42)
+        pygame.draw.rect(surface, (28, 24, 26), mode_badge_rect, border_radius=8)
+        pygame.draw.rect(surface, (140, 115, 60), mode_badge_rect, 1, border_radius=8)
         if self.arcade_mode:
             mode_text = t("arcade_title")
         elif self.match_mode == self.MODE_WATCH:
@@ -1553,7 +1511,7 @@ class CharacterSelectScreen:
         else:
             mode_text = "1P vs 2P"
         mode_s = font_sub_card.render(mode_text, True, COLOR_GOLD)
-        surface.blit(mode_s, mode_s.get_rect(center=self.mode_btn_rect.center))
+        surface.blit(mode_s, mode_s.get_rect(center=mode_badge_rect.center))
 
         # Botão Idioma
         self.lang_btn_rect = pygame.Rect(SCREEN_WIDTH - 96, 16, 68, 42)
@@ -1592,7 +1550,7 @@ class CharacterSelectScreen:
             self.card_rects[global_idx] = rect
 
             is_p1 = (self.p1_choice_idx == global_idx)
-            is_p2 = (self.p2_choice_idx == global_idx)
+            is_p2 = (self.p2_choice_idx == global_idx) and not self.arcade_mode
             is_sel = (is_p1 or is_p2)
             char_id = char_info["id"]
 
@@ -1611,12 +1569,12 @@ class CharacterSelectScreen:
                 pm.draw_ink_border(surface, rect, sel_col, width=2, seed=global_idx + 5, alpha=int(160 + 95 * pulse))
 
             # Hanko badges
-            if is_p1 and is_p2:
+            if not self.arcade_mode and is_p1 and is_p2:
                 draw_hanko_stamp(surface, font_badge, "P1", rect.x + 8, rect.y + 8, size=24, color=COLOR_HANKO_RED, border_w=1)
                 draw_hanko_stamp(surface, font_badge, "IA" if self.vs_ai else "P2", rect.x + 36, rect.y + 8, size=24, color=COLOR_HANKO_BLUE, border_w=1)
             elif is_p1:
                 draw_hanko_stamp(surface, font_badge, "P1", rect.x + 8, rect.y + 8, size=24, color=COLOR_HANKO_RED, border_w=1)
-            elif is_p2:
+            elif is_p2 and not self.arcade_mode:
                 draw_hanko_stamp(surface, font_badge, "IA" if self.vs_ai else "P2", rect.x + 8, rect.y + 8, size=24, color=COLOR_HANKO_BLUE, border_w=1)
 
             # Retrato Oval / Circular Grande (80x80)
@@ -1680,28 +1638,39 @@ class CharacterSelectScreen:
         p1_info = self.characters[self.p1_choice_idx] if self.p1_choice_idx < len(self.characters) else None
         p2_info = self.characters[self.p2_choice_idx] if self.p2_choice_idx < len(self.characters) else None
 
-        p1_box = pygame.Rect(SCREEN_WIDTH // 2 - 420, summary_y, 250, 60)
-        pygame.draw.rect(surface, (22, 24, 26), p1_box, border_radius=8)
-        pygame.draw.rect(surface, COLOR_HANKO_RED, p1_box, 1, border_radius=8)
-        draw_hanko_stamp(surface, font_badge, "P1", p1_box.x + 8, p1_box.centery - 14, size=28, color=COLOR_HANKO_RED, border_w=1)
-        if p1_info:
-            p1_name = p1_info["name"].upper()
-            p1_title = p1_info["title"]
-            surface.blit(font_title_card.render(p1_name, True, COLOR_GOLD), (p1_box.x + 44, p1_box.y + 8))
-            surface.blit(pm.fit_text(font_sub_card, p1_title, (180, 175, 170), 190), (p1_box.x + 44, p1_box.y + 34))
+        if self.arcade_mode:
+            p1_box = pygame.Rect(SCREEN_WIDTH // 2 - 160, summary_y, 320, 60)
+            pygame.draw.rect(surface, (22, 24, 26), p1_box, border_radius=8)
+            pygame.draw.rect(surface, COLOR_HANKO_RED, p1_box, 1, border_radius=8)
+            draw_hanko_stamp(surface, font_badge, "P1", p1_box.x + 8, p1_box.centery - 14, size=28, color=COLOR_HANKO_RED, border_w=1)
+            if p1_info:
+                p1_name = p1_info["name"].upper()
+                p1_title = p1_info["title"]
+                surface.blit(font_title_card.render(p1_name, True, COLOR_GOLD), (p1_box.x + 44, p1_box.y + 8))
+                surface.blit(pm.fit_text(font_sub_card, p1_title, (180, 175, 170), 260), (p1_box.x + 44, p1_box.y + 34))
+        else:
+            p1_box = pygame.Rect(SCREEN_WIDTH // 2 - 420, summary_y, 250, 60)
+            pygame.draw.rect(surface, (22, 24, 26), p1_box, border_radius=8)
+            pygame.draw.rect(surface, COLOR_HANKO_RED, p1_box, 1, border_radius=8)
+            draw_hanko_stamp(surface, font_badge, "P1", p1_box.x + 8, p1_box.centery - 14, size=28, color=COLOR_HANKO_RED, border_w=1)
+            if p1_info:
+                p1_name = p1_info["name"].upper()
+                p1_title = p1_info["title"]
+                surface.blit(font_title_card.render(p1_name, True, COLOR_GOLD), (p1_box.x + 44, p1_box.y + 8))
+                surface.blit(pm.fit_text(font_sub_card, p1_title, (180, 175, 170), 190), (p1_box.x + 44, p1_box.y + 34))
 
-        vs_s = font_title_card.render("VS", True, (160, 140, 90))
-        surface.blit(vs_s, vs_s.get_rect(center=(SCREEN_WIDTH // 2, summary_y + 30)))
+            vs_s = font_title_card.render("VS", True, (160, 140, 90))
+            surface.blit(vs_s, vs_s.get_rect(center=(SCREEN_WIDTH // 2, summary_y + 30)))
 
-        p2_box = pygame.Rect(SCREEN_WIDTH // 2 + 170, summary_y, 250, 60)
-        pygame.draw.rect(surface, (22, 24, 26), p2_box, border_radius=8)
-        pygame.draw.rect(surface, COLOR_HANKO_BLUE, p2_box, 1, border_radius=8)
-        draw_hanko_stamp(surface, font_badge, "IA" if self.vs_ai else "P2", p2_box.x + 8, p2_box.centery - 14, size=28, color=COLOR_HANKO_BLUE, border_w=1)
-        if p2_info:
-            p2_name = p2_info["name"].upper()
-            p2_title = p2_info["title"]
-            surface.blit(font_title_card.render(p2_name, True, COLOR_GOLD), (p2_box.x + 44, p2_box.y + 8))
-            surface.blit(pm.fit_text(font_sub_card, p2_title, (180, 175, 170), 190), (p2_box.x + 44, p2_box.y + 34))
+            p2_box = pygame.Rect(SCREEN_WIDTH // 2 + 170, summary_y, 250, 60)
+            pygame.draw.rect(surface, (22, 24, 26), p2_box, border_radius=8)
+            pygame.draw.rect(surface, COLOR_HANKO_BLUE, p2_box, 1, border_radius=8)
+            draw_hanko_stamp(surface, font_badge, "IA" if self.vs_ai else "P2", p2_box.x + 8, p2_box.centery - 14, size=28, color=COLOR_HANKO_BLUE, border_w=1)
+            if p2_info:
+                p2_name = p2_info["name"].upper()
+                p2_title = p2_info["title"]
+                surface.blit(font_title_card.render(p2_name, True, COLOR_GOLD), (p2_box.x + 44, p2_box.y + 8))
+                surface.blit(pm.fit_text(font_sub_card, p2_title, (180, 175, 170), 190), (p2_box.x + 44, p2_box.y + 34))
 
         # Botão Principal de Confirmação (Touch Grande)
         btn_y = SCREEN_HEIGHT - 74
@@ -1791,52 +1760,42 @@ class CharacterSelectScreen:
         self.help_btn_rect = pygame.Rect(SCREEN_WIDTH - 64, header_y + 2, 36, 36)
         draw_round_help_button(surface, font_zen_mid, self.help_btn_rect, self.anim_timer)
 
-        # 4. Botão Modo de Jogo & Dificuldade da IA (Kanban laqueado com encaixes de ferro)
-        is_mode_focused = (self.focus_zone == "MODE_BTN")
+        # 4. Resumo sutil e elegante das regras de combate ativas
+        rules_y = 42
         if self.arcade_mode:
-            self.mode_btn_rect = pygame.Rect(0, 0, 0, 0)
-            self.difficulty_btn_rect = pygame.Rect(0, 0, 0, 0)
-            arcade_rect = pygame.Rect(SCREEN_WIDTH // 2 - 190, 52, 380, 32)
-            draw_kanban_menu_button(surface, font_zen_small, t("arcade_title"), "", arcade_rect, False, True, self.anim_timer)
-        elif self.match_mode == self.MODE_WATCH:
-            self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 290, 52, 350, 32)
-            self.difficulty_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 + 70, 52, 180, 32)
-            mode_text = "MODO: IA vs IA (ASSISTIR)" if lang == LANG_PT else "MODE: AI vs AI (SPECTATE)"
-            mode_hint = "[ CIMA/BAIXO ]" if lang == LANG_PT else "[ UP/DOWN ]"
-            draw_kanban_menu_button(surface, font_zen_small, mode_text, mode_hint, self.mode_btn_rect, is_mode_focused, True, self.anim_timer)
-
-            diff_names = {
-                "easy": "FÁCIL" if lang == LANG_PT else "EASY",
-                "normal": "NORMAL",
-                "hard": "DIFÍCIL" if lang == LANG_PT else "HARD"
-            }
-            d_name = diff_names.get(self.ai_difficulty, "NORMAL")
-            draw_kanban_menu_button(surface, font_zen_small, f"IA: {d_name}", "[ G ]", self.difficulty_btn_rect, False, True, self.anim_timer)
-        elif self.vs_ai:
-            self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 290, 52, 350, 32)
-            self.difficulty_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 + 70, 52, 180, 32)
-            mode_text = "MODO: 1P vs IA (TREINO)" if lang == LANG_PT else "MODE: 1P vs AI (TRAIN)"
-            mode_hint = "[ CIMA/BAIXO ]" if lang == LANG_PT else "[ UP/DOWN ]"
-            draw_kanban_menu_button(surface, font_zen_small, mode_text, mode_hint, self.mode_btn_rect, is_mode_focused, True, self.anim_timer)
-
-            diff_names = {
-                "easy": "FÁCIL" if lang == LANG_PT else "EASY",
-                "normal": "NORMAL",
-                "hard": "DIFÍCIL" if lang == LANG_PT else "HARD"
-            }
-            d_name = diff_names.get(self.ai_difficulty, "NORMAL")
-            draw_kanban_menu_button(surface, font_zen_small, f"IA: {d_name}", "[ G ]", self.difficulty_btn_rect, False, True, self.anim_timer)
+            rules_txt = t("arcade_title")
         else:
-            self.mode_btn_rect = pygame.Rect(SCREEN_WIDTH // 2 - 190, 52, 380, 32)
-            self.difficulty_btn_rect = pygame.Rect(0, 0, 0, 0)
-            mode_text = "MODO: 1P vs 2P (VERSUS)" if lang == LANG_PT else "MODE: 1P vs 2P (VERSUS)"
-            mode_hint = "[ CIMA/BAIXO ]" if lang == LANG_PT else "[ UP/DOWN ]"
-            draw_kanban_menu_button(surface, font_zen_small, mode_text, mode_hint, self.mode_btn_rect, is_mode_focused, True, self.anim_timer)
+            diff_label = {"easy": t("versus_diff_easy"), "normal": t("versus_diff_normal"), "hard": t("versus_diff_hard")}.get(self.ai_difficulty, self.ai_difficulty)
+            if self.match_mode == self.MODE_WATCH:
+                mode_str = t("versus_mode_watch")
+            elif self.match_mode == self.MODE_PVP:
+                mode_str = t("versus_mode_pvp")
+            else:
+                mode_str = t("versus_mode_pve")
+
+            if self.rounds_to_win == 1:
+                r_str = t("versus_rounds_desc_single")
+            elif self.rounds_to_win == 2:
+                r_str = t("versus_rounds_desc_default")
+            else:
+                r_str = t("versus_rounds_desc", n=self.rounds_to_win, total=2 * self.rounds_to_win - 1)
+
+            if self.match_mode == self.MODE_PVP:
+                rules_txt = f"{mode_str}  •  {r_str}"
+            else:
+                rules_txt = f"{mode_str}  •  {r_str}  •  IA: {diff_label}"
+
+        s_rules = font_zen_small.render(rules_txt, True, (190, 180, 150) if not parch else pm.INK_SOFT)
+        surface.blit(s_rules, (SCREEN_WIDTH // 2 - s_rules.get_width() // 2, rules_y))
 
         # 5. Banner Indicador de Etapa / Instrução
-        step_y = 80
+        step_y = 66
         lang = get_lang()
-        if self.match_mode == self.MODE_WATCH:
+        if self.arcade_mode:
+            step_title = t("arcade_select_step_title")
+            step_color = COLOR_HANKO_RED
+            div_color = (160, 50, 45)
+        elif self.match_mode == self.MODE_WATCH:
             if self.selection_step == "P1":
                 step_title = "PASSO 1: ESCOLHA O COMBATENTE 1 (IA)" if lang == LANG_PT else "STEP 1: CHOOSE FIGHTER 1 (AI)"
                 step_color = COLOR_HANKO_RED
@@ -1872,13 +1831,13 @@ class CharacterSelectScreen:
 
         # 6. Grade 6x4 (24 combatentes: Linhas 0-1 veteranos, Linhas 2-3 novos) + Linha 4 (Aleatório)
         card_w = 190
-        card_h = 102
+        card_h = 112
         spacing_x = 10
-        spacing_y = 6
+        spacing_y = 7
 
         total_w = 6 * card_w + 5 * spacing_x
         start_x = (SCREEN_WIDTH - total_w) // 2
-        start_y = 108
+        start_y = 96
 
         self.card_rects.clear()
         self.info_btn_rects.clear()
@@ -1886,7 +1845,7 @@ class CharacterSelectScreen:
         for idx, char_info in enumerate(self.characters):
             if char_info["id"] == CHAR_RANDOM:
                 # Carta Aleatório: faixa na quinta linha
-                rand_rect = pygame.Rect(SCREEN_WIDTH // 2 - 250, start_y + 4 * (card_h + spacing_y), 500, 36)
+                rand_rect = pygame.Rect(SCREEN_WIDTH // 2 - 250, start_y + 4 * (card_h + spacing_y), 500, 34)
                 self.card_rects.append(rand_rect)
                 self.info_btn_rects.append(pygame.Rect(0, 0, 0, 0))
                 self._render_random_card(surface, rand_rect, idx, char_info, parch, font_oriental_name, font_zen_small, font_zen_tiny, font_zen_stamp)
@@ -1904,7 +1863,7 @@ class CharacterSelectScreen:
             self.card_rects.append(rect)
 
             is_p1 = (self.p1_choice_idx == idx)
-            is_p2 = (self.p2_choice_idx == idx)
+            is_p2 = (self.p2_choice_idx == idx) and not self.arcade_mode
             is_ready = char_info.get("ready", True)
             is_locked_card = self.is_locked(idx)
             is_demo_lock = is_demo() and char_info["id"] not in DEMO_FIGHTERS
@@ -1929,37 +1888,37 @@ class CharacterSelectScreen:
             else:
                 ssz = 18
                 first_x, second_x, sy = rect.right - 44, rect.right - 22, rect.y + 4
-            if is_p1 and is_p2:
+            if not self.arcade_mode and is_p1 and is_p2:
                 draw_hanko_stamp(surface, font_zen_stamp, p1_label, first_x, sy, size=ssz, color=COLOR_HANKO_RED, border_w=1)
                 draw_hanko_stamp(surface, font_zen_stamp, p2_label, second_x, sy, size=ssz, color=COLOR_HANKO_BLUE, border_w=1)
             elif is_p1:
                 draw_hanko_stamp(surface, font_zen_stamp, p1_label, second_x if not parch else first_x, sy, size=ssz, color=COLOR_HANKO_RED, border_w=1)
-            elif is_p2:
+            elif is_p2 and not self.arcade_mode:
                 draw_hanko_stamp(surface, font_zen_stamp, p2_label, second_x if not parch else first_x, sy, size=ssz, color=COLOR_HANKO_BLUE, border_w=1)
 
-            # Retrato Circular com Anel Ensō
+            # Retrato Circular com Anel Ensō (Ampliado para raio 26 / diâmetro 52px)
             char_id = char_info["id"]
-            portrait_cx = rect.x + 28
-            portrait_cy = rect.y + 28
-            ring_color = COLOR_HANKO_RED if is_p1 else (COLOR_HANKO_BLUE if is_p2 else char_info["color"])
+            portrait_cx = rect.x + 34
+            portrait_cy = rect.y + 34
+            ring_color = COLOR_HANKO_RED if is_p1 else ((COLOR_HANKO_BLUE if is_p2 else char_info["color"]) if not self.arcade_mode else char_info["color"])
 
-            portrait_surf = get_portrait(char_id, size=(42, 42), circular=True) if is_ready else None
+            portrait_surf = get_portrait(char_id, size=(52, 52), circular=True) if is_ready else None
             if not is_ready:
                 # Sombra indefinida com símbolo de interrogação para personagens em desenvolvimento
-                draw_mystery_silhouette(surface, portrait_cx, portrait_cy, radius=20)
-                draw_enso_circle(surface, portrait_cx, portrait_cy, 20, (75, 70, 68), self.anim_timer)
-                q_font = get_title_font(18)
+                draw_mystery_silhouette(surface, portrait_cx, portrait_cy, radius=25)
+                draw_enso_circle(surface, portrait_cx, portrait_cy, 26, (75, 70, 68), self.anim_timer)
+                q_font = get_title_font(20)
                 q_surf = q_font.render("?", True, (190, 180, 160))
                 surface.blit(q_surf, q_surf.get_rect(center=(portrait_cx, portrait_cy)))
             else:
-                draw_enso_circle(surface, portrait_cx, portrait_cy, 21, ring_color, self.anim_timer)
+                draw_enso_circle(surface, portrait_cx, portrait_cy, 27, ring_color, self.anim_timer)
                 if portrait_surf is not None:
-                    surface.blit(portrait_surf, (portrait_cx - 21, portrait_cy - 21))
+                    surface.blit(portrait_surf, (portrait_cx - 26, portrait_cy - 26))
                 else:
-                    draw_mystery_silhouette(surface, portrait_cx, portrait_cy, radius=20)
+                    draw_mystery_silhouette(surface, portrait_cx, portrait_cy, radius=25)
 
             # Nome, Título e Estilo ao lado do Retrato
-            text_left = rect.x + 52
+            text_left = rect.x + 66
             if not is_ready:
                 name_display = "???"
                 name_col = (140, 135, 130) if parch else (120, 115, 110)
@@ -1976,19 +1935,19 @@ class CharacterSelectScreen:
 
                 title_col = pm.INK_SOFT if parch else (185, 180, 175)
                 title_s = pm.fit_text(font_zen_small, char_info["title"], title_col, rect.right - text_left - 6)
-                surface.blit(title_s, (text_left, rect.y + 22))
+                surface.blit(title_s, (text_left, rect.y + 24))
 
             if is_ready:
                 style_col = pm.INK if parch else (220, 215, 210)
                 style_s = pm.fit_text(font_zen_tiny, char_info["style"], style_col, rect.right - text_left - 6)
-                surface.blit(style_s, (text_left, rect.y + 38))
+                surface.blit(style_s, (text_left, rect.y + 42))
 
             # Pincelada divisória
-            draw_brush_divider(surface, rect.x + 6, rect.y + 54, rect.right - 6, color=(120, 100, 78) if parch else (75, 70, 65))
+            draw_brush_divider(surface, rect.x + 6, rect.y + 60, rect.right - 6, color=(120, 100, 78) if parch else (75, 70, 65))
 
             if is_ready:
                 # Combatente pronto: estatísticas compactas e botão de ajuda
-                stats_y = rect.y + 58
+                stats_y = rect.y + 66
                 vel_col = pm.GOLD_INK if parch else COLOR_GOLD
                 dmg_col = (150, 40, 30) if parch else (240, 205, 195)
                 esp_col = (30, 70, 125) if parch else (200, 220, 240)
@@ -1996,10 +1955,10 @@ class CharacterSelectScreen:
                 line_stats = pm.fit_text(font_zen_tiny, f"{t('char_stat_speed')}: {char_info['speed_stars']} | {char_info['damage_desc']}", vel_col, card_w - 12)
                 line_esp = pm.fit_text(font_zen_tiny, f"{char_info['special_desc']}", esp_col, card_w - 32)
                 surface.blit(line_stats, (rect.x + 6, stats_y))
-                surface.blit(line_esp, (rect.x + 6, stats_y + 16))
+                surface.blit(line_esp, (rect.x + 6, stats_y + 18))
 
                 # Botão [ ? ] como Selo Hanko pequeno
-                info_btn = pygame.Rect(rect.right - 22, stats_y + 12, 18, 22)
+                info_btn = pygame.Rect(rect.right - 22, stats_y + 14, 18, 22)
                 self.info_btn_rects.append(info_btn)
                 draw_hanko_stamp(surface, font_zen_small, "?", info_btn.x, info_btn.y, size=18,
                                  color=COLOR_HANKO_RED if parch else COLOR_GOLD, border_w=1)
@@ -2011,7 +1970,7 @@ class CharacterSelectScreen:
                 badge_text = t("demo_locked_card") if is_demo_lock else t("char_locked_badge")
                 badge_col = (165, 135, 80) if parch else (210, 190, 130)
                 badge_s = font_zen_small.render(badge_text, True, badge_col)
-                badge_rect = pygame.Rect(rect.centerx - badge_s.get_width() // 2 - 10, rect.y + 64, badge_s.get_width() + 20, 24)
+                badge_rect = pygame.Rect(rect.centerx - badge_s.get_width() // 2 - 10, rect.y + 68, badge_s.get_width() + 20, 24)
                 badge_bg = pygame.Surface((badge_rect.width, badge_rect.height), pygame.SRCALPHA)
                 badge_bg.fill((30, 24, 18, 120) if parch else (15, 14, 18, 180))
                 surface.blit(badge_bg, badge_rect.topleft)
@@ -2049,7 +2008,10 @@ class CharacterSelectScreen:
         enter_space = "ENTER / ESPAÇO" if lang == LANG_PT else "ENTER / SPACE"
         space_only = "ESPAÇO" if lang == LANG_PT else "SPACE"
 
-        if self.match_mode == self.MODE_WATCH:
+        if self.arcade_mode:
+            st_label = t("arcade_select_btn")
+            hint_label = f"[ {ok1} / {space_only} ]" if has_c1 else f"[ {enter_space} ]"
+        elif self.match_mode == self.MODE_WATCH:
             if self.selection_step == "P1":
                 st_label = "CONFIRMAR IA 1" if lang == LANG_PT else "CONFIRM AI 1"
                 hint_label = f"[ {ok1} / {space_only} ]" if has_c1 else f"[ {enter_space} ]"

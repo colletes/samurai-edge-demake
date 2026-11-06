@@ -58,6 +58,28 @@ def test_credits_slideshow():
             break
 
     assert not credits.active, "Tela de créditos deveria estar inativa após conclusão"
+    # 4. Verificação específica do cartão de apoiadores (Slide 6)
+    credits_supporters = ArcadeCreditsScreen()
+    credits_supporters.open(None, white_fade_in=False)
+    # Pular diretamente para o slide de apoiadores (slide 6)
+    credits_supporters.current_slide = 6
+    credits_supporters.slide_timer = 2.0
+    credits_supporters.render(screen)
+
+    # Testar ordenação alfabética e rolagem para listas de apoiadores
+    from src.i18n import t
+    raw_supporters = t("credits_supporters_name")
+    lines = [l.strip() for l in raw_supporters.split("\n") if l.strip()]
+    assert "itchzaya" in lines, "itchzaya deve estar presente nos apoiadores"
+    assert "Tiago Fraga" in lines, "Tiago Fraga deve estar presente nos apoiadores"
+    assert "Tobias C." in lines, "Tobias C. deve estar presente nos apoiadores"
+    sorted_lines = sorted(lines, key=str.casefold)
+    assert sorted_lines == ["itchzaya", "Tiago Fraga", "Tobias C."], f"Ordem alfabética incorreta: {sorted_lines}"
+
+    # Renderizar com 3 apoiadores (ativa rolagem automática)
+    credits_supporters.slide_timer = 5.0
+    credits_supporters.render(screen)
+
     print("test_credits_slideshow OK")
 
 

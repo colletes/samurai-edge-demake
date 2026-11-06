@@ -19,11 +19,11 @@ class PurpleNinja(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Murasaki")
         self.char_type = "murasaki"
-        self.speed = 4.6
+        self.speed = 5.1  # Velocidade ágil e evasiva de kunoichi das sombras
 
-        # Ataque Curto de Foice (Kama Strike) com Precedência Absoluta
+        # Ataque Curto de Foice (Kama Strike)
         self.is_priority_strike = False
-        self.kama_cooldown = 0.45
+        self.kama_cooldown = 0.35
         self.kama_timer = 0.0
 
         # Ataque Especial: Kusarigama Chain Grapple / Pull
@@ -41,12 +41,13 @@ class PurpleNinja(Samurai):
         self.is_holding_shield = False
         self.shield_spin_angle = 0.0
 
-        # Terceira Ação: Esquiva Ágil Shinobi
+        # Terceira Ação: Esquiva Ágil Shinobi (Chain Whirl Backflip)
         self.is_agile_dodge = True
-        self.roll_speed = 10.5
-        self.roll_duration = 0.22
-        self.roll_recovery_duration = 0.12
+        self.roll_speed = 9.5
+        self.roll_duration = 0.28
+        self.roll_recovery_duration = 0.10
         self.roll_cooldown_duration = 0.35
+        self.pose_lerp_tracker = {"lerp_duration": 0.08, "blend_timer": 0.0, "pose_key": None}
 
     def can_act(self) -> bool:
         return (
@@ -88,10 +89,10 @@ class PurpleNinja(Samurai):
         self.vx = self.facing_x * 4.5
         self.vy = self.facing_y * 4.5
 
-        # Hitbox calibrada para 1.30m de alcance (Item 11)
+        # Hitbox ampliada para 1.50m de alcance da foice
         self.hitbox_active = False
-        self.hitbox_center = (self.wx + self.facing_x * 0.85, self.wy + self.facing_y * 0.85)
-        self.hitbox_radius = 1.30
+        self.hitbox_center = (self.wx + self.facing_x * 0.95, self.wy + self.facing_y * 0.95)
+        self.hitbox_radius = 1.50
 
         if game_map:
             for b in game_map.bamboos:
@@ -228,32 +229,42 @@ class PurpleNinja(Samurai):
                 self.state = STATE_IDLE
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza o Ninja Roxo no autêntico estilo Voxel 3D Isométrico com vórtice de corrente."""
+        """Renderiza Murasaki no autêntico estilo Voxel 3D Isométrico com animações fluidas e SSAA 2x."""
         if self.is_hidden:
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
-        if self.is_spinning_chain and self.is_alive:
-            # Efeito visual do giro protetor frontal de corrente em voxel 3D (Item 10)
-            cx = self.wx + self.facing_x * 0.55
-            cy = self.wy + self.facing_y * 0.55
-            sx, sy = camera.apply(cx, cy, 0.45)
-            pygame.draw.circle(surface, COLOR_CHAIN, (sx, sy), 22, 2)
-            pygame.draw.circle(surface, COLOR_PURPLE_AURA, (sx, sy), 16, 1)
-            from src.isometric.voxel_renderer import draw_voxel_box
-            for i in range(4):
-                ang = self.shield_spin_angle + (i / 4.0) * math.pi * 2
-                ox = math.cos(ang) * 0.38
-                oy = math.sin(ang) * 0.38
-                draw_voxel_box(surface, camera, cx + ox - 0.04, cy + oy - 0.04, 0.45, 0.08, 0.08, 0.08, (180, 140, 230), outline=False)
+        extra_props = {
+            "ssaa_2x": getattr(self, "ssaa_enabled", True),
+            "pose_lerp_tracker": getattr(self, "pose_lerp_tracker", None),
+        }
+
+        # Durante esquiva / roll (Chain Whirl Backflip com giro mortal 360°)
+        is_roll = (self.state == STATE_ROLL)
+        if is_roll:
+            roll_prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration))))
+            extra_props["roll_prog"] = roll_prog
+            extra_props["pose"] = "chain_whirl_backflip"
+            extra_props["somersault_angle"] = 360.0 * roll_prog
+            extra_props["somersault_pivot_z"] = self.wz + 0.30
+            extra_props["is_roll"] = True
+
+        elif self.is_holding_shield:
+            extra_props["pose"] = "chain_shield"
+
+        elif self.state == STATE_ATTACK:
+            prog = max(0.0, min(1.0, self.state_timer / max(0.001, self.windup_time + self.active_time + self.recovery_time)))
+            extra_props["pose"] = "kama_strike"
+            extra_props["p"] = prog
 
         render_voxel_humanoid(
             surface, camera,
             self.wx, self.wy, self.wz,
             self.facing_x, self.facing_y,
             self.state, self.state_timer, self.is_alive,
-            char_type="purple",
+            char_type="murasaki",
             walk_timer=self.walk_cycle,
             alpha=self.alpha,
-            is_moving=self.is_moving
+            is_moving=self.is_moving,
+            extra_props=extra_props
         )

@@ -817,8 +817,15 @@ class ArcadeCreditsScreen:
             has_card_configured = bool(cfg.get("header_key") or cfg.get("header_text") or cfg.get("logo"))
             has_card = has_card_configured and (self.slide_timer >= card_delay)
 
+            header_text = t(cfg["header_key"]) if "header_key" in cfg else cfg.get("header_text", "")
+            name_text = t(cfg["name_key"]) if "name_key" in cfg else cfg.get("name_text", "")
+            name_lines = [l.strip() for l in name_text.split("\n") if l.strip()] if name_text else []
+            if cfg.get("header_key") == "credits_supporters_role" and len(name_lines) > 1:
+                name_lines.sort(key=str.casefold)
+
+            is_multiline = len(name_lines) > 1
             panel_w = 900
-            panel_h = 62
+            panel_h = 76 if is_multiline else 62
             panel_x = cx - panel_w // 2
             panel_y = sy - panel_h - 12  # Posicionado logo acima da legenda de karaokê
 
@@ -838,9 +845,6 @@ class ArcadeCreditsScreen:
                 pygame.draw.rect(panel_surf, card_col, (0, 0, panel_w, panel_h), 1, border_radius=6)
                 pygame.draw.rect(panel_surf, (80, 75, 70), (2, 2, panel_w - 4, panel_h - 4), 1, border_radius=5)
 
-                header_text = t(cfg["header_key"]) if "header_key" in cfg else cfg.get("header_text", "")
-                name_text = t(cfg["name_key"]) if "name_key" in cfg else cfg.get("name_text", "")
-
                 logo = get_logo(cfg["logo"], 320) if "logo" in cfg else None
                 if logo is not None:
                     lw, lh = logo.get_size()
@@ -848,6 +852,48 @@ class ArcadeCreditsScreen:
                         scale = 44.0 / lh
                         logo = pygame.transform.smoothscale(logo, (int(lw * scale), 44))
                     panel_surf.blit(logo, ((panel_w - logo.get_width()) // 2, (panel_h - logo.get_height()) // 2))
+                elif header_text and is_multiline:
+                    font_h = get_title_font(17)
+                    sh_head = font_h.render(header_text, True, (12, 10, 14))
+                    tx_head = font_h.render(header_text, True, card_col)
+                    panel_surf.blit(sh_head, ((panel_w - tx_head.get_width()) // 2 + 1, 8))
+                    panel_surf.blit(tx_head, ((panel_w - tx_head.get_width()) // 2, 7))
+
+                    font_n = get_title_font(20)
+                    line_h = 22
+
+                    if len(name_lines) <= 2:
+                        # Exibição estática centralizada e legível quando cabe no cartão
+                        for idx, line in enumerate(name_lines):
+                            ly = 29 + idx * line_h
+                            sh_line = font_n.render(line, True, (12, 10, 14))
+                            tx_line = font_n.render(line, True, COLOR_WHITE)
+                            panel_surf.blit(sh_line, ((panel_w - tx_line.get_width()) // 2 + 1, ly + 1))
+                            panel_surf.blit(tx_line, ((panel_w - tx_line.get_width()) // 2, ly))
+                    else:
+                        # Rolagem vertical contínua com clip rect quando exceder a capacidade estática
+                        clip_top = 28
+                        clip_h = panel_h - clip_top - 6
+                        clip_rect = pygame.Rect(4, clip_top, panel_w - 8, clip_h)
+                        panel_surf.set_clip(clip_rect)
+
+                        total_content_h = len(name_lines) * line_h
+                        gap = 26
+                        loop_h = total_content_h + gap
+                        scroll_speed = 22.0
+                        scroll_y = (card_time * scroll_speed) % loop_h
+
+                        for idx, line in enumerate(name_lines):
+                            base_y = clip_top + (idx * line_h) - scroll_y
+                            for offset_cycle in (-loop_h, 0, loop_h):
+                                ly = base_y + offset_cycle
+                                if clip_top - line_h <= ly <= clip_top + clip_h:
+                                    sh_line = font_n.render(line, True, (12, 10, 14))
+                                    tx_line = font_n.render(line, True, COLOR_WHITE)
+                                    panel_surf.blit(sh_line, ((panel_w - tx_line.get_width()) // 2 + 1, int(ly) + 1))
+                                    panel_surf.blit(tx_line, ((panel_w - tx_line.get_width()) // 2, int(ly)))
+
+                        panel_surf.set_clip(None)
                 elif header_text and name_text:
                     font_h = get_title_font(18)
                     font_n = get_title_font(24)

@@ -27,16 +27,16 @@ class GoroFarmer(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Goro")
         self.char_type = "goro"
-        self.speed = 4.6  # Movimentação ágil e firme
+        self.speed = 4.85  # Movimentação ágil e impetuosa de camponês rebelde
         self.max_hp = 2
         self.hp = 2
         self.can_parry = True
 
         # Ataque Primário: Descida da Kuwa (Corte Vertical de Enxada)
-        self.cleave_duration = 0.18  # Execução rápida e impetuosa (era 0.24s)
-        self.cleave_recovery = 0.18  # Recovery reduzido para punição justa sem travamento excessivo
-        self.cleave_reach = 2.20
-        self.cleave_radius = 1.35
+        self.cleave_duration = 0.16  # Execução acelerada
+        self.cleave_recovery = 0.16  # Recovery otimizado
+        self.cleave_reach = 2.40     # Alcance longo da haste de ferro
+        self.cleave_radius = 1.45
         self.cleave_timer = 0.0
 
         # Ação Secundária: Pisotão Sísmico

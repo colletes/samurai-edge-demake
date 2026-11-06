@@ -51,22 +51,11 @@ class PowderPouch:
     @classmethod
     def create_arena_pouches(cls, game_map, fighters: list = None, total_pouches: int = 3):
         """
-        Cria os pouches para o início do round.
-        Se houver Teppo (Rifleman) entre os lutadores, garante que 1 dos 3 nasça a uma
-        distância média (~3.8m a 5.0m) dele, e os demais aleatoriamente pela arena.
+        Legado: A mecânica de coleta de pólvora em arena foi removida.
+        Teppo agora recarrega automaticamente ou via Trench Ashigaru Dive,
+        e seu barril feudal 3D foi transferido para a mina PowderTrap.
         """
-        riflemen = [f for f in (fighters or []) if getattr(f, "char_type", "") in ("rifleman", "teppo")]
-        if not riflemen:
-            return []
-
-        pouches = []
-        teppo = riflemen[0]
-        pouches.append(cls.spawn_near(game_map, teppo.wx, teppo.wy, min_dist=3.8, max_dist=5.0))
-
-        while len(pouches) < total_pouches:
-            pouches.append(cls.spawn_random(game_map))
-
-        return pouches
+        return []
 
     def update(self, dt: float, game_map, particles: list = None):
         self.glow_timer += dt * 4.0

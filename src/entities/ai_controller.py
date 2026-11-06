@@ -32,8 +32,8 @@ class SamuraiAI:
         if difficulty in (DIFFICULTY_EASY, DIFFICULTY_NORMAL, DIFFICULTY_HARD):
             self.difficulty = difficulty
 
-    def _get_reaction_delay(self, is_explosive: bool = False) -> float:
-        """Tempo de reação humano calibrado por dificuldade. Explosivos usam reação rápida de emergência."""
+    def _get_reaction_delay(self, is_explosive: bool = False, is_bullet: bool = False) -> float:
+        """Tempo de reação humano calibrado por dificuldade. Explosivos usam reação rápida de emergência. Balas supersônicas usam limites de percepção humana."""
         if is_explosive:
             if self.difficulty == DIFFICULTY_EASY:
                 return random.uniform(0.06, 0.10)
@@ -41,6 +41,14 @@ class SamuraiAI:
                 return random.uniform(0.01, 0.03)
             else:  # NORMAL
                 return random.uniform(0.03, 0.06)
+
+        if is_bullet:
+            if self.difficulty == DIFFICULTY_EASY:
+                return random.uniform(0.16, 0.22)
+            elif self.difficulty == DIFFICULTY_HARD:
+                return random.uniform(0.04, 0.08)
+            else:  # NORMAL
+                return random.uniform(0.09, 0.14)
 
         if self.difficulty == DIFFICULTY_EASY:
             return random.uniform(0.16, 0.22)
@@ -132,6 +140,8 @@ class SamuraiAI:
             return False
         cname = p.__class__.__name__
         if cname in ("TimedBombEntity", "RemoteMineEntity", "CannonballProjectile"):
+            return True
+        if cname == "TalismanWard" and getattr(p, "element", "") == "fire":
             return True
         if cname == "BearTrapProjectile":
             if fighter is None or getattr(p, "owner", None) != fighter:
@@ -325,6 +335,94 @@ class SamuraiAI:
             node = prev[node]
         return nodes[node]
 
+    def _get_solid_obstacles(self, game_map):
+        if not game_map:
+            return []
+        obs = list(getattr(game_map, "rocks", []))
+        obs.extend(getattr(game_map, "buildings", []))
+        if getattr(game_map, "well", None) is not None:
+            obs.append(game_map.well)
+        obs.extend(getattr(game_map, "trees", []))
+        obs.extend(getattr(game_map, "lanterns", []))
+        obs.extend(getattr(game_map, "torii_gates", []))
+        obs.extend(getattr(game_map, "solid_props", []))
+        return obs
+
+    def _steer_around_obstacles(self, fighter, target, game_map):
+        """
+        Navegação proativa anti-bloqueio: detecta rochas, construções machiya, poços, árvores e props
+        à frente do lutador usando feixes de sondagem (whiskers). Quando um obstáculo está no caminho,
+        deflete suavemente a direção de movimento em arco tangencial sem prender o lutador.
+        """
+        if not game_map:
+            return
+        m_len = math.hypot(self.move_dir_x, self.move_dir_y)
+        if m_len < 0.001:
+            return
+        base_dx = self.move_dir_x / m_len
+        base_dy = self.move_dir_y / m_len
+
+        obstacles = self._get_solid_obstacles(game_map)
+        if not obstacles:
+            return
+
+        f_radius = getattr(fighter, "radius", 0.35)
+        reach = 0.95
+
+        def _is_blocked(x: float, y: float, r: float) -> bool:
+            for o in obstacles:
+                fn = getattr(o, "check_collision", None)
+                if fn and fn(x, y, r)[0]:
+                    return True
+            return False
+
+        # Verifica se a trajetória atual colide nos próximos passos
+        blocked = _is_blocked(fighter.wx + base_dx * 0.45, fighter.wy + base_dy * 0.45, f_radius) or \
+                  _is_blocked(fighter.wx + base_dx * reach, fighter.wy + base_dy * reach, f_radius)
+
+        # Se já está em contato íntimo com algum obstáculo, precisa de deflexão imediata
+        for o in obstacles:
+            fn = getattr(o, "check_collision", None)
+            if fn:
+                c, px, py = fn(fighter.wx, fighter.wy, f_radius + 0.12)
+                if c:
+                    blocked = True
+                    break
+
+        if not blocked:
+            return
+
+        # Sonda em leque de whiskers para os dois lados, priorizando o lado do flanqueamento
+        sign = getattr(self, "flank_sign", 1.0)
+        if target is not None:
+            tgt_x = getattr(target, "wx", target[0] if isinstance(target, (list, tuple)) else fighter.wx)
+            tgt_y = getattr(target, "wy", target[1] if isinstance(target, (list, tuple)) else fighter.wy)
+            to_tgt_x = tgt_x - fighter.wx
+            to_tgt_y = tgt_y - fighter.wy
+            cross = base_dx * to_tgt_y - base_dy * to_tgt_x
+            if abs(cross) > 0.05:
+                sign = 1.0 if cross > 0 else -1.0
+
+        angles = [
+            0.45 * sign, -0.45 * sign,
+            0.85 * sign, -0.85 * sign,
+            1.30 * sign, -1.30 * sign,
+            1.75 * sign, -1.75 * sign,
+            2.20 * sign, -2.20 * sign
+        ]
+
+        for ang in angles:
+            cos_a, sin_a = math.cos(ang), math.sin(ang)
+            dir_x = base_dx * cos_a - base_dy * sin_a
+            dir_y = base_dx * sin_a + base_dy * cos_a
+
+            if not _is_blocked(fighter.wx + dir_x * 0.5, fighter.wy + dir_y * 0.5, f_radius) and \
+               not _is_blocked(fighter.wx + dir_x * reach, fighter.wy + dir_y * reach, f_radius):
+                if hasattr(game_map, "pit_edge_distance") and game_map.pit_edge_distance(fighter.wx + dir_x * 0.6, fighter.wy + dir_y * 0.6) < 0.40:
+                    continue
+                self.move_dir_x, self.move_dir_y = dir_x, dir_y
+                return
+
     def _steer_around_pits(self, fighter, opponent, game_map):
         """Contorna buracos: segue a rota mais curta (quinas e vigas) quando o caminho até o rival os cruza e afasta das bordas."""
         pits = getattr(game_map, "pits", None)
@@ -429,6 +527,8 @@ class SamuraiAI:
                 length = math.hypot(dx, dy)
                 if length > 0.05 and ai_fighter.can_move():
                     self.move_dir_x, self.move_dir_y = dx / length, dy / length
+                    if game_map:
+                        self._steer_around_obstacles(ai_fighter, ground_kunai, game_map)
                     self._steer_around_pits(ai_fighter, ground_kunai, game_map)
                     ai_fighter.apply_movement(self.move_dir_x, self.move_dir_y, dt, game_map)
                     return
@@ -449,6 +549,8 @@ class SamuraiAI:
             length = math.hypot(dx, dy)
             if length > 0.05 and ai_fighter.can_move():
                 self.move_dir_x, self.move_dir_y = dx / length, dy / length
+                if game_map:
+                    self._steer_around_obstacles(ai_fighter, opponent, game_map)
                 self._steer_around_pits(ai_fighter, opponent, game_map)
                 ai_fighter.apply_movement(self.move_dir_x, self.move_dir_y, dt, game_map)
                 return
@@ -519,6 +621,7 @@ class SamuraiAI:
             threat_x = urgent_proj.wx if (is_proj and urgent_proj) else opponent.wx
             threat_y = urgent_proj.wy if (is_proj and urgent_proj) else opponent.wy
             is_unparriable = is_proj and urgent_proj and self._is_bomb_or_hazard_projectile(urgent_proj, ai_fighter)
+            is_bullet = is_proj and urgent_proj and (urgent_proj.__class__.__name__ == "MusketBulletProjectile")
 
             # Vetores direcionais em relação ao oponente (fechar distância)
             to_opp_x = opponent.wx - ai_fighter.wx
@@ -557,8 +660,9 @@ class SamuraiAI:
                 diag2_x /= m2
                 diag2_y /= m2
 
-            # Se a ameaça NÃO for explosiva/imparável, tenta habilidades de parry ou reflexão
-            if not is_unparriable:
+            def _try_parry_and_counter():
+                if is_unparriable:
+                    return False
                 # Musashi (BlueSamurai): Parry mestre de duas lâminas (reflete projéteis e apara melee)
                 if ai_fighter.__class__.__name__ == "BlueSamurai" and hasattr(ai_fighter, "trigger_parry"):
                     if ai_fighter.can_move() and getattr(ai_fighter, "dash_recovery_timer", 0) <= 0:
@@ -607,118 +711,136 @@ class SamuraiAI:
                     ai_fighter.set_facing(threat_x, threat_y)
                     if ai_fighter.trigger_parry():
                         return True
+                return False
 
-            # Kenshin: Dash evasivo (com esquiva diagonal agressiva fechando distância se for projétil)
-            if hasattr(ai_fighter, "trigger_dash") and ai_fighter.can_act():
-                dash_reach = getattr(ai_fighter, "dash_speed", 22.0) * getattr(ai_fighter, "dash_duration", 0.16)
-                if is_proj and not is_unparriable and opp_dist >= 1.2:
-                    d_cands = [(diag1_x, diag1_y), (diag2_x, diag2_y)]
-                    random.shuffle(d_cands)
-                    for cx, cy in d_cands:
-                        if self._landing_ok(ai_fighter, game_map, cx, cy, dash_reach):
-                            ai_fighter.trigger_dash(cx, cy)
+            def _try_evasion():
+                # Kenshin: Dash evasivo (com esquiva diagonal agressiva fechando distância se for projétil)
+                if hasattr(ai_fighter, "trigger_dash") and ai_fighter.can_act():
+                    dash_reach = getattr(ai_fighter, "dash_speed", 22.0) * getattr(ai_fighter, "dash_duration", 0.16)
+                    if is_proj and not is_unparriable and opp_dist >= 1.2:
+                        d_cands = [(diag1_x, diag1_y), (diag2_x, diag2_y)]
+                        random.shuffle(d_cands)
+                        for cx, cy in d_cands:
+                            if self._landing_ok(ai_fighter, game_map, cx, cy, dash_reach):
+                                ai_fighter.trigger_dash(cx, cy)
+                                return True
+                        for px, py in [(p_perp_x1, p_perp_y1), (p_perp_x2, p_perp_y2)]:
+                            if self._landing_ok(ai_fighter, game_map, px, py, dash_reach):
+                                ai_fighter.trigger_dash(px, py)
+                                return True
+
+                    # Recuo ou perpendicular se for explosivo, golpe corpo a corpo ou se as diagonais estiverem bloqueadas
+                    dx = ai_fighter.wx - threat_x
+                    dy = ai_fighter.wy - threat_y
+                    length = math.hypot(dx, dy)
+                    if length > 0.001:
+                        if self._landing_ok(ai_fighter, game_map, dx / length, dy / length, dash_reach):
+                            ai_fighter.trigger_dash(dx / length, dy / length)
                             return True
-                    for px, py in [(p_perp_x1, p_perp_y1), (p_perp_x2, p_perp_y2)]:
-                        if self._landing_ok(ai_fighter, game_map, px, py, dash_reach):
-                            ai_fighter.trigger_dash(px, py)
+                        for perp in [(-dy / length, dx / length), (dy / length, -dx / length)]:
+                            if self._landing_ok(ai_fighter, game_map, perp[0], perp[1], dash_reach):
+                                ai_fighter.trigger_dash(perp[0], perp[1])
+                                return True
+
+                # Gray Ninja / Kasumi: Bomba de fumaça instantânea
+                if hasattr(ai_fighter, "trigger_smoke_bomb") and projectiles is not None:
+                    aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+                    ai_fighter.trigger_smoke_bomb(aim_x, aim_y, projectiles)
+                    return True
+
+                # Rifleman / Teppo: Salto evasivo para trás
+                if hasattr(ai_fighter, "trigger_evasive_backstep") and self._away_ok(
+                        ai_fighter, opponent, game_map, 1.6):
+                    ai_fighter.trigger_evasive_backstep()
+                    return True
+
+                # Okuni / Kabuki: Finta Kawarimi Decoy
+                if hasattr(ai_fighter, "trigger_kawarimi_decoy") and (decoys is not None) and self._away_ok(
+                        ai_fighter, opponent, game_map, self._roll_reach(ai_fighter)):
+                    dx = ai_fighter.wx - threat_x
+                    dy = ai_fighter.wy - threat_y
+                    ai_fighter.trigger_kawarimi_decoy(dx, dy, decoys)
+                    return True
+
+                # Kyudo Archer / Tomoe: Flecha de corda (se não for bala supersônica)
+                if not is_unparriable and not is_bullet and hasattr(ai_fighter, "trigger_rope_arrow") and projectiles is not None:
+                    aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+                    ai_fighter.trigger_rope_arrow(aim_x, aim_y, projectiles, game_map=game_map)
+                    return True
+
+                # Pirata / Anne: Pólvora nos olhos (se não for bala supersônica)
+                if not is_unparriable and not is_bullet and hasattr(ai_fighter, "trigger_gunpowder_blind"):
+                    aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+                    ai_fighter.trigger_gunpowder_blind(aim_x, aim_y, opponent=opponent)
+                    return True
+
+                # Evasão universal: rolamento inteligente (inclui Shikigami Glide de Seimei)
+                if hasattr(ai_fighter, "trigger_roll") and ai_fighter.can_act():
+                    reach = self._roll_reach(ai_fighter)
+
+                    # Esquiva inteligente diagonal e lateral se for projétil no ar
+                    if is_proj and not is_unparriable and opp_dist >= 1.2:
+                        # 1. Esquiva agressiva diagonal frontal para fechar distância contra zoner/atirador
+                        d_cands = [(diag1_x, diag1_y), (diag2_x, diag2_y)]
+                        random.shuffle(d_cands)
+                        for cx, cy in d_cands:
+                            if self._landing_ok(ai_fighter, game_map, cx, cy, reach):
+                                ai_fighter.trigger_roll(cx, cy)
+                                return True
+                        # 2. Sidestep lateral puro (90°) se diagonal frontal estiver bloqueada
+                        for px, py in [(p_perp_x1, p_perp_y1), (p_perp_x2, p_perp_y2)]:
+                            if self._landing_ok(ai_fighter, game_map, px, py, reach):
+                                ai_fighter.trigger_roll(px, py)
+                                return True
+                    elif is_proj and urgent_proj:
+                        # Projétil que não pode avançar frontalmente (ex: à queima-roupa < 1.2m ou explosivo)
+                        for px, py in [(p_perp_x1, p_perp_y1), (p_perp_x2, p_perp_y2)]:
+                            if self._landing_ok(ai_fighter, game_map, px, py, reach):
+                                ai_fighter.trigger_roll(px, py)
+                                return True
+
+                    # Rolamento padrão afastando-se da ameaça (para melee threat ou bombas)
+                    dx = ai_fighter.wx - threat_x
+                    dy = ai_fighter.wy - threat_y
+                    length = math.hypot(dx, dy)
+                    if length > 0.001:
+                        if self._landing_ok(ai_fighter, game_map, dx / length, dy / length, reach):
+                            ai_fighter.trigger_roll(dx / length, dy / length)
                             return True
-
-                # Recuo ou perpendicular se for explosivo, golpe corpo a corpo ou se as diagonais estiverem bloqueadas
-                dx = ai_fighter.wx - threat_x
-                dy = ai_fighter.wy - threat_y
-                length = math.hypot(dx, dy)
-                if length > 0.001:
-                    if self._landing_ok(ai_fighter, game_map, dx / length, dy / length, dash_reach):
-                        ai_fighter.trigger_dash(dx / length, dy / length)
-                        return True
-                    for perp in [(-dy / length, dx / length), (dy / length, -dx / length)]:
-                        if self._landing_ok(ai_fighter, game_map, perp[0], perp[1], dash_reach):
-                            ai_fighter.trigger_dash(perp[0], perp[1])
+                        cand1 = (-dy / length, dx / length)
+                        cand2 = (dy / length, -dx / length)
+                        ok1 = self._landing_ok(ai_fighter, game_map, cand1[0], cand1[1], reach)
+                        ok2 = self._landing_ok(ai_fighter, game_map, cand2[0], cand2[1], reach)
+                        if ok1 and not ok2:
+                            ai_fighter.trigger_roll(cand1[0], cand1[1])
                             return True
-
-            # Gray Ninja / Kasumi: Bomba de fumaça instantânea
-            if hasattr(ai_fighter, "trigger_smoke_bomb") and projectiles is not None:
-                aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
-                ai_fighter.trigger_smoke_bomb(aim_x, aim_y, projectiles)
-                return True
-
-            # Rifleman / Teppo: Salto evasivo para trás
-            if hasattr(ai_fighter, "trigger_evasive_backstep") and self._away_ok(
-                    ai_fighter, opponent, game_map, 1.6):
-                ai_fighter.trigger_evasive_backstep()
-                return True
-
-            # Okuni / Kabuki: Finta Kawarimi Decoy
-            if hasattr(ai_fighter, "trigger_kawarimi_decoy") and (decoys is not None) and self._away_ok(
-                    ai_fighter, opponent, game_map, self._roll_reach(ai_fighter)):
-                dx = ai_fighter.wx - threat_x
-                dy = ai_fighter.wy - threat_y
-                ai_fighter.trigger_kawarimi_decoy(dx, dy, decoys)
-                return True
-
-            # Kyudo Archer / Tomoe: Flecha de corda
-            if not is_unparriable and hasattr(ai_fighter, "trigger_rope_arrow") and projectiles is not None:
-                aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
-                ai_fighter.trigger_rope_arrow(aim_x, aim_y, projectiles, game_map=game_map)
-                return True
-
-            # Pirata / Anne: Pólvora nos olhos
-            if not is_unparriable and hasattr(ai_fighter, "trigger_gunpowder_blind"):
-                aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
-                ai_fighter.trigger_gunpowder_blind(aim_x, aim_y, opponent=opponent)
-                return True
-
-            # Evasão universal: rolamento inteligente
-            if hasattr(ai_fighter, "trigger_roll") and ai_fighter.can_act():
-                reach = self._roll_reach(ai_fighter)
-
-                # Esquiva inteligente diagonal e lateral se for projétil no ar
-                if is_proj and not is_unparriable and opp_dist >= 1.2:
-                    # 1. Esquiva agressiva diagonal frontal para fechar distância contra zoner/atirador
-                    d_cands = [(diag1_x, diag1_y), (diag2_x, diag2_y)]
-                    random.shuffle(d_cands)
-                    for cx, cy in d_cands:
-                        if self._landing_ok(ai_fighter, game_map, cx, cy, reach):
-                            ai_fighter.trigger_roll(cx, cy)
+                        elif ok2 and not ok1:
+                            ai_fighter.trigger_roll(cand2[0], cand2[1])
                             return True
-                    # 2. Sidestep lateral puro (90°) se diagonal frontal estiver bloqueada
-                    for px, py in [(p_perp_x1, p_perp_y1), (p_perp_x2, p_perp_y2)]:
-                        if self._landing_ok(ai_fighter, game_map, px, py, reach):
-                            ai_fighter.trigger_roll(px, py)
+                        elif ok1 and ok2:
+                            r_dx, r_dy = random.choice([cand1, cand2])
+                            ai_fighter.trigger_roll(r_dx, r_dy)
                             return True
-                elif is_proj and urgent_proj:
-                    # Projétil que não pode avançar frontalmente (ex: à queima-roupa < 1.2m ou explosivo)
-                    for px, py in [(p_perp_x1, p_perp_y1), (p_perp_x2, p_perp_y2)]:
-                        if self._landing_ok(ai_fighter, game_map, px, py, reach):
-                            ai_fighter.trigger_roll(px, py)
+                        # NUNCA rola na direção de uma bomba ou explosivo!
+                        if not is_unparriable and self._landing_ok(ai_fighter, game_map, -dx / length, -dy / length, reach):
+                            ai_fighter.trigger_roll(-dx / length, -dy / length)
                             return True
+                return False
 
-                # Rolamento padrão afastando-se da ameaça (para melee threat ou bombas)
-                dx = ai_fighter.wx - threat_x
-                dy = ai_fighter.wy - threat_y
-                length = math.hypot(dx, dy)
-                if length > 0.001:
-                    if self._landing_ok(ai_fighter, game_map, dx / length, dy / length, reach):
-                        ai_fighter.trigger_roll(dx / length, dy / length)
-                        return True
-                    cand1 = (-dy / length, dx / length)
-                    cand2 = (dy / length, -dx / length)
-                    ok1 = self._landing_ok(ai_fighter, game_map, cand1[0], cand1[1], reach)
-                    ok2 = self._landing_ok(ai_fighter, game_map, cand2[0], cand2[1], reach)
-                    if ok1 and not ok2:
-                        ai_fighter.trigger_roll(cand1[0], cand1[1])
-                        return True
-                    elif ok2 and not ok1:
-                        ai_fighter.trigger_roll(cand2[0], cand2[1])
-                        return True
-                    elif ok1 and ok2:
-                        r_dx, r_dy = random.choice([cand1, cand2])
-                        ai_fighter.trigger_roll(r_dx, r_dy)
-                        return True
-                    # NUNCA rola na direção de uma bomba ou explosivo!
-                    if not is_unparriable and self._landing_ok(ai_fighter, game_map, -dx / length, -dy / length, reach):
-                        ai_fighter.trigger_roll(-dx / length, -dy / length)
-                        return True
+            if is_bullet:
+                # Contra balas supersônicas de armas de fogo, a IA prioriza esquiva (roll/dash) para sair da trajetória.
+                # Se não puder esquivar (em cooldown de esquiva ou cercado de obstáculos), recorre ao parry como último recurso.
+                if _try_evasion():
+                    return True
+                if _try_parry_and_counter():
+                    return True
+            else:
+                # Para golpes corpo a corpo e projéteis lentos/mágicos, parry tem prioridade tática
+                if _try_parry_and_counter():
+                    return True
+                if _try_evasion():
+                    return True
+
             return False
 
         # DEFESA CORPO A CORPO (Humanizada com Reaction Delay)
@@ -747,14 +869,26 @@ class SamuraiAI:
         # DEFESA CONTRA PROJÉTEIS: Mantém o delay de reação (com delay de emergência para bombas)
         if incoming_projectile:
             is_urgent_explosive = urgent_proj and self._is_bomb_or_hazard_projectile(urgent_proj, ai_fighter)
-            if self.pending_defense_threat != "PROJECTILE":
-                self.pending_defense_threat = "PROJECTILE"
-                self.pending_defense_timer = self._get_reaction_delay(is_explosive=bool(is_urgent_explosive))
+            is_urgent_bullet = urgent_proj and (urgent_proj.__class__.__name__ == "MusketBulletProjectile")
+
+            # Se for bala de arma de fogo e o tempo de impacto for menor que 0.05s (~1.5m à queima-roupa absoluta),
+            # o projétil supersônico atinge o alvo antes de qualquer reflexo motor humano.
+            if is_urgent_bullet and min_impact_time < 0.05:
+                self.pending_defense_threat = None
+                self.pending_defense_timer = 0.0
                 self.pending_defense_ready = False
             else:
-                self.pending_defense_timer -= dt
-                if self.pending_defense_timer <= 0:
-                    self.pending_defense_ready = True
+                if self.pending_defense_threat != "PROJECTILE":
+                    self.pending_defense_threat = "PROJECTILE"
+                    self.pending_defense_timer = self._get_reaction_delay(
+                        is_explosive=bool(is_urgent_explosive),
+                        is_bullet=bool(is_urgent_bullet)
+                    )
+                    self.pending_defense_ready = False
+                else:
+                    self.pending_defense_timer -= dt
+                    if self.pending_defense_timer <= 0:
+                        self.pending_defense_ready = True
         else:
             if self.pending_defense_threat == "PROJECTILE":
                 self.pending_defense_threat = None
@@ -764,10 +898,19 @@ class SamuraiAI:
         if incoming_projectile and self.pending_defense_ready:
             self.pending_defense_threat = None
             self.pending_defense_ready = False
-            proj_defense_chance = {
-                DIFFICULTY_EASY: 0.70,
-                DIFFICULTY_HARD: 0.98,
-            }.get(self.difficulty, 0.88)
+            is_urgent_bullet = urgent_proj and (urgent_proj.__class__.__name__ == "MusketBulletProjectile")
+            if is_urgent_bullet:
+                # Contra balas supersônicas, taxa de sucesso de reação humana calibrada
+                proj_defense_chance = {
+                    DIFFICULTY_EASY: 0.55,
+                    DIFFICULTY_HARD: 0.94,
+                }.get(self.difficulty, 0.82)
+            else:
+                proj_defense_chance = {
+                    DIFFICULTY_EASY: 0.70,
+                    DIFFICULTY_HARD: 0.98,
+                }.get(self.difficulty, 0.88)
+
             if random.random() < proj_defense_chance:
                 if _execute_defensive_action(is_proj=True, urgent_proj=urgent_proj):
                     return
@@ -791,6 +934,8 @@ class SamuraiAI:
                 length = math.hypot(dx, dy)
                 if length > 0 and ai_fighter.can_move():
                     self.move_dir_x, self.move_dir_y = dx / length, dy / length
+                    if game_map:
+                        self._steer_around_obstacles(ai_fighter, opponent, game_map)
                     self._steer_around_pits(ai_fighter, opponent, game_map)
                     ai_fighter.apply_movement(self.move_dir_x, self.move_dir_y, dt, game_map)
                 return
@@ -833,10 +978,10 @@ class SamuraiAI:
                     aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
                     ai_fighter.trigger_smoke_bomb(aim_x, aim_y, projectiles)
                     return
-                elif 1.8 <= dist <= 6.2 and random.random() < 0.70:
+                elif 1.8 <= dist <= 6.2 and random.random() < 0.70 and getattr(ai_fighter, "bomb_timer", 0.0) <= 0:
                     aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
-                    ai_fighter.trigger_throw_bomb(aim_x, aim_y, projectiles)
-                    return
+                    if ai_fighter.trigger_throw_bomb(aim_x, aim_y, projectiles):
+                        return
 
             # Murasaki: Kusarigama com dispersão
             if hasattr(ai_fighter, "trigger_kusarigama_pull") and projectiles is not None:
@@ -1207,22 +1352,9 @@ class SamuraiAI:
                     self.move_dir_x = 1.0
                     self.move_dir_y = 0.0
 
-        # Desvio de obstáculos sólidos no caminho
-        if game_map and hasattr(game_map, "rocks"):
-            for rock in game_map.rocks:
-                r_dist = world_distance(ai_fighter.wx, ai_fighter.wy, rock.wx, rock.wy)
-                r_rad = getattr(rock, "radius", 0.5)
-                if r_dist < (r_rad + 1.1):
-                    r_dx = ai_fighter.wx - rock.wx
-                    r_dy = ai_fighter.wy - rock.wy
-                    r_len = math.hypot(r_dx, r_dy)
-                    if r_len > 0.01:
-                        self.move_dir_x += (r_dx / r_len) * 0.6
-                        self.move_dir_y += (r_dy / r_len) * 0.6
-                        m_len = math.hypot(self.move_dir_x, self.move_dir_y)
-                        if m_len > 0.001:
-                            self.move_dir_x /= m_len
-                            self.move_dir_y /= m_len
+        # Desvio proativo de obstáculos sólidos no caminho
+        if game_map:
+            self._steer_around_obstacles(ai_fighter, opponent, game_map)
 
         # Evasão e repulsão contínua de bombas, minas e armadilhas no solo
         if projectiles and ai_fighter.can_move():
@@ -1291,6 +1423,8 @@ class SamuraiAI:
             if game_map and self._avoid_ship_roll(ai_fighter, game_map):
                 direction = next(h.direction for h in game_map.hazards if hasattr(h, "direction"))
                 self.move_dir_x, self.move_dir_y = 0.0, -direction
+            if game_map:
+                self._steer_around_obstacles(ai_fighter, opponent, game_map)
             self._steer_around_pits(ai_fighter, opponent, game_map)
             if getattr(ai_fighter, "confused_timer", 0.0) > 0:
                 self.move_dir_x, self.move_dir_y = -self.move_dir_x, -self.move_dir_y
@@ -1315,10 +1449,10 @@ class SamuraiAI:
             if projectiles is not None:
                 aim_x, aim_y = self._get_aim_target(fighter, target, target.wx, target.wy)
                 fighter.trigger_shuriken(aim_x, aim_y, projectiles)
-        elif hasattr(fighter, "trigger_tanto_slash") and world_distance(fighter.wx, fighter.wy, target.wx, target.wy) <= 1.55:
+        elif hasattr(fighter, "trigger_tanto_slash") and (world_distance(fighter.wx, fighter.wy, target.wx, target.wy) <= 1.55 or getattr(fighter, "bomb_timer", 0.0) > 0):
             fighter.trigger_tanto_slash(target.wx, target.wy)
         elif hasattr(fighter, "trigger_throw_bomb"):
-            if projectiles is not None:
+            if projectiles is not None and getattr(fighter, "bomb_timer", 0.0) <= 0:
                 aim_x, aim_y = self._get_aim_target(fighter, target, target.wx, target.wy)
                 fighter.trigger_throw_bomb(aim_x, aim_y, projectiles)
         elif hasattr(fighter, "trigger_kama_strike"):

@@ -30,7 +30,7 @@ class RedSamurai(Samurai):
         self.base_dash_speed = 20.0
         self.dash_speed = 20.0
         self.dash_duration = 0.14         # Avanço supersônico (~2.8 tiles)
-        self.recovery_duration = 0.45     # Embainhamento (Noto) caminhando a 50% da velocidade
+        self.recovery_duration = 0.22     # Calibrado: Noto veloz impedindo punições de graça após o corte
         self.noto_walk_speed_mult = 0.50
         self.attack_range = 2.6
 
@@ -153,7 +153,7 @@ class RedSamurai(Samurai):
             self.iai_startup_timer = (self.iai_startup_duration * 0.5) if is_cancel else self.iai_startup_duration
             self.hitbox_active = (self.iai_startup_timer <= 0.0)
         self.is_invulnerable_dodge = False
-        self.hitbox_radius = 1.25  # Arco ampliado para 1.25m para consistência do corte
+        self.hitbox_radius = 1.40  # Arco ampliado para 1.40m para consistência do corte Battoujutsu
         self.slash_dir = (self.facing_x, self.facing_y)
         self.slash_trail_points = [(self.wx, self.wy)]
         self.hitbox_center = (self.wx + self.facing_x * 0.8, self.wy + self.facing_y * 0.8)

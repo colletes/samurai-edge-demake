@@ -215,6 +215,7 @@ MODEL_FIGHTERS = {
     "american": joe_model,
     "saitou": saitou_model,
     "rifleman": teppo_model,
+    "teppo": teppo_model,
     "okuni": okuni_model,
     "kasumi": kasumi_model,
     "tomoe": tomoe_model,
@@ -357,6 +358,14 @@ def _render_voxel_humanoid(
 
     # Estado de Morte no solo ou imobilizado no chão
     if (not is_alive and state not in ("DYING_FREEZE", "DYING_HEADLESS")) or state in ("DEAD", "PINNED_DOWN"):
+        if extra_props and extra_props.get("is_pinned_to_earth", False):
+            from src.entities.voxel_corpse import render_pinned_to_earth_model
+            render_pinned_to_earth_model(
+                surface, camera, wx, wy, wz, -facing_x, -facing_y, char_type, alpha=alpha,
+                is_holy=extra_props.get("is_holy_pierced", False), extra_props=extra_props
+            )
+            return
+
         sx, sy = camera.apply(wx, wy, 0.0)
         # Poça de sangue dramática no solo
         pygame.draw.ellipse(surface, (120, 16, 20, 180), (sx - 30, sy - 14, 60, 28))
@@ -509,6 +518,17 @@ def _render_voxel_humanoid(
         base_y = wy + lunge_y
         base_z = wz + idle_bob
 
+    # Trepidação por estocada / espasmo muscular no peito
+    shiver = float(extra_props.get("shiver", 0.0)) if extra_props else 0.0
+    if abs(shiver) > 1e-4:
+        base_x += px * shiver
+        base_y += py * shiver
+
+    # Queda de joelhos (kneeling collapse)
+    kneel = max(0.0, min(1.0, float(extra_props.get("kneel_prog", 0.0)))) if extra_props else 0.0
+    if kneel > 0.0:
+        base_z -= kneel * 0.26
+
     # -------------------------------------------------------------
     # 1. PERNAS HUMANAS ARTICULADAS (COXA + JOELHO/CANELA + PÉ)
     # -------------------------------------------------------------
@@ -518,7 +538,17 @@ def _render_voxel_humanoid(
         is_moving, walk_timer, is_melee, atk_progress,
         hip_w, is_female, char_type=char_type
     )
-    if abs(somersault_angle) > 0.5:
+    if kneel > 0.0:
+        # Joelhos avançam e dobram ao solo na queda de joelhos
+        for _side in ("L", "R"):
+            _ld = legs_data[_side]
+            _th = _ld["thigh"]
+            _sh = _ld["shin"]
+            _ft = _ld["foot"]
+            _ld["thigh"] = (_th[0] + fx * 0.08 * kneel, _th[1] + fy * 0.08 * kneel, _th[2] - 0.05 * kneel)
+            _ld["shin"] = (_sh[0] + fx * 0.16 * kneel, _sh[1] + fy * 0.16 * kneel, max(wz + 0.04, _sh[2] - 0.20 * kneel))
+            _ld["foot"] = (_ft[0] - fx * 0.10 * kneel, _ft[1] - fy * 0.10 * kneel, max(wz + 0.02, _ft[2]))
+    elif abs(somersault_angle) > 0.5:
         # Encolhimento acrobático dos joelhos/pés (Tuck) durante o mortal aéreo 360°
         tuck = math.sin(math.radians(somersault_angle) * 0.5)
         for _side in ("L", "R"):
@@ -935,7 +965,7 @@ def _render_voxel_humanoid(
                 if is_melee:
                     draw_voxel_box(surface, camera, kx + fx*0.12, ky + fy*0.12, kz, 0.08, 0.08, 0.15, COLOR_YELLOW_AURA, outline=False, alpha=160)
 
-        elif char_type in ("gray", "kasumi"):
+        elif char_type in ("gray", "kasumi") and model_c is None:
             # Adaga shinobi na mão direita em guarda rápida
             draw_oriented_voxel_box(
                 surface, camera,

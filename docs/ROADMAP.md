@@ -33,18 +33,18 @@ Consulte o documento mestre [`docs/EXPANSION_ROADMAP_AND_DESIGN.md`](EXPANSION_R
    - 🥋 `2.1`: Kenshi (Hiten Mitsurugi-ryu — Shukuchi Battoujutsu & Ryuu Tsui Sen) **[CONCLUÍDO ✅]**
    - ⚔️ `2.2`: Musashi (Hyoho Niten Ichi-ryu — Dual Cleave & Cross Shockwave) **[CONCLUÍDO ✅]**
    - 🥷 `2.3`: Hanzo (Iga Ninjutsu — Reverse Slash & Kunai Snipe) **[CONCLUÍDO ✅]**
-   - 🐕 `2.4`: Joe & Yamato (Tactical Tanto & Pounce do Doberman) **[PRÓXIMO NA FILA 🎯]**
-   - 🐺 `2.5`: Saitou (Lobos de Mibu — Shinsengumi Slash & Gatotsu Zero-Shiki)
-   - 💥 `2.6`: Teppo (Ashigaru — Tiro de Arcabuz Tanegashima & Coronhada)
-   - ⛓️ `2.7`: Murasaki (Kusarigama — Foice Curta & Arremesso do Peso de Ferro)
-   - 💣 `2.8`: Kasumi (Leques Tessen & Bomba de Cerâmica Horoku)
-   - 🎭 `2.9`: Okuni (Dançarina Kabuki — Leques de Aço & Névoa Dokukiri)
-   - 🏹 `2.10`: Tomoe (Kyudo Onna-musha — Flecha Yumi & Hamaya Exorcista)
-   - 🏴‍☠️ `2.11`: Anne (Corsária Naval — Cutlass Cleave 180° & Pouch de Pólvora)
-   - ⚜️ `2.12`: Julie (Mosqueteira Real — Fleche Thrust & Pederneira de Bolso)
-   - 📿 `2.13`: Ren (Monge Shaolin — Palma de Ferro & Rugido Kiai)
-   - 🗡️ `2.14`: Chiyo (Kunoichi das Sombras — Kodachi Dupla Invertida)
-   - 🛡️ `2.15`: Benkei (Monge Guardião — Naginata Pesada & Hoist Slam)
+   - 🐕 `2.4`: Joe & Yamato (Tactical Tanto & Pounce do Doberman) **[CONCLUÍDO ✅]**
+   - 🐺 `2.5`: Saitou (Lobos de Mibu — Shinsengumi Slash & Gatotsu Zero-Shiki) **[CONCLUÍDO ✅]**
+   - 💥 `2.6`: Teppo (Ashigaru — Tiro de Arcabuz Tanegashima & Coronhada) **[CONCLUÍDO ✅]**
+   - ⛓️ `2.7`: Murasaki (Kusarigama — Foice Curta & Arremesso do Peso de Ferro) **[CONCLUÍDO ✅]**
+   - 💣 `2.8`: Kasumi (Kunoichi da Névoa — Adaga Tanto Híbrida, Bomba Horoku & Mina Remota) **[CONCLUÍDO ✅]**
+   - 🎭 `2.9`: Okuni (Dançarina Kabuki — Leques de Aço & Névoa Dokukiri) **[CONCLUÍDO ✅]**
+   - 🏹 `2.10`: Tomoe (Kyudo Onna-musha — Flecha Yumi & Hamaya Exorcista) **[CONCLUÍDO ✅]**
+   - 🏴‍☠️ `2.11`: Anne (Corsária Naval — Cutlass Cleave 180° & Pouch de Pólvora) **[CONCLUÍDO ✅]**
+   - ⚜️ `2.12`: Julie (Mosqueteira Real — Fleche Thrust & Pederneira de Bolso) **[CONCLUÍDO ✅]**
+   - 📿 `2.13`: Ren (Monge Shaolin — Palma de Ferro & Rugido Kiai) **[CONCLUÍDO ✅]**
+   - 🗡️ `2.14`: Chiyo (Kunoichi das Sombras — Kodachi Dupla Invertida) **[CONCLUÍDO ✅]**
+   - 🛡️ `2.15`: Benkei (Monge Guardião — Naginata Pesada & Hoist Slam) **[PRÓXIMO NA FILA 🎯]**
    - 🎶 `2.16`: O-Rin (Menestrel Cega — Shamisen & Lâminas de Vácuo Kamaitachi)
    - 🌾 `2.17`: Goro (Fazendeiro Rebelde — Enxada Kuwa & Fissura Terrestre)
    - 🦯 `2.18`: Ichi (Espadachim Cega — Saque Rápido da Shikomizue & Escuta)
@@ -52,7 +52,7 @@ Consulte o documento mestre [`docs/EXPANSION_ROADMAP_AND_DESIGN.md`](EXPANSION_R
    - ☯️ `2.20`: Seimei (Mestre Onmyoji — Rajada de Talismãs Ofuda & Barreira Sagrada)
    - 🎋 `2.21`: Daiki (Peregrino Yamabushi — Varredura com Bastão Bō & Salto com Vara)
    - ❄️ `2.22`: Aoi (Caçadora Ainu — Lança de Osso de Hokkaido & Armadilha de Urso)
-   - 🤼 `2.23`: Raiden (Campeão Yokozuna — Empurrões Tsuppari & Carga Tachiai)
+   - 🤼 `2.23`: Raiden (Campeão Yokozuna — Empurrões Tsuppari & Carga Tachiai) **[CONCLUÍDO ✅]**
    - ⚗️ `2.24`: Hendrika (Alquimista de Dejima — Estilete Cirúrgico & Frascos de Ácido)
 3. **Fase 3: Revamp Visual e Atmosférico das Arenas (24 Palcos)**
    - 📦 `A-3.1`: Santuários & Jardins Zen (6 Arenas)

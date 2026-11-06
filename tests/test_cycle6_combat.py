@@ -34,8 +34,8 @@ def test_raiden_combat_mechanics():
     print("--- Testando Raiden Tameemon ---")
     raiden = create_fighter(CHAR_RAIDEN, 10.0, 10.0)
     assert isinstance(raiden, RaidenSumo), "Fábrica deve instanciar RaidenSumo"
-    assert raiden.max_hp == 3, f"Raiden deve ter 3 HP, tem {raiden.max_hp}"
-    assert raiden.hp == 3, f"Raiden deve iniciar com 3 HP, tem {raiden.hp}"
+    assert raiden.max_hp == 2, f"Raiden deve ter 2 HP, tem {raiden.max_hp}"
+    assert raiden.hp == 2, f"Raiden deve iniciar com 2 HP, tem {raiden.hp}"
     assert abs(raiden.speed - 3.85) < 0.01, f"Velocidade deve ser 3.85, é {raiden.speed}"
     print("  [OK] Atributos base de Raiden: 3 HP, 3.85 velocidade")
 
@@ -73,8 +73,8 @@ def test_raiden_combat_mechanics():
     # 2. Poise / Hiperarmadura (não sofre stun durante ataque)
     hit, dead = raiden.take_hit((1.0, 0.0), damage=1)
     assert hit, "Deve receber o golpe"
-    assert not dead, "Não deve morrer com 1 de dano (tem 3 HP)"
-    assert raiden.hp == 2, f"HP deve ser 2, é {raiden.hp}"
+    assert not dead, "Não deve morrer com 1 de dano (tem 2 HP)"
+    assert raiden.hp == 1, f"HP deve ser 1, é {raiden.hp}"
     assert raiden.state in ("TSUPPARI_STRIKE_1", "TSUPPARI_STRIKE_2", "TSUPPARI_RUSH"), "Raiden não deve entrar em STUNNED durante ataque (Super Armor)"
     print("  [OK] Hiperarmadura / Poise absorve golpe sem interromper o ataque")
 

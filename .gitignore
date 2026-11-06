@@ -31,6 +31,8 @@ assets/sound_drafts/
 assets/Opening Videos/Take*
 assets/Opening Videos/Samurai_Edge_Opening.mp4
 assets/concepts/Ending Slides/*.mp4
+assets/promotional/*.mov
+assets/promotional/*.mp4
 src/i18n_backup.py
 
 # Tournament result dumps

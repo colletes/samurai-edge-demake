@@ -15,13 +15,14 @@ import pygame
 
 from src.entities import model_kit as mk
 from src.isometric import cloth
-from src.isometric.mesh_primitives import draw_ribbon_mesh_3d, draw_tapered_frustum_3d
+from src.isometric.mesh_primitives import draw_ribbon_mesh_3d, draw_tapered_frustum_3d, draw_portrait_face_3d
 
 DETAILED = {
     "suit": (26, 20, 36), "suit_dark": (16, 12, 22), "suit_light": (44, 34, 58),
     "wrap": (128, 54, 186), "wrap_dark": (84, 32, 126), "wrap_light": (185, 102, 246),
     "skin": (245, 218, 196), "skin_shadow": (212, 178, 155),
-    "neck": (26, 20, 36),
+    "neck": (118, 52, 172),  # Cor da máscara shinobi para evitar vazamento de pele sob a gola
+    "jaw": (118, 52, 172),
     "hair": (24, 18, 30), "hair_light": (72, 48, 92), "hair_dark": (14, 10, 18),
     "mask": (118, 52, 172), "mask_light": (172, 98, 234),
     "eye": (188, 88, 235), "eye_core": (245, 215, 255), "liner": (14, 10, 18),
@@ -36,7 +37,15 @@ DETAILED = {
 MATERIALS = {
     "suit": "latex", "suit_dark": "latex", "wrap": "latex", "wrap_dark": "latex", "wrap_light": "latex",
     "boot": "leather", "strap": "leather", "steel_dark": "metal", "steel": "metal", "steel_light": "chrome",
-    "mask": "latex", "mask_light": "latex", "ball": "metal", "chain": "metal", "blade": "steel", "edge": "steel"
+    "mask": "latex", "mask_light": "latex", "ball": "metal", "chain": "metal", "blade": "steel", "edge": "steel",
+    "wood": "wood", "sole": "leather", "gold_trim": "metal"
+}
+
+LEGACY_MATERIALS = {
+    "suit": "matte", "suit_dark": "matte", "wrap": "matte", "wrap_dark": "matte", "wrap_light": "matte",
+    "boot": "matte", "strap": "matte", "steel_dark": "matte", "steel": "matte", "steel_light": "matte",
+    "mask": "matte", "mask_light": "matte", "ball": "matte", "chain": "matte", "blade": "matte", "edge": "matte",
+    "wood": "matte", "sole": "matte", "gold_trim": "matte"
 }
 
 
@@ -49,22 +58,129 @@ def _smooth(x):
     return x * x * (3.0 - 2.0 * x)
 
 
-def _hand_pose(c, p=None):
-    """(mão direita da foice, mão esquerda da corrente) da pose atual, antes do respiro."""
+def _hands(c):
+    """Cinemática articulada modular de Murasaki: retorna (mão direita da foice, mão esquerda da corrente)."""
+    extra = getattr(c, "extra_props", {}) or {}
+    pose = extra.get("pose", "")
+    p = extra.get("p", getattr(c, "atk_progress", 0.0))
+    state = getattr(c, "state", "IDLE")
+
     bx, by, fx, fy, px, py, tz = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py, c.torso_z
-    if p is not None:  # ataque
-        if p < 0.3:
-            w = _smooth(p / 0.3)
+
+    # 1. ATAQUE PRIMÁRIO DE FOICE (Kama Strike)
+    if state == "ATTACK" or pose == "kama_strike":
+        prog = p if p is not None else 0.5
+        if prog < 0.3:
+            w = _smooth(prog / 0.3)
             right = (bx + fx * (0.10 - 0.18 * w) - px * 0.16, by + fy * (0.10 - 0.18 * w) - py * 0.16, tz + 0.27 + 0.14 * w)
-        elif p < 0.7:
-            t = (p - 0.3) / 0.4
+        elif prog < 0.7:
+            t = (prog - 0.3) / 0.4
             reach = 0.06 + 0.30 * math.sin(math.pi * t)
             lat = -0.17 + 0.34 * _smooth(t)
             right = (bx + fx * reach + px * lat, by + fy * reach + py * lat, tz + 0.41 - 0.34 * _smooth(t))
         else:
             right = (bx + fx * 0.14 + px * 0.17, by + fy * 0.14 + py * 0.17, tz + 0.07)
-        left = (bx + px * 0.19 - fx * 0.05, by + py * 0.19 - fy * 0.05, tz + 0.13 - 0.05 * math.sin(math.pi * p))
+        left = (bx + px * 0.19 - fx * 0.05, by + py * 0.19 - fy * 0.05, tz + 0.13 - 0.05 * math.sin(math.pi * prog))
         return right, left
+
+    # 2. ARREMESSO DO PESO & PUXÃO DE CORRENTE (Chain Drag)
+    if pose in ("chain_drag", "chain_pull") or state == "CHAIN_PULL":
+        u = _smooth(p)
+        left = (bx + fx * (0.15 + 0.22 * u) + px * 0.08, by + fy * (0.15 + 0.22 * u) + py * 0.08, tz + 0.16 + 0.04 * math.sin(u * math.pi))
+        right = (bx - fx * 0.06 - px * 0.15, by - fy * 0.06 - py * 0.15, tz + 0.24)
+        return right, left
+
+    # 3. SALTO MORTAL ACROBÁTICO / ESCUDO GIRATÓRIO (Chain Whirl Backflip)
+    if pose in ("chain_whirl_backflip", "chain_shield") or state in ("ROLL", "BACKFLIP"):
+        prog = extra.get("roll_prog", p)
+        tuck = math.sin(prog * math.pi)
+        left = (bx + fx * 0.14 + px * 0.12, by + fy * 0.14 + py * 0.12, tz + 0.18 + tuck * 0.04)
+        right = (bx + fx * 0.10 - px * 0.14, by + fy * 0.10 - py * 0.14, tz + 0.22 + tuck * 0.03)
+        return right, left
+
+    # 4. INTRO FASE 1: GIRO ORBITAL NO DEDO (finger_spin com transição fluida para palm_catch)
+    if pose == "finger_spin":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        idle_r = (bx - px * 0.15, by - py * 0.15, tz + 0.05)
+        idle_l = (bx + fx * 0.18 + px * 0.10, by + fy * 0.18 + py * 0.10, tz + 0.22)
+        spin_r = (bx - px * 0.14 + fx * 0.02, by - py * 0.14 + fy * 0.02, tz + 0.12)
+        spin_l = (bx + fx * 0.14 + px * 0.06, by + fy * 0.14 + py * 0.06, tz + 0.15)
+        return mk.lerp(idle_r, spin_r, u), mk.lerp(idle_l, spin_l, u)
+
+    # 5. INTRO FASE 2: PARADA NA PALMA & SAQUE DA FOICE (palm_catch com transição contínua para guarda)
+    if pose == "palm_catch":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        spin_r = (bx - px * 0.14 + fx * 0.02, by - py * 0.14 + fy * 0.02, tz + 0.12)
+        spin_l = (bx + fx * 0.14 + px * 0.06, by + fy * 0.14 + py * 0.06, tz + 0.15)
+        catch_r = (bx + fx * 0.20 - px * 0.10, by + fy * 0.20 - py * 0.10, tz + 0.18)
+        catch_l = (bx + fx * 0.06 + px * 0.17, by + fy * 0.06 + py * 0.17, tz + 0.06)
+        return mk.lerp(spin_r, catch_r, u), mk.lerp(spin_l, catch_l, u)
+
+    # 6. INTRO FASE 3: POSTURA DE COMBATE KUNOICHI (kunoichi_stance com respiração viva - 100% Animado)
+    if pose == "kunoichi_stance":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        glo_p = float(extra.get("p", 0.70 + 0.30 * u))
+        catch_r = (bx + fx * 0.20 - px * 0.10, by + fy * 0.20 - py * 0.10, tz + 0.18)
+        catch_l = (bx + fx * 0.06 + px * 0.17, by + fy * 0.06 + py * 0.17, tz + 0.06)
+        breathe = math.sin((glo_p * 14.0) + c.walk_timer * 2.5) * 0.014
+        sway = math.cos((glo_p * 10.0)) * 0.010
+        right = (catch_r[0] + sway, catch_r[1] + sway, catch_r[2] + breathe)
+        left = (catch_l[0] - sway, catch_l[1] - sway, catch_l[2] + breathe * 0.6)
+        return right, left
+
+    # 7. VITÓRIA FASE 1: RECOLHIMENTO ESPIRAL DA CORRENTE (chain_reel fluido conectando ao ombro)
+    if pose == "chain_reel":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        idle_r = (bx + fx * 0.20 - px * 0.10, by + fy * 0.20 - py * 0.10, tz + 0.18)
+        idle_l = (bx + fx * 0.06 + px * 0.17, by + fy * 0.06 + py * 0.17, tz + 0.06)
+        reel_r = (bx - px * 0.10 + fx * 0.03, by - py * 0.10 + fy * 0.03, tz + 0.32)
+        reel_l = (bx + px * 0.15, by + py * 0.15, tz + 0.05)
+        return mk.lerp(idle_r, reel_r, u), mk.lerp(idle_l, reel_l, u)
+
+    # 8. VITÓRIA FASE 2: FOICE NO OMBRO (kama_rest transicionando para saque de bomba)
+    if pose == "kama_rest":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        reel_r = (bx - px * 0.10 + fx * 0.03, by - py * 0.10 + fy * 0.03, tz + 0.32)
+        reel_l = (bx + px * 0.15, by + py * 0.15, tz + 0.05)
+        rest_r = (bx - px * 0.10 + fx * 0.10, by - py * 0.10 + fy * 0.10, tz + 0.22)
+        rest_l = (bx + px * 0.02 + fx * 0.10, by + py * 0.02 + fy * 0.10, tz + 0.20)
+        return mk.lerp(reel_r, rest_r, u), mk.lerp(reel_l, rest_l, u)
+
+    # 9. VITÓRIA FASE 3: SUMIÇO EM NÉVOA SHINOBI (shadow_vanish - 100% Animado)
+    if pose == "shadow_vanish":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        glo_p = float(extra.get("p", 0.75 + 0.25 * u))
+        rest_r = (bx - px * 0.10 + fx * 0.10, by - py * 0.10 + fy * 0.10, tz + 0.22)
+        rest_l = (bx + px * 0.02 + fx * 0.10, by + py * 0.02 + fy * 0.10, tz + 0.20)
+        vanish_r = (bx + fx * 0.10 - px * 0.04, by + fy * 0.10 - py * 0.04, tz + 0.20)
+        vanish_l = (bx + fx * 0.10 + px * 0.04, by + fy * 0.10 + py * 0.04, tz + 0.20)
+        base_r = mk.lerp(rest_r, vanish_r, u)
+        base_l = mk.lerp(rest_l, vanish_l, u)
+        wave = math.sin((glo_p * 18.0)) * 0.016
+        breathe = math.cos((glo_p * 10.0)) * 0.012
+        return (base_r[0] - wave, base_r[1] - wave, base_r[2] + breathe), (base_l[0] + wave, base_l[1] + wave, base_l[2] + breathe)
+
+    # 10. FINISHER A: KAMAITACHI CHAIN DECAP (finisher_decap)
+    if pose == "finisher_decap":
+        u = _smooth(p)
+        if u < 0.40:
+            right = (bx + fx * 0.22 - px * 0.10, by + fy * 0.22 - py * 0.10, tz + 0.22)
+            left = (bx + fx * 0.22 + px * 0.10, by + fy * 0.22 + py * 0.10, tz + 0.22)
+        else:
+            v = (u - 0.40) / 0.60
+            right = (bx + fx * 0.32 + px * 0.08, by + fy * 0.32 + py * 0.08, tz + 0.12 + 0.32 * v)
+            left = (bx - px * 0.12, by - py * 0.12, tz + 0.15)
+        return right, left
+
+    # 11. FINISHER B: SENPUU CHAIN SHRED TORNADO (finisher_tornado_shred)
+    if pose == "finisher_tornado_shred":
+        u = _smooth(p)
+        ang = u * math.pi * 4.0
+        left = (bx + math.cos(ang) * 0.22, by + math.sin(ang) * 0.22, tz + 0.18)
+        right = (bx - math.cos(ang) * 0.16, by - math.sin(ang) * 0.16, tz + 0.20)
+        return right, left
+
+    # Postura base com respiração / caminhada
     bob = math.sin(c.walk_timer * 2.8) * 0.015
     if c.is_moving:
         sw = math.sin(c.walk_timer * 9.0)
@@ -75,13 +191,23 @@ def _hand_pose(c, p=None):
             (bx + fx * 0.13 + px * 0.18, by + fy * 0.13 + py * 0.18, tz - 0.01 + bob))
 
 
+def _hand_pose(c, p=None):
+    return _hands(c)
+
+
 def idle_arms(c):
-    right, left = _hand_pose(c)
+    right, left = _hands(c)
     return left, right
 
 
 def attack_arms(c):
-    right, left = _hand_pose(c, c.atk_progress)
+    right, left = _hands(c)
+    return left, right
+
+
+def get_arms(c):
+    """Exposição modular da cinemática dos braços para sincronização com o renderizador humanoide."""
+    right, left = _hands(c)
     return left, right
 
 
@@ -90,9 +216,18 @@ walk_arms = idle_arms
 
 def _kama_dirs(c, arm_r):
     """(direção do cabo, lado para onde a lâmina se curva) da foice conforme a pose."""
+    extra = getattr(c, "extra_props", {}) or {}
+    pose = extra.get("pose", "")
     f, p = (c.fx, c.fy, 0.0), (c.px, c.py, 0.0)
-    if c.is_melee:
-        q = c.atk_progress
+
+    # Pose de descanso da foice no ombro (Vitória)
+    if pose == "kama_rest":
+        kd = mk.norm((-c.fx * 0.35 - c.px * 0.20, -c.fy * 0.35 - c.py * 0.20, 0.88))
+        bs = mk.norm((c.px, c.py, 0.0))
+        return kd, bs
+
+    if c.is_melee or pose in ("kama_strike", "finisher_decap"):
+        q = extra.get("p", c.atk_progress)
         if q < 0.3:
             return mk.norm((-c.fx * 0.35, -c.fy * 0.35, 0.95)), mk.norm(f)
         t = _smooth((q - 0.3) / 0.45)
@@ -109,7 +244,58 @@ def _orbit_radius(q):
 
 
 def _ball_state(c, arm_l):
-    """Posição da bola, ponto de controle da curva da corrente e a fase do giro (None fora do ataque)."""
+    """Posição da bola, ponto de controle da curva da corrente e fase de giro."""
+    extra = getattr(c, "extra_props", {}) or {}
+    pose = extra.get("pose", "")
+    p = extra.get("p", getattr(c, "atk_progress", 0.0))
+
+    # Giro no dedo (Intro) com desaceleração contínua convergindo para a palma
+    if pose == "finger_spin":
+        u = _smooth(p)
+        theta = pygame.time.get_ticks() * 0.018 * (1.0 - 0.4 * u)
+        r = 0.22 * (1.0 - 0.7 * u)
+        pos = (arm_l[0] + (math.cos(theta) * c.fx + math.sin(theta) * c.px) * r,
+               arm_l[1] + (math.cos(theta) * c.fy + math.sin(theta) * c.py) * r,
+               arm_l[2] + 0.06 - 0.03 * u)
+        return pos, arm_l, theta
+
+    # Parada na palma (Intro)
+    if pose == "palm_catch":
+        pos = (arm_l[0] + c.fx * 0.02, arm_l[1] + c.fy * 0.02, arm_l[2] + 0.03)
+        return pos, None, None
+
+    # Enrolada no braço (Vitória) com recolhimento espiral contínuo
+    if pose == "chain_reel":
+        u = _smooth(p)
+        theta = u * math.pi * 6.0
+        r = 0.16 * (1.0 - 0.75 * u)
+        pos = (arm_l[0] + (math.cos(theta) * c.px) * r - c.fx * 0.02,
+               arm_l[1] + (math.cos(theta) * c.py) * r - c.fy * 0.02,
+               arm_l[2] - 0.02 - 0.04 * u)
+        return pos, arm_l, None
+
+    if pose in ("kama_rest", "shadow_vanish"):
+        pos = (arm_l[0] - c.fx * 0.02, arm_l[1] - c.fy * 0.02, arm_l[2] - 0.04)
+        return pos, None, None
+
+    # Escudo giratório / Backflip
+    if pose in ("chain_whirl_backflip", "chain_shield") or getattr(c, "state", "") in ("ROLL", "BACKFLIP"):
+        theta = pygame.time.get_ticks() * 0.035
+        r = 0.48
+        pos = (c.base_x + c.fx * 0.35 + c.px * (math.cos(theta) * 0.35),
+               c.base_y + c.fy * 0.35 + c.py * (math.cos(theta) * 0.35),
+               c.base_z + 0.60 + math.sin(theta) * r)
+        return pos, arm_l, theta
+
+    # Arremesso de tração (Chain Drag)
+    if pose in ("chain_drag", "chain_pull") or getattr(c, "state", "") == "CHAIN_PULL":
+        u = _smooth(p)
+        reach = 0.30 + 3.20 * math.sin(u * math.pi)
+        pos = (c.base_x + c.fx * reach, c.base_y + c.fy * reach, c.base_z + 0.55)
+        ctrl = (c.base_x + c.fx * (reach * 0.5), c.base_y + c.fy * (reach * 0.5), c.base_z + 0.70)
+        return pos, ctrl, None
+
+    # Ataque melee com Kama
     if c.is_melee:
         q = c.atk_progress
         theta = -2.2 + 5.0 * q
@@ -121,6 +307,8 @@ def _ball_state(c, arm_l):
         ctrl = (c.base_x + (math.cos(lag) * c.fx + math.sin(lag) * c.px) * radius * 0.6,
                 c.base_y + (math.cos(lag) * c.fy + math.sin(lag) * c.py) * radius * 0.6, c.base_z + 0.55)
         return pos, ctrl, theta
+
+    # Repouso / caminhada com inércia física pendular
     t = c.walk_timer
     sway = math.sin(t * (7.0 if c.is_moving else 1.9)) * (0.07 if c.is_moving else 0.035)
     drop = 0.30 if not c.is_moving else 0.26
@@ -267,10 +455,12 @@ def draw_behind(c):
             _side_lock(c, s)
 
     # 3. Foice e corrente se as mãos estiverem atrás do tronco (ocluídas pelo dorso)
-    hand_r, hand_l = _hand_pose(c, c.atk_progress if c.is_melee else None)
-    d_gear = mk.depth(c, (hand_r[0] + hand_l[0]) * 0.5, (hand_r[1] + hand_l[1]) * 0.5)
+    hand_r, hand_l = _hands(c)
+    hr = (hand_r[0], hand_r[1], hand_r[2] - 0.065)
+    hl = (hand_l[0], hand_l[1], hand_l[2] - 0.065)
+    d_gear = mk.depth(c, (hr[0] + hl[0]) * 0.5, (hr[1] + hl[1]) * 0.5)
     if d_gear < d_torso:
-        _draw_gear(c, hand_l, hand_r)
+        _draw_gear(c, hl, hr)
 
 
 def draw_legs(c):
@@ -418,13 +608,20 @@ def draw_head(c):
     """
     P = pal()
     bx, by, hz, fx, fy, px, py = c.base_x, c.base_y, c.head_z, c.fx, c.fy, c.px, c.py
+    extra = getattr(c, "extra_props", {}) or {}
+    legacy = extra.get("legacy_mode", False)
 
-    # 1. Mechas laterais no lado voltado para a câmera
+    # 1. Rosto HD esculpido via draw_portrait_face_3d (quando a face está virada para a câmera)
+    if not legacy and mk.depth(c, fx, fy) > -0.05:
+        draw_portrait_face_3d(c, char_type="murasaki")
+        c._face_drawn = True
+
+    # 2. Mechas laterais no lado voltado para a câmera
     for s in (-1.0, 1.0):
         if not _lock_is_behind(c, s):
             _side_lock(c, s)
 
-    # 2. Franja repartida anime flutuante na parte superior da testa
+    # 3. Franja repartida anime flutuante na parte superior da testa
     if mk.facing_camera(c):
         front_d = c.head_w * 0.50 + 0.005
         for s in (-1.0, 1.0):
@@ -443,7 +640,7 @@ def draw_head(c):
                 alpha=c.alpha,
             )
 
-    # 3. Coque e fitas esvoaçantes se estiverem no lado voltado para a câmera (ex: costas ou perfil)
+    # 4. Coque e fitas esvoaçantes se estiverem no lado voltado para a câmera (ex: costas ou perfil)
     bp = _bun_pos(c)
     if not _behind(c, bp):
         _draw_bun(c)
@@ -453,11 +650,11 @@ def draw_head(c):
 def draw_front(c, arm_l, arm_r):
     """Camada frontal: desenhada após o corpo se as armas estiverem à frente do tronco."""
     d_torso = mk.depth(c, c.base_x, c.base_y)
-    hand_r = (arm_r[0], arm_r[1], arm_r[2] - 0.065)
-    hand_l = (arm_l[0], arm_l[1], arm_l[2] - 0.065)
-    d_gear = mk.depth(c, (hand_r[0] + hand_l[0]) * 0.5, (hand_r[1] + hand_l[1]) * 0.5)
+    hl = (arm_l[0], arm_l[1], arm_l[2] - 0.065)
+    hr = (arm_r[0], arm_r[1], arm_r[2] - 0.065)
+    d_gear = mk.depth(c, (hr[0] + hl[0]) * 0.5, (hr[1] + hl[1]) * 0.5)
     if d_gear >= d_torso:
-        _draw_gear(c, hand_l, hand_r)
+        _draw_gear(c, hl, hr)
 
 
 def _kama(c, hand, kd, bs):

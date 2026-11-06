@@ -215,10 +215,12 @@ def idle_arms(c):
         return (left[0], left[1], left[2] + 0.065), (grip_r[0], grip_r[1], grip_r[2] + 0.065)
 
     if pose == "victory_bow":
-        # Reverência serena com a mão esquerda na saya e direita relaxada no cabo
+        # Reverência serena com a mão esquerda na saya e direita relaxada no cabo (100% Animado)
+        u = float(extra.get("seg_u", 0.5))
+        bow_depth = math.sin(u * math.pi) * 0.048
         grip = mk.add(k, b, -0.07)
         left = mk.add(k, b, 0.08)
-        return (left[0], left[1], left[2] + 0.06), (grip[0], grip[1], grip[2] + 0.06)
+        return (left[0], left[1], left[2] + 0.06 - bow_depth), (grip[0], grip[1], grip[2] + 0.06 - bow_depth)
 
     if state == "IAI_STARTUP" or pose == "koiguchi_glint":
         # Postura Iai profunda com o polegar esquerdo destravando a tsuba (Koiguchi-kiri) e mão direita pronta para sacar
@@ -226,9 +228,11 @@ def idle_arms(c):
         left = mk.add(k, b, 0.02)
         return (left[0], left[1], left[2] + 0.07), (grip[0], grip[1], grip[2] + 0.07)
 
+    glo_p = float(extra.get("p", 0.0))
+    breathe = math.sin((glo_p * 12.0) + getattr(c, "walk_timer", 0.0) * 2.5) * 0.008
     grip = mk.add(k, b, -0.08)
     left = mk.add(k, b, 0.09)
-    return (left[0], left[1], left[2] + 0.07), (grip[0], grip[1], grip[2] + 0.07)
+    return (left[0], left[1], left[2] + 0.07 + breathe), (grip[0], grip[1], grip[2] + 0.07 + breathe)
 
 
 def walk_arms(c):

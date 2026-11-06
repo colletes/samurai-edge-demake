@@ -100,7 +100,21 @@ class RenMonk(Samurai):
 
     def trigger_punch_combo(self, target_wx: float, target_wy: float):
         """Ataque Primário: Combo Shaolin ritmado de 3 acertos (Soco -> Palma -> Chute)."""
-        if not self.is_alive or self.state in (STATE_STUNNED, STATE_DEAD, STATE_ROLL, "KIAI_SHOUT"):
+        if not self.is_alive or self.state in (STATE_STUNNED, STATE_DEAD, "KIAI_SHOUT"):
+            return False
+
+        # Cancelamento ofensivo de esquiva: nos últimos 40% do roll (state_timer <= 0.08s)
+        if self.state == STATE_ROLL:
+            if self.state_timer <= 0.08:
+                self.state = STATE_IDLE
+                self.roll_recovery_timer = 0.0
+                self.dash_recovery_timer = 0.0
+                self.set_facing(target_wx, target_wy)
+                next_step = 2 if self.combo_step == 1 else 1
+                self.combo_target_step = next_step
+                self.combo_buffered = False
+                self._start_combo_step(next_step)
+                return True
             return False
 
         # Se já está executando um golpe do combo, enfileira (buffer) o próximo sem cancelar o golpe atual!
@@ -309,17 +323,30 @@ class RenMonk(Samurai):
                 pygame.draw.circle(kiai_surf, (255, 160, 40, alpha // 2), (r_px + 5, r_px + 5), max(1, r_px - 4), 2)
                 surface.blit(kiai_surf, (cx - r_px - 5, cy - r_px - 5))
 
+        extra_props = {
+            "ssaa_2x": True,
+            "pose_lerp_tracker": getattr(self, "pose_lerp_tracker", None),
+            "combo_step": max(1, self.combo_step),
+            "hyakuretsu_phase": getattr(self, "hyakuretsu_phase", None),
+            "hyakuretsu_clock": getattr(self, "hyakuretsu_clock", 0.0),
+            "hyakuretsu_punch_count": getattr(self, "hyakuretsu_punch_count", 0),
+        }
+
+        # Animação dinâmica do Salto Acrobático Shaolin (somersault 360°)
+        if self.state == STATE_ROLL:
+            roll_prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration))))
+            extra_props["roll_prog"] = roll_prog
+            extra_props["pose"] = "shaolin_roll"
+            extra_props["somersault_angle"] = 360.0 * roll_prog
+            extra_props["somersault_pivot_z"] = self.wz + 0.28
+            extra_props["is_roll"] = True
+
         render_voxel_humanoid(
             surface, camera, self.wx, self.wy, self.wz,
             self.facing_x, self.facing_y, self.state, self.state_timer,
             self.is_alive, char_type="ren", walk_timer=self.walk_cycle,
             alpha=self.alpha, is_moving=self.is_moving,
-            extra_props={
-                "combo_step": max(1, self.combo_step),
-                "hyakuretsu_phase": getattr(self, "hyakuretsu_phase", None),
-                "hyakuretsu_clock": getattr(self, "hyakuretsu_clock", 0.0),
-                "hyakuretsu_punch_count": getattr(self, "hyakuretsu_punch_count", 0),
-            }
+            extra_props=extra_props
         )
 
     render_voxel = render

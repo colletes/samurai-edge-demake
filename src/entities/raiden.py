@@ -18,7 +18,7 @@ import pygame
 
 from src.entities.samurai import (
     Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY,
-    STATE_PARRY, STATE_STUNNED, STATE_ROLL, resolve_playable_bounds,
+    STATE_PARRY, STATE_STUNNED, STATE_ROLL, STATE_DASH, resolve_playable_bounds,
 )
 from src.entities.voxel_models import render_voxel_humanoid
 from src.effects.particles import SparkParticle, BloodParticle, FloatingBanner
@@ -33,8 +33,8 @@ class RaidenSumo(Samurai):
         super().__init__(wx, wy, name="Raiden")
         self.char_type = "raiden"
         self.speed = 3.85
-        self.max_hp = 3
-        self.hp = 3
+        self.max_hp = 2  # Padronizado com os outros 23 combatentes (morte em 2 golpes)
+        self.hp = 2
         self.can_parry = True
 
         # Ataque Primário: Combo de 2 Golpes Pesados de Sumô (Harite -> Morote-Tsuppari)
@@ -269,6 +269,11 @@ class RaidenSumo(Samurai):
 
     def take_hit(self, slash_dir: tuple[float, float], damage: int = 1) -> tuple[bool, bool]:
         """Hiperarmadura / Poise: Raiden não sofre flinch/stun se estiver atacando ou investindo."""
+        if not self.is_alive:
+            return False, False
+        if getattr(self, "is_invulnerable_dodge", False) or self.state in (STATE_ROLL, STATE_DASH):
+            if getattr(self, "is_invulnerable_dodge", False):
+                return False, False
         self.hp -= damage
         if self.hp <= 0:
             self.hp = 0

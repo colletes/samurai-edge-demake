@@ -197,9 +197,10 @@ def _current_hands(c):
         return left, (rx, ry, rz)
 
     elif pose == "shinobi_stance":
-        sw = math.sin(c.walk_timer * 2.8) * 0.010
-        right = (bx + fx * 0.08 - px * 0.12, by + fy * 0.08 - py * 0.12, tz + 0.10 + sw)
-        left = (bx + fx * 0.20 + px * 0.08, by + fy * 0.20 + py * 0.08, tz + 0.12 + sw)
+        sw = math.sin((p * 14.0) + c.walk_timer * 2.8) * 0.012
+        breathe = math.cos((p * 8.0)) * 0.010
+        right = (bx + fx * 0.08 - px * 0.12, by + fy * 0.08 - py * 0.12, tz + 0.10 + sw + breathe)
+        left = (bx + fx * 0.20 + px * 0.08, by + fy * 0.20 + py * 0.08, tz + 0.12 + sw - breathe)
         return left, right
 
     elif pose == "reverse_slash":
@@ -209,10 +210,11 @@ def _current_hands(c):
         return attack_arms(c, progress=0.75)
 
     elif pose == "kuji_kiri":
-        # Mãos sobem suavemente e tecem os 9 selos sagrados (Kuji-Kiri) na altura do coração
-        prog = _smooth(min(1.0, p * 2.2))
-        weave_x = math.sin(p * 20.0) * 0.015
-        weave_z = math.cos(p * 16.0) * 0.012
+        # Mãos sobem suavemente e tecem os 9 selos sagrados (Kuji-Kiri) na altura do coração (100% Animado)
+        seg_u = float((c.extra_props or {}).get("seg_u", p / 0.45 if p < 0.45 else 1.0))
+        prog = _smooth(seg_u)
+        weave_x = math.sin(p * 24.0) * 0.016
+        weave_z = math.cos(p * 18.0) * 0.012
         rx = bx + fx * (0.12 + 0.05 * prog) - px * (0.08 * (1.0 - prog) + 0.02 * prog) + px * weave_x
         ry = by + fy * (0.12 + 0.05 * prog) - py * (0.08 * (1.0 - prog) + 0.02 * prog) + py * weave_x
         rz = tz + 0.08 + 0.12 * prog + weave_z
@@ -222,14 +224,22 @@ def _current_hands(c):
         return (lx, ly, lz), (rx, ry, rz)
 
     elif pose == "smoke_vanish":
-        # Mãos se separam vigorosamente para baixo e para trás em dispersão ninja
-        snap = _smooth(min(1.0, p * 3.0))
-        rx = bx + fx * (0.17 * (1.0 - snap) - 0.08 * snap) - px * (0.02 * (1.0 - snap) + 0.22 * snap)
-        ry = by + fy * (0.17 * (1.0 - snap) - 0.08 * snap) - py * (0.02 * (1.0 - snap) + 0.22 * snap)
-        rz = tz + 0.20 * (1.0 - snap) + 0.02 * snap
-        lx = bx + fx * (0.17 * (1.0 - snap) - 0.08 * snap) + px * (0.02 * (1.0 - snap) + 0.22 * snap)
-        ly = by + fy * (0.17 * (1.0 - snap) - 0.08 * snap) + py * (0.02 * (1.0 - snap) + 0.22 * snap)
-        lz = tz + 0.20 * (1.0 - snap) + 0.02 * snap
+        # Mãos se separam vigorosamente para baixo e para trás em dispersão ninja (100% Animado)
+        seg_u = float((c.extra_props or {}).get("seg_u", (p - 0.45) / 0.55 if p >= 0.45 else 0.0))
+        snap = _smooth(seg_u)
+        sway = math.sin(p * 18.0) * 0.014
+        start_r = (bx + fx * 0.17 - px * 0.02, by + fy * 0.17 - py * 0.02, tz + 0.20)
+        start_l = (bx + fx * 0.17 + px * 0.02, by + fy * 0.17 + py * 0.02, tz + 0.20)
+        end_r = (bx - fx * 0.08 - px * 0.22, by - fy * 0.08 - py * 0.22, tz + 0.02)
+        end_l = (bx - fx * 0.08 + px * 0.22, by - fy * 0.08 + py * 0.22, tz + 0.02)
+        cur_r = mk.lerp(start_r, end_r, snap)
+        cur_l = mk.lerp(start_l, end_l, snap)
+        rx = cur_r[0] - px * sway
+        ry = cur_r[1] - py * sway
+        rz = cur_r[2] + sway
+        lx = cur_l[0] + px * sway
+        ly = cur_l[1] + py * sway
+        lz = cur_l[2] + sway
         return (lx, ly, lz), (rx, ry, rz)
 
     # 3. Ataque Melee

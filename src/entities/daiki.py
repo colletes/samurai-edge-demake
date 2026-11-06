@@ -26,16 +26,16 @@ class DaikiPilgrim(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Daiki")
         self.char_type = "daiki"
-        self.speed = 4.40  # Velocidade calibrada de peregrino
+        self.speed = 4.65  # Velocidade ágil de peregrino montanhês
         self.max_hp = 2
         self.hp = 2
         self.can_parry = True
 
         # Ataque Primário: Estocada & Varredura de Bastão Bō (Longo Alcance)
-        self.bo_duration = 0.22
-        self.bo_recovery = 0.58        # Janela de recuperação com giro acrobático do bastão
-        self.bo_reach = 2.10           # Calibrado: alcance balanceado com giro
-        self.bo_radius = 1.25
+        self.bo_duration = 0.20
+        self.bo_recovery = 0.26        # Recovery veloz eliminando vulnerabilidade prolongada
+        self.bo_reach = 2.35           # Alcance ampliado condizente com a envergadura do bastão
+        self.bo_radius = 1.30
         self.flourish_spin_active = False
         self.recovery_max_time = self.bo_recovery
 

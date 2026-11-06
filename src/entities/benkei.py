@@ -29,7 +29,7 @@ class BenkeiSamurai(Samurai):
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, name="Benkei")
         self.char_type = "benkei"
-        self.speed = 4.0  # Walking Tank (movimentação pesada e sólida)
+        self.speed = 4.35  # Passo firme e vigoroso de monge guerreiro
         self.max_hp = 2
         self.hp = 2
         self.can_parry = False  # Sem parry técnico por design
@@ -39,10 +39,10 @@ class BenkeiSamurai(Samurai):
         self.active_naginata_projectile = None
 
         # Parâmetros da Estocada Primária (Colossal Thrust)
-        self.thrust_duration = 0.22  # Duração acelerada (era 0.28s) para maior responsividade
+        self.thrust_duration = 0.18  # Duração ágil e impetuosa
         self.thrust_reach = 3.2
         self.thrust_radius = 1.45
-        self.thrust_recovery = 0.28  # Recovery calibrado (era 0.38s)
+        self.thrust_recovery = 0.18  # Recovery reduzido para evitar vulnerabilidade estática excessiva
         self.thrust_timer = 0.0
 
         # Parâmetros do Arremesso Secundário

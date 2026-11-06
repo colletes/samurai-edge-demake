@@ -310,6 +310,14 @@ def intro_arms(c):
                  stand_r[2] + (knee_r[2] - stand_r[2]) * squat_t)
         return left, right
 
+    elif pose == "sumo_kamae":
+        u = float(extra.get("seg_u", 0.5))
+        glo_p = float(extra.get("p", 0.78 + 0.22 * u))
+        breathe = math.sin(glo_p * 12.0) * 0.012
+        left = (bx + fx * 0.22 + px * 0.16, by + fy * 0.22 + py * 0.16, tz + 0.12 + breathe)
+        right = (bx + fx * 0.22 - px * 0.16, by + fy * 0.22 - py * 0.16, tz + 0.12 - breathe)
+        return left, right
+
     return idle_arms(c)
 
 
@@ -320,11 +328,8 @@ def victory_arms(c):
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
 
     if pose == "shiko_raise":
-        if "seg_u" in extra:
-            u = float(extra["seg_u"])
-            raise_t = _smooth(u / 0.65) if u < 0.65 else 1.0
-        else:
-            raise_t = 1.0
+        u = float(extra.get("seg_u", 0.5))
+        raise_t = _smooth(u)
 
         stand_l = (bx + px * 0.18, by + py * 0.18, tz + 0.08)
         stand_r = (bx - px * 0.18, by - py * 0.18, tz + 0.08)
@@ -339,10 +344,25 @@ def victory_arms(c):
                  stand_r[2] + (pose_r[2] - stand_r[2]) * raise_t)
         return left, right
 
-    elif pose in ("shiko_stomp", "mawashi_fists"):
-        # Ambos os punhos cerrados e apoiados firmemente na cintura/mawashi
-        left = (bx + px * 0.21, by + py * 0.21, tz - 0.02)
-        right = (bx - px * 0.21, by - py * 0.21, tz - 0.02)
+    elif pose == "shiko_stomp":
+        u = float(extra.get("seg_u", 0.5))
+        top_l = (bx + px * 0.24, by + py * 0.24, tz + 0.04)
+        top_r = (bx - px * 0.28, by - py * 0.28, tz + 0.32)
+        stomp_l = (bx + px * 0.21, by + py * 0.21, tz - 0.02)
+        stomp_r = (bx - px * 0.21, by - py * 0.21, tz - 0.02)
+        stomp_drop = math.sin(_smooth(u) * math.pi) * 0.03
+        cur_l = mk.lerp(top_l, stomp_l, _smooth(u))
+        cur_r = mk.lerp(top_r, stomp_r, _smooth(u))
+        return (cur_l[0], cur_l[1], cur_l[2] - stomp_drop), (cur_r[0], cur_r[1], cur_r[2] - stomp_drop)
+
+    elif pose == "mawashi_fists":
+        # Ambos os punhos cerrados e apoiados firmemente na cintura/mawashi com rugido telúrico (100% Animado)
+        u = float(extra.get("seg_u", 0.5))
+        glo_p = float(extra.get("p", 0.74 + 0.26 * u))
+        bellow = math.sin(glo_p * 14.0) * 0.014
+        breathe = math.cos(glo_p * 8.0) * 0.010
+        left = (bx + px * 0.21, by + py * 0.21, tz - 0.02 + bellow + breathe)
+        right = (bx - px * 0.21, by - py * 0.21, tz - 0.02 + bellow - breathe)
         return left, right
 
     return idle_arms(c)
@@ -390,6 +410,9 @@ def _current_hands(c):
         return attack_arms(c)
 
     return idle_arms(c)
+
+
+get_arms = _current_hands
 
 
 # ---------------------------------------------------------------------------------------------------------------------

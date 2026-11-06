@@ -365,8 +365,10 @@ class SoundManager:
             return self._play_music_file(self.current_music_track, loops=loops, start_pos=pos_seconds)
         return False
 
-    def stop_music(self, fade_ms: int = 500):
+    def stop_music(self, fade_ms: int = 500, fadeout_ms: int | None = None, **kwargs):
         """Para a música com fadeout suave."""
+        if fadeout_ms is not None:
+            fade_ms = fadeout_ms
         self._pending_music = None
         self._pending_music_timer = 0.0
         self._pending_music_deadline = 0

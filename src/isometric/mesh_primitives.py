@@ -630,6 +630,7 @@ PORTRAIT_FACE_STYLES = {
         "brow_tilt": 0.25, "stubble": True, "delicate_nose": False,
         "eye_z": 0.078, "brow_z": 0.102, "spacing": 0.035,
         "chin_strap": True, "strap_col": (225, 215, 195),
+        "hd_anime_eyes": True,
     },
     "teppo": {
         "iris": (68, 50, 38), "iris_core": (115, 88, 62), "iris_limbal": (32, 24, 18),
@@ -637,6 +638,7 @@ PORTRAIT_FACE_STYLES = {
         "brow_tilt": 0.25, "stubble": True, "delicate_nose": False,
         "eye_z": 0.078, "brow_z": 0.102, "spacing": 0.035,
         "chin_strap": True, "strap_col": (225, 215, 195),
+        "hd_anime_eyes": True,
     },
     "ninja": {
         "iris": (235, 185, 45), "iris_core": (255, 225, 95), "iris_limbal": (75, 50, 15),

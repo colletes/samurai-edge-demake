@@ -33,9 +33,9 @@ class OrinMinstrel(Samurai):
         self.hp = 2
 
         # Ataque Primário: Kamaitachi (Lâmina Sônica de Vácuo)
-        self.attack_duration = 0.18
-        self.attack_recovery = 0.24
-        self.kamaitachi_cooldown = 0.65  # Cadência controlada com intervalo entre dedilhados
+        self.attack_duration = 0.16
+        self.attack_recovery = 0.18
+        self.kamaitachi_cooldown = 0.45  # Cadência ágil de dedilhado no Shamisen
         self.kamaitachi_timer = 0.0
 
         # Ação Secundária: Acorde de Ressonância Mortal (3 ondas em espiral a 120°)

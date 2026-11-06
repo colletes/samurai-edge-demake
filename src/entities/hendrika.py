@@ -71,7 +71,7 @@ class HendrikaAlchemist(Samurai):
         self.reagent_surface_timer = 0.0
         self.surface_sample_reagent = "acid"
         self.last_harvested_reagent = "acid"
-        self.flask_cooldown = 2.8
+        self.flask_cooldown = 3.6  # Calibrado para espaçar poças químicas e controle de arena
         self.flask_timer = 0.0
         self.active_flasks: list[AlchemicFlaskProjectile] = []
         self.active_pools: list[ChemicalPoolHazard] = []

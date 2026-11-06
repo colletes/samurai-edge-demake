@@ -503,10 +503,143 @@ CHARACTER_ANIM_BUTTONS = {
         ("FINISHER_1", "F1. Finisher A: Gatotsu Shinkan (Empalamento)", 1.25),
         ("FINISHER_2", "F2. Finisher B: Zeroshiki Bakutotsu (Bissecção 2 Partes)", 1.35),
     ],
+    "teppo": [
+        ("IDLE", "1. Idle (Postura Ashigaru & Mecha Acesa)", 0.0),
+        ("WALK", "2. Walk (Marcha de Infantaria)", 0.0),
+        ("PRIMARY_SHOT", "3. Golpe 1: Tiro Tanegashima (26 m/s & Recuo)", 0.65),
+        ("RIFLE_BUTT", "4. Golpe 2: Coronhada de Carvalho (Knockback & Stun)", 0.55),
+        ("RAMROD_RELOAD", "5. Recarga: Vareta de Ferro (Ramrod Pump)", 0.85),
+        ("POWDER_TRAP", "6. Secundário: Mina de Pólvora (Zoneamento)", 0.60),
+        ("TRENCH_DIVE", "7. Esquiva: Trench Ashigaru Dive & Auto-Reload", 0.60),
+        ("PARRY_DEFENSE", "8. Guarda: Bloqueio do Cano de Ferro", 0.50),
+        ("INTRO", "9. Intro: Sopro na Brasa da Mecha & Pontaria", 2.00),
+        ("VICTORY", "0. Vitória: Fuzil no Ombro & Cachimbo Kiseru", 2.20),
+        ("FINISHER_1", "F1. Finisher A: Headshot Explode (一発必中)", 1.25),
+        ("FINISHER_2", "F2. Finisher B: Hayago Keg Blast (Detonação)", 1.35),
+    ],
+    "murasaki": [
+        ("IDLE", "1. Idle (Postura Kunoichi)", 0.0),
+        ("WALK", "2. Walk (Passada Silenciosa)", 0.0),
+        ("KAMA_STRIKE", "3. Golpe 1: Kama Strike (Precedência / 1.30m)", 0.54),
+        ("CHAIN_DRAG", "4. Golpe 2: Chain Drag (Grapple / 3.80m / 1 HP)", 0.65),
+        ("BACKFLIP", "5. Salto: Chain Whirl Backflip (360° / Escudo)", 0.55),
+        ("DODGE_CANCEL", "6. Cancelamento: Backflip -> Kama Strike", 0.60),
+        ("PARRY_GROUND", "7. Reação: Parry no Solo", 0.40),
+        ("PARRY_AERIAL", "8. Reação: Parry Aéreo", 0.45),
+        ("INTRO", "9. Intro: Giro no Dedo -> Parada Palma -> Guarda", 2.20),
+        ("VICTORY", "0. Vitória: Recolhe Corrente -> Ombro -> Sumiço", 2.40),
+        ("FINISHER_1", "F1. Finisher A: Kamaitachi Chain Decap (三弦微塵)", 1.20),
+        ("FINISHER_2", "F2. Finisher B: Senpuu Chain Shred (旋風爆砕)", 1.40),
+    ],
+    "kasumi": [
+        ("IDLE", "1. Idle (Postura Kunoichi da Névoa)", 0.0),
+        ("WALK", "2. Walk (Passada Furtiva)", 0.0),
+        ("TANTO_SLASH", "3. Golpe 1: Adaga Tanto (Precedência / 1.20m / 2 Dano)", 0.45),
+        ("HOROKU_BOMB", "4. Golpe 2: Bomba Horoku (Arco Parabólico 3D)", 0.60),
+        ("REMOTE_MINE", "5. Secundário: Mina Remota (Plant / Detonate)", 0.50),
+        ("SMOKE_ROLL", "6. Esquiva: Salto Furtivo / Rolo de Fumaça (14 i-frames)", 0.55),
+        ("DODGE_CANCEL", "7. Cancelamento: Smoke Roll -> Tanto Slash", 0.55),
+        ("PARRY_REACTION", "8. Reação: Bloqueio Defensivo", 0.40),
+        ("INTRO", "9. Intro: Queda Ninja -> Saque de Pavio -> Postura", 2.00),
+        ("VICTORY", "0. Vitória: Chiburi -> Cápsula de Fumaça -> Sumiço", 2.20),
+        ("FINISHER_1", "F1. Finisher A: Moujin Shundan (霧刃瞬断)", 1.20),
+        ("FINISHER_2", "F2. Finisher B: Bakuen Funsai (爆炎粉砕)", 1.35),
+    ],
+    "okuni": [
+        ("IDLE", "1. Idle (Dança Teatral Kabuki)", 0.0),
+        ("WALK", "2. Walk (Passadas Cerimoniosas Kumadori)", 0.0),
+        ("FAN_STRIKE", "3. Golpe 1: Dança dos Leques Tessen (1.45m / Duplo / 2 Dano)", 0.50),
+        ("DOKUKIRI", "4. Golpe 2: Sopro Dokukiri (Cone 3.0m / Push 1.6m / Stun 0.8s)", 0.60),
+        ("KAWARIMI_FEINT", "5. Esquiva: Finta Teatral Kawarimi (Manequim + i-frames)", 0.55),
+        ("DODGE_CANCEL", "6. Cancelamento: Finta Kawarimi -> Fan Strike", 0.55),
+        ("PARRY_REACTION", "7. Reação: Bloqueio Cruzado dos Leques", 0.40),
+        ("INTRO", "8. Intro: Passadas Kumadori -> Giro Quimono -> Guarda X", 2.00),
+        ("VICTORY", "9. Vitória: Ondulação Leques -> Pose Mie -> Oculta Sorriso", 2.20),
+        ("FINISHER_1", "F1. Finisher A: Tessen Zanshu (鉄扇斬首)", 1.20),
+        ("FINISHER_2", "F2. Finisher B: Dokukiri Youkai (毒霧溶解)", 1.40),
+    ],
+    "anne": [
+        ("IDLE", "1. Idle (Postura Bucaneira)", 0.0),
+        ("WALK", "2. Walk (Passadas com Ginga Pirata)", 0.0),
+        ("CUTLASS_CLEAVE", "3. Golpe 1: Cutlass Cleave 180° (1.65m / 2 Dano / Lunge 0.65m)", 0.50),
+        ("CANNON_STRIKE", "4. Golpe 2: Bombardeio Naval Celeste (Hold / Mira Orbital)", 0.60),
+        ("SWASHBUCKLE_DASH", "5. Esquiva: Salto com Pólvora Negra (12 i-frames / Fuligem)", 0.55),
+        ("DODGE_CANCEL", "6. Cancelamento: Swashbuckle Dash -> Cutlass Cleave", 0.55),
+        ("PARRY_REACTION", "7. Reação: Guarda Defensiva com Alfanje", 0.40),
+        ("INTRO", "8. Intro: Giro do Alfanje -> Lâmina na Garganta -> Guarda", 2.20),
+        ("VICTORY", "9. Vitória: Gole de Rum -> Estandarte Jolly Roger -> Riso", 2.40),
+        ("FINISHER_1", "F1. Finisher A: Aranami Ryoudan (荒波両断)", 1.20),
+        ("FINISHER_2", "F2. Finisher B: Kanpou Senmetsu (艦砲殲滅)", 1.40),
+    ],
+    "julie": [
+        ("IDLE", "1. Idle (Postura En Garde Nobre)", 0.0),
+        ("WALK", "2. Walk (Passadas Ágeis de Esgrima)", 0.0),
+        ("FLECHE_THRUST", "3. Golpe 1: Fleche Thrust (1.30m Reach / 0.70m Hitbox / 2 Dano)", 0.48),
+        ("FLINTLOCK_SHOT", "4. Golpe 2: Pederneira de Bolso (5.8m Range / 6.0s CD)", 0.50),
+        ("CAPE_FLOURISH", "5. Secundário: Floreio de Capa & Coup de Pied (Repel 2.0m)", 0.45),
+        ("CAPE_SWIRL_BACKHOP", "6. Esquiva: Salto Acrobático com Capa (13 i-frames)", 0.55),
+        ("DODGE_CANCEL", "7. Cancelamento: Cape Swirl -> Fleche Thrust", 0.55),
+        ("PARRY_REACTION", "8. Reação: Guarda En Garde com Florete", 0.40),
+        ("INTRO", "9. Intro: Retirada de Chapéu -> Reverência Nobre -> En Garde", 2.20),
+        ("VICTORY", "0. Vitória: Embainhar às Cegas -> Luva Branca -> Fumaça", 2.40),
+        ("FINISHER_1", "F1. Finisher A: Hyakka Rantotsu (百花乱突)", 1.20),
+        ("FINISHER_2", "F2. Finisher B: Zero-Kyori Juusatsu (零距離銃殺)", 1.35),
+    ],
+    "tomoe": [
+        ("IDLE", "1. Idle (Postura Kyudo Zen)", 0.0),
+        ("WALK", "2. Walk (Passadas Serenas Hakama)", 0.0),
+        ("QUICK_SNIPE", "3. Golpe 1: Disparo Direto Yumi (32.0 vel / 0.50s CD)", 0.50),
+        ("SACRED_VOLLEY", "4. Secundário: Chuva de Flechas Sagradas em Arco", 0.65),
+        ("ROPE_ARROW", "5. Golpe 2: Flecha de Corda & Deslocamento", 0.55),
+        ("MIKO_ROLL", "6. Esquiva: Salto Giratório Hakama (12 i-frames)", 0.50),
+        ("DODGE_CANCEL", "7. Cancelamento: Miko Roll -> Quick Snipe", 0.55),
+        ("PARRY_REACTION", "8. Reação: Guarda Defensiva com Arco Yumi", 0.40),
+        ("INTRO", "9. Intro: Vento no Yumi -> Teste de Tensão -> Postura Zen", 2.20),
+        ("VICTORY", "0. Vitória: Descanso do Arco -> Reverência Kami -> Respiração Zen", 2.40),
+        ("FINISHER_1", "F1. Finisher A: Jifuu Kyoukyuu (地縫強弓 - Pinned to Earth)", 1.20),
+        ("FINISHER_2", "F2. Finisher B: Hama Tenkan (破魔天貫 - Salva Purificadora)", 1.40),
+    ],
+    "ren": [
+        ("IDLE", "1. Idle (Postura dos Três Dragões)", 0.0),
+        ("WALK", "2. Walk (Passadas Firmes Shaolin)", 0.0),
+        ("JAB_STRIKE", "3. Golpe 1: Jab Frontal Veloz (Passo 1 / 1.30m)", 0.45),
+        ("COMBO_STRIKES", "4. Golpe 2: Palma de Ferro & Chute do Dragão", 0.60),
+        ("KIAI_SHOUT", "5. Secundário: Grito Místico Kiai (Barreira Chi 360°)", 0.50),
+        ("SHAOLIN_ROLL", "6. Esquiva: Salto Acrobático Shaolin (12 i-frames)", 0.45),
+        ("DODGE_CANCEL", "7. Cancelamento: Salto Acrobático -> Jab/Palma", 0.50),
+        ("PARRY_REACTION", "8. Reação: Guarda Defensiva de Palma de Ferro", 0.40),
+        ("INTRO", "9. Intro: Saudação Baoquan -> Jab & Chute -> Postura Zen", 2.20),
+        ("VICTORY", "0. Vitória: Chute do Dragão -> Rugido Kiai -> Reverência", 2.40),
+        ("FINISHER_1", "F1. Finisher A: Hyakuretsu Ken (百烈拳 - Cem Punhos)", 1.20),
+        ("FINISHER_2", "F2. Finisher B: Kiai Shougeki (気合衝撃 - Rugido Chi)", 1.35),
+    ],
+    "chiyo": [
+        ("IDLE", "1. Idle (Postura Felina Kunoichi)", 0.0),
+        ("WALK", "2. Walk (Passadas Silenciosas)", 0.0),
+        ("KODACHI_CROSS", "3. Golpe 1: Corte Cruzado Duplo (Combo 3-Hit)", 0.45),
+        ("MAI_DANCE", "4. Secundário A: Dança Mai Evasiva (Deflexão)", 0.40),
+        ("ACROBAT_LUNGE", "5. Secundário B: Salto Acrobático Lunge (3.2m)", 0.55),
+        ("SHADOW_STEP", "6. Esquiva: Shadow Step Slip (14 i-frames & Pétalas)", 0.45),
+        ("DODGE_CANCEL", "7. Cancelamento: Shadow Step -> Dança Mai", 0.50),
+        ("PARRY_REACTION", "8. Reação: Guarda em X com as Duas Kodachis", 0.40),
+        ("INTRO", "9. Intro: Saque das Costas -> Giro de Lâminas -> Postura Felina", 2.20),
+        ("VICTORY", "0. Vitória: Espiral dos Pulsos -> Embainhar Reverso -> Triunfo", 2.40),
+        ("FINISHER_1", "F1. Finisher A: Triple Scissor Cleave (双刃十字)", 1.20),
+        ("FINISHER_2", "F2. Finisher B: Shadow Lotus Flurry (影蓮乱舞)", 1.35),
+    ],
 }
 # Aliases para chaves alternativas do catálogo
 CHARACTER_ANIM_BUTTONS["joe"] = CHARACTER_ANIM_BUTTONS["american"]
 CHARACTER_ANIM_BUTTONS["hanzo"] = CHARACTER_ANIM_BUTTONS["ninja"]
+CHARACTER_ANIM_BUTTONS["rifleman"] = CHARACTER_ANIM_BUTTONS["teppo"]
+CHARACTER_ANIM_BUTTONS["purple"] = CHARACTER_ANIM_BUTTONS["murasaki"]
+CHARACTER_ANIM_BUTTONS["gray"] = CHARACTER_ANIM_BUTTONS["kasumi"]
+CHARACTER_ANIM_BUTTONS["kabuki"] = CHARACTER_ANIM_BUTTONS["okuni"]
+CHARACTER_ANIM_BUTTONS["pirate"] = CHARACTER_ANIM_BUTTONS["anne"]
+CHARACTER_ANIM_BUTTONS["musketeer"] = CHARACTER_ANIM_BUTTONS["julie"]
+CHARACTER_ANIM_BUTTONS["archer"] = CHARACTER_ANIM_BUTTONS["tomoe"]
+CHARACTER_ANIM_BUTTONS["shaolin"] = CHARACTER_ANIM_BUTTONS["ren"]
+CHARACTER_ANIM_BUTTONS["nodachi"] = CHARACTER_ANIM_BUTTONS["chiyo"]
 
 DEFAULT_ANIM_BUTTONS = [
     ("IDLE", "1. Idle (Respiração)", 0.0),
@@ -562,9 +695,97 @@ OVERHAUL_DE_PARA_NOTES = {
         "Gatotsu Zeroshiki: Explosão a queima-roupa com 1 de Dano Garantido (Chip Damage através do Parry)",
         "Finishers: Gatotsu Shinkan (Empalamento Cardíaco) & Zeroshiki Bakutotsu (Bissecção Horizontal)",
     ],
+    "teppo": [
+        "SSAA 2x Offscreen (Zero serrilhado no longo cano octogonal de ferro e na Jingasa)",
+        "Olhos Marciais Ashigaru HD (Olho direito contraído na mira com anel limbal + bigode 3D)",
+        "Materiais: Carvalho Envernizado, Ferro Fundido, Laca Jingasa Tonbo, Cânhamo e Couro",
+        "Ciclo de Munição Fluido: Tiro Supersônico (26 m/s) + Recarga por Vareta Ramrod ou Trench Dive",
+        "Coronhada Pesada de Madeira sem bala (1.8m Knockback + 0.65s Stun) + Mina de Pólvora Secundária",
+        "Finishers: Headshot Explode (Queixo) & Hayago Keg Blast (Detonação de Cargas de Pólvora)",
+        "Intro (Sopro na Brasa da Mecha) & Vitória (Fuzil no Ombro + Cachimbo Kiseru 3D)",
+    ],
+    "murasaki": [
+        "SSAA 2x Offscreen + Rosto Anime HD (Olhos ametista brilhantes, máscara shinobi sem vazamento)",
+        "Materiais Físicos Realistas: Seda Chirimen púrpura, Aço temperado de alto carbono, Ferro negro",
+        "Kama Strike (1.30m, Precedência absoluta / clash fluido) & Chain Drag (3.80m, Dano 1 + Puxão + Stun)",
+        "Chain Whirl Backflip: Salto mortal 360° com escudo giratório de corrente (deflete projéteis leves)",
+        "Finishers Duplos: Kamaitachi Chain Decap (三弦微塵) & Senpuu Chain Shred Tornado (旋風爆砕)",
+        "Intro (Giro orbital no dedo -> Palma -> Guarda) & Vitória (Recolhimento espiral -> Ombro -> Sumiço)",
+    ],
+    "kasumi": [
+        "SSAA 2x Offscreen + Rosto Anime HD (Olhos azul-aço luminosos, nariz delicado e cílios alados)",
+        "Materiais PBR Realistas: Couro preto curtido, Traje justo cromado, Cachecol de linho névoa",
+        "Gola Shinobi Perfeita: neck e jaw herdam cor do cachecol sem vazamento de pele sob o colarinho",
+        "Sistema Híbrido: Corte de Adaga Tanto (<= 1.6m / 2 Dano) + Bomba Horoku (> 1.6m em arco 3D)",
+        "Ação Secundária: Mina de Detonação Remota (1º toque planta, 2º detona / 2.2m raio com dano 2)",
+        "Esquiva Furtiva: Rolo ninja com tapete espesso de fumaça e 1.0s de camuflagem (alpha=15)",
+        "Finishers Duplos: Moujin Shundan (Decapitação limpa) & Bakuen Funsai (Cataclismo 26+ pedaços)",
+        "Intro (Queda Shinobi -> Saque de Pavio -> Guarda) & Vitória (Chiburi -> Cápsula -> Sumiço)",
+    ],
+    "okuni": [
+        "SSAA 2x Offscreen + Rosto Anime HD (Kumadori carmesim dramático, olhos vermelhos, nariz e lábios delicados)",
+        "Materiais PBR Realistas: Seda Chirimen bordada em ouro, Linho do quimono, Laca Urushi, Aço temperado Tessen",
+        "Dança dos Leques Tessen: Alcance de 1.45m, golpe duplo gracioso e letal com 2 de dano",
+        "Sopro Venenoso Dokukiri: Cone frontal 3.0m, empurrão de 1.6m, Whiff Stun de tosse 0.8s e debuff -25% SPD",
+        "Microvoxels 3D Volumétricos na névoa venenosa com vórtices alternando púrpura e esmeralda",
+        "Finta Teatral Kawarimi: Manequim de seda no ponto de partida que causa whiff punish fatal de 0.45s se golpeado",
+        "Finishers Duplos: Tessen Zanshu (Decapitação em tesoura com sakura) & Dokukiri Youkai (Dissolução ácida com esqueleto)",
+        "Intro Cerimonial & Vitória Teatral com interpolação suave Hermite e leques dinâmicos",
+    ],
+    "anne": [
+        "SSAA 2x Offscreen + Rosto Anime HD (Olhos cor de avelã luminosos, queixo e lábios modelados)",
+        "Materiais PBR Realistas: Couro envelhecido do sobretudo, Latão oxidado, Linho marfim, Aço damasco",
+        "Cutlass Cleave 180°: Alcance amplo de 1.65m, lunge frontal de 0.65m e 2 de dano",
+        "Bombardeio Naval Orbital: Retículo isométrico com astrolábio giratório dourado vindo dos céus",
+        "Swashbuckle Dash: Rolamento pesado com fumaça espessa de pólvora negra (12 i-frames / slow no rival)",
+        "Finishers Duplos: Aranami Ryoudan (荒波両断 - Bissecção diagonal) & Kanpou Senmetsu (艦砲殲滅 - Impacto celeste)",
+        "Intro (Giro do alfanje no dedo -> Mira na garganta) & Vitória (Gole de cantil de rum -> Estandarte pirata 3D)",
+    ],
+    "julie": [
+        "SSAA 2x Offscreen + Rosto Anime HD (Olhos safira profundos, cílios alados, postura aristocrática)",
+        "Materiais PBR Realistas: Veludo azul real da casaca, Renda de seda no decote, Ouro polido, Aço fino",
+        "Fleche Thrust: Bote linear perfurante com alcance de 1.30m, 2 de dano e hitbox precisa de 0.70m",
+        "Pistola Pederneira de Bolso: Disparo veloz a média distância (5.8m) com fumaça volumétrica e recuo",
+        "Floreio de Capa & Coup de Pied: Giro de capa que reflete projéteis e repele oponentes em 2.0m",
+        "Finishers Duplos: Hyakka Rantotsu (百花乱突 - Fonte de sangue arterial) & Zero-Kyori Juusatsu (零距離銃殺)",
+        "Intro (Reverência solene com chapéu na mão -> En Garde) & Vitória (Embainhar às cegas com clique -> Fumaça)",
+    ],
+    "tomoe": [
+        "SSAA 2x Offscreen (Zero serrilhado no grande arco assimétrico Yumi e flechas Ya/Hamaya)",
+        "Olhos Anime HD (Sclera de marfim, íris esmeralda vertical com anel limbal e catchlight duplo)",
+        "Materiais PBR Realistas: Seda Miko Branca, Hakama Carmesim, Laca Urushi do Yumi, Couro Yugake",
+        "Pose LERP 0.08s + 12 Poses Articuladas + Rotação 3D de Flechas e Tração Dinâmica de Corda",
+        "Projéteis Físicos Varridos (Sub-stepped sweep contra obstáculos + Evasão perfeita por Esquiva)",
+        "Fatalidades Cinematográficas: Jifuu Kyoukyuu (Flecha cravada no chão) e Hama Tenkan (Chuva Celestial)",
+    ],
+    "ren": [
+        "SSAA 2x Offscreen (Zero serrilhado nas marcas sagradas Jieba e contas Mala)",
+        "Olhos Anime HD (Esclera marfim, íris castanho-avelã, olhar marcial focado e sobrancelhas determinadas)",
+        "Materiais PBR Realistas: Lona Kasaya açafrão, Seda da faixa, Linho das perneiras e Madeira de cedro",
+        "Pose LERP 0.08s + 12 Poses Articuladas + Combo Marcial Rítmico de 3 Passos (Jab -> Palma -> Chute)",
+        "Grito Kiai 360° com Reflexão Balística de Projéteis e Salto Acrobático com Cancelamento Ofensivo",
+        "Fatalidades Cinematográficas: Hyakuretsu Ken (百烈拳) e Kiai Shougeki (気合衝撃)",
+    ],
+    "chiyo": [
+        "SSAA 2x Offscreen (Zero serrilhado nas lâminas duplas e silhueta ágil de kunoichi)",
+        "Olhos Anime HD (Esclera marfim, íris âmbar vertical luminosa, delineado carmim benibake alado)",
+        "Materiais PBR Realistas: Couro preto fosco, Seda carmesim do lenço/faixa, Laca Urushi negra das bainhas, Aço polido",
+        "Pose LERP 0.08s + 12 Poses Articuladas + Dança das Duas Kodachi com Salto Acrobático Lunge (3.2m)",
+        "Esquiva Evasiva Shadow Step Slip (14 i-frames + Rastro de pétalas de Higanbana)",
+        "Fatalidades Cinematográficas: Triple Scissor Cleave (双刃十字) e Shadow Lotus Flurry (影蓮乱舞)",
+    ],
 }
 OVERHAUL_DE_PARA_NOTES["joe"] = OVERHAUL_DE_PARA_NOTES["american"]
 OVERHAUL_DE_PARA_NOTES["hanzo"] = OVERHAUL_DE_PARA_NOTES["ninja"]
+OVERHAUL_DE_PARA_NOTES["rifleman"] = OVERHAUL_DE_PARA_NOTES["teppo"]
+OVERHAUL_DE_PARA_NOTES["purple"] = OVERHAUL_DE_PARA_NOTES["murasaki"]
+OVERHAUL_DE_PARA_NOTES["gray"] = OVERHAUL_DE_PARA_NOTES["kasumi"]
+OVERHAUL_DE_PARA_NOTES["kabuki"] = OVERHAUL_DE_PARA_NOTES["okuni"]
+OVERHAUL_DE_PARA_NOTES["pirate"] = OVERHAUL_DE_PARA_NOTES["anne"]
+OVERHAUL_DE_PARA_NOTES["musketeer"] = OVERHAUL_DE_PARA_NOTES["julie"]
+OVERHAUL_DE_PARA_NOTES["archer"] = OVERHAUL_DE_PARA_NOTES["tomoe"]
+OVERHAUL_DE_PARA_NOTES["shaolin"] = OVERHAUL_DE_PARA_NOTES["ren"]
+OVERHAUL_DE_PARA_NOTES["nodachi"] = OVERHAUL_DE_PARA_NOTES["chiyo"]
 
 
 # =============================================================================
@@ -689,9 +910,9 @@ class ModelInspector:
         self.action_duration = dur
         if action_id in POSES:
             self.current_pose_idx = POSES.index(action_id)
-        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "ATTACK_1", "ATTACK_2", "ATTACK_3", "CROSS_SHOCKWAVE", "ROLL_CANCEL", "FINISHER_1", "FINISHER_2"):
+        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "ATTACK_1", "ATTACK_2", "ATTACK_3", "CROSS_SHOCKWAVE", "ROLL_CANCEL", "FINISHER_1", "FINISHER_2", "KAMA_STRIKE", "CHAIN_DRAG", "KODACHI_CROSS", "MAI_DANCE", "ACROBAT_LUNGE"):
             self.current_pose_idx = POSES.index("ATTACK")
-        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY", "CROSS_GUARD", "TACTICAL_ROLL"):
+        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY", "CROSS_GUARD", "TACTICAL_ROLL", "BACKFLIP", "DODGE_CANCEL", "SHADOW_STEP"):
             self.current_pose_idx = POSES.index("RECOVERY")
 
     def select_character(self, idx: int | str):
@@ -1278,10 +1499,457 @@ class ModelInspector:
             state_timer = max(0.01, (1.0 - prog) * 0.15)
             extra_props["pose"] = "dog_whistle"
             extra_props["progress"] = prog
+        elif act == "PRIMARY_SHOT":
+            # Teppo Disparo de Arcabuz (Mira + Tiro com Recuo)
+            if prog < 0.35:
+                state = "RIFLE_AIM"
+                extra_props["pose"] = "ready_aim"
+                extra_props["p"] = prog / 0.35
+            else:
+                state = "ATTACK"
+                u = (prog - 0.35) / 0.65
+                state_timer = max(0.01, (1.0 - u) * 0.22)
+                extra_props["pose"] = "aim_shoot"
+                extra_props["p"] = u
+                wx = -0.08 * math.sin(u * math.pi)
+                wy = -0.08 * math.sin(u * math.pi)
+        elif act == "RIFLE_BUTT":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            extra_props["pose"] = "rifle_butt"
+            extra_props["is_rifle_butt"] = True
+            extra_props["p"] = prog
+            wx = 0.20 * math.sin(prog * math.pi)
+            wy = 0.20 * math.sin(prog * math.pi)
+        elif act == "RAMROD_RELOAD":
+            state = "IDLE"
+            extra_props["pose"] = "ramrod_reload"
+            extra_props["is_reloading"] = True
+            extra_props["p"] = prog
+        elif act == "POWDER_TRAP":
+            state = "IDLE"
+            extra_props["pose"] = "plant_trap"
+            extra_props["is_planting_trap"] = True
+            extra_props["p"] = prog
+            wz = -0.06 * math.sin(prog * math.pi)
+        elif act == "TRENCH_DIVE":
+            state = "RIFLE_ROLL"
+            extra_props["pose"] = "trench_dive"
+            extra_props["p"] = prog
+            extra_props["roll_prog"] = prog
+            extra_props["somersault_angle"] = -360.0 * prog
+            extra_props["somersault_pivot_z"] = wz + 0.24
+            extra_props["is_roll"] = True
+            wz = max(0.0, wz - 0.14 * math.sin(prog * math.pi))
+            wx = 0.50 * prog
+            wy = 0.50 * prog
+        elif act == "PARRY_DEFENSE":
+            state = "PARRY"
+            extra_props["pose"] = "ready_aim"
+            wx = -0.12 * math.sin(prog * math.pi)
+            wy = -0.12 * math.sin(prog * math.pi)
+        elif act == "KAMA_STRIKE":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.22)
+            extra_props["pose"] = "kama_strike"
+            extra_props["p"] = prog
+            wx = 0.18 * math.sin(prog * math.pi)
+            wy = 0.18 * math.sin(prog * math.pi)
+        elif act == "CHAIN_DRAG":
+            state = "CHAIN_PULL"
+            extra_props["pose"] = "chain_drag"
+            extra_props["p"] = prog
+        elif act == "BACKFLIP":
+            state = "ROLL"
+            extra_props["pose"] = "chain_whirl_backflip"
+            extra_props["p"] = prog
+            extra_props["roll_prog"] = prog
+            extra_props["somersault_angle"] = 360.0 * prog
+            extra_props["somersault_pivot_z"] = wz + 0.30
+            extra_props["is_roll"] = True
+            wz = math.sin(prog * math.pi) * 0.40
+            wx = -0.40 * prog
+            wy = -0.40 * prog
+        elif act == "TANTO_SLASH":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.14)
+            extra_props["pose"] = "tanto_slash"
+            extra_props["p"] = prog
+            wx = 0.20 * math.sin(prog * math.pi)
+            wy = 0.20 * math.sin(prog * math.pi)
+        elif act == "HOROKU_BOMB":
+            state = "RECOVERY"
+            extra_props["pose"] = "bomb_throw"
+            extra_props["p"] = prog
+            wx = 0.10 * math.sin(prog * math.pi)
+            wy = 0.10 * math.sin(prog * math.pi)
+        elif act == "REMOTE_MINE":
+            state = "RECOVERY"
+            extra_props["pose"] = "plant_mine"
+            extra_props["p"] = prog
+            wz = -0.10 * math.sin(prog * math.pi)
+        elif act == "SMOKE_ROLL":
+            state = "ROLL"
+            extra_props["pose"] = "smoke_roll"
+            extra_props["p"] = prog
+            extra_props["roll_prog"] = prog
+            extra_props["somersault_angle"] = 360.0 * prog
+            extra_props["somersault_pivot_z"] = wz + 0.25
+            extra_props["is_roll"] = True
+            wx = 0.35 * prog
+            wy = 0.35 * prog
+        elif act == "FAN_STRIKE":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.14)
+            extra_props["pose"] = "fan_strike"
+            extra_props["p"] = prog
+            wx = 0.20 * math.sin(prog * math.pi)
+            wy = 0.20 * math.sin(prog * math.pi)
+        elif act == "DOKUKIRI":
+            state = "DOKUKIRI"
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            extra_props["pose"] = "dokukiri_breath"
+            extra_props["p"] = prog
+            wx = 0.08 * math.sin(prog * math.pi)
+            wy = 0.08 * math.sin(prog * math.pi)
+        elif act == "KAWARIMI_FEINT":
+            state = "ROLL"
+            extra_props["pose"] = "kawarimi_feint"
+            extra_props["p"] = prog
+            extra_props["roll_prog"] = prog
+            extra_props["is_roll"] = True
+            wx = 0.30 * prog
+            wy = 0.30 * prog
+        elif act == "CUTLASS_CLEAVE":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.22)
+            extra_props["pose"] = "cutlass_cleave"
+            extra_props["p"] = prog
+            wx = 0.35 * prog
+            wy = 0.35 * prog
+        elif act == "CANNON_STRIKE":
+            state = "ATTACK"
+            extra_props["pose"] = "cannon_strike"
+            extra_props["p"] = prog
+            extra_props["is_aiming_cannon"] = True
+        elif act == "SWASHBUCKLE_DASH":
+            state = "ROLL"
+            extra_props["pose"] = "swashbuckle_dash"
+            extra_props["p"] = prog
+            extra_props["roll_prog"] = prog
+            extra_props["is_roll"] = True
+            wx = 0.40 * prog
+            wy = 0.40 * prog
+        elif act == "FLECHE_THRUST":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            extra_props["pose"] = "fleche_thrust"
+            extra_props["p"] = prog
+            wx = 0.45 * prog
+            wy = 0.45 * prog
+        elif act == "FLINTLOCK_SHOT":
+            state = "ATTACK"
+            extra_props["pose"] = "flintlock"
+            extra_props["p"] = prog
+            wx = -0.10 * math.sin(prog * math.pi)
+        elif act == "CAPE_FLOURISH":
+            state = "CAPE_FLOURISH"
+            extra_props["pose"] = "cape_flourish"
+            extra_props["p"] = prog
+        elif act == "CAPE_SWIRL_BACKHOP":
+            state = "ROLL"
+            extra_props["pose"] = "cape_swirl_backhop"
+            extra_props["p"] = prog
+            extra_props["roll_prog"] = prog
+            extra_props["is_roll"] = True
+            wz = math.sin(prog * math.pi) * 0.25
+            wx = -0.35 * prog
+            wy = -0.35 * prog
+        elif act == "QUICK_SNIPE":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            extra_props["pose"] = "quick_snipe"
+            extra_props["p"] = prog
+            extra_props["is_drawing"] = True
+            wx = -0.06 * math.sin(prog * math.pi)
+            wy = -0.06 * math.sin(prog * math.pi)
+        elif act == "SACRED_VOLLEY":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.22)
+            extra_props["pose"] = "sacred_volley"
+            extra_props["p"] = prog
+            extra_props["is_aiming_volley"] = True
+            extra_props["is_drawing"] = True
+            wz = 0.05 * math.sin(prog * math.pi)
+        elif act == "ROPE_ARROW":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            extra_props["pose"] = "rope_arrow"
+            extra_props["p"] = prog
+            extra_props["is_charging_rope"] = True
+            wx = 0.20 * prog
+            wy = 0.20 * prog
+        elif act == "MIKO_ROLL":
+            state = "ROLL"
+            extra_props["pose"] = "miko_roll"
+            extra_props["p"] = prog
+            extra_props["roll_prog"] = prog
+            extra_props["somersault_angle"] = 360.0 * prog
+            extra_props["somersault_pivot_z"] = wz + 0.28
+            extra_props["is_roll"] = True
+            wx = 0.35 * prog
+            wy = 0.35 * prog
+        elif act == "JAB_STRIKE":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.14)
+            extra_props["combo_step"] = 1
+            extra_props["pose"] = "combo_step_1_jab"
+            extra_props["p"] = prog
+            wx = 0.18 * math.sin(prog * math.pi)
+            wy = 0.18 * math.sin(prog * math.pi)
+        elif act == "COMBO_STRIKES":
+            state = "ATTACK"
+            if prog < 0.48:
+                u = prog / 0.48
+                state_timer = max(0.01, (1.0 - u) * 0.16)
+                extra_props["combo_step"] = 2
+                extra_props["pose"] = "combo_step_2_palm"
+                extra_props["p"] = u
+                wx = 0.22 * math.sin(u * math.pi)
+                wy = 0.22 * math.sin(u * math.pi)
+            else:
+                u = (prog - 0.48) / 0.52
+                state_timer = max(0.01, (1.0 - u) * 0.24)
+                extra_props["combo_step"] = 3
+                extra_props["pose"] = "combo_step_3_dragon_kick"
+                extra_props["p"] = u
+                wx = 0.35 * math.sin(u * math.pi)
+                wy = 0.35 * math.sin(u * math.pi)
+        elif act == "KIAI_SHOUT":
+            state = "KIAI_SHOUT"
+            state_timer = max(0.01, (1.0 - prog) * 0.35)
+            extra_props["pose"] = "kiai_roar"
+            extra_props["p"] = prog
+            extra_props["seg_u"] = prog
+        elif act == "SHAOLIN_ROLL":
+            state = "ROLL"
+            extra_props["pose"] = "shaolin_roll"
+            extra_props["p"] = prog
+            extra_props["roll_prog"] = prog
+            extra_props["somersault_angle"] = 360.0 * prog
+            extra_props["somersault_pivot_z"] = wz + 0.28
+            extra_props["is_roll"] = True
+            wx = 0.38 * prog
+            wy = 0.38 * prog
+        elif act == "PARRY_REACTION":
+            state = "PARRY"
+            if char_type in ("okuni", "kabuki"):
+                extra_props["pose"] = "tessen_cross_guard"
+            elif char_type in ("tomoe", "archer"):
+                extra_props["pose"] = "parry_reaction"
+            elif char_type in ("ren", "shaolin"):
+                extra_props["pose"] = "iron_palm_parry"
+            elif char_type in ("chiyo", "nodachi"):
+                extra_props["pose"] = "kodachi_x_pose"
+            elif char_type in ("anne", "pirate", "julie", "musketeer"):
+                extra_props["pose"] = "en_garde"
+            else:
+                extra_props["pose"] = "tanto_slash"
+            extra_props["p"] = 0.15
+            wx = -0.08 * math.sin(prog * math.pi)
+            wy = -0.08 * math.sin(prog * math.pi)
+        elif act == "DODGE_CANCEL":
+            if char_type in ("okuni", "kabuki"):
+                if prog < 0.45:
+                    u = prog / 0.45
+                    state = "ROLL"
+                    extra_props["pose"] = "kawarimi_feint"
+                    extra_props["p"] = u
+                    extra_props["roll_prog"] = u
+                    extra_props["is_roll"] = True
+                    wx = 0.25 * u
+                    wy = 0.25 * u
+                else:
+                    u = (prog - 0.45) / 0.55
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - u) * 0.14)
+                    extra_props["pose"] = "fan_strike"
+                    extra_props["p"] = u
+                    wx = 0.25 + 0.15 * u
+                    wy = 0.25 + 0.15 * u
+            elif char_type in ("kasumi", "gray"):
+                if prog < 0.45:
+                    u = prog / 0.45
+                    state = "ROLL"
+                    extra_props["pose"] = "smoke_roll"
+                    extra_props["p"] = u
+                    extra_props["roll_prog"] = u
+                    extra_props["somersault_angle"] = 360.0 * u
+                    extra_props["somersault_pivot_z"] = wz + 0.25
+                    extra_props["is_roll"] = True
+                    wx = 0.25 * u
+                    wy = 0.25 * u
+                else:
+                    u = (prog - 0.45) / 0.55
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - u) * 0.14)
+                    extra_props["pose"] = "tanto_slash"
+                    extra_props["p"] = u
+                    wx = 0.25 + 0.15 * u
+                    wy = 0.25 + 0.15 * u
+            elif char_type in ("anne", "pirate"):
+                if prog < 0.45:
+                    u = prog / 0.45
+                    state = "ROLL"
+                    extra_props["pose"] = "swashbuckle_dash"
+                    extra_props["p"] = u
+                    extra_props["roll_prog"] = u
+                    extra_props["is_roll"] = True
+                    wx = 0.30 * u
+                    wy = 0.30 * u
+                else:
+                    u = (prog - 0.45) / 0.55
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - u) * 0.22)
+                    extra_props["pose"] = "cutlass_cleave"
+                    extra_props["p"] = u
+                    wx = 0.30 + 0.25 * u
+                    wy = 0.30 + 0.25 * u
+            elif char_type in ("julie", "musketeer"):
+                if prog < 0.45:
+                    u = prog / 0.45
+                    state = "ROLL"
+                    extra_props["pose"] = "cape_swirl_backhop"
+                    extra_props["p"] = u
+                    extra_props["roll_prog"] = u
+                    extra_props["is_roll"] = True
+                    wz = math.sin(u * math.pi) * 0.20
+                    wx = -0.25 * u
+                    wy = -0.25 * u
+                else:
+                    u = (prog - 0.45) / 0.55
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - u) * 0.20)
+                    extra_props["pose"] = "fleche_thrust"
+                    extra_props["p"] = u
+                    wx = -0.25 + 0.45 * u
+                    wy = -0.25 + 0.45 * u
+            elif char_type in ("tomoe", "archer"):
+                if prog < 0.45:
+                    u = prog / 0.45
+                    state = "ROLL"
+                    extra_props["pose"] = "miko_roll"
+                    extra_props["p"] = u
+                    extra_props["roll_prog"] = u
+                    extra_props["somersault_angle"] = 360.0 * u
+                    extra_props["somersault_pivot_z"] = wz + 0.28
+                    extra_props["is_roll"] = True
+                    wx = 0.25 * u
+                    wy = 0.25 * u
+                else:
+                    u = (prog - 0.45) / 0.55
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - u) * 0.20)
+                    extra_props["pose"] = "quick_snipe"
+                    extra_props["p"] = u
+                    extra_props["is_drawing"] = True
+                    wx = 0.25 + 0.10 * u
+                    wy = 0.25 + 0.10 * u
+            elif char_type in ("ren", "shaolin"):
+                if prog < 0.45:
+                    u = prog / 0.45
+                    state = "ROLL"
+                    extra_props["pose"] = "shaolin_roll"
+                    extra_props["p"] = u
+                    extra_props["roll_prog"] = u
+                    extra_props["somersault_angle"] = 360.0 * u
+                    extra_props["somersault_pivot_z"] = wz + 0.28
+                    extra_props["is_roll"] = True
+                    wx = 0.25 * u
+                    wy = 0.25 * u
+                else:
+                    u = (prog - 0.45) / 0.55
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - u) * 0.14)
+                    extra_props["combo_step"] = 1
+                    extra_props["pose"] = "combo_step_1_jab"
+                    extra_props["p"] = u
+                    wx = 0.25 + 0.15 * u
+                    wy = 0.25 + 0.15 * u
+            elif char_type in ("chiyo", "nodachi"):
+                if prog < 0.45:
+                    u = prog / 0.45
+                    state = "ROLL"
+                    extra_props["pose"] = "shadow_step"
+                    extra_props["p"] = u
+                    extra_props["roll_prog"] = u
+                    extra_props["is_roll"] = True
+                    wx = 0.25 * u
+                    wy = 0.25 * u
+                else:
+                    u = (prog - 0.45) / 0.55
+                    state = "MAI_DANCE"
+                    state_timer = max(0.01, (1.0 - u) * 0.20)
+                    extra_props["pose"] = "mai_dance"
+                    extra_props["p"] = u
+                    wx = 0.25 + 0.15 * u
+                    wy = 0.25 + 0.15 * u
+            else:
+                if prog < 0.45:
+                    u = prog / 0.45
+                    state = "ROLL"
+                    extra_props["pose"] = "chain_whirl_backflip"
+                    extra_props["p"] = u
+                    extra_props["roll_prog"] = u
+                    extra_props["somersault_angle"] = 360.0 * u
+                    extra_props["somersault_pivot_z"] = wz + 0.30
+                    extra_props["is_roll"] = True
+                    wz = math.sin(u * math.pi) * 0.35
+                    wx = -0.25 * u
+                    wy = -0.25 * u
+                else:
+                    u = (prog - 0.45) / 0.55
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - u) * 0.20)
+                    extra_props["pose"] = "kama_strike"
+                    extra_props["p"] = u
+                    wx = -0.25 + 0.40 * u
+                    wy = -0.25 + 0.40 * u
+        elif act == "KODACHI_CROSS":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.14)
+            extra_props["combo_step"] = 1 if prog < 0.35 else (2 if prog < 0.70 else 3)
+            extra_props["p"] = (prog % 0.35) / 0.35
+            wx = 0.15 * math.sin(prog * math.pi)
+            wy = 0.15 * math.sin(prog * math.pi)
+        elif act == "MAI_DANCE":
+            state = "MAI_DANCE"
+            state_timer = max(0.01, (1.0 - prog) * 0.40)
+            extra_props["pose"] = "mai_dance"
+            extra_props["mai_spin_angle"] = prog * math.pi * 4.0
+            extra_props["p"] = prog
+            wx = 0.10 * math.sin(prog * math.pi * 2.0)
+            wy = 0.10 * math.cos(prog * math.pi * 2.0)
+        elif act == "ACROBAT_LUNGE":
+            state = "ACROBAT_LUNGE"
+            state_timer = max(0.01, (1.0 - prog) * 0.32)
+            extra_props["pose"] = "acrobat_lunge"
+            extra_props["p"] = prog
+            wz = math.sin(prog * math.pi) * 0.25
+            wx = 0.45 * prog
+            wy = 0.45 * prog
+        elif act == "SHADOW_STEP":
+            state = "ROLL"
+            extra_props["pose"] = "shadow_step"
+            extra_props["p"] = prog
+            extra_props["roll_prog"] = prog
+            extra_props["is_roll"] = True
+            wx = 0.42 * prog
+            wy = 0.42 * prog
         elif act in ("INTRO", "VICTORY"):
             kind = "intro" if act == "INTRO" else "victory"
             p_sample = prog if dur > 0.0 else ((self.anim_time * 0.42) % 1.0)
-            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american", "joe", "saitou"):
+            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american", "joe", "saitou", "teppo", "rifleman", "murasaki", "purple", "kasumi", "gray", "okuni", "kabuki", "anne", "pirate", "julie", "musketeer", "tomoe", "archer", "ren", "shaolin", "chiyo", "nodachi"):
                 # Roteiro legado pré-Fase 2 (apenas IDLE + ATTACK simples)
                 if p_sample < 0.25 or p_sample > 0.75:
                     state = "IDLE"
@@ -1344,6 +2012,89 @@ class ModelInspector:
                     extra_props["gatotsu_lunge"] = True
                     extra_props["p"] = prog
                     wx, wy = 0.35 * prog, 0.35 * prog
+            elif char_type in ("teppo", "rifleman"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "RIFLE_AIM" if prog < 0.40 else "ATTACK"
+                    extra_props["pose"] = "finisher_headshot"
+                    extra_props["p"] = prog
+                    wx, wy = 0.14 * prog, 0.14 * prog
+            elif char_type in ("murasaki", "purple"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "finisher_decap"
+                    extra_props["p"] = prog
+                    wx, wy = 0.16 * prog, 0.16 * prog
+            elif char_type in ("kasumi", "gray"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "finisher_tanto"
+                    extra_props["p"] = prog
+                    wx, wy = 0.20 * prog, 0.20 * prog
+            elif char_type in ("okuni", "kabuki"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "finisher_decap"
+                    extra_props["p"] = prog
+                    wx, wy = 0.18 * prog, 0.18 * prog
+            elif char_type in ("anne", "pirate"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "finisher_cutlass"
+                    extra_props["p"] = prog
+                    wx, wy = 0.22 * prog, 0.22 * prog
+            elif char_type in ("julie", "musketeer"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "finisher_a"
+                    extra_props["p"] = prog
+                    wx, wy = 0.24 * prog, 0.24 * prog
+            elif char_type in ("tomoe", "archer"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "finisher_pinned"
+                    extra_props["p"] = prog
+                    wx, wy = 0.15 * prog, 0.15 * prog
+            elif char_type in ("ren", "shaolin"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["hyakuretsu_phase"] = "FLURRY" if prog < 0.70 else "PAUSE"
+                    extra_props["hyakuretsu_clock"] = prog * 8.0
+                    extra_props["pose"] = "finisher_hyakuretsu"
+                    extra_props["p"] = prog
+                    wx, wy = 0.15 * prog, 0.15 * prog
+            elif char_type in ("chiyo", "nodachi"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "finisher_scissor_spin"
+                    extra_props["p"] = prog
+                    wx, wy = 0.14 * prog, 0.14 * prog
             else:
                 # 2.1.4a: Ittou Ryoudan
                 state = "RECOVERY"
@@ -1408,6 +2159,91 @@ class ModelInspector:
                     extra_props["zeroshiki_blast"] = True
                     extra_props["p"] = prog
                     wx, wy = 0.18 * prog, 0.18 * prog
+            elif char_type in ("teppo", "rifleman"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "rifle_butt"
+                    extra_props["finisher_style"] = "HAYAGO_KEG_BLAST"
+                    extra_props["p"] = prog
+                    wx = 0.22 * math.sin(prog * math.pi)
+                    wy = 0.22 * math.sin(prog * math.pi)
+            elif char_type in ("murasaki", "purple"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "finisher_tornado_shred"
+                    extra_props["p"] = prog
+                    wx, wy = 0.12 * prog, 0.12 * prog
+            elif char_type in ("kasumi", "gray"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "RECOVERY"
+                    extra_props["pose"] = "finisher_bomb"
+                    extra_props["p"] = prog
+                    wx, wy = 0.10 * prog, 0.10 * prog
+            elif char_type in ("okuni", "kabuki"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "DOKUKIRI"
+                    extra_props["pose"] = "finisher_melt"
+                    extra_props["p"] = prog
+                    wx, wy = 0.12 * prog, 0.12 * prog
+            elif char_type in ("anne", "pirate"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "finisher_cannon"
+                    extra_props["p"] = prog
+                    wx, wy = 0.10 * prog, 0.10 * prog
+            elif char_type in ("julie", "musketeer"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "finisher_b"
+                    extra_props["p"] = prog
+                    wx, wy = 0.12 * prog, 0.12 * prog
+            elif char_type in ("tomoe", "archer"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "finisher_volley"
+                    extra_props["p"] = prog
+                    wx, wy = 0.12 * prog, 0.12 * prog
+            elif char_type in ("ren", "shaolin"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "finisher_kiai"
+                    extra_props["p"] = prog
+                    wx = 0.20 * math.sin(prog * math.pi)
+                    wy = 0.20 * math.sin(prog * math.pi)
+            elif char_type in ("chiyo", "nodachi"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    extra_props["pose"] = "finisher_lotus_flurry"
+                    extra_props["p"] = prog
+                    wx = 0.15 * math.sin(prog * math.pi)
+                    wy = 0.15 * math.sin(prog * math.pi)
             else:
                 # 2.1.4b: Divisão Celestial de Bambu (Ápice + Queda Meteórica)
                 if prog < 0.42:

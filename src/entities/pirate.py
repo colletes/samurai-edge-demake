@@ -20,6 +20,7 @@ class PirateSwordswoman(Samurai):
         super().__init__(wx, wy, name="Anne")
         self.char_type = "pirate"
         self.speed = 4.9  # Velocidade ágil e agressiva de bucaneira (era 4.3)
+        self.pose_lerp_tracker = {"lerp_duration": 0.08, "blend_timer": 0.0, "pose_key": None}
 
         # Mecânica do Alfanje (Corte Amplo em Meia-Lua)
         self.cleave_cooldown = 0.35
@@ -64,7 +65,7 @@ class PirateSwordswoman(Samurai):
         self.state = STATE_ATTACK
         self.state_timer = 0.22
         self.hitbox_active = True
-        self.hitbox_radius = 1.55  # Raio ampliado para corte varredor
+        self.hitbox_radius = 1.65  # Raio ampliado para corte varredor de 180°
         self.slash_dir = (self.facing_x, self.facing_y)
         # Avanço frontal inicial com o corte (+62% de impulso frontal)
         self.wx += self.facing_x * 0.65
@@ -315,13 +316,45 @@ class PirateSwordswoman(Samurai):
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
+        pose_key = None
+        pose_progress = 0.0
+        render_wz = self.wz
+        somersault_angle = 0.0
+        somersault_pivot_z = self.wz + 0.28
+        roll_prog = 0.0
+
+        if self.state == STATE_ATTACK:
+            pose_key = "cutlass_cleave"
+            pose_progress = 1.0 - max(0.0, self.state_timer / max(0.001, 0.22))
+        elif self.state == STATE_ROLL:
+            pose_key = "swashbuckle_dash"
+            roll_prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration))))
+            pose_progress = roll_prog
+            somersault_angle = -360.0 * roll_prog
+            dip = math.sin(roll_prog * math.pi) * 0.12
+            render_wz = max(0.0, self.wz - dip)
+
+        extra_props = {
+            "ssaa_2x": True,
+            "pose_lerp_tracker": self.pose_lerp_tracker,
+            "pose": pose_key,
+            "active_pose": pose_key,
+            "pose_progress": pose_progress,
+            "p": pose_progress,
+            "roll_prog": roll_prog,
+            "is_roll": (self.state == STATE_ROLL),
+            "somersault_angle": somersault_angle,
+            "somersault_pivot_z": somersault_pivot_z,
+        }
+
         render_voxel_humanoid(
             surface, camera,
-            self.wx, self.wy, self.wz,
+            self.wx, self.wy, render_wz,
             self.facing_x, self.facing_y,
             self.state, self.state_timer, self.is_alive,
             char_type="pirate",
             walk_timer=self.walk_cycle,
             alpha=self.alpha,
-            is_moving=self.is_moving
+            is_moving=self.is_moving,
+            extra_props=extra_props
         )

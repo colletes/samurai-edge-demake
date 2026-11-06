@@ -93,6 +93,14 @@ def _draw_skull(surface, cx, cy, r, color=(235, 228, 210)):
     pygame.draw.polygon(surface, (30, 24, 24), [(cx, cy + r // 8), (cx - r // 8, cy + r // 3), (cx + r // 8, cy + r // 3)])
 
 
+def _draw_question_mark(surface, cx, cy, r, color=(60, 54, 50)):
+    """Ponto de interrogação estilizado para o chefe secreto antes da revelação."""
+    font = get_title_font(max(16, int(r * 2.1)))
+    txt = font.render("?", True, color)
+    rect = txt.get_rect(center=(cx, cy - 1))
+    surface.blit(txt, rect)
+
+
 class ArcadeDifficultyScreen:
     """Cartões Fácil/Normal/Difícil; com jornada salva aparece também o cartão "continuar"."""
 
@@ -229,7 +237,10 @@ class ArcadeBracketScreen:
         """state: 'done' | 'current' | 'todo'."""
         pygame.draw.circle(surface, (236, 226, 200), rect.center, rect.w // 2)
         if fight.kind == FightKind.BOSS:
-            _draw_skull(surface, rect.centerx, rect.centery, rect.w // 3, (60, 54, 50))
+            if state == "todo":
+                _draw_question_mark(surface, rect.centerx, rect.centery, rect.w // 3, (60, 54, 50))
+            else:
+                _draw_skull(surface, rect.centerx, rect.centery, rect.w // 3, (60, 54, 50))
         elif fight.kind == FightKind.NINJA_CHALLENGE and _draw_ninja_challenge_marker(surface, rect):
             pass
         else:

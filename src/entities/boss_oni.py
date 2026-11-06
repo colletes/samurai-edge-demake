@@ -24,8 +24,8 @@ BOSS_TUNING = {
     "player_iframes": 1.2, "hit_cooldown": 0.7,
     "p1_walk_speed": 2.2, "p1_gap": (0.2, 0.5), "p1_stomp_warn": 0.7, "p1_stomp_radius": 2.0, "p1_ring_speed": 5.5,
     "p1_ring_max": 4.6, "p1_sweep_warn": 0.7, "p1_sweep_active": 0.3, "p1_sweep_radius": 3.6, "p1_recover": 0.45,
-    "p2_speed": 5.6, "p2_telegraph": 0.9, "p2_slow": 0.8, "p2_stun": 0.9, "p2_contact": 0.6,
-    "p3_speed": 4.8, "p3_speed_gain": 0.6, "p3_speed_max": 8.5, "p3_aim": 0.55, "p3_stun": 0.9, "p3_tired_after": 5.0,
+    "p2_speed": 7.8, "p2_telegraph": 0.65, "p2_slow": 0.45, "p2_stun": 0.50, "p2_contact": 0.6,
+    "p3_speed": 6.8, "p3_speed_gain": 0.8, "p3_speed_max": 11.5, "p3_aim": 0.38, "p3_stun": 0.48, "p3_tired_after": 6.0,
     "p4_idle": 0.25, "p4_warn": 0.8, "p4_radius": 2.2, "p4_aim_error": 0.8, "p4_jump": 0.4, "p4_stuck": 1.0,
     "p5_warns": (0.55, 0.45, 0.4), "p5_radius": 1.6, "p5_direct": 0.6, "p5_jump": 0.4, "p5_rest": 0.9,
     # Perigos do palco (a partir da fase 2): intervalo em segundos por fase (None = ainda não aparece)
@@ -136,17 +136,54 @@ class BossHazard:
             pygame.draw.lines(overlay, (255, 150, 60, 190), True, local, 5)
         elif self.kind == "lava":
             if active:
-                pygame.draw.polygon(overlay, (255, 96, 18, 235), local)
-                pygame.draw.polygon(overlay, (255, 214, 90, 255), local, 3)
+                # Rio de lava vulcânica: margem de basalto, leito incandescente e fita solar central
+                pygame.draw.polygon(overlay, (140, 24, 12, 245), local)
+                if len(local) >= 4:
+                    # Leito interno de alta temperatura
+                    p0, p1, p2, p3 = local[0], local[1], local[2], local[3]
+                    m0 = (p0[0] * 0.8 + p3[0] * 0.2, p0[1] * 0.8 + p3[1] * 0.2)
+                    m1 = (p1[0] * 0.8 + p2[0] * 0.2, p1[1] * 0.8 + p2[1] * 0.2)
+                    m2 = (p1[0] * 0.2 + p2[0] * 0.8, p1[1] * 0.2 + p2[1] * 0.8)
+                    m3 = (p0[0] * 0.2 + p3[0] * 0.8, p0[1] * 0.2 + p3[1] * 0.8)
+                    pygame.draw.polygon(overlay, (255, 85, 18, 255), [m0, m1, m2, m3])
+                    # Veio solar superaquecido no centro
+                    c0 = ((p0[0] + p3[0]) * 0.5, (p0[1] + p3[1]) * 0.5)
+                    c1 = ((p1[0] + p2[0]) * 0.5, (p1[1] + p2[1]) * 0.5)
+                    pygame.draw.line(overlay, (255, 235, 110, 255), c0, c1, 4)
+                pygame.draw.polygon(overlay, (255, 214, 90, 255), local, 2)
             else:
                 progress = min(1.0, self.t / max(0.01, self.warn))
-                pygame.draw.polygon(overlay, (255, 90, 30, int(30 + 70 * progress)), local)
-                pygame.draw.polygon(overlay, (255, 150, 60, 200), local, 2)
+                # Fenda sísmica com pulso térmico subterrâneo
+                pulse = 0.5 + 0.5 * math.sin(game_time * 12.0)
+                alpha_glow = int(35 + 75 * progress + 20 * pulse)
+                pygame.draw.polygon(overlay, (190, 40, 15, alpha_glow), local)
+                if len(local) >= 4:
+                    c0 = ((local[0][0] + local[3][0]) * 0.5, (local[0][1] + local[3][1]) * 0.5)
+                    c1 = ((local[1][0] + local[2][0]) * 0.5, (local[1][1] + local[2][1]) * 0.5)
+                    pygame.draw.line(overlay, (255, 140, 30, int(90 + 140 * progress)), c0, c1, 3)
+                pygame.draw.polygon(overlay, (255, 170, 60, int(110 + 130 * progress)), local, 2)
+        elif self.kind == "fireball":
+            progress = min(1.0, self.t / max(0.01, self.warn))
+            cx, cy = w // 2, h // 2
+            r = int(self.shape.get("r", 1.3) * 32)
+            if active:
+                # Cratera de impacto incandescente com fissuras e anel de choque
+                pygame.draw.circle(overlay, (36, 22, 26, 220), (cx, cy), r)
+                pygame.draw.circle(overlay, (255, 80, 20, 240), (cx, cy), max(2, int(r * 0.65)))
+                pygame.draw.circle(overlay, (255, 225, 90, 255), (cx, cy), max(1, int(r * 0.32)))
+                pygame.draw.circle(overlay, (255, 160, 50, 255), (cx, cy), r, 3)
+            else:
+                # Círculo ritual de mira: anéis concêntricos e raios rúnicos convergentes
+                pulse = 0.5 + 0.5 * math.sin(game_time * 10.0)
+                pygame.draw.circle(overlay, (180, 25, 30, int(40 + 70 * progress + 20 * pulse)), (cx, cy), r)
+                pygame.draw.circle(overlay, (255, 140, 40, int(80 + 130 * progress)), (cx, cy), int(r * (1.0 - 0.5 * progress)), 2)
+                pygame.draw.circle(overlay, (255, 220, 110, int(110 + 135 * progress)), (cx, cy), max(2, int(r * 0.35)), 2)
+                pygame.draw.circle(overlay, (255, 210, 100, 220), (cx, cy), r, 2)
         else:
             progress = min(1.0, self.t / max(0.01, self.warn))
             fill = (255, 40, 30, 150) if active else (255, 120, 50, int(40 + 70 * progress))
             if self.kind == "spikes" and not active:
-                fill = (150, 20, 20, int(40 + 70 * progress))
+                fill = (160, 25, 25, int(45 + 75 * progress))
             pygame.draw.polygon(overlay, fill, local)
             pygame.draw.polygon(overlay, (255, 220, 120, 230), local, 2)
         surface.blit(overlay, (x0, y0))
@@ -154,34 +191,61 @@ class BossHazard:
             self._render_spikes(surface, camera)
 
     def _render_spikes(self, surface, camera):
-        """Espinhos de osso que sobem do chão: tocos durante o aviso e lanças inteiras durante o perigo."""
+        """Espinhos de osso que sobem do chão: lanças chanfradas 3D com ranhuras carmesins e cascalho na base."""
         k = min(1.0, self.t / max(0.01, self.warn))
-        height = 0.15 + 0.2 * k if self.t < self.warn else 1.1
+        is_active = self.t >= self.warn
+        height = 0.15 + 0.2 * k if not is_active else 1.15
         r = self.shape["r"]
-        for i in range(7):
-            ox, oy = (0.0, 0.0) if i == 0 else (math.cos(i / 6 * math.tau) * r * 0.62, math.sin(i / 6 * math.tau) * r * 0.62)
+        spike_count = 9
+        for i in range(spike_count):
+            ox, oy = (0.0, 0.0) if i == 0 else (math.cos(i / (spike_count - 1) * math.tau) * r * 0.65, math.sin(i / (spike_count - 1) * math.tau) * r * 0.65)
             bx, by = camera.apply(self.x + ox, self.y + oy, 0.0)
-            tx, ty = camera.apply(self.x + ox, self.y + oy, height * (1.0 if i else 1.3))
-            pygame.draw.polygon(surface, (236, 228, 204), [(bx - 5, by), (bx + 5, by), (tx, ty)])
-            pygame.draw.polygon(surface, (120, 100, 80), [(bx - 5, by), (bx + 5, by), (tx, ty)], 1)
+            h_mult = 1.35 if i == 0 else (1.0 if i % 2 == 0 else 0.85)
+            tx, ty = camera.apply(self.x + ox, self.y + oy, height * h_mult)
+
+            # Cascalho e rocha fraturada na base
+            if is_active:
+                rubble = [(bx - 8, by + 2), (bx - 3, by - 4), (bx + 4, by - 3), (bx + 8, by + 3), (bx, by + 5)]
+                pygame.draw.polygon(surface, (68, 55, 48), rubble)
+                pygame.draw.polygon(surface, (38, 28, 24), rubble, 1)
+
+            # Lança de osso chanfrada com sombreamento 3D facetado
+            w = 6 if i == 0 else 4
+            # Faceta iluminada (marfim)
+            pygame.draw.polygon(surface, (244, 238, 218), [(bx - w, by), (bx, by), (tx, ty)])
+            # Faceta sombreada (osso escuro)
+            pygame.draw.polygon(surface, (175, 160, 138), [(bx, by), (bx + w, by), (tx, ty)])
+            # Ranhura carmesim / canalete de sangue na espinha
+            pygame.draw.line(surface, (165, 28, 28), (bx, by), (tx, ty), 1)
+            # Contorno de definição
+            pygame.draw.polygon(surface, (95, 78, 65), [(bx - w, by), (bx + w, by), (tx, ty)], 1)
 
     def render_air(self, surface, camera):
-        """Crânio em chamas espectrais 3D caindo do céu durante o aviso (desenhado acima dos lutadores)."""
+        """Crânio em chamas espectrais 3D caindo do céu durante o aviso com vórtice de brasas."""
         if self.kind != "fireball" or self.t >= self.warn:
             return
         from src.isometric.voxel_renderer import draw_voxel_box
         k = self.t / max(0.01, self.warn)
         fall = 1.0 - k
-        for n in range(5, -1, -1):  # rastro de chamas 3D atrás do crânio
-            f = min(1.0, fall + n * 0.05)
-            x, y, z = self.x - 2.2 * f, self.y - 2.2 * f, 0.5 + 8.5 * (f ** 1.35)
+        # Vórtice de brasas orbitando a descida
+        for n in range(6, -1, -1):
+            f = min(1.0, fall + n * 0.045)
+            # Espiral de brasas
+            ang = (self.t * 14.0 + n * 0.8)
+            orbit_r = 0.28 * (1.0 - f * 0.5)
+            ox = math.cos(ang) * orbit_r
+            oy = math.sin(ang) * orbit_r
+            x, y, z = self.x - 2.2 * f + ox, self.y - 2.2 * f + oy, 0.5 + 8.5 * (f ** 1.35)
             if n == 0:
-                # Crânio de osso 3D envolto em fogo carmesim/violeta
-                draw_voxel_box(surface, camera, x - 0.22, y - 0.22, z - 0.18, 0.44, 0.44, 0.42, (235, 225, 200), outline=True)
-                draw_voxel_box(surface, camera, x - 0.14, y + 0.16, z - 0.10, 0.28, 0.08, 0.18, (35, 20, 28), outline=False)
+                # Crânio de osso 3D com cavidades oculares abissais
+                draw_voxel_box(surface, camera, x - 0.24, y - 0.24, z - 0.18, 0.48, 0.48, 0.44, (238, 228, 204), outline=True)
+                draw_voxel_box(surface, camera, x - 0.16, y + 0.18, z - 0.10, 0.32, 0.08, 0.20, (35, 18, 28), outline=False)
+                # Olhos espectrais violetas
+                draw_voxel_box(surface, camera, x - 0.12, y + 0.19, z - 0.06, 0.08, 0.06, 0.08, (220, 60, 255), outline=False)
+                draw_voxel_box(surface, camera, x + 0.04, y + 0.19, z - 0.06, 0.08, 0.06, 0.08, (220, 60, 255), outline=False)
             else:
-                w = max(0.10, 0.36 - n * 0.05)
-                col = (185, 50, 235) if n % 2 == 1 else (255, 85, 45)
+                w = max(0.10, 0.38 - n * 0.05)
+                col = (195, 55, 245) if n % 2 == 1 else (255, 95, 35)
                 draw_voxel_box(surface, camera, x - w * 0.5, y - w * 0.5, z, w, w, w * 1.2, col, outline=False)
 
     @property
@@ -504,10 +568,30 @@ class BossOni(Samurai):
                 h.announced = True
                 if h.kind in ("fireball", "spikes", "lava"):
                     self.events.append(f"env_{h.kind}")
-                    if camera is not None and h.kind != "lava":
-                        camera.add_shake(6.0)
-                    if h.kind == "fireball":
-                        self._dust(particles, h.x, h.y, 8)
+                    if camera is not None:
+                        shake = 9.0 if h.kind == "fireball" else (7.0 if h.kind == "spikes" else 4.0)
+                        camera.add_shake(shake)
+                    if particles is not None:
+                        if h.kind == "fireball":
+                            for _ in range(14):
+                                particles.append(SparkParticle(h.x, h.y, 0.4, color=random.choice([(255, 95, 20), (255, 215, 60), (220, 50, 210)])))
+                            for _ in range(8):
+                                particles.append(SmokeParticle(h.x, h.y, wz=0.3, color=(45, 38, 42), radius=0.45, lifetime=0.75))
+                        elif h.kind == "spikes":
+                            for _ in range(10):
+                                particles.append(SparkParticle(h.x, h.y, 0.3, color=(235, 225, 205)))
+                            for _ in range(8):
+                                particles.append(SmokeParticle(h.x, h.y, wz=0.2, color=(95, 82, 72), radius=0.35, lifetime=0.6))
+                        elif h.kind == "lava":
+                            for _ in range(8):
+                                particles.append(SparkParticle(h.x, h.y, 0.1, color=(255, 140, 30)))
+                            for _ in range(5):
+                                particles.append(SmokeParticle(h.x, h.y, wz=0.15, color=(55, 40, 35), radius=0.3, lifetime=0.55))
+            if h.kind == "lava" and h.is_active and particles is not None and self.rng.random() < 0.25:
+                front = h.shape["speed"] * (h.t - h.warn)
+                fx = h.x + h.shape["dx"] * min(h.shape["len"], front) + self.rng.uniform(-0.5, 0.5)
+                fy = h.y + h.shape["dy"] * min(h.shape["len"], front) + self.rng.uniform(-0.5, 0.5)
+                particles.append(SparkParticle(fx, fy, 0.1, color=random.choice([(255, 120, 25), (255, 220, 80)])))
             if h.is_active and not h.hit_done and h.contains(target.wx, target.wy):
                 if h.kind in ("circle", "ring", "sector", "fireball", "spikes", "lava"):
                     if self._hurt_player(target, (h.x, h.y), game_map, particles, banners, camera, h.damage):
@@ -682,11 +766,13 @@ class BossOni(Samurai):
         self.pose["head_up"] = 1.0
         if sub == "idle":
             e = self._new_ellipse(target, game_map)
+            e["target_loops"] = 2
+            e["loops"] = 0
             pts = [self._ellipse_point(e, i / 48 * math.tau) for i in range(48)]
             self.sub_data = {"e": e}
             warn = self._scaled(TUNE["p2_telegraph"])
             lap = math.tau * (e["a"] + e["b"]) / 2.0 / TUNE["p2_speed"]
-            self.hazards.append(BossHazard("path", 0, 0, warn, 0.0, points=pts, life=lap))
+            self.hazards.append(BossHazard("path", 0, 0, warn, 0.0, points=pts, life=lap * 2.2 + 0.4))
             self.sub, self.sub_t = "telegraph", 0.0
         elif sub == "telegraph":
             if self.sub_t >= self._scaled(TUNE["p2_telegraph"]):
@@ -702,13 +788,18 @@ class BossOni(Samurai):
                 self.set_facing(self.wx + (self.wx - old[0]), self.wy + (self.wy - old[1]))
             self._push_trail()
             self._serpent_contact(target, game_map, particles, banners, camera)
+            target_loops = e.get("target_loops", 2)
+            cur_loops = int(abs(e["s"]) / math.tau)
             if hit_rock:
                 self.sub, self.sub_t = "stun", 0.0
                 if camera is not None:
                     camera.add_shake(10.0)
                 self._dust(particles, self.wx, self.wy, 10)
-            elif abs(e["s"]) >= math.tau - 0.05:
+            elif abs(e["s"]) >= math.tau * target_loops - 0.05:
                 self.sub, self.sub_t = "slow", 0.0
+            elif cur_loops > e.get("loops", 0):
+                e["loops"] = cur_loops
+                self._dust(particles, self.wx, self.wy, 4)
         elif sub in ("slow", "stun"):
             span = TUNE["p2_slow"] if sub == "slow" else TUNE["p2_stun"]
             self.pose["head_up"] = -0.6
@@ -773,10 +864,20 @@ class BossOni(Samurai):
             hit_rock = self._move(nx, ny, game_map)
             if bounced:
                 d["speed"] = min(TUNE["p3_speed_max"], d["speed"] + TUNE["p3_speed_gain"])
-                self._dust(particles, self.wx, self.wy, 5)
+                d["bounces"] = d.get("bounces", 0) + 1
+                self._dust(particles, self.wx, self.wy, 6)
+                # Encadeamento agressivo: re-orienta com vigor rumo ao oponente
+                to_target_x, to_target_y = target.wx - self.wx, target.wy - self.wy
+                t_len = math.hypot(to_target_x, to_target_y)
+                if t_len > 0.01:
+                    target_ang = math.atan2(to_target_y, to_target_x)
+                    cur_ang = math.atan2(d["dir"][1], d["dir"][0])
+                    diff = (target_ang - cur_ang + math.pi) % math.tau - math.pi
+                    ang = cur_ang + 0.40 * diff
+                    d["dir"] = (math.cos(ang), math.sin(ang))
             if self.wz < 0.55 and math.hypot(target.wx - self.wx, target.wy - self.wy) < 0.95 + target.radius:
                 self._hurt_player(target, (self.wx, self.wy), game_map, particles, banners, camera, 1)
-            if hit_rock or d["flight"] > TUNE["p3_tired_after"]:
+            if hit_rock or d["flight"] > TUNE["p3_tired_after"] or d.get("bounces", 0) >= 3:
                 if camera is not None and hit_rock:
                     camera.add_shake(12.0)
                 self.sub, self.sub_t = "stun", 0.0

@@ -134,6 +134,7 @@ from src.arcade.arcade_credits import ArcadeCreditsScreen
 from src.ui.settings_menu import SettingsMenu, format_key_name
 from src.ui.gallery_screen import GalleryScreen
 from src.ui.character_select import CharacterSelectScreen
+from src.ui.versus_config import VersusConfigScreen, load_versus_settings
 from src.ui.title_screen import SumieTitleScreen
 from src.ui.opening_video import OpeningVideoScreen
 from src.ui.arena_select import ArenaSelectScreen
@@ -153,6 +154,7 @@ class GameState(Enum):
     """Máquina de estados unificada para o jogo."""
     OPENING_VIDEO = "opening_video"
     TITLE = "title"
+    VERSUS_CONFIG = "versus_config"
     CHARACTER_SELECT = "character_select"
     ARENA_SELECT = "arena_select"
     DUEL_PLAYING = "duel_playing"
@@ -166,6 +168,7 @@ class GameState(Enum):
 # Compatibilidade com código existente
 STATE_OPENING_VIDEO = GameState.OPENING_VIDEO.value
 STATE_TITLE = GameState.TITLE.value
+STATE_VERSUS_CONFIG = GameState.VERSUS_CONFIG.value
 STATE_CHAR_SELECT = GameState.CHARACTER_SELECT.value
 STATE_ARENA_SELECT = GameState.ARENA_SELECT.value
 STATE_DUEL_PLAYING = GameState.DUEL_PLAYING.value
@@ -295,7 +298,7 @@ def get_fighter_action_labels(fighter):
     elif isinstance(fighter, AmericanNinja):
         return "Shuriken", "Cão Dash"
     elif isinstance(fighter, GrayNinja):
-        return "Bomba Arco", "Bomba Fumaça"
+        return "Tanto / Horoku", "Mina Remota"
     elif isinstance(fighter, PurpleNinja):
         return "Corte Foice", "Kusarigama Puxão"
     elif isinstance(fighter, SaitouSamurai):
@@ -313,7 +316,7 @@ def get_fighter_action_labels(fighter):
     elif isinstance(fighter, RenMonk):
         return "Flurry Shaolin", "Kiai Repulsão"
     elif isinstance(fighter, ChiyoKunoichi):
-        return "Corte Kodachi", "Dança Mai"
+        return "Corte Kodachi", "Dança Mai / Lunge"
     elif isinstance(fighter, BenkeiSamurai):
         if getattr(fighter, "has_naginata", True):
             return "Estocada Naginata", "Arremesso Haste"
@@ -456,8 +459,8 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
 
     elif isinstance(fighter, ChiyoKunoichi):
         timer = max(0.0, getattr(fighter, "mai_timer", 0.0))
-        cd = getattr(fighter, "mai_cooldown", 2.8)
-        return {"name": "Dança Mai", "timer": timer, "max_cd": cd, "color": (60, 220, 180)}
+        cd = getattr(fighter, "mai_cooldown", 3.2)
+        return {"name": "Dança Mai / Lunge", "timer": timer, "max_cd": cd, "color": (210, 36, 48)}
 
     elif isinstance(fighter, BenkeiSamurai):
         if not getattr(fighter, "has_naginata", True):
@@ -556,182 +559,240 @@ def play_sfx(event: SoundEvent):
     except Exception:
         pass
 
-def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: list, particles: list, game_map=None):
+def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: list, particles: list, game_map=None, opponent=None):
     """Executa a ação primária de ataque do lutador em direção às coordenadas de mira com áudio específico de arma."""
     if game_map and hasattr(game_map, "add_wind_impulse"):
         dx = aim_x - fighter.wx
         dy = aim_y - fighter.wy
         game_map.add_wind_impulse(fighter.wx, fighter.wy, strength=1.1, radius=3.2, duration=0.55, dir_x=dx, dir_y=dy)
+    success = False
     if isinstance(fighter, RedSamurai):
         if fighter.trigger_iai_attack(aim_x, aim_y):
             play_sfx(SoundEvent.SLASH_KATANA)
+            success = True
     elif isinstance(fighter, BlueSamurai):
         if fighter.trigger_combo_attack(aim_x, aim_y):
             play_sfx(SoundEvent.SLASH_KATANA)
+            success = True
     elif isinstance(fighter, YellowNinja):
-        fighter.trigger_combo_attack(aim_x, aim_y)
+        if fighter.trigger_combo_attack(aim_x, aim_y):
+            success = True
     elif isinstance(fighter, AmericanNinja):
         if fighter.trigger_shuriken(aim_x, aim_y, projectiles):
             play_sfx(SoundEvent.KUNAI_THROW)
+            success = True
     elif isinstance(fighter, GrayNinja):
-        if fighter.trigger_throw_bomb(aim_x, aim_y, projectiles):
+        res = fighter.trigger_hybrid_attack(aim_x, aim_y, projectiles, particles, opponent=opponent)
+        if res == "tanto":
+            play_sfx(SoundEvent.SLASH_KATANA)
+            success = True
+        elif res == "bomb":
             play_sfx(SoundEvent.BOMB_FUSE)
+            success = True
     elif isinstance(fighter, PurpleNinja):
         if fighter.trigger_kama_strike(aim_x, aim_y):
             play_sfx(SoundEvent.SLASH_CHAIN)
+            success = True
     elif isinstance(fighter, SaitouSamurai):
         if fighter.trigger_gatotsu_thrust(aim_x, aim_y):
             play_sfx(SoundEvent.SLASH_KATANA)
+            success = True
     elif isinstance(fighter, Rifleman):
         if fighter.has_ammo and fighter.cocking_timer <= 0:
             if fighter.trigger_shoot(aim_x, aim_y, projectiles, particles):
                 play_sfx(SoundEvent.BOMB_FUSE)
+                success = True
         else:
             if fighter.trigger_rifle_butt(aim_x, aim_y, particles):
                 play_sfx(SoundEvent.SWING_BLUNT)
+                success = True
     elif isinstance(fighter, Kabuki):
         if fighter.trigger_fan_strike(aim_x, aim_y, particles):
             play_sfx(SoundEvent.SWORD_SLASH)
+            success = True
     elif isinstance(fighter, KyudoArcher):
         if fighter.trigger_bow_draw(aim_x, aim_y, projectiles):
             play_sfx(SoundEvent.BOW_RELEASE)
+            success = True
     elif isinstance(fighter, PirateSwordswoman):
         if fighter.trigger_cutlass_cleave(aim_x, aim_y):
             play_sfx(SoundEvent.SLASH_HEAVY)
+            success = True
     elif isinstance(fighter, Musketeer):
         if fighter.trigger_fleche_thrust(aim_x, aim_y):
             play_sfx(SoundEvent.SLASH_RAPIER)
+            success = True
     elif isinstance(fighter, RenMonk):
         if fighter.trigger_punch_combo(aim_x, aim_y):
             play_sfx(SoundEvent.SWING_BLUNT)
+            success = True
     elif isinstance(fighter, ChiyoKunoichi):
         if fighter.trigger_kodachi_strike(aim_x, aim_y):
             play_sfx(SoundEvent.SLASH_KATANA)
+            success = True
     elif isinstance(fighter, BenkeiSamurai):
         if fighter.trigger_naginata_thrust(aim_x, aim_y):
             play_sfx(SoundEvent.SLASH_HEAVY)
+            success = True
     elif isinstance(fighter, OrinMinstrel):
         if fighter.trigger_kamaitachi_pluck(aim_x, aim_y, projectiles, particles):
             play_sfx(SoundEvent.SWING_SHAMISEN)
+            success = True
     elif isinstance(fighter, GoroFarmer):
         if fighter.trigger_kuwa_cleave(aim_x, aim_y):
             play_sfx(SoundEvent.SLASH_HEAVY)
+            success = True
     elif isinstance(fighter, IchiBlade):
         if fighter.trigger_gyaku_iai(aim_x, aim_y):
             play_sfx(SoundEvent.SLASH_KATANA)
+            success = True
     elif isinstance(fighter, ValeriusNecromancer):
         if fighter.trigger_scythe_reap(aim_x, aim_y):
             play_sfx(SoundEvent.SLASH_HEAVY)
+            success = True
     elif isinstance(fighter, SeimeiOnmyoji):
         if fighter.trigger_ofuda_toss(aim_x, aim_y, projectiles, particles):
             play_sfx(SoundEvent.SHURIKEN_THROW)
+            success = True
     elif isinstance(fighter, DaikiPilgrim):
         if fighter.trigger_bo_strike(aim_x, aim_y):
             play_sfx(SoundEvent.SWING_BLUNT)
+            success = True
     elif isinstance(fighter, AoiHuntress):
         if fighter.trigger_spear_thrust(aim_x, aim_y):
             play_sfx(SoundEvent.SLASH_KATANA)
+            success = True
     elif isinstance(fighter, RaidenSumo):
         if fighter.trigger_tsuppari_rush(aim_x, aim_y, particles=particles):
             play_sfx(SoundEvent.SWING_BLUNT)
+            success = True
     elif isinstance(fighter, HendrikaAlchemist):
         if fighter.trigger_stiletto_thrust(aim_x, aim_y, particles=particles):
             play_sfx(SoundEvent.SLASH_KATANA)
+            success = True
+    return success
 
-def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, poison_clouds: list, powder_traps: list, opponent=None, game_map=None, banners: list = None):
+def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, poison_clouds: list, powder_traps: list, opponent=None, game_map=None, banners: list = None, cinematic_director=None):
     """Executa a Ação Secundária (Técnica Especial / Defesa / Contra-ataque) do combatente."""
+    success = False
     if isinstance(fighter, RedSamurai):
         # Kenshi: Ryuu Tsui Sen (Salto vertical e corte descendente devastador)
         if fighter.trigger_ryuu_tsui_sen(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent):
             play_sfx(SoundEvent.SWORD_SLASH)
+            success = True
     elif isinstance(fighter, BlueSamurai):
         fighter.set_facing(aim_x, aim_y)
-        fighter.trigger_parry(particles=particles, banners=banners, opponent=opponent, projectiles=projectiles)
+        if fighter.trigger_parry(particles=particles, banners=banners, opponent=opponent, projectiles=projectiles):
+            success = True
     elif isinstance(fighter, YellowNinja):
-        fighter.trigger_kunai_snipe(aim_x, aim_y, projectiles)
+        if fighter.trigger_kunai_snipe(aim_x, aim_y, projectiles):
+            success = True
     elif isinstance(fighter, AmericanNinja):
         if fighter.trigger_dog_attack(aim_x, aim_y, target_entity=opponent):
             play_sfx(SoundEvent.DOG_BARK)
+            success = True
     elif isinstance(fighter, GrayNinja):
         all_f = [fighter, opponent] if opponent else [fighter]
-        if fighter.trigger_remote_mine(aim_x, aim_y, projectiles, fighters=all_f, particles=particles, banners=banners):
+        if fighter.trigger_remote_mine(aim_x, aim_y, projectiles, fighters=all_f, particles=particles, banners=banners, cinematic_director=cinematic_director):
             play_sfx(SoundEvent.BOMB_FUSE)
+            success = True
     elif isinstance(fighter, PurpleNinja):
         if fighter.start_chain_shield(aim_x, aim_y):
             play_sfx(SoundEvent.CHAIN_SPIN)
+            success = True
     elif isinstance(fighter, SaitouSamurai):
         if fighter.trigger_zeroshiki(aim_x, aim_y):
             play_sfx(SoundEvent.SWORD_SLASH)
+            success = True
     elif isinstance(fighter, Rifleman):
         # Teppo: Black Powder Ground Trap (Trilha de pólvora inflamável no solo)
         if fighter.trigger_powder_trap(aim_x, aim_y, powder_traps, particles):
             play_sfx(SoundEvent.BOMB_FUSE)
+            success = True
     elif isinstance(fighter, Kabuki):
         # Okuni: Dokukiri (Sopro de névoa venenosa com leques de ferro)
         if fighter.trigger_dokukiri(aim_x, aim_y, poison_clouds):
             play_sfx(SoundEvent.POISON_BREATH)
+            success = True
     elif isinstance(fighter, KyudoArcher):
         # Tomoe: Chuva / Salva de Flechas Sagradas em Arco (Mecanismo idêntico ao da Anne: Hold & Release)
         if fighter.start_sacred_volley(aim_x, aim_y):
             play_sfx(SoundEvent.BOW_RELEASE)
+            success = True
     elif isinstance(fighter, PirateSwordswoman):
         # Anne Bonny: Naval Artillery Strike (Hold & release orbital cannonball)
         fighter.start_cannon_strike(aim_x, aim_y)
+        success = True
     elif isinstance(fighter, Musketeer):
         # Julie: pederneira quando pronta; com ela recarregando, floreio de capa (repele e desvia projéteis)
         result = fighter.trigger_secondary(aim_x, aim_y, projectiles, particles=particles, opponent=opponent)
         if result == "shot":
             play_sfx(SoundEvent.FLINTLOCK_FIRE)
+            success = True
         elif result == "flip":
             play_sfx(SoundEvent.DODGE_WHOOSH)
+            success = True
     elif isinstance(fighter, RenMonk):
         # Ren: Grito Kiai de 360° que repele projéteis e atordoa
         if fighter.trigger_kiai_shout(particles=particles, banners=banners, opponent=opponent):
             play_sfx(SoundEvent.DODGE_WHOOSH)
+            success = True
     elif isinstance(fighter, ChiyoKunoichi):
         # Chiyo: Dança Mai giratória com duas Nodachis em vórtice circular
         if fighter.trigger_nodachi_mai(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent):
             play_sfx(SoundEvent.SWORD_SLASH)
+            success = True
     elif isinstance(fighter, BenkeiSamurai):
         # Benkei: Arremesso da Naginata
         if fighter.trigger_naginata_throw(aim_x, aim_y, projectiles, particles=particles):
             play_sfx(SoundEvent.SWORD_SLASH)
+            success = True
     elif isinstance(fighter, OrinMinstrel):
         # O-Rin: Ressonância Acústica 360°
         if fighter.trigger_resonance_shockwave(aim_x, aim_y, projectiles, particles=particles, banners=banners):
             play_sfx(SoundEvent.SWORD_CLASH)
+            success = True
     elif isinstance(fighter, GoroFarmer):
         # Goro: Pisotão Sísmico
         if fighter.trigger_earth_stomp(aim_x, aim_y, shockwaves=projectiles, particles=particles, banners=banners):
             play_sfx(SoundEvent.OBSTACLE_HIT)
+            success = True
     elif isinstance(fighter, IchiBlade):
         # Ichi: Postura de Escuta
         if fighter.trigger_listen_stance(aim_x, aim_y, banners=banners, particles=particles):
             play_sfx(SoundEvent.DODGE_WHOOSH)
+            success = True
     elif isinstance(fighter, ValeriusNecromancer):
         # Valerius: Invocação de Esqueletos
         if fighter.trigger_summon_undead(aim_x, aim_y, particles=particles, opponent=opponent, banners=banners):
             play_sfx(SoundEvent.DODGE_WHOOSH)
+            success = True
     elif isinstance(fighter, SeimeiOnmyoji):
         # Seimei: Selo Sagrado de Proteção e Fogo
         if fighter.trigger_sacred_ward(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners, game_map=game_map):
             play_sfx(SoundEvent.PARRY)
+            success = True
     elif isinstance(fighter, DaikiPilgrim):
         # Daiki: Salto com Vara (Pole Vault) e Queda Meteórica
         if fighter.trigger_pole_vault(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent, game_map=game_map):
             play_sfx(SoundEvent.DASH_ROLL)
+            success = True
     elif isinstance(fighter, AoiHuntress):
         # Aoi: Armadilha de Urso de Ferro + Recuo Tático
         if fighter.trigger_bear_trap(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners, game_map=game_map):
             play_sfx(SoundEvent.PARRY)
+            success = True
     elif isinstance(fighter, RaidenSumo):
         # Raiden: Tachiai Tackle semiteleguiado
         if fighter.trigger_tachiai_tackle(aim_x, aim_y, particles=particles, banners=banners, opponent=opponent, game_map=game_map):
             play_sfx(SoundEvent.DASH_ROLL)
+            success = True
     elif isinstance(fighter, HendrikaAlchemist):
         # Hendrika: Arremesso de Frasco Químico em arco 3D
         if fighter.trigger_flask_throw(aim_x, aim_y, projectiles=projectiles, particles=particles, banners=banners):
             play_sfx(SoundEvent.OBSTACLE_HIT)
+            success = True
+    return success
 
 def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None, opponent=None, banners=None):
     """Executa a Terceira Ação (Roll / Dash dedicado) com invulnerabilidade temporária (i-frames)."""
@@ -745,8 +806,11 @@ def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: f
     elif isinstance(fighter, PirateSwordswoman):
         success = fighter.trigger_roll(dwx, dwy, particles)
     elif isinstance(fighter, KyudoArcher):
-        # Tomoe: Flecha de corda para movimentação rápida
-        success = fighter.start_rope_arrow_charge(aim_x, aim_y, game_map)
+        # Tomoe: Flecha de corda se disponível; se em cooldown, mergulho ao chão padrão
+        if fighter.rope_timer <= 0:
+            success = fighter.start_rope_arrow_charge(aim_x, aim_y, game_map)
+        else:
+            success = fighter.trigger_roll(dwx, dwy, particles)
     elif isinstance(fighter, ValeriusNecromancer):
         success = fighter.trigger_mist_dash(dwx, dwy, particles=particles)
     elif isinstance(fighter, SeimeiOnmyoji):
@@ -755,12 +819,15 @@ def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: f
         success = fighter.trigger_snow_slide(dwx, dwy, particles=particles)
     elif isinstance(fighter, YellowNinja):
         success = fighter.trigger_jump(dwx, dwy)
+    elif isinstance(fighter, ChiyoKunoichi):
+        success = fighter.trigger_shadow_step(dwx, dwy, particles=particles)
     else:
         # Demais personagens (BlueSamurai, YellowNinja, AmericanNinja, GrayNinja, PurpleNinja, SaitouSamurai)
         if hasattr(fighter, "trigger_roll"):
             success = fighter.trigger_roll(dwx, dwy, particles)
     if success:
         play_sfx(SoundEvent.DASH_ROLL)
+    return success
 
 def execute_fighter_dash(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, opponent=None, game_map=None, poison_clouds=None, powder_traps=None):
     """Compatibilidade legada: direciona para a terceira ação de roll/dash dedicado."""
@@ -943,7 +1010,11 @@ def run_game():
 
     loading_screen.update(0.72, "Carregando retratos e atributos dos 12 guerreiros...", delay_ms=50)
     preload_portraits()
-    char_select_screen = CharacterSelectScreen(ai_difficulty=ai_difficulty)
+    vs_settings = load_versus_settings()
+    vs_rounds_to_win = vs_settings.get("rounds_to_win", 2)
+    char_select_screen = CharacterSelectScreen(ai_difficulty=vs_settings.get("ai_difficulty", ai_difficulty), rounds_to_win=vs_rounds_to_win)
+    char_select_screen.match_mode = vs_settings.get("mode", "pve")
+    versus_config_screen = VersusConfigScreen()
 
     loading_screen.update(0.90, "Sintonizando arenas e cenários dinâmicos...", delay_ms=40)
     arena_select_screen = ArenaSelectScreen()
@@ -1047,7 +1118,7 @@ def run_game():
         decoys.clear()
         poison_clouds.clear()
         powder_traps.clear()
-        powder_pouches = PowderPouch.create_arena_pouches(game_map, [p1, p2], total_pouches=3)
+        powder_pouches = []
         lighting_fx = ArenaLighting(game_map)
         terrain_fx = TerrainFX()
         fog = game_map.fog = FogVolume(game_map)
@@ -1177,10 +1248,12 @@ def run_game():
         if arcade_run.is_finished:
             data = arcade_save.load()
             rank = arcade_save.add_high_score(data, arcade_run)
+            arcade_save.unlock_gallery(data)
             data["current_run"] = None
             arcade_save.save(data)
             sound_mgr.stop_music(fadeout_ms=300)
             arcade_credits_screen.open(arcade_run, rank, data["high_scores"])
+            sound_mgr.play_music(MusicTrack.CLOSING_THEME, fade_ms=1200, loops=0)
             game_state = STATE_ARCADE_CREDITS
         else:
             save_arcade_run()
@@ -1242,8 +1315,6 @@ def run_game():
                     obj.render(screen, camera)
                 finally:
                     obj.alpha = saved_alpha
-            elif item_type == 'pouch':
-                obj.render(screen, camera, font_small)
             elif getattr(obj, 'animated', False):  # rochas animadas (ex.: fonte barroca)
                 obj.render(screen, camera, game_time)
             else:
@@ -1409,9 +1480,8 @@ def run_game():
                     action = title_screen.handle_event(event)
                     if action == "VERSUS":
                         play_sfx(SoundEvent.MENU_SELECT)
-                        char_select_screen.reset()
-                        sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
-                        game_state = STATE_CHAR_SELECT
+                        versus_config_screen.open()
+                        game_state = STATE_VERSUS_CONFIG
                     elif action == "ARCADE":
                         play_sfx(SoundEvent.MENU_SELECT)
                         saved = arcade_save.load()
@@ -1433,6 +1503,35 @@ def run_game():
             title_screen.update(dt)
             title_screen.render(screen, font_large, font_mid, font_small)
             pygame.display.flip()
+            continue
+
+        # -------------------------------------------------------------
+        # SUBMENU DE CONFIGURAÇÃO DO VERSUS (Modo, Rounds, Dificuldade)
+        # -------------------------------------------------------------
+        if game_state == STATE_VERSUS_CONFIG:
+            for event in pygame.event.get():
+                ctrl_mgr.handle_event(event)
+                if event.type == pygame.QUIT:
+                    running = False
+                    break
+                res = versus_config_screen.handle_event(event, ctrl_mgr)
+                if res == "BACK":
+                    game_state = STATE_TITLE
+                    break
+                elif res == "PROCEED":
+                    char_select_screen.match_mode = versus_config_screen.mode
+                    char_select_screen.ai_difficulty = versus_config_screen.ai_difficulty
+                    char_select_screen.rounds_to_win = versus_config_screen.rounds_to_win
+                    vs_rounds_to_win = versus_config_screen.rounds_to_win
+                    char_select_screen.arcade_mode = False
+                    char_select_screen.reset()
+                    sound_mgr.play_music(MusicTrack.CHAR_SELECT_THEME)
+                    game_state = STATE_CHAR_SELECT
+                    break
+            if game_state == STATE_VERSUS_CONFIG:
+                versus_config_screen.update(dt)
+                versus_config_screen.render(screen)
+                pygame.display.flip()
             continue
 
         # -------------------------------------------------------------
@@ -1572,8 +1671,8 @@ def run_game():
                     result = char_select_screen.handle_event(event)
                     if result == "BACK":
                         play_sfx(SoundEvent.MENU_SELECT)
-                        sound_mgr.play_music(MusicTrack.TITLE_THEME)
-                        game_state = STATE_TITLE
+                        versus_config_screen.open()
+                        game_state = STATE_VERSUS_CONFIG
                     elif result:
                         start_match = True
 
@@ -1586,6 +1685,7 @@ def run_game():
                 ai.set_difficulty(char_select_screen.ai_difficulty)
                 ai1.set_difficulty(char_select_screen.ai_difficulty)
                 settings_menu.ai_difficulty = char_select_screen.ai_difficulty
+                vs_rounds_to_win = char_select_screen.rounds_to_win
                 demo_start_pending = is_demo()
                 game_state = STATE_ARENA_SELECT
             char_select_screen.render(screen, font_large, font_mid, font_small)
@@ -1939,7 +2039,7 @@ def run_game():
                 if vs_ai_mode != "watch" and p1.is_alive and round_winner is None and round_in_progress:
                     if event.key == controls["P1_ATTACK"]:
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                        execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles, game_map=game_map)
+                        execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles, game_map=game_map, opponent=p2)
                     elif event.key == controls.get("P1_SECONDARY", pygame.K_r):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                         execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
@@ -1951,7 +2051,7 @@ def run_game():
                 if not vs_ai_mode and p2.is_alive and round_winner is None and round_in_progress:
                     if event.key == controls["P2_ATTACK"]:
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
-                        execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles, game_map=game_map)
+                        execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles, game_map=game_map, opponent=p1)
                     elif event.key in (controls.get("P2_SECONDARY"), controls.get("P2_PARRY")):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
                         execute_fighter_secondary(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p1, game_map=game_map, banners=banners)
@@ -1979,7 +2079,7 @@ def run_game():
                 elif vs_ai_mode != "watch" and p1.is_alive and round_winner is None and round_in_progress:
                     if ctrl_mgr.is_event_action(event, 0, "attack"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                        execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles, game_map=game_map)
+                        execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles, game_map=game_map, opponent=p2)
                     elif ctrl_mgr.is_event_action(event, 0, "secondary"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                         execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
@@ -1994,7 +2094,7 @@ def run_game():
                         break
                     elif ctrl_mgr.is_event_action(event, 1, "attack"):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
-                        execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles, game_map=game_map)
+                        execute_fighter_attack(p2, aim_x, aim_y, projectiles, particles, game_map=game_map, opponent=p1)
                     elif ctrl_mgr.is_event_action(event, 1, "secondary"):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
                         execute_fighter_secondary(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p1, game_map=game_map, banners=banners)
@@ -2020,7 +2120,7 @@ def run_game():
         if vs_ai_mode != "watch" and p1.is_alive and round_winner is None and round_in_progress:
             if touch_controls.is_attack_just_pressed():
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles, game_map=game_map)
+                execute_fighter_attack(p1, aim_x, aim_y, projectiles, particles, game_map=game_map, opponent=p2)
             elif touch_controls.is_secondary_just_pressed():
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
                 execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
@@ -2090,11 +2190,12 @@ def run_game():
         p1_dash_held = (vs_ai_mode != "watch") and (keys[controls.get("P1_DASH", pygame.K_t)] or ctrl_mgr.is_action_down(0, "dash") or touch_controls.is_dash_held())
         if isinstance(p1, KyudoArcher) and p1.is_alive and round_in_progress:
             if p1_dash_held:
-                aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                if not p1.is_charging_rope:
-                    p1.start_rope_arrow_charge(aim_x, aim_y, game_map)
-                else:
-                    p1.update_rope_charge(dt, aim_x, aim_y, game_map)
+                if p1.rope_timer <= 0:
+                    aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
+                    if not p1.is_charging_rope:
+                        p1.start_rope_arrow_charge(aim_x, aim_y, game_map)
+                    else:
+                        p1.update_rope_charge(dt, aim_x, aim_y, game_map)
             else:
                 if p1.is_charging_rope:
                     p1.release_rope_arrow(projectiles, particles, game_map)
@@ -2103,11 +2204,12 @@ def run_game():
         p2_dash_held = keys[p2_dash_key] or ctrl_mgr.is_action_down(1, "dash")
         if not vs_ai_mode and isinstance(p2, KyudoArcher) and p2.is_alive and round_in_progress:
             if p2_dash_held:
-                aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
-                if not p2.is_charging_rope:
-                    p2.start_rope_arrow_charge(aim_x, aim_y, game_map)
-                else:
-                    p2.update_rope_charge(dt, aim_x, aim_y, game_map)
+                if p2.rope_timer <= 0:
+                    aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
+                    if not p2.is_charging_rope:
+                        p2.start_rope_arrow_charge(aim_x, aim_y, game_map)
+                    else:
+                        p2.update_rope_charge(dt, aim_x, aim_y, game_map)
             else:
                 if p2.is_charging_rope:
                     p2.release_rope_arrow(projectiles, particles, game_map)
@@ -2182,9 +2284,6 @@ def run_game():
                     if type(pr).__name__ in ("SmokeCloudEntity", "PoisonCloudProjectile"):
                         pr.is_active = False
 
-            for pouch in powder_pouches:
-                pouch.update(dt, game_map, particles)
-
             # Atualizar manequins teatrais Kawarimi de Okuni
             decoys[:] = [d for d in decoys if d.update(dt)]
 
@@ -2192,7 +2291,7 @@ def run_game():
             poison_clouds = [pc for pc in poison_clouds if pc.update(dt, [p1, p2], particles, banners=banners, cinematic_director=cinematic_director)]
 
             # Atualizar armadilhas de pólvora negra de Teppo
-            powder_traps = [pt for pt in powder_traps if pt.update(dt, [p1, p2], particles, banners=banners, cinematic_director=cinematic_director)]
+            powder_traps = [pt for pt in powder_traps if pt.update(dt, [p1, p2], particles, banners=banners, cinematic_director=cinematic_director, projectiles=projectiles)]
 
             # Atualizar Barreira dos Ventos Kami de Tomoe
             for archer, opp in ((p1, p2), (p2, p1)):
@@ -2212,9 +2311,6 @@ def run_game():
                     else:
                         f.update(0.0)
                     continue
-                if isinstance(f, Rifleman):
-                    if round_in_progress:
-                        f.check_powder_pickup(powder_pouches, particles)
                 if isinstance(f, PirateSwordswoman):
                     f.update(f_dt, game_map, particles, opponent=opp, banners=banners)
                 elif isinstance(f, SaitouSamurai):
@@ -2336,7 +2432,7 @@ def run_game():
             if arcade_run is not None:
                 ends_match = arcade_fight_over in ("won", "lost")
             else:
-                ends_match = check_match_winner(score_p1, score_p2) is not None
+                ends_match = check_match_winner(score_p1, score_p2, wins_needed=vs_rounds_to_win) is not None
 
             # A música da arena continua em loop entre rounds; só encerra quando a luta inteira for resolvida
             if ends_match:
@@ -2355,7 +2451,7 @@ def run_game():
 
 
         if arcade_run is None and round_winner is not None and match_winner is None:
-            mw = check_match_winner(score_p1, score_p2)
+            mw = check_match_winner(score_p1, score_p2, wins_needed=vs_rounds_to_win)
             if mw is not None:
                 match_winner = mw
                 winner_fighter = p1 if mw == "P1" else p2
@@ -2504,10 +2600,6 @@ def run_game():
         # Adicionar corpos voxel fatiados ao Y-sorting
         for corpse in cinematic_director.corpses:
             render_queue.append((camera.depth(corpse.wx, corpse.wy), 'corpse', corpse))
-
-        for pouch in powder_pouches:
-            if pouch.is_active:
-                render_queue.append((camera.depth(pouch.wx, pouch.wy), 'pouch', pouch))
 
         for decoy in decoys:
             if decoy.is_active:
@@ -2723,7 +2815,8 @@ def run_game():
             render_boss_bar(screen, p2, panel_rect)
             render_damage_bars(screen, p1, p2, p1_color, p2_color, panel_rect)
         else:
-            render_round_pips(screen, p1_round_score, score_p2, p1_color, p2_color, panel_rect=panel_rect, p1_total=challenge_total or None)
+            active_wins = (hud_fight.rounds_to_win if hud_fight is not None else 2) if arcade_run is not None else vs_rounds_to_win
+            render_round_pips(screen, p1_round_score, score_p2, p1_color, p2_color, wins_needed=active_wins, panel_rect=panel_rect, p1_total=challenge_total or None)
             render_damage_bars(screen, p1, p2, p1_color, p2_color, panel_rect)
 
         if vs_ai_mode == "watch":
@@ -2826,38 +2919,6 @@ def run_game():
                     fill_col2 = cd2["color"] if t2 > 0 else (60, 205, 120)
                     pygame.draw.rect(screen, fill_col2, (bar_x2 + bar_w - fill_w2, bar_y2, fill_w2, bar_h), border_radius=2)
                 pygame.draw.rect(screen, (75, 90, 82), (bar_x2, bar_y2, bar_w, bar_h), 1, border_radius=2)
-
-        # Indicador Tático de Pólvora para o Teppo (quando desmuniciado)
-        for fighter in (p1, p2):
-            if isinstance(fighter, Rifleman) and fighter.is_alive and round_winner is None:
-                active_pouches = [p for p in powder_pouches if getattr(p, "is_active", False)]
-                if not fighter.has_ammo and active_pouches:
-                    nearest_pouch = min(active_pouches, key=lambda p: math.hypot(p.wx - fighter.wx, p.wy - fighter.wy))
-                    dist = math.hypot(nearest_pouch.wx - fighter.wx, nearest_pouch.wy - fighter.wy)
-                    fsx, fsy = camera.apply(fighter.wx, fighter.wy, 1.4)
-                    psx, psy = camera.apply(nearest_pouch.wx, nearest_pouch.wy, 0.4)
-                    sdx = psx - fsx
-                    sdy = psy - fsy
-                    s_dist = math.hypot(sdx, sdy)
-                    if s_dist > 0.001:
-                        nx = sdx / s_dist
-                        ny = sdy / s_dist
-                        ptr_dist = 42
-                        ptr_x = fsx + nx * ptr_dist
-                        ptr_y = fsy + ny * ptr_dist
-                        perp_x = -ny * 7
-                        perp_y = nx * 7
-                        p_tip = (ptr_x + nx * 8, ptr_y + ny * 8)
-                        p_left = (ptr_x - nx * 6 + perp_x, ptr_y - ny * 6 + perp_y)
-                        p_right = (ptr_x - nx * 6 - perp_x, ptr_y - ny * 6 - perp_y)
-                        pygame.draw.polygon(screen, (15, 18, 16), [p_tip, p_left, p_right])
-                        pygame.draw.polygon(screen, (255, 215, 40), [p_tip, p_left, p_right])
-                        pygame.draw.polygon(screen, (160, 110, 20), [p_tip, p_left, p_right], 1)
-                        dist_lbl = font_small.render(t("powder_tracker", dist=dist), True, (255, 240, 160))
-                        d_bg = pygame.Rect(ptr_x - dist_lbl.get_width() // 2 - 4, ptr_y - 24, dist_lbl.get_width() + 8, 16)
-                        pygame.draw.rect(screen, (18, 24, 21), d_bg, border_radius=4)
-                        pygame.draw.rect(screen, (255, 210, 50), d_bg, 1, border_radius=4)
-                        screen.blit(dist_lbl, (d_bg.x + 4, d_bg.y + 1))
 
         # Rondel Onmyōdō de Seimei (Mostrador dos 6 Elementos no Rodapé Lateral de Cada Jogador)
         from src.ui.hud_rondel import RondelHUD

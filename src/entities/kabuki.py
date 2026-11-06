@@ -48,10 +48,10 @@ class PoisonCloud:
         self.wx = wx + self.dir_x * 0.85
         self.wy = wy + self.dir_y * 0.85
         self.wz = 0.2
-        self.cone_length = 2.45   # Alcance frontal estendido para 2.45m
+        self.cone_length = 3.0    # Alcance frontal estendido para 3.0m
         self.cone_half_angle = math.radians(45)  # Abertura ampla de 90° à frente
         self.cos_cone_half_angle = math.cos(self.cone_half_angle)
-        self.radius = 1.20        # Raio efetivo ampliado
+        self.radius = 1.35        # Raio efetivo ampliado
         self.lifetime = 2.2       # Duração da névoa
         self.max_lifetime = 2.2
         self.age = 0.0
@@ -71,10 +71,16 @@ class PoisonCloud:
             )
             for i in range(12)
         ]
-        # Vórtices de vapor orientados ao longo do cone
+        # Vórtices de microvoxels 3D volumétricos orientados ao longo do cone
         self.wisps = [
-            (random.uniform(0.20, 0.95), random.uniform(-0.35, 0.35), random.uniform(0.03, 0.16), random.uniform(0.65, 1.1))
-            for _ in range(6)
+            (
+                random.uniform(0.15, 0.95),
+                random.uniform(-0.45, 0.45),
+                random.uniform(0.02, 0.22),
+                random.uniform(0.8, 1.4),
+                (140, 50, 185) if i % 2 == 0 else (70, 210, 120)
+            )
+            for i in range(14)
         ]
 
     def update(self, dt: float, fighters: list = None, particles: list = None, banners: list = None, cinematic_director = None) -> bool:
@@ -116,8 +122,10 @@ class PoisonCloud:
                             f.wy += self.dir_y * push_dist
                             f.wx = max(1.0, min(24.0, f.wx))
                             f.wy = max(1.0, min(24.0, f.wy))
-                            # Micro-stun de tosse ao aspirar a nuvem tóxica de frente
-                            f.stun(0.25)
+                            # Whiff stun de tosse (0.8s) ao aspirar a nuvem tóxica de frente
+                            f.stun(0.80)
+                            if banners is not None:
+                                banners.append(FloatingBanner("DOKUKIRI STUN! (0.8s)", f.wx, f.wy, wz=1.9, color=(180, 70, 240), duration=1.2))
 
                         # 2. Infectar com veneno DEBUFF: causa lentidão real (-25% SPD) e drena HP
                         if not getattr(f, "is_poisoned", False):
@@ -142,7 +150,7 @@ class PoisonCloud:
                                     for _ in range(30):
                                         particles.append(BloodParticle(f.wx, f.wy, 0.6))
                                 if cinematic_director:
-                                    cinematic_director.trigger_fatal_strike(self.owner, f, "OKUNI_MELT", (0, 0))
+                                    cinematic_director.trigger_fatal_strike(self.owner, f, "DOKUKIRI_MELT", (0, 0))
         return self.is_active
 
     def render(self, surface: pygame.Surface, camera):
@@ -203,14 +211,14 @@ class PoisonCloud:
         v_alpha = int(80 * base_alpha)
         perp_x = -self.dir_y
         perp_y = self.dir_x
-        for forward_ratio, lateral_ratio, oz, v_sz in self.wisps:
+        for forward_ratio, lateral_ratio, oz, v_sz, w_col in self.wisps:
             dist_f = forward_ratio * self.cone_length * (0.7 + 0.3 * progress)
             dist_l = lateral_ratio * (dist_f * 0.75)
             vx = self.origin_x + self.dir_x * dist_f + perp_x * dist_l
             vy = self.origin_y + self.dir_y * dist_f + perp_y * dist_l
             vz = oz + (self.age * 0.08) % 0.35
             sz = 0.12 * v_sz
-            draw_voxel_box(surface, camera, vx - sz*0.5, vy - sz*0.5, vz, sz, sz, sz*0.65, (130, 60, 175), outline=False, alpha=v_alpha)
+            draw_voxel_box(surface, camera, vx - sz*0.5, vy - sz*0.5, vz, sz, sz, sz*0.65, w_col, outline=False, alpha=v_alpha)
 
 class OkuniDecoy:
     """Manequim teatral de seda deixado por Okuni durante a finta Kawarimi."""
@@ -264,10 +272,12 @@ class Kabuki(Samurai):
         super().__init__(wx, wy, name="Okuni")
         self.char_type = "okuni"
         self.speed = 4.6  # Agilidade aprimorada (era 4.4)
+        self.pose_lerp_tracker = {"lerp_duration": 0.08, "blend_timer": 0.0, "pose_key": None}
 
         # Ataque Melee: Dança dos Leques de Aço (Tessen-jutsu)
         self.attack_duration = 0.14  # Golpes mais ágeis (era 0.16)
         self.recovery_duration = 0.08  # Resposta ultra-rápida pós-golpe (era 0.10)
+        self.hitbox_radius = 1.45  # Alcance estendido dos leques de aço Tessen
 
         # Ação Secundária: Dokukiri (Névoa Venenosa)
         self.poison_cooldown = 2.6   # Cooldown reduzido (era 3.2s) para presença tática
@@ -464,18 +474,38 @@ class Kabuki(Samurai):
                 self.state = STATE_IDLE
 
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza Okuni com leques de aço e efeito de camuflagem."""
+        """Renderiza Okuni com leques de aço, SSAA 2x, pose LERP e efeito de camuflagem."""
         if self.is_hidden:
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (235, 150, 180), (sx, sy), 3)
+
+        pose_key = None
+        pose_progress = 0.0
+        if self.state == STATE_ATTACK:
+            pose_key = "fan_strike"
+            pose_progress = 1.0 - max(0.0, self.state_timer / max(0.001, self.attack_duration))
+        elif self.state == "DOKUKIRI":
+            pose_key = "dokukiri_breath"
+            pose_progress = 1.0 - max(0.0, self.state_timer / 0.20)
+        elif self.state == STATE_KABUKI_ROLL:
+            pose_key = "kawarimi_feint"
+            pose_progress = 1.0 - max(0.0, self.state_timer / max(0.001, self.roll_duration))
+
+        extra_props = {
+            "ssaa_2x": True,
+            "pose_lerp_tracker": self.pose_lerp_tracker,
+            "active_pose": pose_key,
+            "pose_progress": pose_progress,
+        }
 
         render_voxel_humanoid(
             surface, camera,
             self.wx, self.wy, self.wz,
             self.facing_x, self.facing_y,
             self.state, self.state_timer, self.is_alive,
-            char_type="kabuki",
+            char_type="okuni",
             walk_timer=self.walk_cycle,
             alpha=self.alpha,
-            is_moving=self.is_moving
+            is_moving=self.is_moving,
+            extra_props=extra_props
         )

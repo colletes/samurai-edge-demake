@@ -13,7 +13,7 @@ import pygame
 
 from src.entities import model_kit as mk
 from src.isometric import cloth
-from src.isometric.mesh_primitives import draw_ribbon_mesh_3d, draw_tapered_frustum_3d
+from src.isometric.mesh_primitives import draw_ribbon_mesh_3d, draw_tapered_frustum_3d, draw_portrait_face_3d
 
 PALETTE = {
     # Traje e Couro
@@ -41,9 +41,10 @@ PALETTE = {
     "hair_dark": (160, 168, 184),
     "tie": (32, 34, 40),
 
-    # Cachecol Shinobi
+    # Cachecol Shinobi (neck e jaw herdam a cor do cachecol para zero vazamento de pele sob a gola)
     "scarf": (148, 154, 166),
     "neck": (148, 154, 166),
+    "jaw": (148, 154, 166),
     "scarf_dark": (105, 110, 120),
     "scarf_light": (190, 196, 208),
 
@@ -63,8 +64,17 @@ PALETTE = {
 MATERIALS = {
     "pants": "latex", "chrome": "chrome", "chrome_dark": "metal", "chrome_light": "chrome",
     "torso": "leather", "torso_dark": "leather", "black": "leather", "leather": "leather",
-    "belt": "leather", "scarf": "canvas", "scarf_dark": "canvas", "bomb": "lacquer",
-    "buckle": "chrome", "blade": "steel", "edge": "steel"
+    "belt": "leather", "scarf": "canvas", "scarf_dark": "canvas", "scarf_light": "canvas",
+    "bomb": "lacquer", "fuse": "canvas", "buckle": "chrome", "blade": "steel", "edge": "steel",
+    "boot": "leather", "sole": "leather", "glove": "leather", "hair": "hair", "hair_light": "hair"
+}
+
+LEGACY_MATERIALS = {
+    "pants": "matte", "chrome": "matte", "chrome_dark": "matte", "chrome_light": "matte",
+    "torso": "matte", "torso_dark": "matte", "black": "matte", "leather": "matte",
+    "belt": "matte", "scarf": "matte", "scarf_dark": "matte", "scarf_light": "matte",
+    "bomb": "matte", "fuse": "matte", "buckle": "matte", "blade": "matte", "edge": "matte",
+    "boot": "matte", "sole": "matte", "glove": "matte", "hair": "matte", "hair_light": "matte"
 }
 
 
@@ -78,34 +88,202 @@ def _smooth(x):
 
 
 def _hands(c):
-    """Retorna posição das mãos (esquerda, direita) com guarda ágil ou animação de golpe."""
+    """
+    Cinemática articulada modular de Kasumi:
+    Retorna posição das mãos (mão esquerda, mão direita com adaga Tanto).
+    Suporta todas as 11 poses da Fase 2 Overhaul:
+    - tanto_slash (corte relâmpago corpo a corpo)
+    - bomb_throw (arremesso de bomba Horoku em arco 3D)
+    - plant_mine (agachamento para plantar mina remota no solo)
+    - smoke_roll (rolo acrobático shinobi com camuflagem de fumaça)
+    - drop_shinobi (Intro 1: queda vertical do teto)
+    - fuse_draw (Intro 2: centelha do pavio e saque da adaga)
+    - mist_stance (Intro 3: postura furtiva da névoa)
+    - chiburi_sheath (Vitória 1: chiburi e embainhamento)
+    - smoke_drop (Vitória 2: quebra de cápsula de fumaça)
+    - mist_vanish (Vitória 3: dissolução total na névoa)
+    - finisher_tanto (Finisher A: Moujin Shundan / 霧刃瞬断)
+    - finisher_bomb (Finisher B: Bakuen Funsai / 爆炎粉砕)
+    """
+    extra = getattr(c, "extra_props", {}) or {}
+    pose = extra.get("pose", "")
+    p = extra.get("p", getattr(c, "atk_progress", 0.0))
+    state = getattr(c, "state", "IDLE")
+
     tz = c.torso_z
     bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
-    if c.is_melee and c.atk_progress is not None:
-        p = c.atk_progress
-        if p < 0.35:
+
+    # 1. ATAQUE PRIMÁRIO: CORTE MELEE DE TANTO (tanto_slash)
+    if state == "ATTACK" or pose in ("tanto_slash", "attack", "tanto"):
+        prog = p if p is not None else 0.5
+        if prog < 0.35:
             # Antecipação recuada com adaga armada
-            w = _smooth(p / 0.35)
-            right = (bx - fx * 0.08 + px * 0.12, by - fy * 0.08 + py * 0.12, tz + 0.18 + 0.10 * w)
+            w = _smooth(prog / 0.35)
+            right = (bx - fx * (0.08 - 0.02 * w) + px * (0.12 + 0.04 * w),
+                     by - fy * (0.08 - 0.02 * w) + py * (0.12 + 0.04 * w),
+                     tz + 0.18 + 0.10 * w)
             left = (bx + fx * 0.14 - px * 0.12, by + fy * 0.14 - py * 0.12, tz + 0.12)
-        elif p < 0.75:
+        elif prog < 0.75:
             # Estocada/corte fulgurante à frente
-            t = (p - 0.35) / 0.40
+            t = (prog - 0.35) / 0.40
             reach = 0.08 + 0.38 * math.sin(math.pi * t)
-            right = (bx + fx * reach + px * (0.12 - 0.24 * _smooth(t)),
-                     by + fy * reach + py * (0.12 - 0.24 * _smooth(t)),
+            lat = 0.12 - 0.24 * _smooth(t)
+            right = (bx + fx * reach + px * lat,
+                     by + fy * reach + py * lat,
                      tz + 0.22 - 0.14 * _smooth(t))
             left = (bx - fx * 0.06 - px * 0.16, by - fy * 0.06 - py * 0.16, tz + 0.14)
         else:
             # Recuperação com zanshin
-            right = (bx + fx * 0.18 + px * 0.05, by + fy * 0.18 + py * 0.05, tz + 0.12)
-            left = (bx + fx * 0.08 - px * 0.14, by + fy * 0.08 - py * 0.14, tz + 0.15)
+            u = (prog - 0.75) / 0.25
+            right = (bx + fx * (0.18 - 0.04 * u) + px * (0.05 + 0.05 * u),
+                     by + fy * (0.18 - 0.04 * u) + py * (0.05 + 0.05 * u),
+                     tz + 0.12 - 0.01 * u)
+            left = (bx + fx * (0.08 + 0.04 * u) - px * (0.14 - 0.01 * u),
+                    by + fy * (0.08 + 0.04 * u) - py * (0.14 - 0.01 * u),
+                    tz + 0.15)
+        return left, right
+
+    # 2. ARREMESSO DE BOMBA HOROKU (bomb_throw / horoku)
+    if pose in ("bomb_throw", "horoku_bomb", "throw_bomb"):
+        prog = p if p is not None else 0.5
+        u = _smooth(prog)
+        if u < 0.40:
+            w = u / 0.40
+            left = (bx - fx * (0.12 + 0.08 * w) - px * 0.14, by - fy * (0.12 + 0.08 * w) - py * 0.14, tz + 0.18 + 0.12 * w)
+            right = (bx + fx * 0.10 + px * 0.12, by + fy * 0.10 + py * 0.12, tz + 0.10)
+        else:
+            w = (u - 0.40) / 0.60
+            reach = 0.12 + 0.34 * math.sin(math.pi * w)
+            left = (bx + fx * reach - px * 0.08, by + fy * reach - py * 0.08, tz + 0.26 - 0.12 * w)
+            right = (bx - fx * 0.06 + px * 0.14, by - fy * 0.06 + py * 0.14, tz + 0.10)
+        return left, right
+
+    # 3. PLANTO DE MINA REMOTA NO SOLO (plant_mine)
+    if pose in ("plant_mine", "remote_mine"):
+        prog = p if p is not None else 0.5
+        u = _smooth(prog)
+        left = (bx + fx * 0.18 - px * 0.06, by + fy * 0.18 - py * 0.06, tz - 0.18 + 0.12 * math.cos(u * math.pi))
+        right = (bx - fx * 0.05 + px * 0.14, by - fy * 0.05 + py * 0.14, tz + 0.08)
+        return left, right
+
+    # 4. ESQUIVA / ROLO DE FUMAÇA (smoke_roll)
+    if state == "ROLL" or pose in ("smoke_roll", "dodge", "roll"):
+        prog = extra.get("roll_prog", p if p is not None else 0.5)
+        tuck = math.sin(prog * math.pi)
+        left = (bx + fx * 0.08 - px * 0.10, by + fy * 0.08 - py * 0.10, tz + 0.06 - tuck * 0.10)
+        right = (bx + fx * 0.08 + px * 0.10, by + fy * 0.08 + py * 0.10, tz + 0.06 - tuck * 0.10)
+        return left, right
+
+    # 5. INTRO FASE 1: QUEDA SHINOBI (drop_shinobi)
+    if pose == "drop_shinobi":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        land_l = (bx + fx * 0.12 - px * 0.10, by + fy * 0.12 - py * 0.10, tz - 0.20 + 0.25 * u)
+        land_r = (bx - fx * 0.08 + px * 0.14, by - fy * 0.08 + py * 0.14, tz + 0.08 + 0.04 * (1.0 - u))
+        return land_l, land_r
+
+    # 6. INTRO FASE 2: SAQUE DE PAVIO E ADAGA (fuse_draw)
+    if pose == "fuse_draw":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        start_l = (bx + fx * 0.12 - px * 0.10, by + fy * 0.12 - py * 0.10, tz + 0.05)
+        start_r = (bx - fx * 0.08 + px * 0.14, by - fy * 0.08 + py * 0.14, tz + 0.08)
+        draw_l = (bx + fx * 0.10 - px * 0.04, by + fy * 0.10 - py * 0.04, tz + 0.14)
+        draw_r = (bx + fx * 0.18 + px * 0.10, by + fy * 0.18 + py * 0.10, tz + 0.12)
+        return mk.lerp(start_l, draw_l, u), mk.lerp(start_r, draw_r, u)
+
+    # 7. INTRO FASE 3: POSTURA DA NÉVOA (mist_stance - 100% Animado)
+    if pose == "mist_stance":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        glo_p = float(extra.get("p", 0.70 + 0.30 * u))
+        start_l = (bx + fx * 0.10 - px * 0.04, by + fy * 0.10 - py * 0.04, tz + 0.14)
+        start_r = (bx + fx * 0.18 + px * 0.10, by + fy * 0.18 + py * 0.10, tz + 0.12)
+        guard_l = (bx + fx * 0.14 - px * 0.12, by + fy * 0.14 - py * 0.12, tz + 0.16)
+        guard_r = (bx + fx * 0.18 + px * 0.10, by + fy * 0.18 + py * 0.10, tz + 0.12)
+        cur_l = mk.lerp(start_l, guard_l, u)
+        cur_r = mk.lerp(start_r, guard_r, u)
+        sway = math.sin(glo_p * 14.0 + c.walk_timer * 2.5) * 0.014
+        breathe = math.cos(glo_p * 8.0) * 0.010
+        return (cur_l[0], cur_l[1] + sway, cur_l[2] + breathe), (cur_r[0], cur_r[1] - sway, cur_r[2] - breathe)
+
+    # 8. VITÓRIA FASE 1: CHIBURI E EMBAINHAMENTO (chiburi_sheath)
+    if pose == "chiburi_sheath":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        dock_r = (bx - px * 0.10 + fx * 0.02, by - py * 0.10 + fy * 0.02, tz + 0.04)
+        dock_l = (bx + fx * 0.10 - px * 0.04, by + fy * 0.10 - py * 0.04, tz + 0.16)
+        if u < 0.50:
+            w = u / 0.50
+            flick_wave = math.sin(w * math.pi)
+            right = (bx + fx * 0.12 + px * (0.12 + 0.22 * flick_wave),
+                     by + fy * 0.12 + py * (0.12 + 0.22 * flick_wave),
+                     tz + 0.14 - 0.10 * w)
+            left = (bx + fx * 0.08 - px * 0.12, by + fy * 0.08 - py * 0.12, tz + 0.12)
+        else:
+            w = (u - 0.50) / 0.50
+            flick_end_r = (bx + fx * 0.12 + px * 0.12, by + fy * 0.12 + py * 0.12, tz + 0.04)
+            flick_end_l = (bx + fx * 0.08 - px * 0.12, by + fy * 0.08 - py * 0.12, tz + 0.12)
+            right = mk.lerp(flick_end_r, dock_r, w)
+            left = mk.lerp(flick_end_l, dock_l, w)
+        return left, right
+
+    # 9. VITÓRIA FASE 2: QUEDA DE CÁPSULA DE FUMAÇA (smoke_drop)
+    if pose == "smoke_drop":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        dock_r = (bx - px * 0.10 + fx * 0.02, by - py * 0.10 + fy * 0.02, tz + 0.04)
+        dock_l = (bx + fx * 0.10 - px * 0.04, by + fy * 0.10 - py * 0.04, tz + 0.16)
+        smash_l = (bx + fx * 0.14 - px * 0.02, by + fy * 0.14 - py * 0.02, max(0.04, tz - 0.24))
+        mudra_r = (bx - px * 0.06 + fx * 0.06, by - py * 0.06 + fy * 0.06, tz + 0.14)
+        return mk.lerp(dock_l, smash_l, u), mk.lerp(dock_r, mudra_r, u)
+
+    # 10. VITÓRIA FASE 3: SUMIÇO NA NÉVOA (mist_vanish - 100% Animado)
+    if pose == "mist_vanish":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        glo_p = float(extra.get("p", 0.70 + 0.30 * u))
+        smash_l = (bx + fx * 0.14 - px * 0.02, by + fy * 0.14 - py * 0.02, max(0.04, tz - 0.24))
+        mudra_r = (bx - px * 0.06 + fx * 0.06, by - py * 0.06 + fy * 0.06, tz + 0.14)
+        seal_l = (bx + fx * 0.12 - px * 0.08, by + fy * 0.12 - py * 0.08, tz + 0.16)
+        seal_r = (bx + fx * 0.12 + px * 0.08, by + fy * 0.12 + py * 0.08, tz + 0.16)
+        base_l = mk.lerp(smash_l, seal_l, u)
+        base_r = mk.lerp(mudra_r, seal_r, u)
+        wave = math.sin(glo_p * 18.0) * 0.016
+        breathe = math.cos(glo_p * 10.0) * 0.012
+        return (base_l[0] - wave, base_l[1] - wave, base_l[2] + breathe), (base_r[0] + wave, base_r[1] + wave, base_r[2] + breathe)
+
+    # 11. FINISHER A: MOUJIN SHUNDAN / DECAPITAÇÃO COM TANTO (finisher_tanto)
+    if pose in ("finisher_tanto", "finisher_decap", "finisher_1"):
+        prog = p if p is not None else 0.5
+        u = _smooth(prog)
+        reach = 0.10 + 0.42 * math.sin(u * math.pi)
+        right = (bx + fx * reach + px * (0.16 - 0.32 * u), by + fy * reach + py * (0.16 - 0.32 * u), tz + 0.24 - 0.08 * u)
+        left = (bx - fx * 0.10 - px * 0.14, by - fy * 0.10 - py * 0.14, tz + 0.12)
+        return left, right
+
+    # 12. FINISHER B: BAKUEN FUNSAI / CATACLISMO PIROTÉCNICO (finisher_bomb)
+    if pose in ("finisher_bomb", "finisher_explode", "finisher_2"):
+        prog = p if p is not None else 0.5
+        u = _smooth(prog)
+        left = (bx + fx * 0.14 - px * 0.04, by + fy * 0.14 - py * 0.04, tz + 0.20 + 0.06 * math.sin(u * math.pi))
+        right = (bx + fx * 0.14 + px * 0.04, by + fy * 0.14 + py * 0.04, tz + 0.20 + 0.06 * math.sin(u * math.pi))
         return left, right
 
     # Guarda padrão fluida da kunoichi
     breathe = math.sin(c.walk_timer * (6.5 if c.is_moving else 2.5)) * (0.020 if c.is_moving else 0.010)
     left = (bx + fx * 0.12 - px * 0.13, by + fy * 0.12 - py * 0.13 + breathe, tz + 0.15)
     right = (bx + fx * 0.16 + px * 0.11, by + fy * 0.16 + py * 0.11 - breathe, tz + 0.11)
+    return left, right
+
+
+def idle_arms(c):
+    left, right = _hands(c)
+    return left, right
+
+
+def attack_arms(c):
+    left, right = _hands(c)
+    return left, right
+
+
+def get_arms(c):
+    """Exposição modular da cinemática dos braços para sincronização com o renderizador humanoide."""
+    left, right = _hands(c)
     return left, right
 
 
@@ -251,7 +429,10 @@ def draw_behind(c):
     # 4. Braços e armas se as mãos estiverem atrás do tronco
     hand_l, hand_r = _hands(c)
     d_gear = max(mk.depth(c, hand_l[0], hand_l[1]), mk.depth(c, hand_r[0], hand_r[1]))
-    if d_gear < d_torso - 0.01:
+    extra = getattr(c, "extra_props", {}) or {}
+    pose = extra.get("pose", "")
+    is_sheathed = pose in ("smoke_drop", "mist_vanish")
+    if d_gear < d_torso - 0.01 and not is_sheathed:
         _draw_dagger(c, hand_r)
 
 
@@ -419,13 +600,20 @@ def draw_head(c):
     """
     P = pal()
     bx, by, hz, fx, fy, px, py, hw = c.base_x, c.base_y, c.head_z, c.fx, c.fy, c.px, c.py, c.head_w
+    extra = getattr(c, "extra_props", {}) or {}
+    legacy = extra.get("legacy_mode", False)
 
-    # 1. Mechas laterais que caem no lado visível da câmera
+    # 1. Rosto HD esculpido via draw_portrait_face_3d (quando a face está virada para a câmera)
+    if not legacy and mk.depth(c, fx, fy) > -0.05:
+        draw_portrait_face_3d(c, char_type="kasumi")
+        c._face_drawn = True
+
+    # 2. Mechas laterais que caem no lado visível da câmera
     for s in (-1.0, 1.0):
         if not _lock_is_behind(c, s):
             _side_lock(c, s)
 
-    # 2. Franja anime em camadas na testa (estritamente acima dos olhos)
+    # 3. Franja anime em camadas na testa (estritamente acima dos olhos)
     if mk.facing_camera(c):
         front_d = hw * 0.50 + 0.006
         for s in (-1.0, 1.0):
@@ -475,5 +663,8 @@ def draw_front(c, arm_l, arm_r):
     d_torso = mk.depth(c, c.base_x, c.base_y)
     hand_l, hand_r = _hands(c)
     d_gear = max(mk.depth(c, hand_l[0], hand_l[1]), mk.depth(c, hand_r[0], hand_r[1]))
-    if d_gear >= d_torso - 0.01:
+    extra = getattr(c, "extra_props", {}) or {}
+    pose = extra.get("pose", "")
+    is_sheathed = pose in ("smoke_drop", "mist_vanish")
+    if d_gear >= d_torso - 0.01 and not is_sheathed:
         _draw_dagger(c, hand_r)

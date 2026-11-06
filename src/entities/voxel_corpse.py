@@ -12,7 +12,7 @@ import random
 import numpy as np
 import pygame
 from src.config import COLOR_BLOOD
-from src.isometric.voxel_renderer import draw_voxel_box
+from src.isometric.voxel_renderer import draw_voxel_box, draw_oriented_voxel_box
 from src.isometric.mesh_primitives import draw_tapered_frustum_3d
 
 ALPHA_CUT = 200      # descarta sombras e auras translúcidas do recorte
@@ -28,6 +28,7 @@ STUCK_WEAPON = {
     "FOREHEAD_PIN": "kunai", "HEART_THROAT_STAB": "blade",
     "PINNED_TO_EARTH": "arrow", "HAMAYA_HOLY_PIERCE": "arrow",
     "SPEAR_HEART_SLIDE": "naginata", "TRAP_AND_EXECUTE": "kunai",
+    "SHADOW_LOTUS_FLURRY": "dual_kodachi",
 }
 
 
@@ -76,6 +77,29 @@ def fall_factor(camera, wx: float, wy: float, dx: float, dy: float) -> float:
     return -g
 
 
+def get_continuous_fall_angle(camera, wx: float, wy: float, dx: float, dy: float, rot_angle: float) -> float:
+    """
+    Calcula a rotação 2D contínua em tela para uma peça/corpo caindo na direção 3D (dx, dy).
+    Totalmente invariante à rotação da câmera em 360° (elimina 100% de saltos de sinal e contorções).
+    """
+    if abs(rot_angle) < 0.01:
+        return 0.0
+    eff_dx = dx if rot_angle >= 0 else -dx
+    eff_dy = dy if rot_angle >= 0 else -dy
+    eff_rot = abs(rot_angle)
+
+    a = camera.apply(wx, wy, 0.0)
+    b = camera.apply(wx + eff_dx, wy + eff_dy, 0.0)
+    sx, sy = b[0] - a[0], b[1] - a[1]
+    norm = math.hypot(sx, sy)
+    if norm < 0.001:
+        return 0.0
+
+    target_deg = -math.degrees(math.atan2(sx, -sy))
+    prog = min(1.0, eff_rot / 90.0)
+    return target_deg * prog
+
+
 def blit_rotated(surface: pygame.Surface, img: pygame.Surface, pivot_screen: tuple[float, float],
                  pivot_in_img: tuple[float, float], angle_deg: float):
     """Desenha `img` girada (anti-horário positivo) mantendo `pivot_in_img` fixo em `pivot_screen`."""
@@ -121,7 +145,7 @@ def sample_colors(sprite: pygame.Surface, count: int, min_y: int = 0, max_y: int
 
 def _draw_stuck(layer: pygame.Surface, kind: str, x: float, y: float, ax: float, ay: float):
     """Arma cravada no peito, com a ponta para fora voltada ao agressor (ax, ay = direção em tela)."""
-    length = {"arrow": 18, "kunai": 9, "blade": 22, "naginata": 36, "kuwa": 26}[kind]
+    length = {"arrow": 18, "kunai": 9, "blade": 22, "naginata": 36, "kuwa": 26, "dual_kodachi": 20}[kind]
     tail = (x + ax * length, y + ay * length)
     if kind == "arrow":
         pygame.draw.line(layer, (176, 132, 76), (x, y), tail, 2)
@@ -132,6 +156,19 @@ def _draw_stuck(layer: pygame.Surface, kind: str, x: float, y: float, ax: float,
     elif kind == "kunai":
         pygame.draw.line(layer, (190, 196, 206), (x, y), tail, 2)
         pygame.draw.circle(layer, (48, 48, 54), (int(tail[0]), int(tail[1])), 3, 1)
+    elif kind == "dual_kodachi":
+        # Duas lâminas curtas Kodachi cravadas em cruz 'X' no peito com ferida carmim
+        for sign in (-1.0, 1.0):
+            kax = ax * 0.85 + ay * (0.45 * sign)
+            kay = ay * 0.85 - ax * (0.45 * sign)
+            ktail = (x + kax * length, y + kay * length)
+            # Aço polido
+            pygame.draw.line(layer, (235, 240, 252), (x, y), ktail, 2)
+            # Tsuba dourada
+            tsuba = (x + kax * 7, y + kay * 7)
+            pygame.draw.circle(layer, (224, 182, 64), (int(tsuba[0]), int(tsuba[1])), 2)
+            # Tsuka preto e vermelho
+            pygame.draw.line(layer, (175, 30, 42), tsuba, ktail, 3)
     elif kind == "naginata":
         # Haste longa de carvalho/ferro escuro
         pygame.draw.line(layer, (42, 30, 22), (x, y), tail, 3)
@@ -310,12 +347,15 @@ class VoxelCorpse:
 
         # Cores anatômicas do guerreiro (usadas só se o recorte do modelo falhar)
         from src.entities.voxel_models import (
-            _canonical_char_type, _get_char_torso_color, _get_char_pants_color, _get_char_hair_color
+            _canonical_char_type, _get_char_torso_color, _get_char_pants_color,
+            _get_char_hair_color, _get_char_belt_color, _skin_colors
         )
         canonical = _canonical_char_type(self.char_type)
         self.col_torso = _get_char_torso_color(canonical)
         self.col_pants = _get_char_pants_color(canonical)
         self.col_hair = _get_char_hair_color(canonical)
+        self.col_belt = _get_char_belt_color(canonical)
+        self.skin_color, _ = _skin_colors(canonical)
 
         self._initialize_death_pieces()
         if victim_wz > 0.0:
@@ -474,7 +514,12 @@ class VoxelCorpse:
                                  vx=dy * 1.1, vy=-dx * 1.1, vz=0.4,
                                  piece_type="legs", region=lambda c: c.band(WAIST_Z, None), rot_target=75.0, rot_speed=135.0, rot_delay=0.22))
 
-        elif style in ("MURASAKI_DECAP", "CLEAN_DECAP"):
+        elif style == "SHADOW_LOTUS_FLURRY":
+            # Chiyo Finisher B: Lótus das Sombras - Duas Kodachis cravadas em cruz no peito com fontes de sangue
+            self.pieces.append(P(x, y, 0.0, 0.28, 0.22, 1.05, self.col_torso,
+                                 piece_type="impaled_body", rot_target=FALL_DEG, rot_speed=125.0, rot_delay=0.15))
+
+        elif style in ("KAMAITACHI_CHAIN_DECAP", "MURASAKI_DECAP", "CLEAN_DECAP", "MOUJIN_SHUNDAN"):
             self.headless_body = P(x, y, 0.0, 0.28, 0.22, 0.85, self.col_torso, piece_type="body",
                                    region=lambda c: c.band(NECK_Z, None), rot_target=FALL_DEG, rot_speed=110.0, rot_delay=0.35)
             self.severed_head = P(x, y, NECK_Z + 0.15, 0.16, 0.16, 0.16, self.col_hair,
@@ -483,7 +528,27 @@ class VoxelCorpse:
                                   pivot="center", floor_z=0.15)
             self.pieces.extend([self.headless_body, self.severed_head])
 
-        elif style == "KASUMI_EXPLODE":
+        elif style == "SENPUU_CHAIN_SHRED":
+            # Pernas caem de joelhos no solo (leve rotação para frente sem tombar completamente)
+            self.kneeling_legs = P(x, y, 0.0, 0.36, 0.26, 0.46, self.col_pants, piece_type="legs",
+                                   region=lambda c: c.band(WAIST_Z, None), rot_target=32.0, rot_speed=80.0, rot_delay=0.30)
+            # Cabeça decapitada rola no solo
+            self.severed_head = P(x, y, NECK_Z + 0.10, 0.16, 0.16, 0.16, self.col_hair,
+                                  vx=dx * 1.8 + random.uniform(-0.4, 0.4), vy=dy * 1.8 + random.uniform(-0.4, 0.4),
+                                  vz=2.8, rot_speed=280.0, piece_type="head", region=lambda c: c.band(None, NECK_Z),
+                                  pivot="center", floor_z=0.15)
+            self.pieces.extend([self.kneeling_legs, self.severed_head])
+            # Tronco estraçalhado em múltiplos fragmentos arremessados centrifugamente em anel espiral 360°
+            for i in range(8):
+                ang = (i / 8.0) * math.pi * 2 + random.uniform(-0.2, 0.2)
+                spd = random.uniform(2.2, 4.2)
+                sz = random.uniform(0.09, 0.15)
+                c_gib = random.choice([self.col_torso, COLOR_BLOOD, (65, 20, 25), (135, 30, 40)])
+                self.pieces.append(P(x, y, WAIST_Z + 0.12, sz, sz, sz, c_gib,
+                                     vx=math.cos(ang) * spd, vy=math.sin(ang) * spd, vz=random.uniform(1.6, 3.8),
+                                     rot_speed=random.uniform(-350, 350), piece_type="gib"))
+
+        elif style in ("KASUMI_EXPLODE", "BAKUEN_FUNSAI"):
             for _ in range(26):
                 angle = random.uniform(0, math.pi * 2)
                 speed = random.uniform(2.5, 7.5)
@@ -493,11 +558,6 @@ class VoxelCorpse:
                                      vx=math.cos(angle) * speed, vy=math.sin(angle) * speed, vz=random.uniform(3.0, 7.0),
                                      rot_speed=random.uniform(-400, 400), piece_type="gib"))
 
-        elif style == "OKUNI_MELT":
-            self.acid_radius = 0.2
-            self.acid_max_radius = 0.85
-            self.pieces.append(P(x, y, 0.0, 0.40, 0.30, 0.70, (60, 180, 90), piece_type="melting_body",
-                                 region=lambda c: c.band(None, None), squash="melt"))
 
         elif style in ("ARMORED_HEART_IMPALE", "NAGINATA_HOIST_SLAM"):
             # Benkei Estocada Colossal / Hoist & Slam: Tórax perfurado com jorro arterial massivo
@@ -537,14 +597,29 @@ class VoxelCorpse:
             for _ in range(28):
                 self._add_blood_drop(spread=0.8)
 
-        elif style == "RAPIER_FLURRY_POINTBLANK":
-            # Julie: Fuzilamento à queima-roupa com pistola pederneira
+        elif style in ("FLINTLOCK_EXECUTION", "ZERO_KYORI_JUUSATSU", "RAPIER_FLURRY_POINTBLANK"):
+            # Julie Fatality B: Zero-Kyori Juusatsu (Fuzilamento de Pederneira à Queima-Roupa)
             self.pieces.append(P(x, y, 0.0, 0.44, 0.34, 0.72, self.col_torso,
-                                 vx=dx * 4.6, vy=dy * 4.6, vz=2.4,
-                                 piece_type="fallen_body", region=lambda c: c.band(None, None),
-                                 rot_target=FALL_DEG, rot_speed=280.0))
-            for _ in range(30):
-                self._add_blood_drop(spread=0.9)
+                                 vx=dx * 5.2, vy=dy * 5.2, vz=2.5,
+                                 piece_type="flintlock_blasted_body", region=lambda c: c.band(None, None),
+                                 rot_target=FALL_DEG, rot_speed=300.0))
+            for _ in range(35):
+                self._add_blood_drop(spread=0.95)
+
+        elif style in ("RAPIER_BLOOD_FOUNTAIN", "HYAKKA_RANTOTSU"):
+            # Julie Fatality A: Hyakka Rantotsu (Cair de joelhos com fonte de sangue frontal)
+            # Pernas caem de joelhos no chão (rot_target=24.0)
+            self.kneeling_legs = P(x, y, 0.0, 0.38, 0.28, 0.44, self.col_pants,
+                                   piece_type="kneeling_legs", region=lambda c: c.band(WAIST_Z, None),
+                                   rot_target=24.0, rot_speed=65.0, rot_delay=0.10)
+            # Tronco perfurado ajoelhado no topo das pernas, inclinando suavemente à frente (rot_target=32.0)
+            self.fountain_torso = P(x + dx * 0.04, y + dy * 0.04, WAIST_Z - 0.08, 0.42, 0.30, 0.52, self.col_torso,
+                                    vx=-dx * 0.1, vy=-dy * 0.1, vz=0.0,
+                                    piece_type="kneeling_fountain_torso", region=lambda c: c.band(None, WAIST_Z),
+                                    rot_target=32.0, rot_speed=75.0, rot_delay=0.25)
+            self.pieces.extend([self.kneeling_legs, self.fountain_torso])
+            for _ in range(120):
+                self._add_blood_drop(spread=1.6)
 
         elif style == "SKEWERED_LANCE_FLAG":
             # Benkei Arremesso de Naginata: Corpo transpassado e cravado em ângulo no solo
@@ -603,13 +678,56 @@ class VoxelCorpse:
                                      vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(1.5, 4.5),
                                      rot_speed=random.uniform(-300, 300), piece_type="skull_gib"))
 
-        elif style == "PIRATE_CLEAVE":
-            self.pieces.append(P(x, y, 0.0, 0.44, 0.32, 0.40, self.col_pants, vx=-dy * 1.2, vy=dx * 1.2, vz=0.5,
+        elif style == "HAYAGO_KEG_BLAST":
+            # Teppo Finisher Secundário: Cargas de pólvora explodem no peito da vítima
+            self.pieces.append(P(x, y, WAIST_Z + 0.05, 0.42, 0.30, 0.45, self.col_torso,
+                                 vx=dx * 3.8, vy=dy * 3.8, vz=2.2,
+                                 piece_type="torso", region=lambda c: c.band(None, WAIST_Z),
+                                 rot_target=90.0, rot_speed=200.0, floor_z=0.15))
+            self.pieces.append(P(x, y, 0.0, 0.38, 0.28, 0.45, self.col_pants,
+                                 vx=-dx * 0.4, vy=-dy * 0.4, vz=0.1,
+                                 piece_type="legs", region=lambda c: c.band(WAIST_Z, None),
+                                 rot_target=FALL_DEG, rot_speed=110.0, rot_delay=0.10))
+            for _ in range(22):
+                angle = random.uniform(0, math.pi * 2)
+                speed = random.uniform(2.5, 6.5)
+                sz = random.uniform(0.06, 0.12)
+                col = random.choice([(255, 140, 30), (255, 200, 60), (45, 45, 50), COLOR_BLOOD, self.col_torso])
+                self.pieces.append(P(x, y, random.uniform(0.30, 0.70), sz, sz, sz, col,
+                                     vx=math.cos(angle) * speed, vy=math.sin(angle) * speed, vz=random.uniform(2.0, 5.0),
+                                     rot_speed=random.uniform(-400, 400), piece_type="keg_gib"))
+            for _ in range(30):
+                self._add_blood_drop(spread=0.9)
+
+        elif style in ("ARANAMI_CLEAVE", "PIRATE_CLEAVE"):
+            # Anne Fatality A: Aranami Ryoudan (Bissecção do Alfanje Corsa)
+            self.pieces.append(P(x, y, 0.0, 0.44, 0.32, 0.42, self.col_pants,
+                                 vx=-dy * 1.3 - dx * 0.4, vy=dx * 1.3 - dy * 0.4, vz=0.6,
                                  piece_type="half_left", region=lambda c: c.band(WAIST_Z, None),
-                                 rot_target=75.0, rot_speed=130.0, rot_delay=0.2))
-            self.pieces.append(P(x, y, WAIST_Z, 0.44, 0.32, 0.42, self.col_torso, vx=dy * 1.5 + dx * 1.0, vy=-dx * 1.5 + dy * 1.0, vz=1.5,
+                                 rot_target=78.0, rot_speed=140.0, rot_delay=0.18))
+            self.pieces.append(P(x, y, WAIST_Z, 0.44, 0.32, 0.44, self.col_torso,
+                                 vx=dy * 1.8 + dx * 1.4, vy=-dx * 1.8 + dy * 1.4, vz=1.8,
                                  piece_type="half_right", region=lambda c: c.band(None, WAIST_Z),
-                                 rot_target=105.0, rot_speed=240.0))
+                                 rot_target=110.0, rot_speed=260.0))
+            for _ in range(36):
+                self._add_blood_drop(spread=0.95)
+
+        elif style in ("KANPOU_SENMETSU", "KANPOU_OBLITERATION"):
+            # Anne Fatality B: Kanpou Senmetsu (Bombardeio Naval Orbital)
+            self.pieces.append(P(x, y, 0.0, 0.42, 0.32, 0.36, (40, 36, 38),
+                                 vx=0.0, vy=0.0, vz=0.0,
+                                 piece_type="charred_kneeling_legs", region=lambda c: c.band(WAIST_Z, None),
+                                 rot_target=25.0, rot_speed=60.0, rot_delay=0.4))
+            for _ in range(26):
+                angle = random.uniform(0, math.pi * 2)
+                speed = random.uniform(2.0, 5.8)
+                sz = random.uniform(0.07, 0.15)
+                col = random.choice([(30, 28, 30), (55, 45, 40), (160, 25, 25), (200, 40, 30), self.col_torso])
+                self.pieces.append(P(x, y, random.uniform(0.35, 0.85), sz, sz, sz, col,
+                                     vx=math.cos(angle) * speed, vy=math.sin(angle) * speed, vz=random.uniform(2.8, 6.2),
+                                     rot_speed=random.uniform(-450, 450), piece_type="keg_gib"))
+            for _ in range(45):
+                self._add_blood_drop(spread=1.2)
 
         elif style == "MAULED":
             # Derrubado pelo cão: jogado para trás com força
@@ -780,39 +898,53 @@ class VoxelCorpse:
             for _ in range(38):
                 self._add_blood_drop(spread=0.85)
 
-        elif style in ("DOKUKIRI_MELT", "ALCHEMIC_ACID_DISSOLVE"):
-            # Okuni Secundário & Hendrika Ácido Corrosivo: Sopro/Frasco ácido dissolve a carne em poça esmeralda fumegante com ossos
+        elif style in ("DOKUKIRI_MELT", "OKUNI_MELT", "ALCHEMIC_ACID_DISSOLVE"):
+            # Okuni Secundário / Finisher B: Sopro tóxico dissolve a carne revelando o esqueleto que desaba e desmonta espalhando ossos na poça ácida
             self.is_acid_pool = True
             self.acid_radius = 0.30
-            self.acid_max_radius = 0.95
-            self.pieces.append(P(x, y, 0.0, 0.40, 0.30, 0.70, (60, 210, 110), piece_type="melting_body",
+            self.acid_max_radius = 1.05
+            self.pieces.append(P(x, y, 0.0, 0.38, 0.28, 0.65, (60, 210, 110), piece_type="melting_body",
                                  region=lambda c: c.band(None, None), squash="melt"))
-            for _ in range(12):
+            # Crânio esbranquiçado de osso que cai e rola
+            self.pieces.append(P(x, y, NECK_Z + 0.05, 0.16, 0.16, 0.16, (238, 235, 222),
+                                 vx=dx * 0.8 + random.uniform(-0.3, 0.3), vy=dy * 0.8 + random.uniform(-0.3, 0.3), vz=1.8,
+                                 rot_speed=random.uniform(-180, 180), piece_type="bone_skull", floor_z=0.08))
+            # Costelas e vértebras (peitoral ósseo)
+            self.pieces.append(P(x, y, CHEST_Z - 0.05, 0.20, 0.14, 0.22, (230, 226, 212),
+                                 vx=dx * 0.3, vy=dy * 0.3, vz=0.6,
+                                 rot_target=FALL_DEG, rot_speed=140.0, piece_type="bone_ribs", floor_z=0.05))
+            # Ossos dos membros (fêmures, úmeros, tíbias) que se espalham
+            bone_colors = [(238, 235, 222), (230, 226, 212), (220, 215, 200)]
+            for _ in range(16):
                 angle = random.uniform(0, math.pi * 2)
-                sp = random.uniform(0.6, 2.0)
-                self.pieces.append(P(x, y, 0.25, 0.08, 0.08, 0.08, (225, 220, 205),
-                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(0.8, 2.0),
-                                     rot_speed=random.uniform(-180, 180), piece_type="bone_gib"))
+                sp = random.uniform(0.5, 2.2)
+                self.pieces.append(P(x, y, random.uniform(0.15, 0.40), random.uniform(0.06, 0.09), random.uniform(0.06, 0.09), random.uniform(0.10, 0.18),
+                                     random.choice(bone_colors),
+                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(1.0, 2.6),
+                                     rot_speed=random.uniform(-360, 360), piece_type="bone_gib", floor_z=0.04))
 
         elif style == "PINNED_TO_EARTH":
-            # Tomoe Primário: Flecha de arco Yumi atravessa o peito e prega o rival estatelado ao solo
-            self.pieces.append(P(x, y, 0.0, 0.44, 0.34, 0.75, self.col_torso,
-                                 vx=dx * 3.8, vy=dy * 3.8, vz=1.5,
-                                 piece_type="impaled_body", region=lambda c: c.band(None, None),
-                                 rot_target=FALL_DEG, rot_speed=240.0))
-            for _ in range(28):
-                self._add_blood_drop(spread=0.75)
+            # Tomoe Primário: Flecha de arco Yumi atravessa a garganta e prega o rival estatelado ao solo
+            self.is_pinned_to_earth = True
+            # Peça puramente lógica sem recorte 2D por fall_factor (evita contorção ao girar a câmera!)
+            self.cleaved_body = P(x, y, 0.0, 0.44, 0.34, 0.20, self.col_torso,
+                                  vx=0.0, vy=0.0, vz=0.0, piece_type="impaled_body",
+                                  region=None, floor_z=0.02)
+            self.pieces.append(self.cleaved_body)
+            for _ in range(36):
+                self._add_blood_drop(spread=0.85)
 
         elif style == "HAMAYA_HOLY_PIERCE":
             # Tomoe Secundário: Flecha Sagrada Hama-no-Ya transfixa o peito com pilar de luz dourada purificadora
+            self.is_pinned_to_earth = True
             self.is_holy_pierced = True
             self.holy_pierce_time = 0.0
-            self.pieces.append(P(x, y, 0.0, 0.44, 0.34, 0.75, self.col_torso,
-                                 vx=dx * 1.2, vy=dy * 1.2, vz=0.6,
-                                 piece_type="impaled_body", region=lambda c: c.band(None, None),
-                                 rot_target=FALL_DEG, rot_speed=160.0))
-            for _ in range(24):
-                self._add_blood_drop(spread=0.70)
+            self.cleaved_body = P(x, y, 0.0, 0.44, 0.34, 0.20, self.col_torso,
+                                  vx=0.0, vy=0.0, vz=0.0, piece_type="impaled_body",
+                                  region=None, floor_z=0.02)
+            self.pieces.append(self.cleaved_body)
+            for _ in range(32):
+                self._add_blood_drop(spread=0.75)
 
         elif style == "THROAT_TEMPLE_CRUSH":
             # Daiki Primário: Estocada de bastão Bō na garganta + giro de 360° que esmaga a têmpora
@@ -1013,15 +1145,34 @@ class VoxelCorpse:
                 particles.append(SparkParticle(self.wx + random.uniform(-0.25, 0.25), self.wy + random.uniform(-0.25, 0.25), random.uniform(0.3, 0.95), color=(255, 215, 70)))
         self.timer += dt
 
+        # Fonte de sangue contínua saindo da garganta do rival pregado ao solo (PINNED_TO_EARTH)
+        if getattr(self, "is_pinned_to_earth", False) and particles is not None and self.timer < 5.0:
+            self.geyser_timer += dt
+            if self.geyser_timer > 0.025:
+                self.geyser_timer = 0.0
+                from src.effects.particles import BloodParticle
+                mag = math.hypot(self.dx, self.dy) or 1.0
+                fx, fy = self.dx / mag, self.dy / mag
+                th_x = self.wx + fx * 0.44
+                th_y = self.wy + fy * 0.44
+                for _ in range(random.randint(3, 6)):
+                    bp = BloodParticle(th_x + random.uniform(-0.025, 0.025),
+                                       th_y + random.uniform(-0.025, 0.025),
+                                       0.08 + random.uniform(0.0, 0.03))
+                    bp.vz = random.uniform(2.8, 5.5)
+                    bp.vx = random.uniform(-0.35, 0.35)
+                    bp.vy = random.uniform(-0.35, 0.35)
+                    particles.append(bp)
+
         # Spawn de geiser de sangue contínuo nos primeiros momentos da morte
-        geyser_limit = 2.4 if self.death_style in ("FOREHEAD_PIN", "HEART_THROAT_STAB", "HEART_IMPALE_LUNGE") else 1.2
+        geyser_limit = 3.2 if self.death_style in ("RAPIER_BLOOD_FOUNTAIN", "HYAKKA_RANTOTSU") else (2.4 if self.death_style in ("FOREHEAD_PIN", "HEART_THROAT_STAB", "HEART_IMPALE_LUNGE") else 1.2)
         if self.timer < geyser_limit and particles is not None:
             self.geyser_timer += dt
-            interval = 0.03 if self.death_style in ("FOREHEAD_PIN", "HEART_IMPALE_LUNGE") else 0.04
+            interval = 0.02 if self.death_style in ("RAPIER_BLOOD_FOUNTAIN", "HYAKKA_RANTOTSU") else (0.03 if self.death_style in ("FOREHEAD_PIN", "HEART_IMPALE_LUNGE") else 0.04)
             if self.geyser_timer > interval:
                 self.geyser_timer = 0.0
                 from src.effects.particles import BloodParticle
-                count = 7 if self.death_style == "HEART_IMPALE_LUNGE" else (6 if self.death_style == "FOREHEAD_PIN" else 4)
+                count = 45 if self.death_style in ("RAPIER_BLOOD_FOUNTAIN", "HYAKKA_RANTOTSU") else (7 if self.death_style == "HEART_IMPALE_LUNGE" else (6 if self.death_style == "FOREHEAD_PIN" else 4))
 
                 # Origem dinâmica do sangue acompanhando a cabeça/peito durante a rotação da queda
                 if self.death_style == "FOREHEAD_PIN" and self.pieces:
@@ -1043,6 +1194,13 @@ class VoxelCorpse:
                     bx_base = p_body.wx + self.dx * 0.12
                     by_base = p_body.wy + self.dy * 0.12
                     bz_base = max(0.12, p_body.wz + 0.40)
+                elif self.death_style in ("RAPIER_BLOOD_FOUNTAIN", "HYAKKA_RANTOTSU") and self.pieces:
+                    # Acompanha a posição real do tronco perfurado conforme ele desce/inclina ao cair de joelhos
+                    p_torso = getattr(self, "fountain_torso", self.pieces[-1])
+                    rad = math.radians(abs(p_torso.rot_angle))
+                    bx_base = p_torso.wx + self.dx * math.sin(rad) * 0.20
+                    by_base = p_torso.wy + self.dy * math.sin(rad) * 0.20
+                    bz_base = max(0.12, p_torso.wz + math.cos(rad) * 0.32)
                 else:
                     bx_base = self.wx
                     by_base = self.wy
@@ -1064,6 +1222,12 @@ class VoxelCorpse:
                         bp.vz = random.uniform(2.8, 5.5)
                         bp.vx = self.dx * random.uniform(3.4, 6.5) + random.uniform(-0.8, 0.8)
                         bp.vy = self.dy * random.uniform(3.4, 6.5) + random.uniform(-0.8, 0.8)
+                    elif self.death_style in ("RAPIER_BLOOD_FOUNTAIN", "HYAKKA_RANTOTSU"):
+                        # O sangue esguicha na direção contrária, para a frente do rival (5x mais sangue)
+                        jet_speed = random.uniform(3.4, 7.2)
+                        bp.vx = -self.dx * jet_speed + random.uniform(-0.8, 0.8)
+                        bp.vy = -self.dy * jet_speed + random.uniform(-0.8, 0.8)
+                        bp.vz = random.uniform(2.2, 5.8)
                     particles.append(bp)
 
         # Atualizar física das peças individuais
@@ -1082,6 +1246,28 @@ class VoxelCorpse:
         if self.death_style in ("OKUNI_MELT", "DOKUKIRI_MELT") and hasattr(self, "acid_radius"):
             if self.acid_radius < self.acid_max_radius:
                 self.acid_radius += dt * 0.35
+            # Borbulhas ácidas esmeralda/roxas subindo da poça
+            if particles is not None and random.random() < 0.30:
+                from src.effects.particles import SparkParticle
+                r_angle = random.uniform(0, math.pi * 2)
+                r_dist = random.uniform(0.0, self.acid_radius * 0.75)
+                particles.append(SparkParticle(
+                    self.wx + math.cos(r_angle) * r_dist,
+                    self.wy + math.sin(r_angle) * r_dist,
+                    random.uniform(0.05, 0.25),
+                    color=random.choice([(60, 220, 110), (140, 50, 190), (180, 240, 140)])
+                ))
+
+        # Pétalas de sakura no Tessen Decap
+        if self.death_style == "TESSEN_DECAP" and getattr(self, "age", 0.0) < 1.6:
+            if particles is not None and random.random() < 0.35:
+                from src.effects.particles import SparkParticle
+                particles.append(SparkParticle(
+                    self.wx + random.uniform(-0.35, 0.35),
+                    self.wy + random.uniform(-0.35, 0.35),
+                    random.uniform(0.3, 0.9),
+                    color=random.choice([(255, 185, 205), (250, 150, 180), (255, 215, 225)])
+                ))
 
         # Luz purificadora para Flecha Sagrada Hama-no-Ya de Tomoe
         if getattr(self, "is_holy_pierced", False):
@@ -1148,6 +1334,17 @@ class VoxelCorpse:
                         radius=0.22
                     ))
 
+        if self.death_style == "SHADOW_LOTUS_FLURRY" and particles is not None and getattr(self, "lotus_blood_time", 0.0) < 4.5:
+            self.lotus_blood_time = getattr(self, "lotus_blood_time", 0.0) + dt
+            if random.random() < 0.65:
+                from src.effects.particles import BloodParticle
+                for off in (-0.08, 0.08):
+                    bp = BloodParticle(self.wx + off, self.wy + off, 0.35 + random.uniform(0.0, 0.1))
+                    bp.vz = random.uniform(2.2, 4.5)
+                    bp.vx = random.uniform(-0.3, 0.3)
+                    bp.vy = random.uniform(-0.3, 0.3)
+                    particles.append(bp)
+
     # ------------------------------------------------------------------ desenho
     @staticmethod
     def _squash_scale(piece: VoxelCorpsePiece) -> float:
@@ -1175,7 +1372,7 @@ class VoxelCorpse:
                 img.fill((0, int(110 * (1.0 - scale)), int(30 * (1.0 - scale))), special_flags=pygame.BLEND_RGB_ADD)
             angle = 0.0
         else:
-            angle = piece.rot_angle * fall
+            angle = get_continuous_fall_angle(camera, self.wx, self.wy, self.dx, self.dy, piece.rot_angle)
         blit_rotated(surface, img, (px, py), pivot, angle)
 
     def render(self, surface: pygame.Surface, camera):
@@ -1203,7 +1400,7 @@ class VoxelCorpse:
             draw_voxel_box(surface, camera, self.wx + 0.01, self.wy - 0.15, 0.03, 0.06, 0.30, 0.18, (82, 88, 98), outline=True)
 
         # Marca de queimado sob os estilhaços da explosão
-        if self.death_style == "KASUMI_EXPLODE":
+        if self.death_style in ("KASUMI_EXPLODE", "BAKUEN_FUNSAI"):
             sx, sy = camera.apply(self.wx, self.wy, 0.01)
             scorch = pygame.Surface((int(76 * camera.zoom), int(36 * camera.zoom)), pygame.SRCALPHA)
             pygame.draw.ellipse(scorch, (18, 16, 16, 150), scorch.get_rect())
@@ -1220,6 +1417,17 @@ class VoxelCorpse:
         # 1.8. Fenda tumular profunda de Valerius (DRAGGED_TO_GRAVE)
         if getattr(self, "is_grave_pit", False):
             self._render_grave_pit(surface, camera)
+
+        # 1.9. Vítima pregada ao solo pela Flecha Yumi ou Hamaya de Tomoe (PINNED_TO_EARTH / HAMAYA_HOLY_PIERCE)
+        if getattr(self, "is_pinned_to_earth", False):
+            render_pinned_to_earth_model(
+                surface, camera, self.wx, self.wy, self.wz, self.dx, self.dy,
+                char_type=self.char_type,
+                col_torso=self.col_torso, col_pants=self.col_pants,
+                col_hair=self.col_hair, skin_color=self.skin_color, col_belt=self.col_belt,
+                is_holy=getattr(self, "is_holy_pierced", False)
+            )
+            return
 
 
         # 2. Peças: recortes do modelo, tampas anatômicas 3D de corte e estilhaços em malha 3D
@@ -1364,6 +1572,228 @@ class VoxelCorpse:
             draw_voxel_box(surface, camera, self.wx + ox * 0.85, self.wy + oy * 0.85, arm_h - 0.05, 0.055, 0.055, 0.035, c_bone, outline=True)
 
 
+def render_pinned_to_earth_model(
+    surface: pygame.Surface,
+    camera,
+    wx: float, wy: float, wz: float,
+    dir_h_x: float, dir_h_y: float,
+    char_type: str = "red_samurai",
+    col_torso = None, col_pants = None, col_hair = None, skin_color = None, col_belt = None,
+    alpha: int = 255,
+    is_holy: bool = False,
+    extra_props: dict = None
+):
+    """
+    Renderiza o rival pregado ao solo de costas pela Flecha Yumi de Tomoe (PINNED_TO_EARTH / HAMAYA_HOLY_PIERCE).
+    Geometria 100% 3D sólida orientada no mundo com postura orgânica de agonia (sem T-pose):
+    - Braços relaxados ao longo do tronco e mão contraindo junto ao peito/pescoço em espasmo.
+    - Pernas relaxadas com joelhos abertos e pés soltos.
+    - Respiração e tremores agônicos sutis (heaving senoidal).
+    - Flecha Yumi / Hamaya 3D atravessando a garganta e fincada profundamente na terra.
+    - Poça de sangue dramática sob o corpo.
+    """
+    if extra_props is None:
+        extra_props = {}
+
+    from src.isometric.voxel_renderer import draw_oriented_voxel_box
+    from src.entities.voxel_models import (
+        _canonical_char_type, _get_char_torso_color, _get_char_pants_color,
+        _get_char_hair_color, _get_char_belt_color, _skin_colors
+    )
+    canonical = _canonical_char_type(char_type)
+    if skin_color is None:
+        skin_color, _ = _skin_colors(canonical)
+    if col_torso is None:
+        col_torso = _get_char_torso_color(canonical)
+    if col_pants is None:
+        col_pants = _get_char_pants_color(canonical)
+    if col_hair is None:
+        col_hair = _get_char_hair_color(canonical)
+    if col_belt is None:
+        col_belt = _get_char_belt_color(canonical)
+
+    dir_len = math.hypot(dir_h_x, dir_h_y) or 1.0
+    fx, fy = dir_h_x / dir_len, dir_h_y / dir_len
+    px, py = -fy, fx
+
+    # Espasmo agônico sutil e heaving da respiração moribunda
+    spasm_time = float(extra_props.get("spasm_time", 0.0))
+    heave = math.sin(spasm_time * 8.0) * 0.009 if spasm_time > 0.0 else 0.0
+    quiver = math.sin(spasm_time * 24.0) * 0.004 if spasm_time > 0.0 else 0.0
+
+    base_z = max(0.01, wz)
+
+    # 1. Poça de sangue sob o corpo
+    sx, sy = camera.apply(wx + fx * 0.15, wy + fy * 0.15, 0.01)
+    bw = max(10, int(54 * camera.zoom))
+    bh = max(6, int(28 * camera.zoom))
+    blood_surf = pygame.Surface((bw * 2, bh * 2), pygame.SRCALPHA)
+    pygame.draw.ellipse(blood_surf, (110, 14, 18, 190), (0, 0, bw * 2, bh * 2))
+    pygame.draw.ellipse(blood_surf, (65, 8, 12, 230), (bw // 2, bh // 2, bw, bh))
+    surface.blit(blood_surf, (sx - bw, sy - bh))
+
+    # 2. Pelve (Hakama / Calças)
+    draw_oriented_voxel_box(surface, camera,
+                            wx - fx * 0.10, wy - fy * 0.10, base_z + 0.07,
+                            fx, fy, 0.0,
+                            0.20, 0.28, 0.14,
+                            col_pants, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+
+    # 3. Pernas relaxadas no solo (joelhos levemente abertos e flexionados, postura natural)
+    # Perna esquerda
+    draw_oriented_voxel_box(surface, camera,
+                            wx - fx * 0.12 + px * 0.10, wy - fy * 0.12 + py * 0.10, base_z + 0.05,
+                            -fx * 0.88 + px * 0.18, -fy * 0.88 + py * 0.18, 0.0,
+                            0.34, 0.10, 0.11,
+                            col_pants, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+    draw_oriented_voxel_box(surface, camera,
+                            wx - fx * 0.42 + px * 0.16, wy - fy * 0.42 + py * 0.16, base_z + 0.04,
+                            -fx * 0.94 + px * 0.10, -fy * 0.94 + py * 0.10, 0.0,
+                            0.10, 0.08, 0.09,
+                            (235, 230, 220), up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+
+    # Perna direita
+    draw_oriented_voxel_box(surface, camera,
+                            wx - fx * 0.12 - px * 0.10, wy - fy * 0.12 - py * 0.10, base_z + 0.05,
+                            -fx * 0.88 - px * 0.18, -fy * 0.88 - py * 0.18, 0.0,
+                            0.34, 0.10, 0.11,
+                            col_pants, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+    draw_oriented_voxel_box(surface, camera,
+                            wx - fx * 0.42 - px * 0.16, wy - fy * 0.42 - py * 0.16, base_z + 0.04,
+                            -fx * 0.94 - px * 0.10, -fy * 0.94 - py * 0.10, 0.0,
+                            0.10, 0.08, 0.09,
+                            (235, 230, 220), up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+
+    # 4. Faixa / Obi
+    draw_oriented_voxel_box(surface, camera,
+                            wx + fx * 0.08, wy + fy * 0.08, base_z + 0.07 + heave * 0.5,
+                            fx, fy, 0.0,
+                            0.08, 0.27, 0.14,
+                            col_belt, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+
+    # 5. Torso / Peito arqueado para cima com heaving agônico
+    draw_oriented_voxel_box(surface, camera,
+                            wx + fx * 0.18, wy + fy * 0.18, base_z + 0.08 + heave,
+                            fx, fy, 0.0,
+                            0.24, 0.30, 0.16,
+                            col_torso, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+
+    # 6. Braços orgânicos em repouso agônico (NUNCA T-pose: cotovelos dobrados ao lado do corpo e mão clutching)
+    # Braço esquerdo: repousa ao lado dos flancos com mão relaxada junto ao quadril
+    draw_oriented_voxel_box(surface, camera,
+                            wx + fx * 0.22 + px * 0.18, wy + fy * 0.22 + py * 0.18, base_z + 0.06 + heave * 0.3,
+                            -fx * 0.72 + px * 0.28, -fy * 0.72 + py * 0.28, 0.0,
+                            0.24, 0.085, 0.085,
+                            col_torso, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+    draw_oriented_voxel_box(surface, camera,
+                            wx + fx * 0.04 + px * 0.23, wy + fy * 0.04 + py * 0.23, base_z + 0.05,
+                            -fx * 0.85 - px * 0.15, -fy * 0.85 - py * 0.15, 0.0,
+                            0.18, 0.075, 0.075,
+                            col_torso, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+    draw_oriented_voxel_box(surface, camera,
+                            wx - fx * 0.10 + px * 0.21, wy - fy * 0.10 + py * 0.21, base_z + 0.04,
+                            -fx * 0.90, -fy * 0.90, 0.0,
+                            0.07, 0.07, 0.06,
+                            skin_color, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+
+    # Braço direito: cotovelo no solo, antebraço recolhido para cima com a mão tentando tocar a ferida/peito
+    draw_oriented_voxel_box(surface, camera,
+                            wx + fx * 0.22 - px * 0.18, wy + fy * 0.22 - py * 0.18, base_z + 0.06 + heave * 0.3,
+                            -fx * 0.65 - px * 0.32, -fy * 0.65 - py * 0.32, 0.0,
+                            0.22, 0.085, 0.085,
+                            col_torso, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+    draw_oriented_voxel_box(surface, camera,
+                            wx + fx * 0.10 - px * 0.23, wy + fy * 0.10 - py * 0.23, base_z + 0.06 + quiver,
+                            fx * 0.35 + px * 0.65, fy * 0.35 + py * 0.65, 0.0,
+                            0.20, 0.075, 0.075,
+                            col_torso, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+    draw_oriented_voxel_box(surface, camera,
+                            wx + fx * 0.16 - px * 0.10, wy + fy * 0.16 - py * 0.10, base_z + 0.07 + quiver,
+                            fx * 0.40 + px * 0.60, fy * 0.40 + py * 0.60, 0.0,
+                            0.07, 0.07, 0.06,
+                            skin_color, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+
+    # 7. Pescoço e Garganta (ponto de fixação fatal)
+    throat_x = wx + fx * 0.44
+    throat_y = wy + fy * 0.44
+    throat_z = base_z + 0.06 + heave * 0.4
+    draw_oriented_voxel_box(surface, camera,
+                            throat_x - fx * 0.02, throat_y - fy * 0.02, throat_z,
+                            fx, fy, 0.0,
+                            0.12, 0.13, 0.10,
+                            skin_color, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+
+    # 8. Cabeça e Cabelo tombados no solo
+    draw_oriented_voxel_box(surface, camera,
+                            wx + fx * 0.52, wy + fy * 0.52, base_z + 0.07,
+                            fx, fy, 0.0,
+                            0.18, 0.18, 0.15,
+                            skin_color, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+    draw_oriented_voxel_box(surface, camera,
+                            wx + fx * 0.51, wy + fy * 0.51, base_z + 0.08,
+                            fx, fy, 0.0,
+                            0.20, 0.20, 0.15,
+                            col_hair, up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+
+    # 9. FERIDA CARMIM EM VOLTA DA GARGANTA
+    draw_oriented_voxel_box(surface, camera,
+                            throat_x, throat_y, throat_z + 0.04,
+                            fx, fy, 0.0,
+                            0.08, 0.09, 0.05,
+                            (145, 15, 22), up_x=0.0, up_y=0.0, up_z=1.0, alpha=alpha)
+
+    # 10. A FLECHA YUMI / HAMAYA 3D CRAVADA PREGANDO A GARGANTA AO SOLO
+    # Vetor apontando para cima e levemente inclinado para a direção de disparo (-fx, -fy)
+    arr_dx, arr_dy, arr_dz = -fx * 0.18, -fy * 0.18, 0.98
+    a_len = math.hypot(arr_dx, arr_dy, arr_dz)
+    arr_dx /= a_len; arr_dy /= a_len; arr_dz /= a_len
+
+    shaft_col = (235, 220, 160) if is_holy else (175, 130, 70)
+    point_col = (210, 195, 140) if is_holy else (80, 85, 95)
+    tie_col = (255, 215, 60) if is_holy else (180, 25, 30)
+
+    # Haste da flecha (0.78m de comprimento)
+    draw_oriented_voxel_box(surface, camera,
+                            throat_x, throat_y, base_z - 0.04,
+                            arr_dx, arr_dy, arr_dz,
+                            0.78, 0.03, 0.03,
+                            shaft_col, up_x=px, up_y=py, up_z=0.0, outline=True, alpha=alpha)
+
+    # Ponta de ferro Yanagiba / Ponta Sagrada
+    draw_oriented_voxel_box(surface, camera,
+                            throat_x, throat_y, base_z - 0.05,
+                            arr_dx, arr_dy, arr_dz,
+                            0.12, 0.045, 0.045,
+                            point_col, up_x=px, up_y=py, up_z=0.0, outline=True, alpha=alpha)
+
+    # Penas brancas Kyudo / Hamaya e ligadura no topo
+    feather_x = throat_x + arr_dx * 0.60
+    feather_y = throat_y + arr_dy * 0.60
+    feather_z = (base_z - 0.04) + arr_dz * 0.60
+    # Ligadura
+    draw_oriented_voxel_box(surface, camera,
+                            feather_x, feather_y, feather_z,
+                            arr_dx, arr_dy, arr_dz,
+                            0.04, 0.045, 0.045,
+                            tie_col, up_x=px, up_y=py, up_z=0.0, outline=False, alpha=alpha)
+    # Penas
+    draw_oriented_voxel_box(surface, camera,
+                            feather_x + arr_dx * 0.04, feather_y + arr_dy * 0.04, feather_z + arr_dz * 0.04,
+                            arr_dx, arr_dy, arr_dz,
+                            0.14, 0.065, 0.065,
+                            (255, 255, 250), up_x=px, up_y=py, up_z=0.0, outline=True, alpha=alpha)
+
+    # Se for flecha sagrada Hama-no-Ya, projeta pilar vertical de luz purificadora
+    if is_holy:
+        px_beam, py_beam = camera.apply(throat_x, throat_y, base_z + 0.1)
+        beam_w = max(6, int(18 * camera.zoom))
+        beam_h = max(40, int(120 * camera.zoom))
+        beam_surf = pygame.Surface((beam_w * 2, beam_h), pygame.SRCALPHA)
+        pygame.draw.ellipse(beam_surf, (255, 240, 160, 110), (0, 0, beam_w * 2, beam_h))
+        pygame.draw.ellipse(beam_surf, (255, 255, 220, 180), (beam_w // 2, 0, beam_w, beam_h))
+        surface.blit(beam_surf, (px_beam - beam_w, py_beam - beam_h + 10))
+
+
 def draw_fallen_model(surface: pygame.Surface, camera, wx: float, wy: float, wz: float, facing_x: float, facing_y: float, draw) -> bool:
     """Corpo caído sem cinemática (ex.: tiro de canhão): o próprio modelo deitado, de costas para onde olhava."""
     try:
@@ -1375,9 +1805,9 @@ def draw_fallen_model(surface: pygame.Surface, camera, wx: float, wy: float, wz:
         return False
     rect = rects[0].unionall(rects[1:]) if len(rects) > 1 else rects[0]
     mag = math.hypot(facing_x, facing_y) or 1.0
-    fall = fall_factor(camera, wx, wy, -facing_x / mag, -facing_y / mag)
     body = sprite.subsurface(rect).copy()
     ox, oy = camera.apply(wx, wy, wz)
     pivot = (ox + rect.centerx - left, oy + rect.bottom - up)
-    blit_rotated(surface, body, pivot, (rect.w / 2.0, float(rect.h)), FALL_DEG * fall)
+    angle = get_continuous_fall_angle(camera, wx, wy, -facing_x / mag, -facing_y / mag, FALL_DEG)
+    blit_rotated(surface, body, pivot, (rect.w / 2.0, float(rect.h)), angle)
     return True

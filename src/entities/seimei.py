@@ -54,11 +54,11 @@ class SeimeiOnmyoji(Samurai):
 
         # Rondel Onmyōdō de 6 Elementos
         self.rondel_index = 0
-        self.ofuda_cooldown = 0.65  # Ritmo universal balanceado
+        self.ofuda_cooldown = 0.88  # Calibrado: cadência tática para evitar spam contínuo
         self.ofuda_timer = 0.0
 
         # Ação Secundária: Ritos e Barreiras Kekkai
-        self.ward_cooldown = 0.95  # Ritmo universal fluido
+        self.ward_cooldown = 1.40  # Cooldown expandido para rotação justa de barreiras
         self.ward_timer = 0.0
         self.active_wards: list[TalismanWard] = []
 

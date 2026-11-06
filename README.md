@@ -380,3 +380,16 @@ This project is distributed under a **Proprietary Personal Non-Commercial Licens
 - All copyrights, publication rights, commercial exploitation, and distribution of official builds are reserved exclusively by **Thiago Carvalho**.
 - Copying, redistributing, or incorporating this codebase into commercial products without prior written permission is strictly prohibited.
 See the [`LICENSE`](LICENSE) file for complete legal terms.
+
+---
+
+## 👥 8. Apoiadores da Comunidade & Agradecimentos / Supporters & Special Thanks
+
+Agradecimento especial a todos os apoiadores e entusiastas que tornam a jornada de Samurai Edge: Bakumatsu possível:
+
+- **Apoiadores da Comunidade / Community Supporters**:
+  - `itchzaya`
+  - `Tiago Fraga`
+  - `Tobias C.`
+- **Dedicatória Especial**: À Lorena, que me apoia em todas as minhas loucuras.
+

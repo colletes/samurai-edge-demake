@@ -75,6 +75,11 @@ class CinematicDirector:
         self.julie_attacker = None
         self.julie_victim = None
         self.julie_flurry_timer = 0.0
+        self.julie_flurry_duration = 0.0
+        self.julie_kneel_timer = 0.0
+        self.julie_kneel_duration = 0.0
+        self.julie_clock = 0.0
+        self.julie_thrust_sfx_timer = 0.0
         self.julie_spin_timer = 0.0
         self.julie_bang_timer = 0.0
         self.julie_spark_accum = 0.0
@@ -121,6 +126,8 @@ class CinematicDirector:
         self.finisher_strike_timer: float = 0.0
         self.finisher_strike_duration: float = 0.52
         self.finisher_impact_played: bool = False
+        self.tomoe_pinned_played: bool = False
+        self.tomoe_volley_played: bool = False
 
         # Kenshi (2.1.4a & 2.1.4b): Ittou Ryoudan (Kenshin Split) & Amakakeru Ryuu Tsui Sen (Vertical Bisection)
         self.kenshin_split_attacker = None
@@ -212,11 +219,19 @@ class CinematicDirector:
         # Expressões exclusivas por estilo de Fatality (Ciclo 1 + Clássicos)
         style_phrases_pt = {
             "HEADSHOT_EXPLODE": ("一発必中", "IPPATSU HITCHUU — DISPARO MORTAL"),
-            "PIRATE_CLEAVE": ("荒波両断", "ARANAMI RYOUDAN — CORTE DO CORSÁRIO"),
+            "HAYAGO_KEG_BLAST": ("火薬百連", "KAYAKU HYAKUREN — DETONAÇÃO DE PÓLVORA"),
+            "ARANAMI_CLEAVE": ("荒波両断", "ARANAMI RYOUDAN — BISSECÇÃO DO ALFANJE CORSA"),
+            "PIRATE_CLEAVE": ("荒波両断", "ARANAMI RYOUDAN — BISSECÇÃO DO ALFANJE CORSA"),
+            "KANPOU_SENMETSU": ("艦砲殲滅", "KANPOU SENMETSU — BOMBARDEIO NAVAL ORBITAL"),
+            "RAPIER_BLOOD_FOUNTAIN": ("百花乱突", "HYAKKA RANTOTSU — FONTE DE SANGUE DE FLORETE"),
+            "HYAKKA_RANTOTSU": ("百花乱突", "HYAKKA RANTOTSU — FONTE DE SANGUE DE FLORETE"),
+            "FLINTLOCK_EXECUTION": ("零距離銃殺", "ZERO-KYORI JUUSATSU — FUZILAMENTO À QUEIMA-ROUPA"),
+            "ZERO_KYORI_JUUSATSU": ("零距離銃殺", "ZERO-KYORI JUUSATSU — FUZILAMENTO À QUEIMA-ROUPA"),
             "HYAKURETSU_BODY_EXPLOSION": ("百烈拳", "HYAKURETSU KEN — CEM PUNHOS DE LÓTUS"),
             "WALL_SMASH_FATAL": ("気合衝撃", "KIAI SHOUGEKI — RUGIDO DE CHI"),
             "TRIPLE_SCISSOR_CLEAVE": ("双刃十字", "SOUJIN JUUJI — TESOURA CARMIM"),
-            "MAI_X_CLEAVE": ("紅舞必殺", "BENIMAI HISSATSU — DANÇA DA MORTE"),
+            "SHADOW_LOTUS_FLURRY": ("影蓮乱舞", "EIGEN RANBU — LÓTUS DAS SOMBRAS"),
+            "MAI_X_CLEAVE": ("影蓮乱舞", "EIGEN RANBU — LÓTUS DAS SOMBRAS"),
             "KENSHIN_SPLIT": ("一刀両断", "ITTOU RYOUDAN — UM CORTE, DUAS PARTES"),
             "VERTICAL_BISECTION": ("龍槌閃", "RYUU TSUI SEN — DIVISÃO CELESTIAL DE BAMBU"),
             "DUAL_IMPALE_X_SPREAD": ("二天一流", "NITEN ICHI-RYUU — EMPALAMENTO DUPLO EM LEQUE"),
@@ -271,15 +286,31 @@ class CinematicDirector:
             "ALCHEMIC_ETHER_SUFFOCATION": ("幽冥窒息", "YUUMEI CHISSOKU — ÉTER SOPORÍFERO"),
             "ALCHEMIC_FROST_SHATTER": ("氷華砕裂", "HYOUKA SAIRETSU — CONGELAMENTO E ESTILHAÇO"),
             "ALCHEMIC_MIASMA_MELT": ("毒瘴崩壊", "DOKU SHOU HOUKAI — COLAPSO NEUROTÓXICO"),
+            # Murasaki Fatalities (Fase 2 Overhaul)
+            "KAMAITACHI_CHAIN_DECAP": ("三弦微塵", "SANGEN MIJIN — DECAPITAÇÃO DA CORRENTE KAMAITACHI"),
+            "MURASAKI_DECAP": ("三弦微塵", "SANGEN MIJIN — DECAPITAÇÃO DA CORRENTE KAMAITACHI"),
+            "SENPUU_CHAIN_SHRED": ("旋風爆砕", "SENPUU BAKUSAI — TORNADO DE CORRENTE"),
+            # Kasumi Fatalities (Fase 2 Overhaul)
+            "MOUJIN_SHUNDAN": ("霧刃瞬断", "MOUJIN SHUNDAN — DECAPITAÇÃO DA LÂMINA DE NÉVOA"),
+            "BAKUEN_FUNSAI": ("爆炎粉砕", "BAKUEN FUNSAI — CATACLISMO PIROTÉCNICO HOUROKU"),
+            "KASUMI_EXPLODE": ("爆炎粉砕", "BAKUEN FUNSAI — CATACLISMO PIROTÉCNICO HOUROKU"),
         }
 
         style_phrases_en = {
             "HEADSHOT_EXPLODE": ("一発必中", "IPPATSU HITCHUU — DEADLY MARKSMANSHIP"),
-            "PIRATE_CLEAVE": ("荒波両断", "ARANAMI RYOUDAN — CORSAIR CLEAVE"),
+            "HAYAGO_KEG_BLAST": ("火薬百連", "KAYAKU HYAKUREN — POWDER KEG DETONATION"),
+            "ARANAMI_CLEAVE": ("荒波両断", "ARANAMI RYOUDAN — CORSAIR CUTLASS BISECTION"),
+            "PIRATE_CLEAVE": ("荒波両断", "ARANAMI RYOUDAN — CORSAIR CUTLASS BISECTION"),
+            "KANPOU_SENMETSU": ("艦砲殲滅", "KANPOU SENMETSU — ORBITAL CANNON OBLITERATION"),
+            "RAPIER_BLOOD_FOUNTAIN": ("百花乱突", "HYAKKA RANTOTSU — RAPIER BLOOD FOUNTAIN"),
+            "HYAKKA_RANTOTSU": ("百花乱突", "HYAKKA RANTOTSU — RAPIER BLOOD FOUNTAIN"),
+            "FLINTLOCK_EXECUTION": ("零距離銃殺", "ZERO-KYORI JUUSATSU — POINT-BLANK FLINTLOCK EXECUTION"),
+            "ZERO_KYORI_JUUSATSU": ("零距離銃殺", "ZERO-KYORI JUUSATSU — POINT-BLANK FLINTLOCK EXECUTION"),
             "HYAKURETSU_BODY_EXPLOSION": ("百烈拳", "HYAKURETSU KEN — HUNDRED LOTUS FISTS"),
             "WALL_SMASH_FATAL": ("気合衝撃", "KIAI SHOUGEKI — CHI ROAR"),
             "TRIPLE_SCISSOR_CLEAVE": ("双刃十字", "SOUJIN JUUJI — CRIMSON SCISSORS"),
-            "MAI_X_CLEAVE": ("紅舞必殺", "BENIMAI HISSATSU — DANCE OF DEATH"),
+            "SHADOW_LOTUS_FLURRY": ("影蓮乱舞", "EIGEN RANBU — SHADOW LOTUS FLURRY"),
+            "MAI_X_CLEAVE": ("影蓮乱舞", "EIGEN RANBU — SHADOW LOTUS FLURRY"),
             "KENSHIN_SPLIT": ("一刀両断", "ITTOU RYOUDAN — ONE CUT, TWO HALVES"),
             "VERTICAL_BISECTION": ("龍槌閃", "RYUU TSUI SEN — CELESTIAL BAMBOO CLEAVE"),
             "DUAL_IMPALE_X_SPREAD": ("二天一流", "NITEN ICHI-RYUU — DUAL FANNING IMPALE"),
@@ -334,6 +365,14 @@ class CinematicDirector:
             "ALCHEMIC_ETHER_SUFFOCATION": ("幽冥窒息", "YUUMEI CHISSOKU — SOPORIFIC ETHER"),
             "ALCHEMIC_FROST_SHATTER": ("氷華砕裂", "HYOUKA SAIRETSU — FREEZE & SHATTER"),
             "ALCHEMIC_MIASMA_MELT": ("毒瘴崩壊", "DOKU SHOU HOUKAI — NEUROTOXIC COLLAPSE"),
+            # Murasaki Fatalities (Phase 2 Overhaul)
+            "KAMAITACHI_CHAIN_DECAP": ("三弦微塵", "SANGEN MIJIN — KAMAITACHI CHAIN DECAPITATION"),
+            "MURASAKI_DECAP": ("三弦微塵", "SANGEN MIJIN — KAMAITACHI CHAIN DECAPITATION"),
+            "SENPUU_CHAIN_SHRED": ("旋風爆砕", "SENPUU BAKUSAI — CHAIN SHRED TORNADO"),
+            # Kasumi Fatalities (Phase 2 Overhaul)
+            "MOUJIN_SHUNDAN": ("霧刃瞬断", "MOUJIN SHUNDAN — MIST BLADE DECAPITATION"),
+            "BAKUEN_FUNSAI": ("爆炎粉砕", "BAKUEN FUNSAI — HOUROKU PYROTECHNIC CATACLYSM"),
+            "KASUMI_EXPLODE": ("爆炎粉砕", "BAKUEN FUNSAI — HOUROKU PYROTECHNIC CATACLYSM"),
         }
 
         style_phrases = style_phrases_pt if is_pt else style_phrases_en
@@ -565,22 +604,46 @@ class CinematicDirector:
                 attacker.set_facing(victim.wx, victim.wy)
                 attacker.state = "ATTACK"
 
-        elif death_style == "RAPIER_FLURRY_POINTBLANK":
-            # Julie: 24 estocadas de rapieira, pirueta elegante e disparo de pistola à queima-roupa!
+        elif death_style in ("RAPIER_BLOOD_FOUNTAIN", "HYAKKA_RANTOTSU", "RAPIER_FLURRY_POINTBLANK"):
+            # Julie: Hyakka Rantotsu (Barragem de florete e queda de joelhos com fonte de sangue frontal)
             self.julie_attacker = attacker
             self.julie_victim = victim
-            self.julie_flurry_timer = 0.85
-            self.julie_spin_timer = 0.35
-            self.julie_bang_timer = 0.28
+            flurry_dur = 1.15
+            kneel_dur = 0.55
+            self.julie_flurry_duration = flurry_dur
+            self.julie_flurry_timer = flurry_dur
+            self.julie_kneel_duration = kneel_dur
+            self.julie_kneel_timer = kneel_dur
+            self.julie_clock = 0.0
+            self.julie_thrust_sfx_timer = 0.0
+            self.julie_spin_timer = 0.0
+            self.julie_bang_timer = 0.0
             self.julie_spark_accum = 0.0
-            self.freeze_timer = 1.48
-            self.bw_flash_duration = 1.90
-            self.bw_flash_timer = 1.90
-            self.delayed_death_timer = 1.48
-            if attacker is not None:
+            total_dur = flurry_dur + kneel_dur
+            self.freeze_timer = total_dur
+            self.bw_flash_duration = total_dur + 0.35
+            self.bw_flash_timer = total_dur + 0.35
+            self.delayed_death_timer = total_dur
+            self.cinematic_zoom_target = 2.15
+            if attacker is not None and victim is not None:
                 attacker.set_facing(victim.wx, victim.wy)
                 attacker.state = "ATTACK"
-                attacker.state_timer = 0.85
+                attacker.extra_props = {
+                    "pose": "finisher_a",
+                    "p": 0.0,
+                    "is_flurry": True,
+                    "flurry_clock": 0.0,
+                }
+                # Rival permanece em pé!
+                victim.state = "DYING_FREEZE"
+                if hasattr(victim, "set_facing"):
+                    victim.set_facing(attacker.wx, attacker.wy)
+                else:
+                    victim.facing_x, victim.facing_y = -attacker.facing_x, -attacker.facing_y
+                victim.extra_props = {
+                    "pose": "dying_freeze",
+                    "kneel_prog": 0.0,
+                }
 
         elif death_style in ("DUAL_IMPALE_X_SPREAD", "CROSS_VACUUM_SLICER", "REFLECTED_TORSO_CLEAVE"):
             # Musashi: Niten Ichi-ryuu - 3 Atos Viscerais (Katana -> Wakizashi -> Rasgo em 'X' e desmembramento)
@@ -798,7 +861,17 @@ class CinematicDirector:
                         "duration": 0.80,
                     })
 
-        elif death_style in ("TESSEN_DECAP", "THROAT_TEMPLE_CRUSH", "METEOR_STAFF_CRUSH", "SPEAR_HEART_SLIDE", "TRAP_AND_EXECUTE", "PINNED_TO_EARTH", "HAMAYA_HOLY_PIERCE", "DOKUKIRI_MELT", "TSUPPARI_SONIC_DECAP", "TACHIAI_SHATTER_SLAM", "STILETTO_CAROTID_VITRIOL", "ALCHEMIC_ACID_DISSOLVE", "ALCHEMIC_FIRE_ASH", "ALCHEMIC_ETHER_SUFFOCATION", "ALCHEMIC_FROST_SHATTER", "ALCHEMIC_MIASMA_MELT"):
+        elif death_style in ("TRIPLE_SCISSOR_CLEAVE", "SHADOW_LOTUS_FLURRY", "MAI_X_CLEAVE"):
+            # Chiyo: Fatality Duplo (Tesoura Carmim vs Lótus das Sombras)
+            dur = 0.85
+            self.cinematic_zoom_target = 2.15
+            self.bw_flash_duration = dur + 0.25
+            self.freeze_timer = dur
+            self.bw_flash_timer = dur + 0.25
+            self.delayed_death_timer = dur
+            self._arm_closeup_finisher_strike(attacker, victim, duration=dur)
+
+        elif death_style in ("TESSEN_DECAP", "THROAT_TEMPLE_CRUSH", "METEOR_STAFF_CRUSH", "SPEAR_HEART_SLIDE", "TRAP_AND_EXECUTE", "PINNED_TO_EARTH", "HAMAYA_HOLY_PIERCE", "DOKUKIRI_MELT", "OKUNI_MELT", "TSUPPARI_SONIC_DECAP", "TACHIAI_SHATTER_SLAM", "STILETTO_CAROTID_VITRIOL", "ALCHEMIC_ACID_DISSOLVE", "ALCHEMIC_FIRE_ASH", "ALCHEMIC_ETHER_SUFFOCATION", "ALCHEMIC_FROST_SHATTER", "ALCHEMIC_MIASMA_MELT", "KAMAITACHI_CHAIN_DECAP", "MURASAKI_DECAP", "SENPUU_CHAIN_SHRED", "MOUJIN_SHUNDAN", "BAKUEN_FUNSAI", "KASUMI_EXPLODE"):
             if attacker is not None and death_style == "METEOR_STAFF_CRUSH":
                 attacker.wz = 0.0
             dur = 0.72 if attacker is not None else 0.52
@@ -844,11 +917,13 @@ class CinematicDirector:
         self.finisher_strike_duration = max(0.25, duration)
         self.finisher_strike_timer = self.finisher_strike_duration
         self.finisher_impact_played = False
+        self.tomoe_pinned_played = False
+        self.tomoe_volley_played = False
         attacker.set_facing(victim.wx, victim.wy)
         if hasattr(victim, "set_facing"):
             victim.set_facing(attacker.wx, attacker.wy)
         dist = math.hypot(victim.wx - attacker.wx, victim.wy - attacker.wy)
-        if dist < 2.8 and self.finisher_style != "HEADSHOT_EXPLODE":
+        if dist < 2.8 and self.finisher_style not in ("HEADSHOT_EXPLODE", "KANPOU_SENMETSU"):
             atk_dur = getattr(attacker, "attack_duration", 0.25) or 0.25
             attacker.state = "ATTACK"
             # Pose inicial engatilhada (atk_progress = 0.10) enquanto a câmera faz o zoom & roll no tempo congelado
@@ -864,7 +939,7 @@ class CinematicDirector:
             if self.finisher_attacker is not None and self.finisher_victim is not None:
                 dist = math.hypot(self.finisher_victim.wx - self.finisher_attacker.wx,
                                   self.finisher_victim.wy - self.finisher_attacker.wy)
-                if dist < 2.8 and self.finisher_style != "HEADSHOT_EXPLODE":
+                if dist < 2.8 and self.finisher_style not in ("HEADSHOT_EXPLODE", "KANPOU_SENMETSU"):
                     atk_dur = getattr(self.finisher_attacker, "attack_duration", 0.25) or 0.25
                     self.finisher_attacker.state = "ATTACK"
                     self.finisher_attacker.state_timer = atk_dur * 0.90
@@ -1243,64 +1318,144 @@ class CinematicDirector:
                     atk.state_timer = 0.15
                     vic.wz = max(0.0, vic.wz - 8.0 * effective_dt)
 
-        # 5. Julie Rapier Flurry & Point-blank
+        # 5. Julie: Hyakka Rantotsu (Barragem de Florete & Queda de Joelhos com Fonte Frontal)
         if self.julie_flurry_timer > 0:
             self.julie_flurry_timer = max(0.0, self.julie_flurry_timer - effective_dt)
+            self.julie_clock += effective_dt
+            self.julie_thrust_sfx_timer += effective_dt
             atk = self.julie_attacker
             vic = self.julie_victim
-            if atk is not None:
-                # Animação ativa contínua de estocada (16Hz)
+
+            flurry_dur = getattr(self, "julie_flurry_duration", 1.15)
+            prog = 1.0 - (self.julie_flurry_timer / max(0.001, flurry_dur))
+
+            if atk is not None and vic is not None:
+                # Alinhar duelistas no espaçamento ideal de esgrima (0.74m da lâmina)
+                dx = vic.wx - atk.wx
+                dy = vic.wy - atk.wy
+                dist = math.hypot(dx, dy)
+                if dist > 1e-4:
+                    fx, fy = dx / dist, dy / dist
+                    target_dist = 0.74
+                    ideal_x = vic.wx - fx * target_dist
+                    ideal_y = vic.wy - fy * target_dist
+                    atk.wx += (ideal_x - atk.wx) * min(1.0, effective_dt * 8.0)
+                    atk.wy += (ideal_y - atk.wy) * min(1.0, effective_dt * 8.0)
+                    atk.facing_x, atk.facing_y = fx, fy
+                    vic.facing_x, vic.facing_y = -fx, -fy
+
+                # Julie: velocidade moderada e claramente visível de estocadas (7.0Hz)
                 atk.state = "ATTACK"
-                atk.state_timer = 0.06
+                atk.atk_progress = (self.julie_clock * 7.0) % 1.0
+                atk.extra_props = {
+                    "pose": "finisher_a",
+                    "p": prog,
+                    "is_flurry": True,
+                    "flurry_clock": self.julie_clock,
+                    "flurry_prog": prog
+                }
+
+                # Oponente PERMANECE EM PÉ durante o flurry, com espasmo e estremecimento dos golpes
+                vic.state = "DYING_FREEZE"
+                shiver = math.sin(self.julie_clock * 36.0) * 0.012
+                vic.extra_props = {
+                    "pose": "dying_freeze",
+                    "shiver": shiver,
+                    "kneel_prog": 0.0
+                }
+
+            # Som de aço perfurando a cada estocada visível (~7Hz -> 0.14s)
+            if self.julie_thrust_sfx_timer >= 0.14:
+                self.julie_thrust_sfx_timer = 0.0
+                from src.audio.sound_manager import get_sound_manager
+                from src.audio.sound_events import SoundEvent
+                get_sound_manager().play(SoundEvent.SWORD_SLASH, volume_scale=0.90)
+
+            # SANGUE ESGUICHANDO NA DIREÇÃO CONTRÁRIA (PARA A FRENTE DO RIVAL)
             self.julie_spark_accum += effective_dt
-            while self.julie_spark_accum >= 0.032:
-                self.julie_spark_accum -= 0.032
-                if vic is not None and particles is not None:
-                    from src.effects.particles import SparkParticle, BloodParticle
-                    particles.append(SparkParticle(
-                        vic.wx + random.uniform(-0.16, 0.16),
-                        vic.wy + random.uniform(-0.16, 0.16),
-                        random.uniform(0.40, 0.85),
-                        color=(190, 230, 255)
-                    ))
-                    if random.random() < 0.65:
-                        particles.append(BloodParticle(vic.wx, vic.wy, random.uniform(0.4, 0.75)))
+            while self.julie_spark_accum >= 0.020:
+                self.julie_spark_accum -= 0.020
+                if vic is not None and atk is not None and particles is not None:
+                    from src.effects.particles import SparkParticle, BloodParticle, SmokeParticle
+                    # Vetor para a frente do rival
+                    rx, ry = vic.facing_x, vic.facing_y
 
-        elif self.julie_spin_timer > 0:
-            self.julie_spin_timer = max(0.0, self.julie_spin_timer - effective_dt)
+                    # 18 partículas jorrando para a frente do rival
+                    for _ in range(18):
+                        hole_ox = random.uniform(-0.10, 0.10)
+                        hole_oy = random.uniform(-0.10, 0.10)
+                        hole_oz = vic.wz + random.uniform(0.42, 0.68)
+
+                        bp = BloodParticle(vic.wx + hole_ox, vic.wy + hole_oy, hole_oz)
+                        jet_speed = random.uniform(3.8, 7.8)
+                        bp.vx = rx * jet_speed + random.uniform(-0.7, 0.7)
+                        bp.vy = ry * jet_speed + random.uniform(-0.7, 0.7)
+                        bp.vz = random.uniform(2.0, 5.2)  # Jatos em arco alto para a frente
+                        particles.append(bp)
+
+                    # 6 partículas adicionais borrifando para os lados do peito
+                    for _ in range(6):
+                        bp_side = BloodParticle(vic.wx, vic.wy, vic.wz + random.uniform(0.42, 0.65))
+                        side_speed = random.uniform(1.8, 3.8)
+                        bp_side.vx = rx * (side_speed * 0.4) + random.uniform(-1.0, 1.0)
+                        bp_side.vy = ry * (side_speed * 0.4) + random.uniform(-1.0, 1.0)
+                        bp_side.vz = random.uniform(1.8, 4.2)
+                        particles.append(bp_side)
+
+                    if random.random() < 0.60:
+                        particles.append(SparkParticle(
+                            vic.wx + rx * 0.05 + random.uniform(-0.12, 0.12),
+                            vic.wy + ry * 0.05 + random.uniform(-0.12, 0.12),
+                            vic.wz + random.uniform(0.42, 0.68),
+                            color=random.choice([(255, 230, 180), (200, 230, 255), (255, 210, 110)])
+                        ))
+                    if random.random() < 0.45:
+                        particles.append(SmokeParticle(
+                            vic.wx + rx * 0.25,
+                            vic.wy + ry * 0.25,
+                            wz=vic.wz + random.uniform(0.48, 0.68),
+                            color=(135, 12, 22), radius=0.25, lifetime=0.42
+                        ))
+
+        elif self.julie_kneel_timer > 0:
+            # Fase 2: Julie recolhe a lâmina e o rival cai de joelhos com o sangue acompanhando a queda
+            self.julie_kneel_timer = max(0.0, self.julie_kneel_timer - effective_dt)
             atk = self.julie_attacker
             vic = self.julie_victim
-            if atk is not None and vic is not None:
-                sp = 1.0 - (self.julie_spin_timer / 0.35)
-                # Pirueta elegante de capa girando 360° para as costas do oponente
-                atk.state = "CAPE_FLOURISH"
-                atk.state_timer = 0.20
-                target_x = vic.wx - vic.facing_x * 0.45
-                target_y = vic.wy - vic.facing_y * 0.45
-                atk.wx += (target_x - atk.wx) * min(1.0, effective_dt * 8.0)
-                atk.wy += (target_y - atk.wy) * min(1.0, effective_dt * 8.0)
-                atk.set_facing(vic.wx, vic.wy)
 
-        elif self.julie_bang_timer > 0:
-            first_frame = (self.julie_bang_timer >= 0.27)
-            self.julie_bang_timer = max(0.0, self.julie_bang_timer - effective_dt)
-            atk = self.julie_attacker
-            vic = self.julie_victim
-            if atk is not None and vic is not None:
+            kneel_dur = getattr(self, "julie_kneel_duration", 0.55)
+            k_prog = min(1.0, (1.0 - self.julie_kneel_timer / max(0.001, kneel_dur)) * 1.35)
+
+            if atk is not None:
+                # Julie recolhe o sabre com elegância aristocrática
                 atk.state = "IDLE"
-                atk.set_facing(vic.wx, vic.wy)
-                if first_frame:
-                    from src.audio.sound_manager import get_sound_manager
-                    from src.audio.sound_events import SoundEvent
-                    get_sound_manager().play(SoundEvent.SWORD_CLASH, volume_scale=1.0)
-                    if particles is not None:
-                        from src.effects.particles import SmokeParticle, SparkParticle
-                        for _ in range(5):
-                            particles.append(SmokeParticle(atk.wx + atk.facing_x * 0.25,
-                                                           atk.wy + atk.facing_y * 0.25,
-                                                           wz=0.72, color=(225, 225, 235), radius=0.75))
-                        for _ in range(8):
-                            particles.append(SparkParticle(vic.wx, vic.wy, 0.72, color=(255, 195, 60)))
+                atk.extra_props = {"pose": "en_garde", "p": 0.5}
+
+            if vic is not None:
+                # Oponente cai de joelhos suavemente
+                vic.state = "DYING_FREEZE"
+                vic.extra_props = {
+                    "pose": "dying_freeze",
+                    "kneel_prog": k_prog
+                }
+
+            # Sangue arterial contínuo acompanhando a descida do peito ao solo
+            self.julie_spark_accum += effective_dt
+            while self.julie_spark_accum >= 0.024:
+                self.julie_spark_accum -= 0.024
+                if vic is not None and particles is not None:
+                    from src.effects.particles import BloodParticle
+                    rx, ry = vic.facing_x, vic.facing_y
+                    drop_z = k_prog * 0.26
+                    for _ in range(14):
+                        bp = BloodParticle(vic.wx + random.uniform(-0.08, 0.08),
+                                           vic.wy + random.uniform(-0.08, 0.08),
+                                           max(0.12, vic.wz + 0.52 - drop_z))
+                        sp = random.uniform(2.8, 5.8)
+                        bp.vx = rx * sp + random.uniform(-0.6, 0.6)
+                        bp.vy = ry * sp + random.uniform(-0.6, 0.6)
+                        bp.vz = random.uniform(1.8, 4.2)
+                        particles.append(bp)
 
         # 5. Goro (Kuwa Skull Cleave)
         if self.goro_windup_timer > 0:
@@ -1661,7 +1816,7 @@ class CinematicDirector:
                 atk.extra_props["finisher_style"] = self.finisher_style
                 atk.extra_props["p"] = prog
                 dist = math.hypot(vic.wx - atk.wx, vic.wy - atk.wy)
-                if dist < 2.8 and self.finisher_style != "HEADSHOT_EXPLODE":
+                if dist < 2.8 and self.finisher_style not in ("HEADSHOT_EXPLODE", "KANPOU_SENMETSU"):
                     atk_dur = getattr(atk, "attack_duration", 0.25) or 0.25
                     atk.state = "ATTACK"
                     # Aproximar suavemente para distância ideal de golpe em close-up (~0.82 tiles)
@@ -1712,15 +1867,268 @@ class CinematicDirector:
                                     particles.append(SparkParticle(vic.wx, vic.wy, 0.65, color=(255, 255, 220)))
                                 for _ in range(28):
                                     particles.append(BloodParticle(vic.wx, vic.wy, 0.65))
+                    elif self.finisher_style in ("TRIPLE_SCISSOR_CLEAVE", "MAI_X_CLEAVE"):
+                        # Chiyo: Finisher A (SOUJIN JUUJI / Tesoura Carmim)
+                        anim_p = prog
+                        try:
+                            from src.audio.sound_manager import get_sound_manager
+                            from src.audio.sound_events import SoundEvent
+                            sm = get_sound_manager()
+                        except Exception:
+                            sm = None
+
+                        if not hasattr(vic, "extra_props") or vic.extra_props is None:
+                            vic.extra_props = {}
+
+                        if prog < 0.35:
+                            u = prog / 0.35
+                            atk.extra_props["pose"] = "finisher_scissor_leap"
+                            atk.extra_props["p"] = u
+                            vic.state = "DYING_FREEZE"
+                            vic.extra_props["shiver"] = math.sin(prog * 30.0) * 0.01
+                            vic.extra_props["kneel_prog"] = 0.0
+                        elif prog < 0.70:
+                            u = (prog - 0.35) / 0.35
+                            atk.extra_props["pose"] = "finisher_scissor_spin"
+                            atk.extra_props["p"] = u
+                            if prog >= 0.46 and not getattr(self, "chiyo_scissor_played", False):
+                                self.chiyo_scissor_played = True
+                                if sm:
+                                    sm.play(SoundEvent.SWORD_SLASH, volume_scale=1.1)
+                                    sm.play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
+                                if particles is not None:
+                                    from src.effects.particles import SparkParticle, BloodParticle
+                                    for _ in range(22):
+                                        particles.append(SparkParticle(vic.wx, vic.wy, 0.88, color=(255, 230, 180)))
+                                    for _ in range(32):
+                                        bp = BloodParticle(vic.wx, vic.wy, 0.88)
+                                        bp.vz = random.uniform(2.8, 5.2)
+                                        particles.append(bp)
+                            vic.state = "DYING_FREEZE"
+                            vic_u = (prog - 0.46) / 0.24 if prog >= 0.46 else 0.0
+                            vic.extra_props["kneel_prog"] = vic_u * 0.75
+                            vic.extra_props["shiver"] = math.sin(prog * 50.0) * 0.02 * (1.0 - vic_u)
+                        else:
+                            u = (prog - 0.70) / 0.30
+                            atk.extra_props["pose"] = "finisher_scissor_land"
+                            atk.extra_props["p"] = u
+                            vic.extra_props["kneel_prog"] = 0.75 + u * 0.25
+
+                    elif self.finisher_style == "SHADOW_LOTUS_FLURRY":
+                        # Chiyo: Finisher B (EIGEN RANBU / Lótus das Sombras - com fontes de sangue das kodachis)
+                        anim_p = prog
+                        try:
+                            from src.audio.sound_manager import get_sound_manager
+                            from src.audio.sound_events import SoundEvent
+                            sm = get_sound_manager()
+                        except Exception:
+                            sm = None
+
+                        if not hasattr(vic, "extra_props") or vic.extra_props is None:
+                            vic.extra_props = {}
+
+                        spin_speed = 18.0
+                        spin_angle = prog * spin_speed
+                        atk.extra_props["pose"] = "finisher_lotus_flurry"
+                        atk.extra_props["lotus_prog"] = prog
+                        atk.extra_props["lotus_angle"] = spin_angle
+
+                        orbit_r = 0.75
+                        atk.wx = vic.wx + math.cos(spin_angle) * orbit_r
+                        atk.wy = vic.wy + math.sin(spin_angle) * orbit_r
+                        atk.set_facing(vic.wx, vic.wy)
+
+                        if particles is not None and 0.15 <= prog <= 0.85:
+                            from src.effects.particles import BloodParticle, SparkParticle
+                            tip1_x = atk.wx + atk.facing_x * 0.45 + atk.facing_y * 0.35
+                            tip1_y = atk.wy + atk.facing_y * 0.45 - atk.facing_x * 0.35
+                            tip2_x = atk.wx + atk.facing_x * 0.45 - atk.facing_y * 0.35
+                            tip2_y = atk.wy + atk.facing_y * 0.45 + atk.facing_x * 0.35
+                            for tx, ty in ((tip1_x, tip1_y), (tip2_x, tip2_y)):
+                                if random.random() < 0.75:
+                                    bp = BloodParticle(tx, ty, 0.72)
+                                    bp.vz = random.uniform(2.4, 4.8)
+                                    bp.vx = random.uniform(-0.6, 0.6)
+                                    bp.vy = random.uniform(-0.6, 0.6)
+                                    particles.append(bp)
+                                    sp = SparkParticle(tx, ty, 0.70, color=(235, 45, 60))
+                                    particles.append(sp)
+
+                        if prog >= 0.48 and not getattr(self, "chiyo_lotus_played", False):
+                            self.chiyo_lotus_played = True
+                            if sm:
+                                sm.play(SoundEvent.SWORD_SLASH, volume_scale=1.1)
+                                sm.play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
+
+                        if prog < 0.65:
+                            vic.state = "DYING_FREEZE"
+                            vic.extra_props["shiver"] = math.sin(prog * 45.0) * 0.02
+                            vic.extra_props["kneel_prog"] = (prog / 0.65) * 0.60
+                        else:
+                            vic.state = "DYING_FREEZE"
+                            vic.extra_props["kneel_prog"] = 0.60 + ((prog - 0.65) / 0.35) * 0.40
+                            vic.extra_props["shiver"] = math.sin(prog * 15.0) * 0.006
+
+                    elif self.finisher_style in ("PINNED_TO_EARTH", "ARROW_PIN"):
+                        # Tomoe: Finisher A (Jifuu Kyoukyuu / Flecha Pregada à Terra)
+                        anim_p = prog
+                        atk.extra_props["pose"] = "finisher_pinned"
+                        try:
+                            from src.audio.sound_manager import get_sound_manager
+                            from src.audio.sound_events import SoundEvent
+                            sm = get_sound_manager()
+                        except Exception:
+                            sm = None
+
+                        if not hasattr(vic, "extra_props") or vic.extra_props is None:
+                            vic.extra_props = {}
+
+                        hit_prog = 0.35
+                        ground_prog = 0.54
+
+                        if prog >= hit_prog and not getattr(self, "tomoe_pinned_played", False):
+                            self.tomoe_pinned_played = True
+                            if sm:
+                                sm.play(SoundEvent.BOW_RELEASE, volume_scale=1.1)
+                                sm.play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
+                            if particles is not None:
+                                from src.effects.particles import SparkParticle, BloodParticle
+                                for _ in range(16):
+                                    particles.append(SparkParticle(vic.wx, vic.wy, 0.65, color=(255, 235, 180)))
+                                for _ in range(24):
+                                    particles.append(BloodParticle(vic.wx, vic.wy, 0.65))
+
+                        if prog < hit_prog:
+                            # Fase 1: Vítima em choque/tensão esperando o disparo
+                            vic.state = "DYING_FREEZE"
+                            vic.extra_props["is_pinned_to_earth"] = False
+                            vic.extra_props["shiver"] = math.sin(prog * 28.0) * 0.012
+                            vic.extra_props["kneel_prog"] = 0.0
+                        elif prog < ground_prog:
+                            # Fase 2: O impacto da flecha atinge a garganta e arremessa a vítima de costas ao solo em queda contínua 3D
+                            fall_u = (prog - hit_prog) / (ground_prog - hit_prog)
+                            smooth_fall = fall_u * fall_u * (3.0 - 2.0 * fall_u)
+                            vic.state = "DYING_FREEZE"
+                            vic.extra_props["is_pinned_to_earth"] = False
+                            vic.extra_props["somersault_angle"] = 90.0 * smooth_fall
+                            vic.extra_props["somersault_pivot_z"] = vic.wz + 0.06
+                            vic.extra_props["shiver"] = (1.0 - smooth_fall) * 0.02
+                        else:
+                            # Fase 3: Vítima cravada ao solo na postura orgânica agônica com respiração e sangue arterial
+                            vic.state = "PINNED_DOWN"
+                            vic.extra_props["is_pinned_to_earth"] = True
+                            vic.extra_props["somersault_angle"] = 0.0
+                            vic.extra_props["spasm_time"] = prog - ground_prog
+                            vic.wz = 0.0
+                            vic.vz = 0.0
+
+                        # Fonte de sangue arterial contínua jorrando da garganta perfurada
+                        if prog >= hit_prog and particles is not None and random.random() < 0.85:
+                            from src.effects.particles import BloodParticle
+                            mag = math.hypot(atk.facing_x, atk.facing_y) or 1.0
+                            fx, fy = atk.facing_x / mag, atk.facing_y / mag
+                            th_x = vic.wx + fx * 0.44
+                            th_y = vic.wy + fy * 0.44
+                            for _ in range(random.randint(2, 4)):
+                                bp = BloodParticle(th_x + random.uniform(-0.025, 0.025),
+                                                   th_y + random.uniform(-0.025, 0.025),
+                                                   0.08 + random.uniform(0.0, 0.03))
+                                bp.vz = random.uniform(2.8, 5.2)
+                                bp.vx = random.uniform(-0.35, 0.35)
+                                bp.vy = random.uniform(-0.35, 0.35)
+                                particles.append(bp)
+
+                    elif self.finisher_style == "HAMAYA_HOLY_PIERCE":
+                        # Tomoe: Finisher B (Hama Tenkan / Salva Purificadora Celeste)
+                        anim_p = prog
+                        atk.extra_props["pose"] = "finisher_volley"
+                        try:
+                            from src.audio.sound_manager import get_sound_manager
+                            from src.audio.sound_events import SoundEvent
+                            sm = get_sound_manager()
+                        except Exception:
+                            sm = None
+
+                        if not hasattr(vic, "extra_props") or vic.extra_props is None:
+                            vic.extra_props = {}
+
+                        hit_prog = 0.38
+                        ground_prog = 0.56
+
+                        if prog >= hit_prog and not getattr(self, "tomoe_volley_played", False):
+                            self.tomoe_volley_played = True
+                            if sm:
+                                sm.play(SoundEvent.BOW_RELEASE, volume_scale=1.1)
+                                sm.play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
+                            if particles is not None:
+                                from src.effects.particles import SparkParticle, BloodParticle
+                                for _ in range(22):
+                                    particles.append(SparkParticle(vic.wx, vic.wy, 0.70, color=(255, 230, 90)))
+                                for _ in range(14):
+                                    particles.append(SparkParticle(vic.wx, vic.wy, 0.85, color=(255, 255, 240)))
+                                for _ in range(26):
+                                    particles.append(BloodParticle(vic.wx, vic.wy, 0.68))
+
+                        if prog < hit_prog:
+                            vic.state = "DYING_FREEZE"
+                            vic.extra_props["is_pinned_to_earth"] = False
+                            vic.extra_props["shiver"] = math.sin(prog * 28.0) * 0.012
+                            vic.extra_props["kneel_prog"] = 0.0
+                        elif prog < ground_prog:
+                            fall_u = (prog - hit_prog) / (ground_prog - hit_prog)
+                            smooth_fall = fall_u * fall_u * (3.0 - 2.0 * fall_u)
+                            vic.state = "DYING_FREEZE"
+                            vic.extra_props["is_pinned_to_earth"] = False
+                            vic.extra_props["somersault_angle"] = 90.0 * smooth_fall
+                            vic.extra_props["somersault_pivot_z"] = vic.wz + 0.06
+                            vic.extra_props["shiver"] = (1.0 - smooth_fall) * 0.02
+                        else:
+                            vic.state = "PINNED_DOWN"
+                            vic.extra_props["is_pinned_to_earth"] = True
+                            vic.extra_props["is_holy_pierced"] = True
+                            vic.extra_props["somersault_angle"] = 0.0
+                            vic.extra_props["spasm_time"] = prog - ground_prog
+                            vic.wz = 0.0
+                            vic.vz = 0.0
+
+                        if prog >= hit_prog and particles is not None and random.random() < 0.85:
+                            from src.effects.particles import BloodParticle
+                            mag = math.hypot(atk.facing_x, atk.facing_y) or 1.0
+                            fx, fy = atk.facing_x / mag, atk.facing_y / mag
+                            th_x = vic.wx + fx * 0.44
+                            th_y = vic.wy + fy * 0.44
+                            for _ in range(random.randint(2, 4)):
+                                bp = BloodParticle(th_x + random.uniform(-0.025, 0.025),
+                                                   th_y + random.uniform(-0.025, 0.025),
+                                                   0.08 + random.uniform(0.0, 0.03))
+                                bp.vz = random.uniform(2.8, 5.2)
+                                bp.vx = random.uniform(-0.35, 0.35)
+                                bp.vy = random.uniform(-0.35, 0.35)
+                                particles.append(bp)
+
                     elif prog < 0.28:
                         # Fase A: Tensão e preparação da lâmina no close-up (atk_progress: 0.10 -> 0.22)
                         u = prog / 0.28
                         anim_p = 0.10 + 0.12 * (u * u)
+                        if not hasattr(vic, "extra_props") or vic.extra_props is None:
+                            vic.extra_props = {}
+                        vic.extra_props["shiver"] = math.sin(prog * 25.0) * 0.008
+                        vic.extra_props["kneel_prog"] = 0.0
                     elif prog < 0.74:
                         # Fase B: Desfere o corte/estocada fatal através do alvo (atk_progress: 0.22 -> 0.92)
                         u = (prog - 0.28) / 0.46
                         smooth_u = u * u * (3.0 - 2.0 * u)
                         anim_p = 0.22 + 0.70 * smooth_u
+                        if not hasattr(vic, "extra_props") or vic.extra_props is None:
+                            vic.extra_props = {}
+                        if prog >= 0.46:
+                            vic_hit_u = (prog - 0.46) / 0.28
+                            vic.extra_props["shiver"] = math.sin(prog * 60.0) * (0.025 * (1.0 - vic_hit_u))
+                            vic.extra_props["kneel_prog"] = vic_hit_u * 0.80
+                        else:
+                            vic.extra_props["shiver"] = math.sin(prog * 30.0) * 0.012
+                            vic.extra_props["kneel_prog"] = 0.0
+
                         if prog >= 0.46 and not self.finisher_impact_played:
                             self.finisher_impact_played = True
                             try:
@@ -1748,6 +2156,10 @@ class CinematicDirector:
                     else:
                         # Fase C: Follow-through dramático (Zanshin) enquanto o corpo se parte
                         anim_p = 0.94
+                        if not hasattr(vic, "extra_props") or vic.extra_props is None:
+                            vic.extra_props = {}
+                        vic.extra_props["kneel_prog"] = 0.80 + 0.20 * ((prog - 0.74) / 0.26)
+                        vic.extra_props["shiver"] = math.sin(prog * 12.0) * 0.005
                     atk.state_timer = max(0.01, (1.0 - anim_p) * atk_dur)
 
         if self.delayed_death_timer > 0:
@@ -1807,6 +2219,12 @@ class CinematicDirector:
                 if self.joe_triple_victim is not None:
                     self.joe_triple_victim = None
                 self.joe_triple_shurikens.clear()
+                if self.julie_attacker is not None:
+                    self.julie_attacker.state = "IDLE"
+                    self.julie_attacker.extra_props = {}
+                    self.julie_attacker = None
+                if self.julie_victim is not None:
+                    self.julie_victim = None
                 self.finisher_attacker = None
                 self.finisher_victim = None
                 self.corpses.append(self.pending_corpse)
@@ -1838,6 +2256,7 @@ class CinematicDirector:
             or self.joe_triple_timer > 0
             or self.saitou_timer > 0
             or self.julie_flurry_timer > 0
+            or self.julie_kneel_timer > 0
             or self.goro_windup_timer > 0
             or self.goro_cleaved_timer > 0
             or self.finisher_strike_timer > 0
@@ -2238,6 +2657,11 @@ class CinematicDirector:
         self.julie_attacker = None
         self.julie_victim = None
         self.julie_flurry_timer = 0.0
+        self.julie_flurry_duration = 0.0
+        self.julie_kneel_timer = 0.0
+        self.julie_kneel_duration = 0.0
+        self.julie_clock = 0.0
+        self.julie_thrust_sfx_timer = 0.0
         self.julie_spin_timer = 0.0
         self.julie_bang_timer = 0.0
         self.julie_spark_accum = 0.0

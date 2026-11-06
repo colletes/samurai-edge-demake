@@ -52,7 +52,14 @@ MATERIALS = {
     "kimono": "silk", "kimono_dark": "silk", "kimono_light": "silk",
     "skirt": "silk", "obi": "gold", "kanzashi": "gold",
     "fan_cloth": "silk", "fan_gold": "gold", "steel": "steel",
-    "geta": "wood"
+    "tessen_blade": "steel", "geta": "wood"
+}
+
+LEGACY_MATERIALS = {
+    "kimono": "matte", "kimono_dark": "matte", "kimono_light": "matte",
+    "skirt": "matte", "obi": "matte", "kanzashi": "matte",
+    "fan_cloth": "matte", "fan_gold": "matte", "steel": "matte",
+    "tessen_blade": "matte", "geta": "matte"
 }
 
 
@@ -60,14 +67,237 @@ def pal() -> dict:
     return PALETTE
 
 
+def _smooth(x):
+    x = max(0.0, min(1.0, x))
+    return x * x * (3.0 - 2.0 * x)
+
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Poses dos Braços e Leques Tessen
 # ---------------------------------------------------------------------------------------------------------------------
 
+def _hands(c):
+    """
+    Cinemática articulada modular de Okuni (Izumo no Okuni):
+    Retorna posição das mãos (mão esquerda, mão direita com leques Tessen).
+    Suporta todas as 12 poses da Fase 2 Overhaul:
+    - fan_strike (ataque melee com leques Tessen e micro-avanço)
+    - dokukiri_breath (sopro venenoso Dokukiri em cone frontal)
+    - kawarimi_feint (pirueta teatral Kawarimi)
+    - kumadori_steps (Intro 1: passos rítmicos com batida de pé)
+    - kimono_spin (Intro 2: giro de quimono e abertura de leques)
+    - tessen_cross_guard (Intro 3: guarda cruzada de Tessen diante do rosto)
+    - theatrical_flourish (Vitória 1: giro gracioso com arcos de leque)
+    - mie_pose (Vitória 2: pose dramática clássica Mie)
+    - fan_hide_smile (Vitória 3: leque ocultando sorriso)
+    - finisher_decap (Finisher A: Tessen Zanshu / 鉄扇斬首)
+    - finisher_melt (Finisher B: Dokukiri Youkai / 毒霧溶解)
+    - dodge_cancel (Cancelamento de pirueta em golpe de leque)
+    """
+    extra = getattr(c, "extra_props", {}) or {}
+    pose = extra.get("pose", "")
+    p = extra.get("p", getattr(c, "atk_progress", 0.0))
+    state = getattr(c, "state", "IDLE")
+
+    tz = getattr(c, "torso_z", 0.40)
+    bx = getattr(c, "base_x", 0.0)
+    by = getattr(c, "base_y", 0.0)
+    fx = getattr(c, "fx", 1.0)
+    fy = getattr(c, "fy", 0.0)
+    px = getattr(c, "px", 0.0)
+    py = getattr(c, "py", 1.0)
+
+    # 1. ATAQUE PRIMÁRIO: DANÇA DOS LEQUES DE AÇO (fan_strike / ATTACK)
+    if (pose in ("fan_strike", "attack", "fan_flurry")) or (not pose and state == "ATTACK"):
+        prog = p if p is not None else 0.5
+        if prog < 0.35:
+            w = _smooth(prog / 0.35)
+            right = (bx + fx * 0.10 - px * (0.12 - 0.06 * w), by + fy * 0.10 - py * (0.12 - 0.06 * w), tz + 0.18 + 0.12 * w)
+            left = (bx + fx * 0.14 + px * 0.12, by + fy * 0.14 + py * 0.12, tz + 0.08)
+        elif prog < 0.75:
+            t = (prog - 0.35) / 0.40
+            reach = 0.12 + 0.36 * math.sin(math.pi * t)
+            right = (bx + fx * reach + px * (0.04 - 0.22 * _smooth(t)),
+                     by + fy * reach + py * (0.04 - 0.22 * _smooth(t)),
+                     tz + 0.24 - 0.16 * _smooth(t))
+            left = (bx + fx * (reach * 0.8) - px * (0.10 - 0.18 * _smooth(t)),
+                    by + fy * (reach * 0.8) - py * (0.10 - 0.18 * _smooth(t)),
+                    tz + 0.14 + 0.10 * math.sin(math.pi * t))
+        else:
+            u = (prog - 0.75) / 0.25
+            right = (bx + fx * (0.16 - 0.04 * u) + px * 0.08, by + fy * (0.16 - 0.04 * u) + py * 0.08, tz + 0.12)
+            left = (bx + fx * (0.08 + 0.04 * u) - px * 0.12, by + fy * (0.08 + 0.04 * u) - py * 0.12, tz + 0.10)
+        return left, right
+
+    # 2. AÇÃO SECUNDÁRIA: DOKUKIRI (SOPRO VENENOSO EM CONE)
+    if (pose in ("dokukiri", "dokukiri_breath", "poison_breath")) or (not pose and state == "DOKUKIRI"):
+        prog = p if p is not None else 0.5
+        u = _smooth(prog)
+        if u < 0.35:
+            # Inspiração: recolhe os dois leques fechados rente ao peito
+            w = u / 0.35
+            right = (bx + fx * 0.06 + px * 0.04, by + fy * 0.06 + py * 0.04, tz + 0.20 + 0.06 * w)
+            left = (bx + fx * 0.06 - px * 0.04, by + fy * 0.06 - py * 0.04, tz + 0.20 + 0.06 * w)
+        else:
+            # Sopro teatral e abertura em leque para projetar o cone
+            w = (u - 0.35) / 0.65
+            flare = math.sin(math.pi * w)
+            right = (bx + fx * (0.18 + 0.12 * flare) + px * (0.16 + 0.08 * flare),
+                     by + fy * (0.18 + 0.12 * flare) + py * (0.16 + 0.08 * flare),
+                     tz + 0.18 - 0.06 * w)
+            left = (bx + fx * (0.18 + 0.12 * flare) - px * (0.16 + 0.08 * flare),
+                    by + fy * (0.18 + 0.12 * flare) - py * (0.16 + 0.08 * flare),
+                    tz + 0.18 - 0.06 * w)
+        return left, right
+
+    # 3. ESQUIVA / KAWARIMI FEINT
+    if (pose in ("kawarimi", "kawarimi_feint", "dodge")) or (not pose and state in ("ROLL", "KABUKI_ROLL")):
+        prog = extra.get("roll_prog", p if p is not None else 0.5)
+        spin = math.sin(prog * math.pi)
+        left = (bx - fx * 0.06 - px * 0.16, by - fy * 0.06 - py * 0.16, tz + 0.16 + spin * 0.12)
+        right = (bx + fx * 0.18 + px * 0.10, by + fy * 0.18 + py * 0.10, tz + 0.16 - spin * 0.08)
+        return left, right
+
+    # 4. INTRO FASE 1: PASSOS KUMADORI (kumadori_steps)
+    if pose == "kumadori_steps":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        stomp = math.sin(u * math.pi * 3.0) * 0.02
+        start_l = (bx + fx * 0.06 - px * 0.12, by + fy * 0.06 - py * 0.12, tz + 0.06)
+        end_l = (bx + fx * 0.08 - px * 0.10, by + fy * 0.08 - py * 0.10, tz + 0.08)
+        start_r = (bx + fx * 0.10 + px * 0.12, by + fy * 0.10 + py * 0.12, tz + 0.06)
+        end_r = (bx + fx * 0.14 + px * 0.10, by + fy * 0.14 + py * 0.10, tz + 0.12)
+        left = mk.lerp(start_l, end_l, u)
+        right = mk.lerp(start_r, end_r, u)
+        return (left[0], left[1], left[2] + stomp), (right[0], right[1], right[2] - stomp)
+
+    # 5. INTRO FASE 2: GIRO DE QUIMONO E ABERTURA (kimono_spin)
+    if pose == "kimono_spin":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        ang = u * math.pi
+        spin_l = (bx + fx * (0.08 + 0.06 * math.sin(ang)) - px * (0.10 - 0.14 * math.sin(ang)),
+                  by + fy * (0.08 + 0.06 * math.sin(ang)) - py * (0.10 - 0.14 * math.sin(ang)),
+                  tz + 0.08 + 0.10 * math.sin(ang))
+        spin_r = (bx + fx * (0.14 + 0.02 * math.cos(ang)) + px * (0.10 - 0.06 * math.sin(ang)),
+                  by + fy * (0.14 + 0.02 * math.cos(ang)) - py * (0.10 - 0.06 * math.sin(ang)),
+                  tz + 0.12 + 0.06 * math.sin(ang))
+        guard_l = (bx + fx * 0.14 - px * 0.04, by + fy * 0.14 - py * 0.04, tz + 0.18)
+        guard_r = (bx + fx * 0.16 + px * 0.04, by + fy * 0.16 + py * 0.04, tz + 0.16)
+        return mk.lerp(spin_l, guard_l, u), mk.lerp(spin_r, guard_r, u)
+
+    # 6. INTRO FASE 3: GUARDA CRUZADA DE TESSEN (tessen_cross_guard)
+    if pose == "tessen_cross_guard":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        glo_p = float(extra.get("p", 0.70 + 0.30 * u))
+        start_l = (bx + fx * 0.14 - px * 0.04, by + fy * 0.14 - py * 0.04, tz + 0.18)
+        start_r = (bx + fx * 0.16 + px * 0.04, by + fy * 0.16 + py * 0.04, tz + 0.16)
+        cross_l = (bx + fx * 0.15 - px * 0.03, by + fy * 0.15 - py * 0.03, tz + 0.19)
+        cross_r = (bx + fx * 0.17 + px * 0.03, by + fy * 0.17 + py * 0.03, tz + 0.17)
+        breathe = math.sin(glo_p * 14.0 + c.walk_timer * 2.5) * 0.012
+        fan_pulse = math.sin(glo_p * 10.0) * 0.008
+        cur_l = mk.lerp(start_l, cross_l, u)
+        cur_r = mk.lerp(start_r, cross_r, u)
+        return (cur_l[0], cur_l[1], cur_l[2] + breathe + fan_pulse), (cur_r[0], cur_r[1], cur_r[2] - breathe - fan_pulse)
+
+    # 7. VITÓRIA FASE 1: GIRO TEATRAL COM PÉTALAS (theatrical_flourish)
+    if pose == "theatrical_flourish":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        idle_l = (bx + fx * 0.12 - px * 0.14, by + fy * 0.12 - py * 0.14, tz + 0.12)
+        idle_r = (bx + fx * 0.16 + px * 0.10, by + fy * 0.16 + py * 0.10, tz + 0.14)
+        flare = math.sin(u * math.pi)
+        flourish_l = (bx + fx * (0.12 - 0.06 * flare) - px * (0.14 + 0.12 * flare),
+                      by + fy * (0.12 - 0.06 * flare) - py * (0.14 + 0.12 * flare),
+                      tz + 0.12 + 0.16 * flare)
+        flourish_r = (bx + fx * (0.16 + 0.10 * flare) + px * (0.10 + 0.12 * flare),
+                      by + fy * (0.16 + 0.10 * flare) + py * (0.10 + 0.12 * flare),
+                      tz + 0.14 + 0.14 * flare)
+        mie_start_l = (bx + fx * 0.06 - px * 0.18, by + fy * 0.06 - py * 0.18, tz + 0.06)
+        mie_start_r = (bx + fx * 0.22 + px * 0.12, by + fy * 0.22 + py * 0.12, tz + 0.22)
+        return mk.lerp(flourish_l, mie_start_l, u * 0.6), mk.lerp(flourish_r, mie_start_r, u * 0.6)
+
+    # 8. VITÓRIA FASE 2: POSE MIE DRAMÁTICA (mie_pose)
+    if pose == "mie_pose":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        mie_start_l = (bx + fx * 0.06 - px * 0.18, by + fy * 0.06 - py * 0.18, tz + 0.06)
+        mie_start_r = (bx + fx * 0.22 + px * 0.12, by + fy * 0.22 + py * 0.12, tz + 0.22)
+        mie_hold_l = (bx + fx * 0.07 - px * 0.16, by + fy * 0.07 - py * 0.16, tz + 0.05)
+        mie_hold_r = (bx + fx * 0.24 + px * 0.10, by + fy * 0.24 + py * 0.10, tz + 0.24)
+        hide_ready_l = (bx + fx * 0.05 + px * 0.12, by + fy * 0.05 + py * 0.12, tz + 0.05)
+        hide_ready_r = (bx + fx * 0.18 + px * 0.04, by + fy * 0.18 + py * 0.04, tz + 0.26)
+        if u < 0.65:
+            w = u / 0.65
+            return mk.lerp(mie_start_l, mie_hold_l, w), mk.lerp(mie_start_r, mie_hold_r, w)
+        else:
+            w = (u - 0.65) / 0.35
+            return mk.lerp(mie_hold_l, hide_ready_l, w), mk.lerp(mie_hold_r, hide_ready_r, w)
+
+    # 9. VITÓRIA FASE 3: LEQUE OCULTANDO SORRISO (fan_hide_smile - 100% Animado)
+    if pose == "fan_hide_smile":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        glo_p = float(extra.get("p", 0.70 + 0.30 * u))
+        hide_ready_l = (bx + fx * 0.05 + px * 0.12, by + fy * 0.05 + py * 0.12, tz + 0.05)
+        hide_ready_r = (bx + fx * 0.18 + px * 0.04, by + fy * 0.18 + py * 0.04, tz + 0.26)
+        hide_final_l = (bx + fx * 0.04 + px * 0.14, by + fy * 0.04 + py * 0.14, tz + 0.04)
+        hide_final_r = (bx + fx * 0.15 + px * 0.02, by + fy * 0.15 + py * 0.02, tz + 0.28)
+        base_l = mk.lerp(hide_ready_l, hide_final_l, u)
+        base_r = mk.lerp(hide_ready_r, hide_final_r, u)
+        flutter = math.sin((glo_p * 22.0) + c.walk_timer * 3.0) * 0.016
+        sway = math.cos((glo_p * 10.0)) * 0.012
+        return (base_l[0], base_l[1], base_l[2] + sway), (base_r[0], base_r[1], base_r[2] + flutter)
+
+    # 10. FINISHER A: TESSEN ZANSHU / DECAPITAÇÃO DE LEQUES (finisher_decap / finisher_1)
+    if pose in ("finisher_decap", "finisher_tessen", "finisher_1"):
+        prog = p if p is not None else 0.5
+        u = _smooth(prog)
+        reach = 0.14 + 0.38 * math.sin(u * math.pi)
+        scissor = (1.0 - u) * 0.18
+        right = (bx + fx * reach + px * scissor, by + fy * reach + py * scissor, tz + 0.26 - 0.06 * u)
+        left = (bx + fx * reach - px * scissor, by + fy * reach - py * scissor, tz + 0.26 - 0.06 * u)
+        return left, right
+
+    # 11. FINISHER B: DOKUKIRI YOUKAI / DISSOLUÇÃO EM ÁCIDO (finisher_melt / finisher_2)
+    if pose in ("finisher_melt", "finisher_poison", "finisher_2"):
+        prog = p if p is not None else 0.5
+        u = _smooth(prog)
+        right = (bx + fx * (0.20 + 0.10 * math.sin(u * math.pi)) + px * 0.12,
+                 by + fy * (0.20 + 0.10 * math.sin(u * math.pi)) + py * 0.12,
+                 tz + 0.22)
+        left = (bx + fx * (0.20 + 0.10 * math.sin(u * math.pi)) - px * 0.12,
+                by + fy * (0.20 + 0.10 * math.sin(u * math.pi)) - py * 0.12,
+                tz + 0.22)
+        return left, right
+
+    # 12. CANCELAMENTO: KAWARIMI PIRUETA -> GOLPE DE LEQUES (dodge_cancel)
+    if pose == "dodge_cancel":
+        prog = p if p is not None else 0.5
+        if prog < 0.45:
+            u = prog / 0.45
+            spin = math.sin(u * math.pi)
+            left = (bx - fx * 0.06 - px * 0.16, by - fy * 0.06 - py * 0.16, tz + 0.16 + spin * 0.12)
+            right = (bx + fx * 0.18 + px * 0.10, by + fy * 0.18 + py * 0.10, tz + 0.16 - spin * 0.08)
+        else:
+            u = (prog - 0.45) / 0.55
+            reach = 0.12 + 0.36 * math.sin(u * math.pi)
+            right = (bx + fx * reach + px * (0.04 - 0.22 * _smooth(u)),
+                     by + fy * reach + py * (0.04 - 0.22 * _smooth(u)),
+                     tz + 0.24 - 0.16 * _smooth(u))
+            left = (bx + fx * (reach * 0.8) - px * (0.10 - 0.18 * _smooth(u)),
+                    by + fy * (reach * 0.8) - py * (0.10 - 0.18 * _smooth(u)),
+                    tz + 0.14)
+        return left, right
+
+    # Padrão: guarda graciosa de dançarina
+    return idle_arms(c)
+
+
 def idle_arms(c):
     """Guarda graciosa de dançarina: leque direito em semicírculo diante do peito, leque esquerdo invertido ao lado."""
-    tz = c.torso_z + math.sin(c.walk_timer * 2.8) * 0.012
-    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
+    tz = getattr(c, "torso_z", 0.40) + math.sin(getattr(c, "walk_timer", 0.0) * 2.8) * 0.012
+    bx = getattr(c, "base_x", 0.0)
+    by = getattr(c, "base_y", 0.0)
+    fx = getattr(c, "fx", 1.0)
+    fy = getattr(c, "fy", 0.0)
+    px = getattr(c, "px", 0.0)
+    py = getattr(c, "py", 1.0)
     right = (bx + fx * 0.16 - px * 0.06, by + fy * 0.16 - py * 0.06, tz + 0.12)
     left = (bx + fx * 0.06 + px * 0.14, by + fy * 0.06 + py * 0.14, tz + 0.02)
     return left, right
@@ -75,8 +305,16 @@ def idle_arms(c):
 
 def attack_arms(c):
     """Ataque rodopiante de leques de ferro (Tessen-jutsu): leque direito cortando em leque e esquerdo bloqueando."""
-    p = c.atk_progress if c.atk_progress is not None else 0.0
-    bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
+    p = getattr(c, "atk_progress", 0.0)
+    if p is None:
+        p = 0.0
+    tz = getattr(c, "torso_z", 0.40)
+    bx = getattr(c, "base_x", 0.0)
+    by = getattr(c, "base_y", 0.0)
+    fx = getattr(c, "fx", 1.0)
+    fy = getattr(c, "fy", 0.0)
+    px = getattr(c, "px", 0.0)
+    py = getattr(c, "py", 1.0)
     sw = math.sin(p * math.pi)
     right = (bx + fx * (0.18 + sw * 0.28) - px * (0.04 - p * 0.18),
              by + fy * (0.18 + sw * 0.28) - py * (0.04 - p * 0.18),
@@ -88,16 +326,30 @@ def attack_arms(c):
 
 
 def _current_hands(c):
-    if c.is_melee and c.atk_progress is not None:
+    extra = getattr(c, "extra_props", {}) or {}
+    if extra.get("pose") or getattr(c, "state", "IDLE") not in ("IDLE", "WALK"):
+        return _hands(c)
+    if getattr(c, "is_melee", False) and getattr(c, "atk_progress", None) is not None:
         return attack_arms(c)
-    if c.is_moving and hasattr(c, "walk_timer"):
-        tz = c.torso_z
-        bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
+    if getattr(c, "is_moving", False) and hasattr(c, "walk_timer"):
+        tz = getattr(c, "torso_z", 0.40)
+        bx = getattr(c, "base_x", 0.0)
+        by = getattr(c, "base_y", 0.0)
+        fx = getattr(c, "fx", 1.0)
+        fy = getattr(c, "fy", 0.0)
+        px = getattr(c, "px", 0.0)
+        py = getattr(c, "py", 1.0)
         sw = math.sin(c.walk_timer * 7.5) * 0.035
         right = (bx + fx * 0.12 - px * 0.08 + fx * sw, by + fy * 0.12 - py * 0.08 + fy * sw, tz + 0.08)
         left = (bx + fx * 0.04 + px * 0.12 - fx * sw, by + fy * 0.04 + py * 0.12 - fy * sw, tz + 0.04)
         return left, right
     return idle_arms(c)
+
+
+def get_arms(c):
+    """Exposição modular da cinemática dos braços para sincronização com o renderizador humanoide."""
+    left, right = _current_hands(c)
+    return left, right
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -166,8 +418,24 @@ def _render_fans_and_hands(c, arm_l, arm_r):
     hand_l = (arm_l[0], arm_l[1], arm_l[2] - 0.065)
     hand_r = (arm_r[0], arm_r[1], arm_r[2] - 0.065)
 
-    is_atk = c.is_melee and c.atk_progress is not None
-    open_frac = math.sin(c.atk_progress * math.pi) if is_atk else 0.0
+    extra = getattr(c, "extra_props", {}) or {}
+    pose = extra.get("pose", "")
+    p = extra.get("p", getattr(c, "atk_progress", 0.0))
+    is_atk = (c.is_melee and c.atk_progress is not None) or (pose in ("fan_strike", "attack", "fan_flurry"))
+
+    if is_atk:
+        prog = p if p is not None else 0.5
+        open_frac = math.sin(prog * math.pi)
+    elif pose in ("tessen_cross_guard", "theatrical_flourish", "mie_pose", "fan_hide_smile", "finisher_decap", "finisher_melt"):
+        open_frac = 1.0
+    elif pose in ("dokukiri", "dokukiri_breath"):
+        prog = p if p is not None else 0.5
+        open_frac = 0.0 if prog < 0.35 else min(1.0, (prog - 0.35) / 0.30)
+    elif pose == "kimono_spin":
+        prog = p if p is not None else 0.5
+        open_frac = max(0.0, min(1.0, (prog - 0.30) / 0.50))
+    else:
+        open_frac = 0.0
 
     fx, fy, px, py = c.fx, c.fy, c.px, c.py
     dir_r_fwd = (fx * 0.8 + px * 0.3, fy * 0.8 + py * 0.3, 0.2 if is_atk else 0.4)
@@ -176,10 +444,10 @@ def _render_fans_and_hands(c, arm_l, arm_r):
 
     dir_l_fwd = (fx * 0.5 - px * 0.5, fy * 0.5 - py * 0.5, -0.2 if is_atk else 0.1)
     dir_l_side = (px * 0.7 + fx * 0.1, py * 0.7 + fy * 0.1, 0.0)
-    _draw_tessen_fan(c, hand_l, dir_l_fwd, dir_l_side, open_frac=open_frac * 0.7)
+    _draw_tessen_fan(c, hand_l, dir_l_fwd, dir_l_side, open_frac=open_frac * (0.85 if pose else 0.7))
 
     # Rastro mágico/venenoso em arco durante o ataque
-    if is_atk and c.atk_progress >= 0.25:
+    if is_atk and getattr(c, "atk_progress", 0.0) >= 0.25:
         P = pal()
         tip_r = mk.add(hand_r, mk.norm(dir_r_fwd), 0.28)
         pts = [
@@ -452,8 +720,15 @@ def draw_head(c):
     P = pal()
     bx, by, hz, fx, fy, px, py, hw = c.base_x, c.base_y, c.head_z, c.fx, c.fy, c.px, c.py, c.head_w
     d_torso = mk.depth(c, bx, by)
+    extra = getattr(c, "extra_props", {}) or {}
+    legacy = extra.get("legacy_mode", False)
 
-    # Franja repartida clássica acima das sobrancelhas (z >= hz + 0.108)
+    # 1. Rosto Kumadori HD esculpido via draw_portrait_face_3d (quando virada para a câmera)
+    if not legacy and mk.depth(c, fx, fy) > -0.05:
+        draw_portrait_face_3d(c, char_type="okuni")
+        c._face_drawn = True
+
+    # 2. Franja repartida clássica acima das sobrancelhas (z >= hz + 0.108)
     if mk.facing_camera(c):
         front_d = hw * 0.50 + 0.005
         for s in (-1.0, 1.0):
@@ -470,7 +745,7 @@ def draw_head(c):
                 alpha=c.alpha,
             )
 
-    # Coque Shimada se do lado visível da câmera
+    # 3. Coque Shimada se do lado visível da câmera
     b_root_pos = _shimada_bun_root(c)
     if mk.depth(c, b_root_pos[0], b_root_pos[1]) >= d_torso:
         _draw_shimada_hair(c)

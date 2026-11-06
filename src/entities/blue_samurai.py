@@ -127,7 +127,8 @@ class BlueSamurai(Samurai):
             return False, False
 
         # Se estiver em esquiva / roll com i-frames ativos
-        if self.state in (STATE_ROLL, STATE_DASH, "DODGE") and (self.is_invulnerable_dodge or getattr(self, "is_invulnerable_dodge", False)):
+        if (getattr(self, "is_invulnerable_dodge", False) or
+            (self.state in (STATE_ROLL, STATE_DASH, "DODGE", "SHUKUCHI", "KAWARIMI_ROLL", "CAPE_FLOURISH", "PARRY_BACKHOP") and (self.is_invulnerable_dodge or getattr(self, "is_invulnerable_dodge", False)))):
             return False, False
 
         # Se estiver em postura de parry e de frente para o ataque
@@ -237,7 +238,7 @@ class BlueSamurai(Samurai):
 
         self.state = STATE_PARRY
         self.state_timer = self.parry_duration
-        self.parry_reflect_active_timer = 0.28
+        self.parry_reflect_active_timer = 0.0
         self.current_pose = "cross_guard"
         try:
             from src.audio import play_sfx, SoundEvent

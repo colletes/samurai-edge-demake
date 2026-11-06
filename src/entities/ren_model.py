@@ -62,6 +62,8 @@ MATERIALS = {
     "sandal": "canvas"
 }
 
+LEGACY_MATERIALS = {k: "matte" for k in MATERIALS}
+
 
 def pal() -> dict:
     return PALETTE
@@ -80,86 +82,196 @@ def _step(c):
 # Poses de Braços e Artes Marciais
 # ---------------------------------------------------------------------------------------------------------------------
 
-def idle_arms(c):
+def _hands(c):
     """
-    Postura Shaolin de combate e poses cerimoniais (Intro/Victory):
-    - 'shaolin_salute': Saudação Baoquan (punho direito encostado na palma esquerda aberta diante do peito).
-    - 'kiai_roar': Postura de canalização de Kiai com punhos cerrados nas laterais do tronco.
-    - 'shaolin_bow': Reverência Gassho com palmas unidas em prece no centro do peito.
-    - Padrão: Mão esquerda à frente em guarda de palma (Ping Zhang) e punho direito engatilhado na cintura.
+    Cinemática articulada modular de Ren (Monge Shaolin dos Punhos de Ferro e Kiai):
+    Retorna posição das mãos (mão esquerda, mão direita).
+    Suporta todas as 12 poses da Fase 2 Overhaul:
+    - combo_step_1_jab (Passo 1: Jab direto de direita)
+    - combo_step_2_palm (Passo 2: Palma de Ferro de esquerda)
+    - combo_step_3_dragon_kick (Passo 3: Chute Alto do Dragão Shaolin com Chi)
+    - shaolin_roll / is_roll (Salto acrobático / mortal frontal com braços recolhidos)
+    - kiai_roar (Ação Secundária: Grito de Kiai com Chi 360°)
+    - iron_palm_parry (Guarda defensiva de palmas de ferro)
+    - shaolin_salute (Intro 1: Saudação Baoquan marcial)
+    - shaolin_opening_flurry (Intro 2: Sequência fluida de abertura)
+    - three_dragons_stance (Intro 3: Postura dos Três Dragões viva com respiração)
+    - dragon_kick_landing (Vitória 1: Pouso marcial do chute)
+    - shaolin_bow (Vitória 3: Reverência Gassho solene com prece e respiração)
+    - finisher_hyakuretsu (Finisher A: Hokuto Hyakuretsu Ken - Cem Punhos de Lótus)
+    - finisher_kiai (Finisher B: Kiai Shougeki - Onda de choque titânica)
     """
-    breathe = math.sin(c.walk_timer * 2.8) * 0.015
-    tz = c.torso_z + breathe
-    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
-    pose = c.extra_props.get("pose") if c.extra_props else None
+    extra = getattr(c, "extra_props", {}) or {}
+    pose = extra.get("pose", "")
+    p = extra.get("p", getattr(c, "atk_progress", 0.0) or 0.0)
+    state = getattr(c, "state", "IDLE")
 
-    h_phase = c.extra_props.get("hyakuretsu_phase") if c.extra_props else None
-    if h_phase == "FLURRY":
-        h_clock = c.extra_props.get("hyakuretsu_clock", 0.0) if c.extra_props else 0.0
+    bx, by, tz = c.base_x, c.base_y, c.torso_z
+    fx = getattr(c, "fx", 1.0)
+    fy = getattr(c, "fy", 0.0)
+    px = getattr(c, "px", 0.0)
+    py = getattr(c, "py", 1.0)
+
+    # 0. Esquiva Acrobática Shaolin (Salto mortal com braços recolhidos)
+    if state == "ROLL" or pose in ("shaolin_roll", "dodge", "roll") or extra.get("is_roll", False):
+        prog = float(extra.get("roll_prog", p if p is not None else 0.5))
+        tuck = math.sin(prog * math.pi)
+        left = (bx + fx * 0.10 + px * 0.08, by + fy * 0.10 + py * 0.08, tz + 0.08 - tuck * 0.08)
+        right = (bx + fx * 0.10 - px * 0.08, by + fy * 0.10 - py * 0.08, tz + 0.08 - tuck * 0.08)
+        return left, right
+
+    # 1. Intro Fase 1: Saudação Baoquan (Punho direito encostado na palma esquerda aberta)
+    if pose == "shaolin_salute":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        start_l = (bx + fx * 0.12 + px * 0.10, by + fy * 0.12 + py * 0.10, tz + 0.06)
+        start_r = (bx - fx * 0.04 - px * 0.14, by - fy * 0.04 - py * 0.14, tz + 0.04)
+        end_l = (bx + fx * 0.20 + px * 0.03, by + fy * 0.20 + py * 0.03, tz + 0.14)
+        end_r = (bx + fx * 0.19 - px * 0.02, by + fy * 0.19 - py * 0.02, tz + 0.13)
+        return mk.lerp(start_l, end_l, u), mk.lerp(start_r, end_r, u)
+
+    # 2. Intro Fase 2: Transição de Abertura (Jab rápido e abertura para guarda)
+    if pose == "shaolin_opening_flurry":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        start_l = (bx + fx * 0.20 + px * 0.03, by + fy * 0.20 + py * 0.03, tz + 0.14)
+        start_r = (bx + fx * 0.19 - px * 0.02, by + fy * 0.19 - py * 0.02, tz + 0.13)
+        peak_r = (bx + fx * 0.36 - px * 0.04, by + fy * 0.36 - py * 0.04, tz + 0.15)
+        end_l = (bx + fx * 0.22 + px * 0.08, by + fy * 0.22 + py * 0.08, tz + 0.14)
+        end_r = (bx - fx * 0.04 - px * 0.14, by - fy * 0.04 - py * 0.14, tz + 0.04)
+        if u < 0.45:
+            w = u / 0.45
+            left = mk.lerp(start_l, (start_l[0] - fx * 0.04, start_l[1] - fy * 0.04, start_l[2]), w)
+            right = mk.lerp(start_r, peak_r, w)
+        else:
+            w = (u - 0.45) / 0.55
+            left = mk.lerp((start_l[0] - fx * 0.04, start_l[1] - fy * 0.04, start_l[2]), end_l, w)
+            right = mk.lerp(peak_r, end_r, w)
+        return left, right
+
+    # 3. Intro Fase 3: Postura dos Três Dragões (Respiração contínua e concentração de Chi)
+    if pose in ("three_dragons_stance", "kunoichi_stance") or (pose == "serene_kyudo_stance"):
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        start_l = (bx + fx * 0.22 + px * 0.08, by + fy * 0.22 + py * 0.08, tz + 0.14)
+        start_r = (bx - fx * 0.04 - px * 0.14, by - fy * 0.04 - py * 0.14, tz + 0.04)
+        breathe = math.sin(u * math.pi * 3.0) * 0.012
+        left = (start_l[0] + fx * breathe, start_l[1] + fy * breathe, start_l[2] + breathe)
+        right = (start_r[0] - fx * breathe * 0.5, start_r[1] - fy * breathe * 0.5, start_r[2] + breathe * 0.6)
+        return left, right
+
+    # 4. Vitória Fase 1: Pouso do Chute do Dragão (Aterrissagem com braços abertos)
+    if pose in ("dragon_kick_landing", "kick_landing"):
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        start_l = (bx - fx * 0.12 + px * 0.22, by - fy * 0.12 + py * 0.22, tz + 0.18)
+        start_r = (bx - fx * 0.18 - px * 0.20, by - fy * 0.18 - py * 0.20, tz + 0.14)
+        end_l = (bx + fx * 0.10 + px * 0.22, by + fy * 0.10 + py * 0.22, tz + 0.08)
+        end_r = (bx + fx * 0.10 - px * 0.22, by + fy * 0.10 - py * 0.22, tz + 0.08)
+        return mk.lerp(start_l, end_l, u), mk.lerp(start_r, end_r, u)
+
+    # 5. Vitória Fase 2 & Ação Secundária: Rugido de Kiai com Chi Dourado (kiai_roar)
+    if pose in ("kiai_roar", "kiai") or state in ("KIAI", "KIAI_SHOUT"):
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        start_l = (bx + fx * 0.10 + px * 0.22, by + fy * 0.10 + py * 0.22, tz + 0.08)
+        start_r = (bx + fx * 0.10 - px * 0.22, by + fy * 0.10 - py * 0.22, tz + 0.08)
+        end_l = (bx + fx * 0.18 + px * 0.04, by + fy * 0.18 + py * 0.04, tz + 0.15)
+        end_r = (bx + fx * 0.18 - px * 0.04, by + fy * 0.18 - py * 0.04, tz + 0.15)
+        expand = math.sin(u * math.pi) * 0.05
+        mid_l = (start_l[0] + px * expand, start_l[1] + py * expand, start_l[2] + expand)
+        mid_r = (start_r[0] - px * expand, start_r[1] - py * expand, start_r[2] + expand)
+        if u < 0.65:
+            w = u / 0.65
+            return mk.lerp(start_l, mid_l, w), mk.lerp(start_r, mid_r, w)
+        else:
+            w = (u - 0.65) / 0.35
+            return mk.lerp(mid_l, end_l, w), mk.lerp(mid_r, end_r, w)
+
+    # 6. Vitória Fase 3: Reverência Gassho Solene (shaolin_bow - 100% Animada)
+    if pose == "shaolin_bow":
+        u = _smooth(float(extra.get("seg_u", p if p is not None else 0.5)))
+        start_l = (bx + fx * 0.18 + px * 0.04, by + fy * 0.18 + py * 0.04, tz + 0.15)
+        start_r = (bx + fx * 0.18 - px * 0.04, by + fy * 0.18 - py * 0.04, tz + 0.15)
+        bow_pitch = math.sin(u * math.pi) * 0.12
+        breathe = math.sin(u * math.pi * 3.0) * 0.008
+        left = (start_l[0] + fx * bow_pitch * 0.3, start_l[1] + fy * bow_pitch * 0.3, start_l[2] - bow_pitch * 0.6 + breathe)
+        right = (start_r[0] + fx * bow_pitch * 0.3, start_r[1] + fy * bow_pitch * 0.3, start_r[2] - bow_pitch * 0.6 + breathe)
+        return left, right
+
+    # 7. Reação de Bloqueio com Palma de Ferro (iron_palm_parry)
+    if pose in ("iron_palm_parry", "parry_reaction") or state == "PARRY":
+        u = _smooth(p)
+        recoil = math.sin(u * math.pi) * 0.04
+        left = (bx + fx * (0.22 - recoil) + px * 0.04, by + fy * (0.22 - recoil) + py * 0.04, tz + 0.16)
+        right = (bx + fx * (0.18 - recoil) - px * 0.06, by + fy * (0.18 - recoil) - py * 0.06, tz + 0.14)
+        return left, right
+
+    # 8. Finisher A: Hokuto Hyakuretsu Ken (Cem Punhos de Lótus)
+    h_phase = extra.get("hyakuretsu_phase")
+    if h_phase == "FLURRY" or pose in ("finisher_hyakuretsu", "finisher_1"):
+        h_clock = float(extra.get("hyakuretsu_clock", p * 6.0))
         s1 = math.sin(h_clock * 68.0)
         s2 = -s1
         left = (bx + fx * (0.28 + max(0.0, s1) * 0.30) + px * 0.11, by + fy * (0.28 + max(0.0, s1) * 0.30) + py * 0.11, tz + 0.14 + s1 * 0.04)
         right = (bx + fx * (0.28 + max(0.0, s2) * 0.30) - px * 0.11, by + fy * (0.28 + max(0.0, s2) * 0.30) - py * 0.11, tz + 0.14 + s2 * 0.04)
         return left, right
     if h_phase == "PAUSE":
-        # Pausa dramática pós-Hyakuretsu Ken: mão esquerda em prece vertical no peito, punho direito recolhido
         left = (bx + fx * 0.18 + px * 0.03, by + fy * 0.18 + py * 0.03, tz + 0.16)
         right = (bx - fx * 0.06 - px * 0.16, by - fy * 0.06 - py * 0.16, tz + 0.05)
         return left, right
 
-    if pose == "shaolin_salute":
-        left = (bx + fx * 0.20 + px * 0.03, by + fy * 0.20 + py * 0.03, tz + 0.14)
-        right = (bx + fx * 0.19 - px * 0.02, by + fy * 0.19 - py * 0.02, tz + 0.13)
-        return left, right
-    if pose == "kiai_roar":
-        left = (bx + fx * 0.10 + px * 0.22, by + fy * 0.10 + py * 0.22, tz + 0.08)
-        right = (bx + fx * 0.10 - px * 0.22, by + fy * 0.10 - py * 0.22, tz + 0.08)
-        return left, right
-    if pose == "shaolin_bow":
-        left = (bx + fx * 0.18 + px * 0.04, by + fy * 0.18 + py * 0.04, tz + 0.15)
-        right = (bx + fx * 0.06 - px * 0.14, by + fy * 0.06 - py * 0.14, tz + 0.38)
+    # 9. Finisher B: Kiai Shougeki (Rugido de Chi e Palma Dupla)
+    if pose in ("finisher_kiai", "finisher_2"):
+        u = _smooth(p)
+        thrust = math.sin(u * math.pi) * 0.32
+        left = (bx + fx * (0.26 + thrust) + px * 0.06, by + fy * (0.26 + thrust) + py * 0.06, tz + 0.14)
+        right = (bx + fx * (0.26 + thrust) - px * 0.06, by + fy * (0.26 + thrust) - py * 0.06, tz + 0.14)
         return left, right
 
-    # Palma esquerda à frente
-    left = (bx + fx * 0.22 + px * 0.08, by + fy * 0.22 + py * 0.08, tz + 0.14)
-    # Punho direito engatilhado na cintura
-    right = (bx - fx * 0.04 - px * 0.14, by - fy * 0.04 - py * 0.14, tz + 0.04)
+    # 10. Ataques do Combo Marcial de 3 Passos
+    if state == "ATTACK" or pose in ("attack", "combo_step_1_jab", "combo_step_2_palm", "combo_step_3_dragon_kick"):
+        step = extra.get("combo_step", _step(c))
+        if step == 1 or pose == "combo_step_1_jab":
+            reach = math.sin(p * math.pi) * 0.44
+            right = (bx + fx * (0.24 + reach) - px * 0.04, by + fy * (0.24 + reach) - py * 0.04, tz + 0.14)
+            left = (bx - fx * (0.04 + reach * 0.2) + px * 0.14, by - fy * (0.04 + reach * 0.2) + py * 0.14, tz + 0.12)
+            return left, right
+        elif step == 2 or pose == "combo_step_2_palm":
+            reach = math.sin(p * math.pi) * 0.46
+            left = (bx + fx * (0.26 + reach) + px * 0.04, by + fy * (0.26 + reach) + py * 0.04, tz + 0.15)
+            right = (bx - fx * (0.08 + reach * 0.2) - px * 0.14, by - fy * (0.08 + reach * 0.2) - py * 0.14, tz + 0.06)
+            return left, right
+        else:
+            kick_arc = math.sin(p * math.pi)
+            left = (bx - fx * (0.06 + kick_arc * 0.12) + px * 0.22, by - fy * (0.06 + kick_arc * 0.12) + py * 0.22, tz + 0.18)
+            right = (bx - fx * (0.12 + kick_arc * 0.14) - px * 0.20, by - fy * (0.12 + kick_arc * 0.14) - py * 0.20, tz + 0.12 + kick_arc * 0.06)
+            return left, right
+
+    # 11. Movimentação / Caminhada
+    if c.is_moving and hasattr(c, "walk_timer"):
+        sw = math.sin(c.walk_timer * 9.0)
+        left = (bx + fx * (0.12 - sw * 0.14) + px * 0.12, by + fy * (0.12 - sw * 0.14) + py * 0.12, tz + 0.08 + abs(sw) * 0.02)
+        right = (bx + fx * (0.12 + sw * 0.14) - px * 0.12, by + fy * (0.12 + sw * 0.14) - py * 0.12, tz + 0.08 + abs(sw) * 0.02)
+        return left, right
+
+    # 12. Postura Padrão Zen dos Três Dragões (Idle)
+    breathe = math.sin(c.walk_timer * 2.8) * 0.015
+    left = (bx + fx * 0.22 + px * 0.08, by + fy * 0.22 + py * 0.08, tz + 0.14 + breathe)
+    right = (bx - fx * 0.04 - px * 0.14, by - fy * 0.04 - py * 0.14, tz + 0.04 + breathe * 0.7)
     return left, right
+
+
+def get_arms(c):
+    """Exposição modular da cinemática dos braços para sincronização com o renderizador humanoide."""
+    return _hands(c)
+
+
+def idle_arms(c):
+    return _hands(c)
 
 
 def walk_arms(c):
-    """Passada marcial com balanço fluído dos punhos."""
-    sw = math.sin(c.walk_timer * 9.0)
-    tz = c.torso_z
-    left = (c.base_x + c.fx * (0.12 - sw * 0.14) + c.px * 0.12, c.base_y + c.fy * (0.12 - sw * 0.14) + c.py * 0.12, tz + 0.08 + abs(sw) * 0.02)
-    right = (c.base_x + c.fx * (0.12 + sw * 0.14) - c.px * 0.12, c.base_y + c.fy * (0.12 + sw * 0.14) - c.py * 0.12, tz + 0.08 + abs(sw) * 0.02)
-    return left, right
+    return _hands(c)
 
 
 def attack_arms(c):
-    """3 golpes de artes marciais Shaolin: 1) Soco Direto, 2) Palma de Ferro, 3) Chute Alto Dragon Kick."""
-    step = _step(c)
-    p = c.atk_progress if c.atk_progress is not None else 0.0
-    bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
-
-    if step == 1:
-        # Soco direto com o punho direito
-        reach = math.sin(p * math.pi) * 0.44
-        right = (bx + fx * (0.24 + reach) - px * 0.04, by + fy * (0.24 + reach) - py * 0.04, tz + 0.14)
-        left = (bx - fx * (0.04 + reach * 0.2) + px * 0.14, by - fy * (0.04 + reach * 0.2) + py * 0.14, tz + 0.12)
-        return left, right
-    elif step == 2:
-        # Palma de ferro com a mão esquerda
-        reach = math.sin(p * math.pi) * 0.46
-        left = (bx + fx * (0.26 + reach) + px * 0.04, by + fy * (0.26 + reach) + py * 0.04, tz + 0.15)
-        right = (bx - fx * (0.08 + reach * 0.2) - px * 0.14, by - fy * (0.08 + reach * 0.2) - py * 0.14, tz + 0.06)
-        return left, right
-    else:
-        # Chute alto Shaolin: braços abertos em equilíbrio
-        kick_arc = math.sin(p * math.pi)
-        left = (bx - fx * (0.06 + kick_arc * 0.12) + px * 0.22, by - fy * (0.06 + kick_arc * 0.12) + py * 0.22, tz + 0.18)
-        right = (bx - fx * (0.12 + kick_arc * 0.14) - px * 0.20, by - fy * (0.12 + kick_arc * 0.14) - py * 0.20, tz + 0.12 + kick_arc * 0.06)
-        return left, right
+    return _hands(c)
 
 
 # ---------------------------------------------------------------------------------------------------------------------

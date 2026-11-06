@@ -119,7 +119,7 @@ FIGHTERS_GUIDE_DATA = [
             ),
             "habilidades": (
                 "• Combo 3-Cortes [E]: Sequência ritmada de Katana descendente, Wakizashi ascendente e clivagem dupla em X com avanço e onda cortante.\n"
-                "• Cross Guard Parry [R]: Ergue ambas as lâminas cruzadas em X (0.28s de reflexão frontal). Se defletir um golpe, libera o punitivo Cross Shockwave.\n"
+                "• Cross Guard Parry [R]: Ergue ambas as lâminas cruzadas em X (0.28s de parry frontal). Se defletir um golpe, libera o punitivo Cross Shockwave.\n"
                 "• Rolamento Tático [Espaço]: Esquiva fluida de ombro no solo sem zanzou, cancelável aos 40% finais em lunge de ataque instantâneo.\n"
                 "• Finalizações: Niten Ichi-ryu (Empalamento sequencial e rasgo em 3 partes) e Cross Vacuum Slicer (Corte em X em 4 partes)."
             ),
@@ -149,7 +149,7 @@ FIGHTERS_GUIDE_DATA = [
             ),
             "habilidades": (
                 "• 3-Slash Combo [E]: Rhythmic descending Katana, rising Wakizashi, and double X-cleave with forward lunge and vacuum wave.\n"
-                "• Cross Guard Parry [R]: Crosses dual blades frontally (0.28s reflection window). Deflecting an attack arms the punishing Cross Shockwave.\n"
+                "• Cross Guard Parry [R]: Crosses dual blades frontally (0.28s parry window). Deflecting an attack arms the punishing Cross Shockwave.\n"
                 "• Tactical Roll [Space]: Ground shoulder roll without zanzou, cancellable in the last 40% into an instant running strike.\n"
                 "• Finishers: Niten Ichi-ryu (Sequential dual impale tearing torso into 3) and Cross Vacuum Slicer (X-wave dividing into 4 quadrants)."
             ),
@@ -355,60 +355,60 @@ FIGHTERS_GUIDE_DATA = [
         "char_type": "rifleman",
         "pt": {
             "name": "TEPPO",
-            "title": "Marksman do Arcabuz Feudal",
-            "style": "Tanegashima (Balística Feudal)",
-            "vel": "[3/5] Cadência & Pólvora",
-            "dano": "Tiro Fatal (1-Hit) / Coronhada Stun",
-            "especial": "Salto Evasivo com Fumaça / Recarga",
-            "keys_p1": "[E] Disparo / Coronhada (Ataque)",
-            "keys_p2": "[R] Salto Evasivo (Especial)",
+            "title": "Mestre Ashigaru da Pólvora Tanegashima",
+            "style": "Tanegashima-jutsu (Balística & Infantaria Feudal)",
+            "vel": "[3.8/5] Veterano Tático & Cadência",
+            "dano": "Tiro Fatal (1-Hit Kill) / Coronhada Stun (0.65s)",
+            "especial": "Mina de Pólvora Negra / Trench Dive",
+            "keys_p1": "[E] Tiro / Coronhada | [R] Mina | [T] Trench Dive",
+            "keys_p2": "[U] Tiro / Coronhada | [I] Mina | [O] Trench Dive",
             "conceito": (
-                "Soldado ashigaru especialista na introdução das armas de fogo no Japão feudal (Batalha de Nagashino). "
-                "Empunha um pesado arcabuz Tanegashima capaz de matar qualquer samurai com um único projétil fatal."
+                "Veterano soldado ashigaru com armadura Dō com rebites, Jingasa laqueada com brasão Tonbo e bandoleira de tubos hayago. "
+                "Empunha um pesado arcabuz Tanegashima capaz de liquidar qualquer samurai à distância e controla o campo com minas de pólvora negra."
             ),
             "habilidades": (
-                "• Disparo de Arcabuz [E]: Tiro de longa distância devastador (1-Hit Kill). Se descarregado, aplica Coronhada.\n"
-                "• Coronhada de Madeira [E]: Golpe tático com a coronha do rifle que atordoa e afasta o adversário.\n"
-                "• Salto Evasivo [R]: Salto acrobático para trás soltando fumaça, ótimo para escapar de cortes."
+                "• Tiro de Arcabuz [E / Ataque]: Disparo supersônico balístico a 26 m/s com 1-Hit Kill fatal. Recarga automática fluida por vareta (ramrod).\n"
+                "• Coronhada de Carvalho [E / sem bala]: Golpe pesado com a coronha que atordoa o rival por 0.65s e o arremessa 1.8m para trás.\n"
+                "• Mina de Pólvora Negra [R / Secundário]: Deposita uma carga de pólvora no solo que detona ao contato, bloqueando investidas de espadachins.\n"
+                "• Trench Ashigaru Dive [T / Esquiva]: Mergulho rústico rasante com i-frames completos que conclui a recarga do arcabuz ao levantar."
             ),
             "estrategia_ofensiva": (
-                "• ATENÇÃO: Teppo começa a luta DESMUNICIADO! Sua missão número 1 é correr até a PÓLVORA!\n"
-                "• Siga a SETA DOURADA FLUTUANTE e a BÚSSOLA no topo da tela para achar o Barril de Pólvora.\n"
-                "• Ao coletar a pólvora, mantenha a distância, alinhe a mira e dispare com [E] para a vitória imediata.\n"
-                "• Se o rival te encurralar antes de recarregar, dê a Coronhada [E] para atordoá-lo e use o Salto [R]."
+                "• Teppo já começa o round CARREGADO com bala na agulha! Alinhe a mira e aguarde a queima da mecha para o disparo mortal.\n"
+                "• Plante a Mina de Pólvora [R] para criar um gargalo tático que pune aproximações em linha reta (como o Gatotsu de Saitou e Shukuchi de Kenshi).\n"
+                "• Se errar o tiro ou for encurralado, desfira a Coronhada [E] para afastar o rival e execute o Trench Dive [T] para recarregar imediatamente."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Teppo: Não o deixe chegar nos barris de pólvora! Pressione-o desde o segundo zero. "
-                "Se ele já estiver carregado, use bambus ou a esquiva no instante da fumaça do disparo."
+                "• Como vencer Teppo: Cuidado com o brilho da brasa na ponta do cano durante a mira — use a esquiva direcional no timing exato da fumaça! "
+                "Cuidado ao saltar cegamente sobre o solo minado; force-o a gastar a munição e pressione-o enquanto ele puxa a vareta de ferro."
             )
         },
         "en": {
             "name": "TEPPO",
-            "title": "Tanegashima Marksman",
-            "style": "Feudal Ballistics & Gunpowder",
-            "vel": "[3/5] Cadence & Powder",
-            "dano": "Fatal Shot (1-Hit) / Butt Stun",
-            "especial": "Evasive Backstep / Reload",
-            "keys_p1": "[E] Shoot / Rifle Butt (Attack)",
-            "keys_p2": "[R] Evasive Backstep (Special)",
+            "title": "Ashigaru Matchlock Master",
+            "style": "Tanegashima-jutsu (Feudal Ballistics & Gunpowder)",
+            "vel": "[3.8/5] Tactical Veteran & Cadence",
+            "dano": "Fatal Shot (1-Hit Kill) / Butt Stun (0.65s)",
+            "especial": "Black Powder Ground Trap / Trench Dive",
+            "keys_p1": "[E] Shoot / Rifle Butt | [R] Trap | [T] Trench Dive",
+            "keys_p2": "[U] Shoot / Rifle Butt | [I] Trap | [O] Trench Dive",
             "conceito": (
-                "Ashigaru marksman pioneering gunpowder warfare in feudal Japan (Battle of Nagashino). "
-                "Wields a heavy matchlock Tanegashima arcabuz capable of dropping any samurai with a single bullet."
+                "Veteran Ashigaru soldier clad in riveted Dō cuirass, lacquered Tonbo Jingasa and hayago bamboo bandolier. "
+                "Wields an authentic Tanegashima matchlock rifle capable of dropping any samurai at range, dominating space with explosive powder traps."
             ),
             "habilidades": (
-                "• Arcabuz Shot [E]: Long-range devastating 1-Hit Kill shot. If unloaded, delivers a wooden Rifle Butt strike.\n"
-                "• Rifle Butt [E]: Tactical melee strike with the musket stock that stuns and knocks back.\n"
-                "• Evasive Backstep [R]: Backwards leap releasing smoke, great for evading incoming sword slashes."
+                "• Matchlock Shot [E / Attack]: Supersonic 26 m/s ballistic bullet with 1-Hit Kill fatality. Fluid automatic ramrod reload.\n"
+                "• Oak Rifle Butt [E / unloaded]: Heavy blunt smash that stuns the opponent for 0.65s and knocks them back 1.8m.\n"
+                "• Black Powder Ground Trap [R / Secondary]: Deploys a volatile powder charge on the ground that detonates on contact, shutting down rushes.\n"
+                "• Trench Ashigaru Dive [T / Dodge]: Prone tactical dive with full i-frames that automatically chambers a new bullet upon rising."
             ),
             "estrategia_ofensiva": (
-                "• WARNING: Teppo starts each round UNLOADED! Your #1 priority is running to the GUNPOWDER KEG!\n"
-                "• Follow the FLOATING GOLDEN ARROW and the HUD COMPASS at the top to reach the Gunpowder Keg.\n"
-                "• Once loaded, keep distance, align your sights, and fire [E] for an instant kill.\n"
-                "• If crowded before loading, strike with Rifle Butt [E] to stun, then use Evasive Backstep [R]."
+                "• Teppo starts each round FULLY LOADED! Align your sights and let the match cord trigger the deadly shot.\n"
+                "• Plant Ground Traps [R] to establish zoning choke points that punish aggressive dashers (like Saitou's Gatotsu or Kenshi's Shukuchi).\n"
+                "• If crowded or out of ammo, strike with the Oak Rifle Butt [E] to create breathing room and Trench Dive [T] to reload instantly."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Teppo: Never let him reach the gunpowder kegs! Rush him down from second zero. "
-                "If he is already loaded, utilize bamboo for cover and evade when you see matchlock smoke."
+                "• How to defeat Teppo: Watch for the glowing match spark on his barrel during aim — time your dodge precisely as smoke erupts! "
+                "Steer clear of glowing ground canisters; bait his shot and close the gap while he pumps the iron ramrod."
             )
         }
     },
@@ -418,56 +418,58 @@ FIGHTERS_GUIDE_DATA = [
         "char_type": "murasaki",
         "pt": {
             "name": "MURASAKI",
-            "title": "Kunoichi da Foice",
+            "title": "Kunoichi da Kusarigama",
             "style": "Kusarigamajutsu (Foice & Corrente)",
-            "vel": "[4/5] Ágil e Flexível",
-            "dano": "Corte com Precedência Absoluta",
-            "especial": "Puxão de Corrente à Distância",
-            "keys_p1": "[E] Corte de Foice (Ataque)",
-            "keys_p2": "[R] Puxar Corrente (Especial)",
+            "vel": "[5/5] Acrobática e Letal",
+            "dano": "Kama Strike (1.30m) & Chain Drag (1 HP)",
+            "especial": "Chain Drag & Chain Whirl Backflip",
+            "keys_p1": "[E] Golpe de Foice (Ataque)",
+            "keys_p2": "[R] Chain Drag (Especial)",
             "conceito": (
-                "Assassina acrobática que domina a Kusarigama: foice de colheita atrelada a uma longa corrente de aço "
-                "com peso de chumbo. Sua arte quebra a distância convencional e dita as regras do espaço."
+                "Kunoichi acrobática que domina a Kusarigama: foice curva Kama de aço carbono e corrente de ferro "
+                "com peso esférico Fundo. Combina controle de espaço a 3.80m com golpes fatais à queima-roupa."
             ),
             "habilidades": (
-                "• Corte de Foice [E]: Golpe cortante dotado de Precedência Absoluta — vence qualquer golpe simultâneo!\n"
-                "• Puxão de Corrente [R]: Arremessa a corrente; se atingir, laça e arrasta o oponente até seus pés."
+                "• Golpe de Foice (Kama Strike) [E]: Golpe cortante rápido com 1.30m de alcance e precedência de combate.\n"
+                "• Chain Drag [R]: Arremessa a corrente (3.80m); ao acertar, causa 1 de dano, aplica 0.45s de stun e arrasta o rival. Fatal se o rival tiver 1 HP!\n"
+                "• Chain Whirl Backflip [Esquiva]: Salto mortal 360° com escudo giratório de corrente que deflete e destrói projéteis leves."
             ),
             "estrategia_ofensiva": (
-                "• A Kusarigama é a rainha do controle de zona: lance a corrente com [R] para fisgar o inimigo de longe.\n"
-                "• Ao puxar o oponente para perto, desabafe com a Foice [E]. Graças à Precedência, seu golpe acerta primeiro!\n"
-                "• Não tema trocar ataques ao mesmo tempo: sua foice tem prioridade no motor de combate."
+                "• Domínio de Zona: Use o Chain Drag [R] a média distância para arrastar o oponente ou executá-lo diretamente caso esteja com 1 HP.\n"
+                "• Na curta distância, o Kama Strike [E] corta com velocidade extrema e vence trocas diretas.\n"
+                "• Use o Chain Whirl Backflip para saltar por cima de ataques e anular projéteis inimigos em pleno ar."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Murasaki: A corrente tem tempo de arremesso e retorno. Se ela errar o puxão, "
-                "avance diagonalmente na recuperação dela. Evite trocar ataques retos ao mesmo tempo contra a foice."
+                "• Como vencer Murasaki: O Chain Drag possui tempo de retorno ao errar; ataque no vácuo de recuperação da corrente.\n"
+                "• Dê parry na corrente para fazê-la retrair imediatamente, e evite trocar golpes frontais com a foice."
             )
         },
         "en": {
             "name": "MURASAKI",
-            "title": "Sickle Kunoichi",
+            "title": "Kusarigama Kunoichi",
             "style": "Kusarigamajutsu (Chain & Sickle)",
-            "vel": "[4/5] Agile & Flexible",
-            "dano": "Absolute Precedence Slash",
-            "especial": "Ranged Chain Snare & Reel",
-            "keys_p1": "[E] Sickle Slash (Attack)",
-            "keys_p2": "[R] Chain Pull (Special)",
+            "vel": "[5/5] Acrobatic & Lethal",
+            "dano": "Kama Strike (1.30m) & Chain Drag (1 HP)",
+            "especial": "Chain Drag & Chain Whirl Backflip",
+            "keys_p1": "[E] Kama Sickle Slash (Attack)",
+            "keys_p2": "[R] Chain Drag (Special)",
             "conceito": (
-                "Graceful acrobat wielding the Kusarigama: a harvesting kama sickle linked to a heavy steel "
-                "chain and iron weight. Dictates space and shatters conventional engagement ranges."
+                "Deadly acrobatic kunoichi wielding the Kusarigama: a high-carbon steel Kama sickle linked to a heavy "
+                "iron chain with spherical weight. Controls the battlefield at 3.80m and executes at point-blank."
             ),
             "habilidades": (
-                "• Sickle Slash [E]: Lethal strike with Absolute Precedence — beats any simultaneous normal attack!\n"
-                "• Chain Pull [R]: Flings the chain forward; on hit, snares and pulls the foe directly to your feet."
+                "• Kama Strike [E]: Fast sickle slash with 1.30m reach and combat precedence.\n"
+                "• Chain Drag [R]: Flings the chain weight (3.80m); deals 1 damage, 0.45s stun, and drags foe to melee. Fatal if foe has 1 HP!\n"
+                "• Chain Whirl Backflip [Dodge]: 360° somersault with vertical spinning chain shield that deflects/destroys light projectiles."
             ),
             "estrategia_ofensiva": (
-                "• Master of zone control: toss your chain with [R] to hook the enemy from afar.\n"
-                "• As they are reeled in, strike with the Sickle [E]. Precedence guarantees you land the fatal hit first!\n"
-                "• Never hesitate in simultaneous trades: your sickle wins priority in the combat engine."
+                "• Zone Control: Hook foes from 3.80m with Chain Drag [R] to reel them in or execute them when at 1 HP.\n"
+                "• At close range, Kama Strike [E] delivers swift slashes with top priority in direct exchanges.\n"
+                "• Utilize Chain Whirl Backflip to leap over low swipes and obliterate incoming projectiles."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Murasaki: The chain has throw and retract frames. If she misses the snare, "
-                "rush in diagonally during recovery. Avoid direct simultaneous trades against the sickle."
+                "• How to defeat Murasaki: Whiffed chain drags leave her vulnerable during retraction; punish from the flank.\n"
+                "• Parry the incoming chain to force an instant retraction and avoid head-on clashes with the Kama."
             )
         }
     },
@@ -478,55 +480,57 @@ FIGHTERS_GUIDE_DATA = [
         "pt": {
             "name": "KASUMI",
             "title": "Kunoichi da Névoa",
-            "style": "Névoa, Bombas de Cerâmica & Pólvora",
-            "vel": "[4/5] Ágil e Evasiva",
-            "dano": "Granada Parabólica 3D (Explosão)",
-            "especial": "Bomba de Fumaça (Slow + Fuga)",
-            "keys_p1": "[E] Lançar Bomba (Ataque)",
-            "keys_p2": "[R] Cortina de Fumaça (Especial)",
+            "style": "Névoa, Adaga Tanto, Pólvora & Minas",
+            "vel": "[5/5] Ágil, Furtiva e Acrobática",
+            "dano": "Adaga Melee (2 Dano) + Bomba Horoku + Mina Remota",
+            "especial": "Mina Remota & Rolo de Fumaça",
+            "keys_p1": "[E] Adaga Tanto / Bomba Horoku (Híbrido)",
+            "keys_p2": "[R] Mina Remota (Planta / Detona)",
             "conceito": (
-                "Sabotadora e ilusionista das sombras, mestra em misturas pirotécnicas e pós ofuscantes. "
-                "Transforma a arena em um campo minado caótico de fumaça, chamas e detonações."
+                "Sabotadora e ilusionista das sombras, mestra em misturas pirotécnicas e combate furtivo com Tanto. "
+                "Transforma a arena em um campo minado caótico de fumaça, chamas e detonações cirúrgicas."
             ),
             "habilidades": (
-                "• Bomba em Arco 3D [E]: Lança bomba de cerâmica que voa em parábola e explode em área (1-Hit Kill).\n"
-                "• Cortina de Fumaça [R]: Detona fumaça espessa aos seus pés, cegando e reduzindo a velocidade do rival."
+                "• Sistema Híbrido [E]: Corte relâmpago de adaga Tanto à queima-roupa (alcance 1.20m, 2 de dano, clash prioritário); à distância (>1.6m), lança bomba Horoku em arco 3D parabólico (limite de 1 ativa, recarga de 2.0s; golpes durante a recarga utilizam a adaga Tanto).\n"
+                "• Mina de Detonação Remota [R]: 1º toque planta a mina no solo; 2º toque detona remotamente num raio de 2.2m (2 de dano). Não suicida se Kasumi tiver 1 HP.\n"
+                "• Esquiva Furtiva: Rolo ninja acrobático que liberta um tapete de fumaça espesso e concede camuflagem (alpha=15)."
             ),
             "estrategia_ofensiva": (
-                "• Lance bombas por cima de obstáculos (rochas e bambus) para atingir alvos sem linha de visão direta.\n"
-                "• Solte a fumaça [R] no meio da arena ou na ponte estreita para deixar o oponente lento como tartaruga.\n"
-                "• CUIDADO COM O AUTO-DANO: Não fique colado na explosão da sua própria bomba!"
+                "• Use a adaga Tanto em combates próximos para superar espadas longas antes do recuo.\n"
+                "• Plante a mina remota [R] em pontos de afunilamento e detone assim que o rival passar.\n"
+                "• Combine o rolo de fumaça com arremessos de Horoku para manter o oponente desorientado."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Kasumi: Pressione-a em combate corpo a corpo colado! Se ela jogar a bomba muito perto, "
-                "ela mesma será atingida pela explosão. Saia da nuvem de fumaça para recuperar sua velocidade."
+                "• Como vencer Kasumi: Fique atento ao solo para não pisar na mina remota ativa. "
+                "Pressione-a em meia distância onde a bomba Horoku demora a cair e a adaga não alcança."
             )
         },
         "en": {
             "name": "KASUMI",
             "title": "Mist Kunoichi",
-            "style": "Mist, Ceramic Bombs & Gunpowder",
-            "vel": "[4/5] Agile & Evasive",
-            "dano": "Parabolic 3D Bomb (Explosive)",
-            "especial": "Smoke Screen (Slow + Escape)",
-            "keys_p1": "[E] Throw Bomb (Attack)",
-            "keys_p2": "[R] Smoke Screen (Special)",
+            "style": "Mist, Tanto Dagger, Horoku Bombs & Mines",
+            "vel": "[5/5] Agile, Stealthy & Acrobatic",
+            "dano": "Melee Tanto (2 Dmg) + Horoku Bomb + Remote Mine",
+            "especial": "Remote Mine & Smoke Roll",
+            "keys_p1": "[E] Tanto Dagger / Horoku Bomb (Hybrid)",
+            "keys_p2": "[R] Remote Mine (Plant / Detonate)",
             "conceito": (
-                "Shadow saboteur and illusionist, master of pyrotechnic blends and obscuring powders. "
-                "Transforms the arena into a chaotic minefield of smoke, sparks, and lethal detonations."
+                "Shadow saboteur and illusionist, master of pyrotechnic blends and lethal close-quarters Tanto strikes. "
+                "Transforms the arena into a chaotic minefield of smoke, sparks, and precision detonations."
             ),
             "habilidades": (
-                "• 3D Arc Bomb [E]: Hurls a ceramic powder bomb in a parabolic arc that detonates on contact/timer (1-Hit Kill).\n"
-                "• Smoke Screen [R]: Drops thick smoke at her feet, blinding and drastically slowing down the rival."
+                "• Hybrid Strike [E]: Swift point-blank Tanto dagger slash (1.20m range, 2 damage, high priority clash); at distance (>1.6m), hurls a parabolic 3D Horoku ceramic bomb (max 1 active bomb, 2.0s cooldown; strikes during cooldown use the Tanto dagger).\n"
+                "• Remote Detonation Mine [R]: 1st press plants mine into the ground; 2nd press detonates remotely within 2.2m radius (2 damage). Kasumi is immune to lethal self-damage at 1 HP.\n"
+                "• Smoke Roll: Agile ninja roll that drops dense volumetric smoke and provides stealth concealment (alpha=15)."
             ),
             "estrategia_ofensiva": (
-                "• Lob bombs over obstacles (rocks and bamboo) to strike enemies without direct line of sight.\n"
-                "• Drop smoke [R] in the arena center or bridge to slow charging foes to a crawl.\n"
-                "• WATCH OUT FOR SELF-DAMAGE: Do not stand in the blast radius of your own bomb!"
+                "• Use the Tanto dagger in close quarters to intercept longer weapons before their recovery.\n"
+                "• Plant remote mines [R] in chokepoints and detonate the instant the opponent enters the radius.\n"
+                "• Chain the smoke roll with Horoku bomb tosses to strike from hidden angles."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Kasumi: Close the distance into point-blank melee! If she throws a bomb at point-blank, "
-                "she will catch herself in the blast. Evade the smoke cloud to maintain mobility."
+                "• How to defeat Kasumi: Watch the ground carefully for armed remote mines. "
+                "Engage at mid-range where Horoku bombs take time to arc down and the Tanto dagger cannot reach."
             )
         }
     },
@@ -536,56 +540,65 @@ FIGHTERS_GUIDE_DATA = [
         "char_type": "okuni",
         "pt": {
             "name": "OKUNI",
-            "title": "Mestra do Teatro Kabuki",
-            "style": "Tessen-jutsu & Dança do Veneno",
-            "vel": "[4/5] Acrobata Exímia",
-            "dano": "Sopro de Veneno (10s Morte Certa)",
-            "especial": "Kawarimi Decoy (Substituição)",
-            "keys_p1": "[E] Sopro de Veneno (Ataque)",
-            "keys_p2": "[R] Kawarimi Decoy (Especial)",
+            "title": "Dançarina Kabuki dos Leques de Aço",
+            "style": "Tessen-jutsu & Névoa Dokukiri",
+            "vel": "[4/5] Acrobata Teatral Ágil",
+            "dano": "Leques Tessen (Dano 2) / Dokukiri Stun",
+            "especial": "Finta Kawarimi & Sopro Dokukiri",
+            "keys_p1": "[J] Leques Tessen  [K] Dokukiri  [L] Kawarimi",
+            "keys_p2": "[1] Leques Tessen  [2] Dokukiri  [3] Kawarimi",
             "conceito": (
-                "Homenagem à lendária Izumo no Okuni, fundadora do teatro Kabuki. Usa leques afiados com lâminas de ferro, "
-                "pós tóxicos letais e a arte clássica da substituição por boneco de madeira (Kawarimi)."
+                "Inspirada em Izumo no Okuni, pioneira do teatro Kabuki. Combina combate corpo a corpo elegante "
+                "com leques de lâminas de ferro afiadas (Tessen), sopro venenoso Dokukiri que repele e atordoa "
+                "adversários, e piruetas teatrais com manequim de seda (Kawarimi Decoy)."
             ),
             "habilidades": (
-                "• Sopro de Veneno [E]: Lança nuvem carmesim tóxica. Inicia contagem regressiva de 10 SEGUNDOS para a MORTE!\n"
-                "• Kawarimi Decoy [R]: Salto evasivo que deixa um boneco de madeira no local e absorve ataques."
+                "• Dança dos Leques [Ataque]: Golpe duplo veloz e cortante com leques de ferro (1.45m de alcance, Dano 2 letal).\n"
+                "• Sopro Dokukiri [Secundário]: Exala névoa cáustica em cone frontal (3.0m) que repele o rival (1.6m), "
+                "causa tosse e Whiff Stun (0.8s) e aplica debuff de lentidão (-25% SPD).\n"
+                "• Finta Kawarimi [Esquiva]: Pirueta evasiva rápida com i-frames que deixa um manequim de seda. "
+                "Se o rival golpear a ilusão, sofre whiff punish de 0.45s!"
             ),
             "estrategia_ofensiva": (
-                "• Sua condição de vitória é única: Aproxime-se no início e acerte o Sopro de Veneno [E].\n"
-                "• Uma vez que o rival esteja infectado pela contagem de 10s, SUA ÚNICA MISSÃO É SOBREVIVER!\n"
-                "• Use o Kawarimi [R], pule obstáculos, corra ao redor do lago e deixe o veneno fazer o trabalho!"
+                "• Controle o ritmo com o Sopro Dokukiri para repelir o rival e aplicar o stun de tosse de 0.8s.\n"
+                "• Avance imediatamente durante o stun com a Dança dos Leques Tessen para uma execução limpa!\n"
+                "• Em situações de pressão adversária, ative a Finta Kawarimi para induzir o oponente ao erro e punir severamente."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Okuni: Se for envenenado, seu tempo está correndo! Você ganha um pequeno bônus de "
-                "fúria e velocidade: vá para o tudo ou nada e mate Okuni antes dos 10 segundos acabarem!"
+                "• Como vencer Okuni: Fique atento ao sopro roxo/verde de Dokukiri e mantenha esquivas laterais para "
+                "não ser pego pelo cone frontal. Nunca ataque o manequim de seda recém-deixado após a pirueta, "
+                "sob risco de stun punitivo."
             )
         },
         "en": {
             "name": "OKUNI",
-            "title": "Kabuki Theatre Master",
-            "style": "Tessen-jutsu & Poison Dance",
-            "vel": "[4/5] Master Acrobat",
-            "dano": "Poison Breath (10s Fatal Death)",
-            "especial": "Kawarimi Decoy (Substitution)",
-            "keys_p1": "[E] Poison Breath (Attack)",
-            "keys_p2": "[R] Kawarimi Decoy (Special)",
+            "title": "Kabuki Iron Fan Dancer",
+            "style": "Tessen-jutsu & Dokukiri Mist",
+            "vel": "[4/5] Agile Theatrical Acrobat",
+            "dano": "Tessen Fans (2 Damage) / Dokukiri Stun",
+            "especial": "Kawarimi Feint & Dokukiri Breath",
+            "keys_p1": "[J] Tessen Fans  [K] Dokukiri  [L] Kawarimi",
+            "keys_p2": "[1] Tessen Fans  [2] Dokukiri  [3] Kawarimi",
             "conceito": (
-                "Homage to Izumo no Okuni, pioneer of Kabuki. Wields iron-ribbed war fans (tessen), "
-                "lethal contact poisons, and the classic Kawarimi substitution technique."
+                "Inspired by Izumo no Okuni, founder of Kabuki theatre. Blends graceful melee combat using "
+                "razor-sharp iron war fans (Tessen), toxic Dokukiri breath that knocks back and stuns rivals, "
+                "and elusive silk mannequin substitution feints (Kawarimi Decoy)."
             ),
             "habilidades": (
-                "• Poison Breath [E]: Exhales a toxic crimson cloud. Triggers a 10-SECOND COUNTDOWN TO CERTAIN DEATH!\n"
-                "• Kawarimi Decoy [R]: Evasive leap leaving a wooden log doll behind that absorbs incoming attacks."
+                "• Tessen Fan Dance [Attack]: Swift, lethal double slash with iron war fans (1.45m range, 2 damage).\n"
+                "• Dokukiri Breath [Secondary]: Exhales a caustic mist in a 3.0m frontal cone, pushing foes back (1.6m), "
+                "inflicting cough Whiff Stun (0.8s) and a -25% SPD slow debuff.\n"
+                "• Kawarimi Feint [Dodge]: Rapid evasive pirouette with i-frames, leaving a silk decoy behind. "
+                "If struck by the enemy, it inflicts a punishing 0.45s stun!"
             ),
             "estrategia_ofensiva": (
-                "• Unique win condition: Close in early and land the Poison Breath [E].\n"
-                "• Once your rival is infected by the 10s timer, YOUR ONLY MISSION IS SURVIVAL!\n"
-                "• Use Kawarimi [R], leap over obstacles, kite around the lake, and let the poison claim victory!"
+                "• Dictate spacing using Dokukiri Breath to repel incoming rushdowns and trigger the 0.8s cough stun.\n"
+                "• Close the distance during the stun window and execute with the lethal Tessen Fan Dance!\n"
+                "• Bait aggressive opponents into striking your Kawarimi silk decoy for an easy whiff punish."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Okuni: If poisoned, your clock is ticking! You gain a brief fury/speed boost: "
-                "go all-out and kill Okuni before the 10-second timer expires!"
+                "• How to defeat Okuni: Circle laterally to avoid the frontal Dokukiri cone. Never commit attacks into "
+                "the newly spawned silk decoy after her dodge pirouette to avoid severe whiff stuns."
             )
         }
     },
@@ -596,7 +609,7 @@ FIGHTERS_GUIDE_DATA = [
         "pt": {
             "name": "TOMOE",
             "title": "Arqueira Miko",
-            "style": "Kyudo Sagrado & Flechas Sagradas",
+            "style": "Kyudo Sagrado & Flechas Hamaya",
             "vel": "[4/5] Ágil e Concentrada",
             "dano": "Flecha Yumi Fatal (Alcance Máximo)",
             "especial": "Chuva Sagrada (Disparo em Arco)",
@@ -604,47 +617,51 @@ FIGHTERS_GUIDE_DATA = [
             "keys_p2": "[R] Chuva Sagrada (Especial)",
             "conceito": (
                 "Sacerdotisa miko do santuário nas montanhas, mestre na arte marcial meditativa do arco e flecha (Kyudo). "
-                "Sua presença transmite serenidade, foco inabalável e disparos mortais milimétricos."
+                "Sua presença transmite serenidade, foco inabalável e disparos mortais milimétricos com o grande arco Yumi."
             ),
             "habilidades": (
-                "• Disparo Yumi [E]: Pressione para disparar uma flecha mortal de longo alcance (1-Hit Kill).\n"
-                "• Chuva Sagrada [R]: Disparo em arco de várias flechas sagradas em uma pequena área com dano letal (2 HP). Segure para mirar e solte para disparar (idêntico à Anne)."
+                "• Disparo Yumi [E]: Disparo direto e veloz de flecha Ya perfurante com rastro visível. Colide com obstáculos sólidos do cenário e pode ser evitado por esquivas com i-frames (1-Hit Kill).\n"
+                "• Chuva Sagrada em Arco [R]: Lança uma salva de flechas sagradas Hamaya aos céus que desce em arco parabólico sobre a área visada causando dano letal (Cooldown: 3.0s).\n"
+                "• Flecha de Corda & Miko Roll [Esquiva]: Hold & Release para disparar flecha de corda e se puxar pelo mapa. Caso a corda esteja em recarga (2.0s), executa um mergulho ágil ao chão com 12 i-frames.\n"
+                "• Fatalidades: Jifuu Kyoukyuu (地縫強弓 - Flecha cravada na garganta pregando o rival ao solo com fonte de sangue arterial) & Hama Tenkan (破魔天貫 - Salva purificadora que desce do zênite celestial)."
             ),
             "estrategia_ofensiva": (
                 "• Mantenha a maior distância possível do inimigo; seu arco tem alcance superior a qualquer espada.\n"
-                "• Retese o arco atrás de rochas e saia da cobertura apenas para desferir o disparo certeiro.\n"
-                "• Se o oponente tentar avançar em linha reta, solte a flecha no caminho previsto dele."
+                "• Use os obstáculos sólidos do mapa como proteção; posicione-se para alvejar o adversário quando ele contornar cercas ou rochas.\n"
+                "• Use a Chuva Sagrada em Arco [R] para punir inimigos que se escondem atrás de barricadas intransponíveis."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Tomoe: O arco Yumi exige um breve tempo de retesamento (windup). Aproxime-se "
-                "em zigue-zague usando bambus e rochas como escudo. Ela fica vulnerável enquanto prepara o tiro."
+                "• Como vencer Tomoe: As flechas retilíneas colidem com árvores, pedras e cercas. Aproxime-se "
+                "em zigue-zague ou use esquivas ágeis durante o voo da flecha para aproveitar os i-frames."
             )
         },
         "en": {
             "name": "TOMOE",
             "title": "Shrine Maiden Archer",
-            "style": "Sacred Kyudo & Rope Arrow",
+            "style": "Sacred Kyudo & Hamaya Volley",
             "vel": "[4/5] Calm & Focused",
             "dano": "Fatal Yumi Arrow (Max Range)",
-            "especial": "Rope Arrow (Zip Mobility)",
+            "especial": "Sacred Arrow Volley (Sky Arch)",
             "keys_p1": "[E] Draw & Release (Attack)",
-            "keys_p2": "[R] Rope Arrow (Special)",
+            "keys_p2": "[R] Sacred Volley (Special)",
             "conceito": (
                 "Mountain shrine maiden master of the meditative martial art of Japanese archery (Kyudo). "
-                "Radiates serene focus, unshakable patience, and pinpoint lethal arrows."
+                "Radiates serene focus, unshakable patience, and pinpoint lethal arrows with the asymmetric Yumi bow."
             ),
             "habilidades": (
-                "• Yumi Bow Shot [E]: Draw and release a lethal infinite-range arrow (1-Hit Kill). Requires windup time.\n"
-                "• Rope Arrow [R]: Fires an arrow tied to hemp rope for grappling, pulling targets or quick repositioning."
+                "• Yumi Bow Shot [E]: Direct high-velocity Ya arrow with visible aerodynamic slipstream. Collides with solid obstacles and is dodgeable with i-frames (1-Hit Kill).\n"
+                "• Sacred Volley [R]: Arcs multiple sacred Hamaya arrows into the zenith, descending upon target ground coordinates with lethal impact (Cooldown: 3.0s).\n"
+                "• Rope Arrow & Miko Roll [Dodge]: Hold & Release to launch a rope arrow and zip across the map. When rope is on cooldown (2.0s), performs a standard evasive ground dive with 12 i-frames.\n"
+                "• Fatalities: Jifuu Kyoukyuu (地縫強弓 - Pinned to Earth by Yumi arrow through throat with arterial blood fountain) & Hama Tenkan (破魔天貫 - Zenith holy arrow cleave)."
             ),
             "estrategia_ofensiva": (
                 "• Maintain maximum distance; your Yumi bow out-ranges any sword.\n"
-                "• Draw your bow behind rocks or bamboo cover, stepping out only to loose the fatal shot.\n"
-                "• If the foe charges in a straight line, release into their predicted path."
+                "• Leverage arena obstacles as cover; draw while shielded and loose the arrow as enemies emerge.\n"
+                "• Use Sacred Volley [R] to lob celestial arrows over fences and barricades when enemies turtle behind solid terrain."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Tomoe: The Yumi bow requires a brief draw windup. Approach in a zig-zag pattern "
-                "using bamboo and rocks as shields. She is vulnerable during her draw."
+                "• How to defeat Tomoe: Direct arrows stop against trees, lanterns, and hedges. Advance "
+                "behind solid props or time your dodge rolls to phase through incoming arrows using i-frames."
             )
         }
     },
@@ -655,55 +672,57 @@ FIGHTERS_GUIDE_DATA = [
         "pt": {
             "name": "ANNE",
             "title": "A Loba dos Mares",
-            "style": "Alfanje Bucaneiro & Pólvora nos Olhos",
+            "style": "Alfanje Bucaneiro & Bombardeio Naval Celeste",
             "vel": "[4/5] Robusta e Rápida",
-            "dano": "Cleave Amplo de 180° com Alfanje",
-            "especial": "Pólvora nos Olhos (Cegueira/Slow)",
-            "keys_p1": "[E] Giro de Alfanje (Ataque)",
-            "keys_p2": "[R] Pólvora nos Olhos (Especial)",
+            "dano": "Cutlass Cleave 180° (1.65m / 2 HP)",
+            "especial": "Bombardeio Naval Orbital & Pólvora Negra",
+            "keys_p1": "[E] Cutlass Cleave 180° (Ataque)",
+            "keys_p2": "[R] Bombardeio Naval (Segure e Solte)",
             "conceito": (
-                "Pirata destemida acostumada a motins, abordagens navais e brigas de taverna sujas. "
-                "Combina a força bruta de seu alfanje curvo de 180° com truques covardes de pólvora cegante."
+                "Pirata destemida acostumada a motins, abordagens navais e duelos impiedosos. "
+                "Combina a força bruta de seu alfanje curvo de 180° com bombardeios de artilharia naval celestial e fuligem de pólvora."
             ),
             "habilidades": (
-                "• Giro de Alfanje [E]: Golpe com arco monumental de 180 graus na frente e nos flancos.\n"
-                "• Pólvora nos Olhos [R]: Arremessa pólvora no rosto do adversário, cegando-o e causando atordoamento."
+                "• Cutlass Cleave 180° [E]: Arco amplo frontal e lateral de 1.65m com lunge de 0.65m e 2 de dano.\n"
+                "• Bombardeio Naval [R]: Astrolábio isométrico vindo dos céus. Segure [R] para guiar o retículo e solte para disparar uma bala de canhão orbital devastadora.\n"
+                "• Rolamento com Pólvora [T]: Esquiva pesada com 12 i-frames que solta fuligem espessa no solo, causando lentidão no rival.\n"
+                "• Fatalities: Aranami Ryoudan (荒波両断 - Bissecção diagonal do alfanje) e Kanpou Senmetsu (艦砲殲滅 - Impacto orbital do canhão)."
             ),
             "estrategia_ofensiva": (
-                "• Aproxime-se e lance a Pólvora nos Olhos [R] para cegar e desorientar o rival completamente.\n"
-                "• Com o adversário cego e sem saber para onde golpear, desfira o giro de 180° com o Alfanje [E].\n"
-                "• Seu golpe cobre toda a frente, impossibilitando desvios laterais curtos."
+                "• Use o avanço vigoroso do Cutlass Cleave [E] para atropelar tentativas de esquiva lateral rasa.\n"
+                "• Force o adversário a se mover sob a mira do Bombardeio Naval [R] e corte-o na aproximação!\n"
+                "• Deixe a fuligem da pólvora [T] no chão para reduzir a velocidade do adversário."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Anne: A pólvora dela tem alcance curto. Mantenha distância média e use golpes perfurantes "
-                "retos e longos (como Gatotsu ou Florete) para atingi-la fora do alcance do lançamento da pólvora."
+                "• Como vencer Anne: Ao ver a mira dourada do canhão no chão, saia imediatamente da área. Ataque nos momentos de recuperação pós-golpe do alfanje com golpes rápidos ou projéteis."
             )
         },
         "en": {
             "name": "ANNE",
             "title": "Wolf of the High Seas",
-            "style": "Buccaneer Cutlass & Pocket Powder",
+            "style": "Buccaneer Cutlass & Celestial Naval Bombardment",
             "vel": "[4/5] Heavy & Fast",
-            "dano": "180° Broad Cutlass Cleave",
-            "especial": "Pocket Powder (Blind/Slow)",
-            "keys_p1": "[E] Cutlass Cleave (Attack)",
-            "keys_p2": "[R] Pocket Powder (Special)",
+            "dano": "180° Cutlass Cleave (1.65m / 2 HP)",
+            "especial": "Orbital Cannonball Strike & Black Powder Dash",
+            "keys_p1": "[E] Cutlass Cleave 180° (Attack)",
+            "keys_p2": "[R] Naval Artillery (Hold & Release)",
             "conceito": (
-                "Fearless pirate captain forged in boarding skirmishes and dirty tavern brawls. "
-                "Combines heavy 180° cutlass cleaves with blinding gunpowder thrown into the eyes."
+                "Fearless pirate captain forged in boarding skirmishes and naval battles. "
+                "Combines heavy 180° cutlass cleaves with devastating celestial cannonball strikes and blinding powder soot."
             ),
             "habilidades": (
-                "• Cutlass Cleave [E]: Sweeping 180-degree horizontal arc covering front and flanks.\n"
-                "• Pocket Powder [R]: Hurls gunpowder into the opponent's face, blinding and heavily staggering them."
+                "• Cutlass Cleave 180° [E]: Wide 180-degree horizontal arc covering 1.65m with a 0.65m lunge dealing 2 damage.\n"
+                "• Naval Artillery [R]: Isometric celestial astrolabe. Hold [R] to guide the target reticle and release to call a devastating orbital cannonball.\n"
+                "• Black Powder Dash [T]: Heavy dodge with 12 i-frames leaving black powder soot on the ground to slow the opponent.\n"
+                "• Fatalities: Aranami Ryoudan (荒波両断 - Diagonal Cutlass Bisection) and Kanpou Senmetsu (艦砲殲滅 - Orbital Cannon Obliteration)."
             ),
             "estrategia_ofensiva": (
-                "• Close in and throw Pocket Powder [R] to blind and disorient your rival.\n"
-                "• While the enemy is blinded and unable to aim, unleash the 180° Cutlass Cleave [E].\n"
-                "• Your wide arc makes short lateral sidesteps impossible to escape."
+                "• Use Cutlass Cleave's forward lunge [E] to punish shallow lateral sidesteps.\n"
+                "• Pressure the opponent with the descending Naval Artillery [R] and intercept them with the cutlass!\n"
+                "• Lay black powder soot [T] to impair enemy mobility."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Anne: Her gunpowder throw has short range. Maintain mid-range and use linear piercing "
-                "thrusts (like Gatotsu or Fleche) to hit her outside her powder range."
+                "• How to defeat Anne: When you see the golden cannon reticle on the floor, exit the zone immediately. Punish her long cutlass recovery with quick counter-thrusts or projectiles."
             )
         }
     },
@@ -725,9 +744,10 @@ FIGHTERS_GUIDE_DATA = [
                 "de honra, combina elegância aristocrática, estocadas de alcance cirúrgico e defesas perfeitas."
             ),
             "habilidades": (
-                "• Fleche Thrust [E]: Investida frontal alongada em passo de flecha de longo alcance e precisão cirúrgica.\n"
-                "• Pederneira / Floreio de Capa [R]: com a pistola pronta, dispara; com ela recarregando, o floreio de capa repele quem está perto e desvia projéteis.\n"
-                "• Rolamento [T]: rolamento grande com i-frames que atravessa buracos e desvia projéteis."
+                "• Fleche Thrust [E]: Investida frontal alongada em passo de flecha com 1.30m de alcance, 2 de dano e precisão cirúrgica (hitbox 0.70m).\n"
+                "• Pederneira / Floreio de Capa [R]: Com a pistola pronta, dispara a até 5.8m; em recarga, o floreio de capa com chute repele oponentes em 2.0m e desvia projéteis.\n"
+                "• Salto com Capa [T]: Rolamento evasivo com 13 i-frames que atravessa obstáculos e desvia projéteis em pleno ar.\n"
+                "• Fatalities: Hyakka Rantotsu (百花乱突 - Fonte de sangue arterial de 18 estocadas) e Zero-Kyori Juusatsu (零距離銃殺 - Fuzilamento à queima-roupa com pederneira)."
             ),
             "estrategia_ofensiva": (
                 "• O Fleche tem alcance superior ao das katanas convencionais. Pique o oponente de fora do alcance dele!\n"
@@ -753,9 +773,10 @@ FIGHTERS_GUIDE_DATA = [
                 "Melds courtly elegance with surgical reach and deadly counter-ripostes."
             ),
             "habilidades": (
-                "• Fleche Thrust [E]: Extended acrobatic lunging thrust with extreme range and pinpoint accuracy.\n"
-                "• Flintlock / Cape Flip [R]: fires the pistol when ready; while it reloads, the cape flip repels nearby foes and deflects projectiles.\n"
-                "• Roll [T]: a large invulnerable roll that clears pits and deflects projectiles."
+                "• Fleche Thrust [E]: Extended acrobatic lunging thrust with 1.30m reach, 2 damage, and pinpoint accuracy (hitbox 0.70m).\n"
+                "• Flintlock / Cape Flip [R]: Fires the pocket flintlock up to 5.8m when ready; while reloading, the cape flip and coup de pied repels foes by 2.0m and deflects projectiles.\n"
+                "• Cape Swirl Roll [T]: Acrobatic roll with 13 i-frames that clears obstacles and deflects projectiles in mid-air.\n"
+                "• Fatalities: Hyakka Rantotsu (百花乱突 - 18-Thrust Arterial Blood Fountain) and Zero-Kyori Juusatsu (零距離銃殺 - Point-Blank Flintlock Execution)."
             ),
             "estrategia_ofensiva": (
                 "• Fleche out-ranges conventional samurai katanas. Strike from just outside their range!\n"
@@ -775,50 +796,57 @@ FIGHTERS_GUIDE_DATA = [
         "pt": {
             "name": "REN",
             "title": "O Monge Shaolin",
-            "style": "Punhos de Ferro & Kiai",
+            "style": "Punhos de Ferro & Kiai Místico",
             "vel": "[5/5] Relâmpago",
-            "dano": "Combo 3 Golpes (Socos e Chutes)",
+            "dano": "Combo 3 Golpes (Socos, Palmas e Chutes)",
             "especial": "Grito Kiai (Barreira 360°)",
             "keys_p1": "[E] Combo Punhos | [R] Kiai",
             "keys_p2": "[U] Combo Punhos | [I] Kiai",
             "conceito": (
-                "Monge budista peregrino do templo Shaolin. Especialista em artes marciais desarmadas, "
-                "combina velocidade de socos inigualável com o poder espiritual do Kiai."
+                "Monge budista peregrino do lendário templo Shaolin. Mestre supremo do combate desarmado, "
+                "combina velocidade de punhos avassaladora com a canalização espiritual do Chi e do Kiai."
             ),
             "habilidades": (
-                "• Combo Shaolin [E]: Sequência fluida de 3 golpes (Jab, Palma e Chute Dragão).\n"
-                "• Grito Kiai [R]: Emite um pulso de energia mística que repele projéteis e atordoa oponentes."
+                "• Combo Shaolin [E]: Sequência rítmica fluida de 3 passos com avanço e buffering: 1. Jab frontal veloz (1 Dano) -> 2. Palma de Ferro quebra-guarda (1 Dano) -> 3. Chute Alto do Dragão Shaolin com Chi concentrado (2 Dano Letal).\n"
+                "• Grito Místico Kiai [R]: Emite uma barreira esférica de Chi dourado de 2.4m em 360° que repele e reflete projéteis inimigos, empurrando oponentes com alto knockback e atordoamento leve.\n"
+                "• Salto Acrobático [Esquiva]: Mortal frontal baixo com 12 i-frames, cancelável nos últimos 40% diretamente para o Passo 1 ou 2 do combo herdando o momento cinético.\n"
+                "• Fatalidades: Hyakuretsu Ken (百烈拳 - Rajada supersônica nos pontos vitais, pausa de costas e detonação interna do torso) & Kiai Shougeki (気合衝撃 - Rugido de Chi e dupla palma de choque)."
             ),
             "estrategia_ofensiva": (
-                "• Use a velocidade de 5.4 para pressionar incessantemente os oponentes armados.\n"
-                "• Dispare o Kiai para anular projéteis e fechar a distância com segurança."
+                "• Use a velocidade colossal de 5.4 e a esquiva acrobática para fechar distância rapidamente contra oponentes com espadas ou armas de fogo.\n"
+                "• Dispare o Grito Kiai [R] para rebater projéteis em 360° direto contra seus atacantes e criar aberturas fatais.\n"
+                "• Pressione o Ataque Primário na recuperação do salto mortal para surpreender o rival com o cancelamento ofensivo no Jab ou Palma de Ferro."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Ren: Ren precisa colar no corpo a corpo; mantenha distância com armas de longo alcance ou estocadas."
+                "• Como vencer Ren: O combate desarmado de Ren exige proximidade estrita. Use estocadas longas e varreduras de lança para mantê-lo fora do alcance de seus punhos. Não atire projéteis quando ele tiver o Kiai disponível."
             )
         },
         "en": {
             "name": "REN",
             "title": "Shaolin Monk",
-            "style": "Iron Fists & Kiai",
+            "style": "Iron Fists & Mystic Kiai",
             "vel": "[5/5] Lightning Speed",
             "dano": "3-Hit Martial Combo",
             "especial": "Kiai Shout (360° Barrier)",
             "keys_p1": "[E] Fist Combo | [R] Kiai",
             "keys_p2": "[U] Fist Combo | [I] Kiai",
             "conceito": (
-                "Wandering Buddhist Shaolin monk. Unarmed martial artist fusing unmatched fist speed with spiritual shockwaves."
+                "Wandering Buddhist monk from the legendary Shaolin temple. Master of unarmed combat fusing "
+                "blistering fist speed with spiritual Chi shockwaves."
             ),
             "habilidades": (
-                "• Shaolin Combo [E]: Fluid 3-hit sequence (Jab, Palm Strike, Dragon Kick).\n"
-                "• Kiai Shout [R]: Mystic energy wave reflecting projectiles and shoving foes."
+                "• Shaolin Combo [E]: Fluid 3-step martial sequence with buffering: 1. Fast lead Jab (1 Dmg) -> 2. Iron Palm guard-crusher (1 Dmg) -> 3. High Dragon Kick with concentrated Chi (2 Lethal Dmg).\n"
+                "• Kiai Shout [R]: Unleashes a 360° golden Chi barrier (2.4m radius) reflecting incoming projectiles and shoving foes with high knockback and soft stun.\n"
+                "• Acrobatic Somersault [Dodge]: Low forward roll with 12 i-frames, cancelable in the last 40% into Combo Step 1 or 2 while preserving kinetic momentum.\n"
+                "• Fatalities: Hyakuretsu Ken (百烈拳 - Vital-point supersonic flurry with delayed torso detonation) & Kiai Shougeki (気合衝撃 - Chi shockwave palm blast)."
             ),
             "estrategia_ofensiva": (
-                "• Pressure armed rivals with high movement speed and fast combo cancels.\n"
-                "• Counter projectile zoners with well-timed Kiai shockwaves."
+                "• Exploit your top 5.4 movement speed and acrobatic roll to close distance aggressively against armed rivals.\n"
+                "• Time your Kiai Shout [R] to turn enemy bullets, arrows, and shurikens back at their owners.\n"
+                "• Attack during the tail end of your dodge roll to execute a surprise offensive cancel into Jab or Iron Palm."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Ren: Keep spacing outside his short unarmed melee reach with long blades or polearms."
+                "• How to defeat Ren: Ren must get into point-blank range to connect punches. Keep him at bay with long thrusts and polearms, and bait his Kiai cooldown before firing projectiles."
             )
         }
     },
@@ -829,47 +857,51 @@ FIGHTERS_GUIDE_DATA = [
         "pt": {
             "name": "CHIYO",
             "title": "A Kunoichi das Duas Kodachi",
-            "style": "Duas Kodachi em Tesoura",
-            "vel": "[4/5] Ágil",
-            "dano": "Corte Duplo Tesoura",
-            "especial": "Dança Mai (Parry Dançante)",
-            "keys_p1": "[E] Kodachi | [R] Dança Mai",
-            "keys_p2": "[U] Kodachi | [I] Dança Mai",
+            "style": "Dança das Duas Kodachi & Acrobacias Evasivas",
+            "vel": "[5/5] Extrema",
+            "dano": "Corte Duplo Tesoura & Lunge",
+            "especial": "Dança Mai & Salto Acrobático",
+            "keys_p1": "[E] Kodachi | [R] Dança Mai / Lunge",
+            "keys_p2": "[U] Kodachi | [I] Dança Mai / Lunge",
             "conceito": (
-                "Kunoichi graciosa e acrobática que maneja duas lâminas Kodachi com agilidade cirúrgica e técnica evasiva."
+                "Kunoichi ágil e acrobática que maneja duas lâminas Kodachi com técnica cirúrgica, giros evasivos de deflexão e botes aéreos fulminantes."
             ),
             "habilidades": (
-                "• Corte Tesoura [E]: Golpe duplo rápido e letal com as duas lâminas curtas.\n"
-                "• Dança Mai [R]: Giro acrobático defensivo que deflete ataques e contra-ataca em seguida."
+                "• Corte Kodachi Duplo [E]: Combo fluido de 3 passos com arcos amplos em tesoura (1.20m de alcance, 7 frames de startup e 0.28s de cooldown).\n"
+                "• Dança Mai & Salto Acrobático Lunge [R]: Giro evasivo de 0.40s com deflexão de projéteis e golpes. Pressionar [R] novamente durante o giro cancela a dança em um bote acrobático de 3.2m com estocada dupla (3.2s de cooldown).\n"
+                "• Shadow Step Slip [Espaço]: Deslizamento evasivo de alta velocidade com 14 frames de invulnerabilidade e rastro de pétalas carmesins de Higanbana."
             ),
             "estrategia_ofensiva": (
-                "• Use a Dança Mai para aparar golpes agressivos e punir o adversário com cortes cruzados."
+                "• Use a Dança Mai para desviar ou defletir investidas inimigas e converta instantaneamente no Salto Acrobático Lunge para perfurar o oponente a 3.2m.\n"
+                "• O Shadow Step Slip permite atravessar projéteis e reposicionar-se nas costas do rival para iniciar o combo de 3 passos de Kodachi."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Chiyo: Evite atacar impulsivamente durante a Dança Mai; espere a janela de recuperação."
+                "• Como vencer Chiyo: O Salto Acrobático Lunge deixa Chiyo vulnerável a parry ou esquiva lateral se errar (0.28s de whiff recovery). Aguarde o término da Dança Mai ou do salto antes de retaliar com ataques pesados."
             )
         },
         "en": {
             "name": "CHIYO",
             "title": "Twin Kodachi Kunoichi",
-            "style": "Dual Kodachi Scissor Cuts",
-            "vel": "[4/5] Agile",
-            "dano": "Scissor Cross Cuts",
-            "especial": "Mai Dance (Whirling Parry)",
-            "keys_p1": "[E] Kodachi | [R] Mai Dance",
-            "keys_p2": "[U] Kodachi | [I] Mai Dance",
+            "style": "Dual Kodachi Dance & Evasive Acrobatics",
+            "vel": "[5/5] Extreme",
+            "dano": "Scissor Cross Cuts & Lunge",
+            "especial": "Mai Dance & Acrobat Lunge",
+            "keys_p1": "[E] Kodachi | [R] Mai Dance / Lunge",
+            "keys_p2": "[U] Kodachi | [I] Mai Dance / Lunge",
             "conceito": (
-                "Graceful kunoichi master of dual kodachi blades, excelling at evasive spins and counter-strikes."
+                "Graceful and acrobatic kunoichi master of dual kodachi blades, excelling at evasive spins, projectile deflections, and aerial lunges."
             ),
             "habilidades": (
-                "• Scissor Cut [E]: Fast, lethal double-blade cross slice.\n"
-                "• Mai Dance [R]: Whirling evasive dance that deflects incoming blades."
+                "• Twin Kodachi Cross Slice [E]: Fluid 3-hit scissor combo (1.20m reach, 7f startup, 0.28s recovery).\n"
+                "• Mai Dance & Acrobat Lunge [R]: Whirling 0.40s evasive spin with weapon/projectile deflection. Re-pressing [R] during the dance cancels into a 3.2m acrobatic leap with a twin blade thrust (3.2s cooldown).\n"
+                "• Shadow Step Slip [Space]: Low evasive glide with 14 invulnerability frames, projectile immunity, and a trail of Higanbana crimson petals."
             ),
             "estrategia_ofensiva": (
-                "• Bait opponents into swinging, absorb their blow with Mai Dance, then punish immediately."
+                "• Deflect incoming attacks with Mai Dance and immediately press [R] again to trigger the Acrobat Lunge, closing 3.2m of distance instantly.\n"
+                "• Use Shadow Step Slip to slip cleanly through ranged projectiles and flank into your 3-hit kodachi scissor combo."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Chiyo: Do not commit to heavy attacks while she spins; strike when her dance ends."
+                "• How to defeat Chiyo: If Chiyo whiffs her Acrobat Lunge, she incurs 0.28s of recovery frames. Sidestep her straight leap and punish heavily before she can recover."
             )
         }
     },

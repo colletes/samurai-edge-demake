@@ -118,9 +118,9 @@ class YellowNinja(Samurai):
             self.state_timer = self.thrust_duration
             self.hitbox_active = True
             self.hitbox_damage = 2
-            self.hitbox_radius = 1.45
+            self.hitbox_radius = 1.65  # Alcance ampliado para 1.65m na estocada
             self.slash_dir = (self.facing_x, self.facing_y)
-            self.hitbox_center = (self.wx + self.facing_x * 1.15, self.wy + self.facing_y * 1.15)
+            self.hitbox_center = (self.wx + self.facing_x * 1.25, self.wy + self.facing_y * 1.25)
             play_sfx(SoundEvent.SWORD_SLASH)
             return True
 
@@ -143,17 +143,17 @@ class YellowNinja(Samurai):
                 self.state_timer = self.slash_duration
                 self.hitbox_active = True
                 self.hitbox_damage = 1
-                self.hitbox_radius = 1.30
+                self.hitbox_radius = 1.55  # Alcance ampliado para 1.55m no corte reverso
                 self.slash_dir = (self.facing_x, self.facing_y)
-                self.hitbox_center = (self.wx + self.facing_x * 0.95, self.wy + self.facing_y * 0.95)
+                self.hitbox_center = (self.wx + self.facing_x * 1.05, self.wy + self.facing_y * 1.05)
                 play_sfx(SoundEvent.SWORD_SLASH)
             else:
                 self.state_timer = self.thrust_duration
                 self.hitbox_active = True
                 self.hitbox_damage = 2
-                self.hitbox_radius = 1.45
+                self.hitbox_radius = 1.65  # Alcance ampliado para 1.65m na estocada
                 self.slash_dir = (self.facing_x, self.facing_y)
-                self.hitbox_center = (self.wx + self.facing_x * 1.15, self.wy + self.facing_y * 1.15)
+                self.hitbox_center = (self.wx + self.facing_x * 1.25, self.wy + self.facing_y * 1.25)
                 play_sfx(SoundEvent.SWORD_SLASH)
             return True
 
@@ -262,6 +262,7 @@ class YellowNinja(Samurai):
 
         self.state = "JUMP"
         self.state_timer = self.jump_duration
+        self.is_invulnerable_dodge = True
         self.has_thrown_in_jump = False
         self.auto_throw_in_jump = False
         self.hitbox_active = False
@@ -286,6 +287,7 @@ class YellowNinja(Samurai):
         """
         self.wz = 0.0
         self.is_midair_dash = False
+        self.is_invulnerable_dodge = False
         self.hitbox_active = False
         self.combo_step = 0
         self.combo_buffered = False
@@ -373,6 +375,7 @@ class YellowNinja(Samurai):
                 self.wz = 0.0
                 self.state = STATE_RECOVERY
                 self.state_timer = 0.16  # Landing lag
+                self.is_invulnerable_dodge = False
                 self.is_landing_from_jump = True
                 self.jump_cooldown_timer = self.jump_cooldown
                 self.has_thrown_in_jump = False
