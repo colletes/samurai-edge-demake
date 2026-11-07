@@ -696,9 +696,10 @@ PORTRAIT_FACE_STYLES = {
         "brow_tilt": 0.42,
     },
     "valerius": {
-        "iris": (130, 165, 195), "iris_core": (195, 225, 245), "iris_limbal": (50, 75, 100),
+        "iris": (110, 165, 205), "iris_core": (195, 230, 255), "iris_limbal": (42, 70, 95),
         "brow": (160, 168, 178), "lip": (175, 135, 138),
-        "brow_tilt": 0.28, "delicate_nose": False,
+        "brow_tilt": 0.28, "delicate_nose": False, "hd_anime_eyes": True,
+        "monocle": True, "monocle_col": (225, 185, 65),
         "eye_z": 0.080, "brow_z": 0.104, "spacing": 0.036, "mouth_w": 0.025,
         "hairline_mid": 0.68, "hairline_lat": 0.52,
     },
@@ -1028,6 +1029,20 @@ def draw_portrait_face_3d(
         b_out = _p3(spacing * 1.50 * s, b_z - (0.004 if is_male else 0.002) + tilt * 0.010, 0.003)
         b_thick = max(1, brow_thick) if is_male else 1
         pygame.draw.lines(surface, brow_col, False, [b_in, b_mid, b_out], b_thick)
+
+        # Monóculo Aristocrático de Ouro (ex: Valerius no olho direito)
+        if s == 1.0 and style.get("monocle", False):
+            m_col = style.get("monocle_col", (225, 185, 65))
+            m_chain_col = (185, 145, 45)
+            m_pts = [
+                _p3(ir_x + math.cos(math.radians(deg)) * (ir_w * 0.95),
+                    ir_y + math.sin(math.radians(deg)) * (ir_h * 0.95), 0.006)
+                for deg in range(0, 360, 45)
+            ]
+            pygame.draw.polygon(surface, m_col, m_pts, 1)
+            m_chain_start = _p3(ir_x + ir_w * 0.8, ir_y - ir_h * 0.7, 0.006)
+            m_chain_end = _p3(ir_x * 0.7, ir_y - 0.040, 0.007)
+            pygame.draw.line(surface, m_chain_col, m_chain_start, m_chain_end, 1)
 
     # 3. Nariz em Prisma 3D Saliente (Low-Poly 3D Wedge Protrusion com Sombreamento Direcional)
     if nose:

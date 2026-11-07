@@ -1146,52 +1146,62 @@ FIGHTERS_GUIDE_DATA = [
         "char_type": "valerius",
         "pt": {
             "name": "VALERIUS",
-            "title": "O Necromante Prussiano",
-            "style": "Ceifada Fúnebre & Summons Mortos",
+            "title": "O Necromante / Exorcista Prussiano",
+            "style": "Foice Espectral & Tríade dos Mortos",
             "vel": "[3/5] Passo Cerimonial",
-            "dano": "Ceifada Ampla Soul Reap (2 HP)",
-            "especial": "Invocação de Esqueleto (Agarrão & Lentidão)",
-            "keys_p1": "[E] Ceifada | [R] Invocação",
-            "keys_p2": "[U] Ceifada | [I] Invocação",
+            "dano": "Cursed Scythe Reap (2 HP)",
+            "especial": "Tríade dos Mortos & Detonação Cadavérica",
+            "keys_p1": "[E] Ceifada | [R] Invocar / Detonar | [T] Névoa",
+            "keys_p2": "[U] Ceifada | [I] Invocar / Detonar | [O] Névoa",
             "conceito": (
-                "Aristocrata e ocultista prussiano em missão obscura no Bakumatsu. Empunha uma foice fúnebre de ferro forjado "
-                "e invoca mortos-vivos das profundezas da terra para imobilizar seus oponentes."
+                "Aristocrata e exorcista prussiano em terras nipônicas durante a era Bakumatsu. Empunha uma imponente foice cerimonial "
+                "com rastro de chamas azuis e comanda a Tríade dos Mortos — servos rituais que rastejam, golpeiam ou explodem sob seu comando."
             ),
             "habilidades": (
-                "• Ceifada Fúnebre [E]: Golpe horizontal amplo com alcance devastador de duas mãos (2 HP).\n"
-                "• Invocação de Esqueleto [R]: Invoca um esqueleto guerreiro autônomo que avança até o rival, causa 1 HP de dano e o segura aplicando lentidão (slow) por tempo limitado."
+                "• Ceifada Cerimonial (Soul Reap) [E]: Golpe ceifador amplo em arco largo com rastro de chamas azuis espectrais (alcance 1.95m, raio 1.35m, 2 HP).\n"
+                "• Tríade dos Mortos [R]: Invoca em ciclo ritual um dos 3 servos das profundezas:\n"
+                "    1. Rastejante de Tornozelos: persegue a 3.4 m/s e imobiliza o rival por 1.4s (0 dano).\n"
+                "    2. Soldado com Espada: marcha com Pickelhaube e sabre enferrujado causando 1 de dano.\n"
+                "    3. Wight de Chamas Azuis: corre em disparada a 4.4 m/s e explode em área (raio 1.6m, 1 dano) ao aproximar-se ou ser golpeado.\n"
+                "• Detonação de Cadáver [R com servo ativo]: Estala os dedos e explode o servo prematuramente em chamas azuis de área onde estiver!\n"
+                "• Névoa Espectral (Mist Dash) [T]: Deslizamento etéreo com 13 i-frames (0.22s de invulnerabilidade) em fumaça violeta e fagulhas azuis."
             ),
             "estrategia_ofensiva": (
-                "• Utilize o esqueleto para colocar pressão e forçar o rival a recuar ou ficar preso.\n"
-                "• Aproveite o momento em que o rival é agarrado pelo lacaio para aplicar a Ceifada Fúnebre com segurança máxima."
+                "• Use o Rastejante para imobilizar o rival e garantir a Ceifada Cerimonial de 2 HP à queima-roupa.\n"
+                "• Com o Wight ou Soldado em campo, pressione [R] para detonar o lacaio quando o oponente tentar esquivar ou contra-atacar."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Valerius: Destrua o esqueleto com um golpe rápido ou mantenha distância diagonal para desviar do arco largo da foice."
+                "• Como vencer Valerius: Destrua o lacaio com um golpe antes que ele se aproxime (ou aparo técnico/parry para defleti-lo). Cuidado extremo com a explosão do Wight ao matá-lo corpo a corpo!"
             )
         },
         "en": {
             "name": "VALERIUS",
             "title": "The Prussian Necromancer",
-            "style": "Funeral Scythe & Undead Summons",
+            "style": "Spectral Scythe & Triad of the Dead",
             "vel": "[3/5] Ceremonial Stride",
-            "dano": "Soul Reap Scythe Slash (2 HP)",
-            "especial": "Skeleton Minion (Grab & Slow)",
-            "keys_p1": "[E] Scythe Slash | [R] Summon",
-            "keys_p2": "[U] Scythe Slash | [I] Summon",
+            "dano": "Cursed Scythe Reap (2 HP)",
+            "especial": "Triad of the Dead & Corpse Detonation",
+            "keys_p1": "[E] Scythe Reap | [R] Summon / Detonate | [T] Mist",
+            "keys_p2": "[U] Scythe Reap | [I] Summon / Detonate | [O] Mist",
             "conceito": (
-                "Prussian aristocrat and dark occultist navigating Bakumatsu Japan. Wields a colossal forged-iron funeral scythe "
-                "and summons undead minions from cemetery soil to pin foes."
+                "Prussian aristocrat and dark exorcist navigating Bakumatsu Japan. Wields a colossal ceremonial funeral scythe "
+                "with an azure spectral flame trail and commands the Triad of the Dead — minions that crawl, strike, or detonate on his command."
             ),
             "habilidades": (
-                "• Funeral Scythe [E]: Wide horizontal sweeping reap with great reach and priority (2 HP).\n"
-                "• Undead Summon [R]: Spawns an autonomous skeleton minion that marches towards the foe, dealing 1 HP damage and grabbing them with a lingering slow."
+                "• Cursed Scythe Reap [E]: Broad sweeping horizontal reap with azure flame wake (reach 1.95m, radius 1.35m, 2 HP).\n"
+                "• Triad of the Dead [R]: Summons in a ritual cycle one of 3 specialized undead minions:\n"
+                "    1. Crawling Grasper: crawls low at 3.4 m/s and pins the foe with a 1.4s heavy immobilize/slow (0 direct damage).\n"
+                "    2. Bone Swordsman: marches upright in a Pickelhaube with rusty saber, slashing for 1 damage.\n"
+                "    3. Pyre Wight: sprints at 4.4 m/s engulfed in azure flames, detonating in an area blast (radius 1.6m, 1 damage) on contact or upon destruction.\n"
+                "• Corpse Detonation [R while minion is alive]: Snaps fingers to prematurely detonate the active minion in an azure pyre blast anywhere on the field!\n"
+                "• Mist Dash [T]: Ethereal ghost slide with 13 i-frames (0.22s invulnerability) leaving dark violet smoke and azure embers."
             ),
             "estrategia_ofensiva": (
-                "• Send the skeleton forward to control neutral space and force defensive errors.\n"
-                "• Punish pinned or slowed opponents with a clean Soul Reap execution."
+                "• Send the Crawling Grasper to pin the enemy and guarantee a lethal 2 HP Cursed Scythe Reap.\n"
+                "• If the foe maneuvers around your minion, press [R] to trigger Corpse Detonation and catch them with the area blast."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Valerius: Intercept or dash past the skeleton minion. Punish the heavy recovery frames of his funeral scythe."
+                "• How to defeat Valerius: Destroy or parry his minions before they close the distance. Beware of the Pyre Wight's death explosion when engaging in melee!"
             )
         }
     },

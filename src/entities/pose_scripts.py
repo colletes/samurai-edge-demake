@@ -200,11 +200,11 @@ INTRO = {
         _idle(0.35, 0.70, pose="blade_unlock_thumb"),
         _idle(0.70, 1.0, pose="serene_ready_stance"),
     ],
-    # Valerius (Necromante Prussiano): Vórtice fúnebre, corte cerimonial da foice e postura aristocrática
+    # Valerius (Necromante Prussiano): Vórtice de névoa fúnebre -> Ajuste de monóculo & manifestação de foice -> Postura nobre
     "valerius": [
-        _idle(0.0, 0.20),
-        _seg(0.20, 0.65, "ATTACK", 0.0, 1.0),
-        _idle(0.65, 1.0, pose="aristocrat_stance"),
+        _idle(0.0, 0.35, pose="mist_emergence"),
+        _idle(0.35, 0.70, pose="monocle_adjust"),
+        _idle(0.70, 1.0, pose="aristocrat_ready"),
     ],
     # Seimei (Mestra Onmyoji): Meditação astral, lançamento celestial de Ofuda com leque e reverência
     "seimei": [
@@ -340,11 +340,11 @@ VICTORY = {
         _idle(0.38, 0.72, pose="sheath_click_lock"),
         _idle(0.72, 1.0, pose="serene_cane_rest"),
     ],
-    # Valerius: Giro cerimonial da foice, estalar de dedos e reverência prussiana solene
+    # Valerius: Dissipação da foice em brasas -> Estalo de dedos & reverência solene -> Olhar condescendente
     "valerius": [
-        _idle(0.0, 0.15),
-        _seg(0.15, 0.55, "ATTACK", 0.0, 0.8),
-        _idle(0.55, 1.0, pose="aristocrat_bow"),
+        _idle(0.0, 0.38, pose="scythe_dissipate"),
+        _idle(0.38, 0.72, pose="finger_snap_bow"),
+        _idle(0.72, 1.0, pose="condescending_gaze"),
     ],
     # Seimei: Ofuda cósmico incandescente, giro de vestes e reverência tradicional Heian
     "seimei": [
@@ -394,7 +394,7 @@ BEATS = {
         "orin": [(0.22, "sfx:sword_slash"), (0.50, "fx:petals")],
         "goro": [(0.24, "sfx:obstacle_hit"), (0.45, "sfx:sword_slash"), (0.50, "fx:sparks")],
         "ichi": [(0.12, "sfx:dodge_whoosh"), (0.48, "sfx:parry"), (0.75, "fx:petals")],
-        "valerius": [(0.22, "sfx:sword_slash"), (0.45, "fx:smoke")],
+        "valerius": [(0.12, "fx:smoke"), (0.45, "sfx:sword_slash"), (0.75, "sfx:parry")],
         "seimei": [(0.20, "sfx:kunai_throw"), (0.40, "fx:sparks"), (0.65, "fx:petals")],
         "daiki": [(0.25, "sfx:dodge_whoosh"), (0.48, "sfx:obstacle_hit")],
         "aoi": [(0.24, "sfx:sword_slash"), (0.52, "sfx:dodge_whoosh")],
@@ -419,7 +419,7 @@ BEATS = {
         "orin": [(0.24, "sfx:sword_slash"), (0.40, "fx:petals"), (0.75, "fx:petals")],
         "goro": [(0.15, "sfx:obstacle_hit"), (0.40, "sfx:sword_slash"), (0.45, "fx:sparks")],
         "ichi": [(0.12, "sfx:sword_slash"), (0.50, "sfx:parry"), (0.75, "fx:petals")],
-        "valerius": [(0.18, "sfx:sword_slash"), (0.50, "fx:smoke")],
+        "valerius": [(0.12, "fx:smoke"), (0.48, "sfx:parry"), (0.75, "fx:petals")],
         "seimei": [(0.15, "sfx:kunai_throw"), (0.35, "fx:sparks"), (0.70, "fx:petals")],
         "daiki": [(0.18, "sfx:dodge_whoosh"), (0.44, "sfx:obstacle_hit")],
         "aoi": [(0.16, "sfx:sword_slash"), (0.50, "fx:petals")],

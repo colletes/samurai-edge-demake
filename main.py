@@ -334,7 +334,8 @@ def get_fighter_action_labels(fighter):
     elif isinstance(fighter, IchiBlade):
         return "Gyaku-Iai", "Postura Escuta"
     elif isinstance(fighter, ValeriusNecromancer):
-        return "Foice Fúnebre", "Evocar Mortos"
+        sec_name = "Detonação Cadavérica" if (fighter.summon and fighter.summon.is_alive) else fighter.get_next_summon_name()
+        return "Foice Fúnebre", sec_name
     elif isinstance(fighter, SeimeiOnmyoji):
         el = getattr(fighter, "current_element", "wood")
         from src.entities.seimei import ELEMENT_SPELL_NAMES
@@ -497,7 +498,7 @@ def get_fighter_cooldown_data(fighter) -> dict | None:
     elif isinstance(fighter, ValeriusNecromancer):
         timer = max(0.0, getattr(fighter, "summon_timer", 0.0))
         if timer > 0:
-            return {"name": "Evocar Mortos", "timer": timer, "max_cd": getattr(fighter, "summon_cooldown", 4.5), "color": (140, 70, 180)}
+            return {"name": "Evocar Mortos", "timer": timer, "max_cd": getattr(fighter, "summon_cooldown", 5.5), "color": (140, 70, 180)}
         return None
 
     elif isinstance(fighter, SeimeiOnmyoji):

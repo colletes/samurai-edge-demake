@@ -848,15 +848,14 @@ class VoxelCorpse:
                 self._add_blood_drop(spread=0.85)
 
         elif style == "SOUL_REAP":
-            # Valerius Primário: Foice decapita a cabeça do rival (presa/recolhida) e reanima o cadáver decapitado em esqueleto!
+            # Valerius Primário: Foice decapita a cabeça do rival e reanima o cadáver decapitado em esqueleto!
             self.reanimated_skeleton = True
             self.skeleton_time = 0.0
-            # Cabeça decepada descansando no solo próxima ao esqueleto reanimado
-            head_target_x = x + dx * 0.55
-            head_target_y = y + dy * 0.55
-            self.severed_head = P(head_target_x, head_target_y, 0.08, 0.16, 0.16, 0.16, self.col_hair,
-                                  vx=0.0, vy=0.0, vz=0.0, rot_speed=0.0, piece_type="head",
-                                  region=lambda c: c.band(None, NECK_Z), pivot="center", floor_z=0.08)
+            # Cabeça decepada voa e pousa no solo com feições normais preservadas
+            self.severed_head = P(x, y, NECK_Z + 0.14, 0.16, 0.16, 0.16, self.col_hair,
+                                  vx=dx * 2.2 - dy * 1.2, vy=dy * 2.2 + dx * 1.2, vz=3.4,
+                                  rot_speed=360.0, piece_type="head", region=lambda c: c.band(None, NECK_Z),
+                                  pivot="center", floor_z=0.08)
             self.pieces.append(self.severed_head)
             for _ in range(32):
                 self._add_blood_drop(spread=0.75)
@@ -1281,17 +1280,26 @@ class VoxelCorpse:
                     color=random.choice([(255, 235, 110), (255, 250, 210)])
                 ))
 
-        # Pulsação do esqueleto reanimado de Valerius (fagulhas espectrais no pescoço decapitado)
+        # Pulsação do esqueleto reanimado de Valerius (fagulhas espectrais e chamas azuis no pescoço decapitado)
         if getattr(self, "reanimated_skeleton", False):
             self.skeleton_time = getattr(self, "skeleton_time", 0.0) + dt
-            if particles is not None and random.random() < 0.22:
-                from src.effects.particles import SparkParticle
+            if particles is not None and random.random() < 0.32:
+                from src.effects.particles import SparkParticle, SmokeParticle
                 particles.append(SparkParticle(
-                    self.wx + random.uniform(-0.05, 0.05),
-                    self.wy + random.uniform(-0.05, 0.05),
-                    0.65 + random.uniform(0.0, 0.12),
-                    color=random.choice([(65, 240, 175), (90, 255, 200), (140, 70, 200)])
+                    self.wx + random.uniform(-0.08, 0.08),
+                    self.wy + random.uniform(-0.08, 0.08),
+                    0.65 + random.uniform(0.0, 0.16),
+                    color=random.choice([(60, 160, 255), (100, 200, 255), (180, 235, 255)])
                 ))
+                if random.random() < 0.20:
+                    particles.append(SmokeParticle(
+                        self.wx + random.uniform(-0.06, 0.06),
+                        self.wy + random.uniform(-0.06, 0.06),
+                        wz=0.45,
+                        color=(35, 20, 50),
+                        radius=0.18,
+                        lifetime=0.45
+                    ))
 
         # Cinzas fumegantes e brasas verdes sagradas de Seimei
         if getattr(self, "is_ash_mound", False):
@@ -1469,10 +1477,11 @@ class VoxelCorpse:
         )
 
     def _render_reanimated_skeleton(self, surface: pygame.Surface, camera):
-        """Renderiza o esqueleto decapitado reanimado por Valerius, em pé no campo de batalha."""
+        """Renderiza o esqueleto decapitado reanimado por Valerius, com animação contínua e chamas azuis espectrais."""
         c_bone = (235, 230, 215)
         c_bone_shadow = (185, 180, 168)
-        c_emerald = (65, 240, 175)
+        c_flame = (60, 160, 255)
+        c_flame_core = (175, 220, 255)
 
         base_x, base_y = self.wx, self.wy
         # Sombra no solo
@@ -1483,6 +1492,13 @@ class VoxelCorpse:
         pygame.draw.ellipse(shadow_surf, (15, 18, 15, 120), (0, 0, sw * 2, sh * 2))
         surface.blit(shadow_surf, (sx - sw, sy - sh))
 
+        st = getattr(self, "skeleton_time", 0.0)
+        # Animação contínua de respiração e tremor cadavérico
+        breath = math.sin(st * 4.0) * 0.012
+        arm_twitch_l = math.sin(st * 5.5) * 0.02
+        arm_twitch_r = math.cos(st * 5.5) * 0.02
+        flame_flicker = math.sin(st * 16.0) * 0.015
+
         # 1. Pernas esqueléticas (Fêmur + Tíbia)
         draw_voxel_box(surface, camera, base_x - 0.08, base_y - 0.03, 0.02, 0.05, 0.05, 0.20, c_bone_shadow, outline=True)
         draw_voxel_box(surface, camera, base_x + 0.03, base_y - 0.03, 0.02, 0.05, 0.05, 0.20, c_bone, outline=True)
@@ -1491,24 +1507,29 @@ class VoxelCorpse:
         draw_voxel_box(surface, camera, base_x - 0.08, base_y - 0.05, 0.22, 0.16, 0.10, 0.06, c_bone, outline=True)
 
         # 3. Coluna vertebral (Spine)
-        draw_voxel_box(surface, camera, base_x - 0.03, base_y - 0.03, 0.28, 0.06, 0.06, 0.28, c_bone_shadow, outline=True)
+        draw_voxel_box(surface, camera, base_x - 0.03, base_y - 0.03, 0.28, 0.06, 0.06, 0.28 + breath, c_bone_shadow, outline=True)
 
-        # 4. Caixa torácica (3 camadas de costelas)
-        draw_voxel_box(surface, camera, base_x - 0.11, base_y - 0.07, 0.34, 0.22, 0.14, 0.04, c_bone, outline=True)
-        draw_voxel_box(surface, camera, base_x - 0.13, base_y - 0.08, 0.42, 0.26, 0.16, 0.05, c_bone, outline=True)
-        draw_voxel_box(surface, camera, base_x - 0.11, base_y - 0.07, 0.50, 0.22, 0.14, 0.04, c_bone, outline=True)
+        # 4. Caixa torácica (3 camadas de costelas com expansão rítmica)
+        draw_voxel_box(surface, camera, base_x - 0.11 - breath * 0.5, base_y - 0.07, 0.34, 0.22 + breath, 0.14, 0.04, c_bone, outline=True)
+        draw_voxel_box(surface, camera, base_x - 0.13 - breath * 0.5, base_y - 0.08, 0.42, 0.26 + breath, 0.16, 0.05, c_bone, outline=True)
+        draw_voxel_box(surface, camera, base_x - 0.11 - breath * 0.5, base_y - 0.07, 0.50, 0.22 + breath, 0.14, 0.04, c_bone, outline=True)
+
+        # Chamas azuis espectrais pulsando na caixa torácica
+        draw_voxel_box(surface, camera, base_x - 0.06, base_y - 0.04, 0.38 + flame_flicker, 0.12, 0.08, 0.12, c_flame, outline=False)
+        draw_voxel_box(surface, camera, base_x - 0.03, base_y - 0.02, 0.40, 0.06, 0.04, 0.08, c_flame_core, outline=False)
 
         # 5. Clavículas e ombros
-        draw_voxel_box(surface, camera, base_x - 0.14, base_y - 0.05, 0.56, 0.28, 0.10, 0.04, c_bone, outline=True)
+        draw_voxel_box(surface, camera, base_x - 0.14, base_y - 0.05, 0.56 + breath, 0.28, 0.10, 0.04, c_bone, outline=True)
 
-        # 6. Braços pendentes articulados
-        draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.03, 0.36, 0.04, 0.04, 0.20, c_bone_shadow, outline=True)
-        draw_voxel_box(surface, camera, base_x + 0.12, base_y - 0.03, 0.36, 0.04, 0.04, 0.20, c_bone, outline=True)
+        # 6. Braços pendentes articulados com sutil movimento
+        draw_voxel_box(surface, camera, base_x - 0.16, base_y - 0.03, 0.36 + breath + arm_twitch_l, 0.04, 0.04, 0.20, c_bone_shadow, outline=True)
+        draw_voxel_box(surface, camera, base_x + 0.12, base_y - 0.03, 0.36 + breath + arm_twitch_r, 0.04, 0.04, 0.20, c_bone, outline=True)
 
-        # 7. Coto cervical decapitado com labareda de alma esmeralda
-        draw_voxel_box(surface, camera, base_x - 0.035, base_y - 0.035, 0.59, 0.07, 0.07, 0.04, (200, 195, 180), outline=True)
-        # Chama verde espectral emanando do pescoço
-        draw_voxel_box(surface, camera, base_x - 0.025, base_y - 0.025, 0.63, 0.05, 0.05, 0.05, c_emerald, outline=False)
+        # 7. Coto cervical decapitado com labareda de chamas azuis espectrais
+        draw_voxel_box(surface, camera, base_x - 0.035, base_y - 0.035, 0.59 + breath, 0.07, 0.07, 0.04, (200, 195, 180), outline=True)
+        # Chama azul espectral emanando do pescoço
+        draw_voxel_box(surface, camera, base_x - 0.03, base_y - 0.03, 0.63 + breath + flame_flicker, 0.06, 0.06, 0.08, c_flame, outline=False)
+        draw_voxel_box(surface, camera, base_x - 0.015, base_y - 0.015, 0.66 + breath, 0.03, 0.03, 0.05, c_flame_core, outline=False)
 
     def _render_ash_mound(self, surface: pygame.Surface, camera):
         """Renderiza o montículo de cinzas e brasas místicas deixado por Seimei."""

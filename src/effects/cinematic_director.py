@@ -2434,7 +2434,8 @@ class CinematicDirector:
                 from src.isometric.voxel_renderer import draw_voxel_box
                 c_bone = (235, 230, 215)
                 c_bone_shadow = (185, 180, 168)
-                c_emerald = (65, 240, 175)
+                c_flame = (60, 160, 255)
+                c_flame_core = (175, 220, 255)
 
                 draw_voxel_box(surface, camera, vic.wx - 0.03, vic.wy - 0.03, 0.28, 0.06, 0.06, 0.28, c_bone_shadow, outline=True)
                 draw_voxel_box(surface, camera, vic.wx - 0.08, vic.wy - 0.05, 0.22, 0.16, 0.10, 0.06, c_bone, outline=True)
@@ -2444,7 +2445,8 @@ class CinematicDirector:
                 draw_voxel_box(surface, camera, vic.wx - 0.14, vic.wy - 0.05, 0.56, 0.28, 0.10, 0.04, c_bone, outline=True)
 
                 draw_voxel_box(surface, camera, vic.wx - 0.035, vic.wy - 0.035, 0.59, 0.07, 0.07, 0.04, (200, 195, 180), outline=True)
-                draw_voxel_box(surface, camera, vic.wx - 0.025, vic.wy - 0.025, 0.63, 0.05, 0.05, 0.05, c_emerald, outline=False)
+                draw_voxel_box(surface, camera, vic.wx - 0.025, vic.wy - 0.025, 0.63, 0.05, 0.05, 0.05, c_flame, outline=False)
+                draw_voxel_box(surface, camera, vic.wx - 0.015, vic.wy - 0.015, 0.66, 0.03, 0.03, 0.03, c_flame_core, outline=False)
 
         # 3. Valerius: Fenda tumular e mãos esqueléticas arrastando a vítima para o solo (DRAGGED_TO_GRAVE)
         if self.dragged_timer > 0 and self.dragged_victim is not None:
