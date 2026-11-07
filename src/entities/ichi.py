@@ -1,9 +1,11 @@
 """
-Ichi (A Lâmina Cega / Shikomizue - Ciclo 3):
-Mestra espadachim cega de audição extraordinária (homenagem a Zatoichi).
-- Arquétipo: Assassina ágil, precisa e sensorial (velocidade 4.8, 2 HP).
-- Ataque Primário: Gyaku-Iai Cego (GYAKU_IAI_SLASH) - saque relâmpago em pegada invertida da espada-bengala oculta (alcance 1.70m, raio 0.95m, execução 0.14s).
-- Ação Secundária: Postura de Escuta (LISTEN_STANCE) - postura sensorial de percepção auditiva que concede i-frames e engatilha contra-ataque perfurante automático se atacada. Cooldown 4.2s.
+Ichi (A Lâmina Cega / Shikomizue - Ciclo 3 — Overhaul 2.18):
+Mestra espadachim cega de audição extraordinária (homenagem à clássica lenda de Zatoichi).
+- Arquétipo: Assassina ágil, precisa e sensorial (velocidade 5.1, 2 HP).
+- Ataque Primário: Gyaku-Iai Cego (GYAKU_IAI_SLASH) - saque relâmpago em pegada invertida da espada-bengala oculta (alcance 1.80m, raio 1.05m, execução 0.11s, dano 2).
+- Ação Secundária: Postura de Escuta Sensorial (LISTEN_STANCE) - postura sensorial de percepção auditiva que concede foco, desvia golpes/projéteis frontais com a bainha de madeira e engatilha contra-ataque perfurante automático letal (Blind Counter-Thrust). Cooldown 3.8s.
+- Mobilidade / Terceira Ação: Desvio da Bengala (CANE_TAP_SLIP) - deslize evasivo ágil guiado pelo toque da bengala de cerejeira (13 i-frames) com deslocamento padrão para esquivar de perigos de arena e carruagens.
+- Fatalidades: Blind Carotid Slice (盲刃頚断) e Blind Spine Pierce (盲背心貫).
 """
 import math
 import random
@@ -31,8 +33,8 @@ class IchiBlade(Samurai):
         self.hp = 2
         self.can_parry = True
 
-        # Ataque Primário: Gyaku-Iai (Saque Relâmpago Invertido)
-        self.attack_duration = 0.14  # Altíssima velocidade de saque
+        # Ataque Primário: Gyaku-Iai (Saque Relâmpago Invertido estilo Zatoichi puro)
+        self.attack_duration = 0.11   # 7 frames de startup ultrarrápido
         self.attack_recovery = 0.20
         self.slash_reach = 1.80
         self.slash_radius = 1.05
@@ -43,16 +45,21 @@ class IchiBlade(Samurai):
         self.listen_duration = 0.40
         self.counter_active = False
 
-        # Esquiva mais lenta e pesada (design intencional: priorizar parry/escuta)
-        self.is_agile_dodge = False
-        self.roll_speed = 7.0
+        # Terceira Ação: Desvio Evasivo da Bengala (Cane Tap Slip)
+        # Deslocamento padrão com 13 i-frames para evadir carruagens de Kyoto e perigos de arena
+        self.is_agile_dodge = True
+        self.roll_speed = 7.2
         self.roll_duration = 0.28
-        self.roll_recovery_duration = 0.24
-        self.roll_cooldown_duration = 0.50
+        self.roll_recovery_duration = 0.22
+        self.roll_cooldown_duration = 0.45
         self.recovery_duration = self.attack_recovery
 
+        # Estilos de Fatalidade Bespoke
+        self.finisher_style_primary = "BLIND_CAROTID_SLICE"
+        self.finisher_style_secondary = "BLIND_SPINE_PIERCE"
+
     def trigger_parry(self) -> bool:
-        """Parry técnico: bloqueia com a bainha de madeira (Shikomizue)."""
+        """Parry técnico: bloqueia com a bainha de madeira de cerejeira (Shikomizue)."""
         if not self.can_act():
             return False
         self.state = STATE_PARRY
@@ -60,7 +67,7 @@ class IchiBlade(Samurai):
         return True
 
     def is_facing_target(self, target_x: float, target_y: float) -> bool:
-        """Verifica se o alvo está no cone frontal de escuta (angulo < 90°)."""
+        """Verifica se o alvo está no cone frontal de escuta (ângulo < 90°)."""
         dx = target_x - self.wx
         dy = target_y - self.wy
         return (dx * self.facing_x + dy * self.facing_y) > 0.0
@@ -74,7 +81,7 @@ class IchiBlade(Samurai):
         )
 
     def trigger_gyaku_iai(self, aim_x: float, aim_y: float) -> bool:
-        """Ataque Primário: Saque rápido em pegada invertida da Shikomizue."""
+        """Ataque Primário: Saque relâmpago em pegada invertida da Shikomizue (Opção A)."""
         if not self.can_act():
             return False
 
@@ -93,7 +100,7 @@ class IchiBlade(Samurai):
         return True
 
     def trigger_listen_stance(self, aim_x: float = None, aim_y: float = None, banners: list = None, particles: list = None) -> bool:
-        """Ação Secundária: Postura de Escuta Auditiva. Foco sensorial que contra-ataca."""
+        """Ação Secundária: Postura de Escuta Sensorial. Foco auditivo que desvia e contra-ataca."""
         if not self.can_act() or self.listen_timer > 0:
             return False
 
@@ -104,18 +111,24 @@ class IchiBlade(Samurai):
         self.listen_timer = self.listen_cooldown
         self.hitbox_active = False
         self.counter_active = True
+        self.invincible = True
+        self.invincible_timer = self.listen_duration
 
         if particles is not None:
-            for _ in range(6):
-                particles.append(SparkParticle(self.wx, self.wy, 0.20, color=(210, 180, 235)))
+            # Ondas concêntricas sutis simulando a ecolocalização da bengala
+            for ang_deg in range(0, 360, 45):
+                rad = math.radians(ang_deg)
+                px = self.wx + math.cos(rad) * 0.4
+                py = self.wy + math.sin(rad) * 0.4
+                particles.append(SparkParticle(px, py, 0.15, color=(210, 225, 250)))
 
         if banners is not None:
-            banners.append(FloatingBanner("LISTEN...", self.wx, self.wy, color=(220, 170, 240), duration=0.75))
+            banners.append(FloatingBanner("LISTEN...", self.wx, self.wy, color=(215, 230, 255), duration=0.65))
 
         return True
 
-    def trigger_counter_thrust(self, target_x: float, target_y: float, banners: list = None, particles: list = None):
-        """Contra-ataque automático perfurante ativado ao aparar ou desviar durante a Postura de Escuta."""
+    def trigger_counter_thrust(self, target_x: float, target_y: float, banners: list = None, particles: list = None, cinematic_director = None):
+        """Contra-ataque automático perfurante ativado ao interceptar golpe ou projétil na Postura de Escuta."""
         self.set_facing(target_x, target_y)
         self.state = STATE_COUNTER_THRUST
         self.state_timer = 0.20
@@ -126,14 +139,72 @@ class IchiBlade(Samurai):
             self.wx + self.facing_x * 1.25,
             self.wy + self.facing_y * 1.25
         )
-        self.hitbox_radius = 1.0
+        self.hitbox_radius = 1.05
         self.slash_dir = (self.facing_x, self.facing_y)
         self.counter_active = False
+
+        if particles is not None:
+            for _ in range(8):
+                particles.append(SparkParticle(self.wx + self.facing_x * 0.8, self.wy + self.facing_y * 0.8, 0.45, color=(255, 250, 220)))
 
         if banners is not None:
             banners.append(FloatingBanner("BLIND COUNTER!", self.wx, self.wy, color=COLOR_GOLD, duration=0.85))
 
-    def update(self, dt: float, game_map = None, particles: list = None, opponent = None, projectiles: list = None, **kwargs):
+        try:
+            from src.audio.sound_manager import get_sound_manager
+            from src.audio.sound_events import SoundEvent
+            get_sound_manager().play(SoundEvent.SWORD_SLASH, volume_scale=1.0)
+        except Exception:
+            pass
+
+    def trigger_cane_slip(self, dwx: float, dwy: float, particles: list = None, game_map = None) -> bool:
+        """
+        Terceira Ação: Desvio Evasivo da Bengala (Cane Tap Slip).
+        Deslize ágil com 13 i-frames (0.22s de invulnerabilidade) em distância padrão
+        permitindo escapar de ataques em área, escombros e carruagens de Kyoto.
+        """
+        if (
+            not self.is_alive
+            or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD, STATE_ATTACK, STATE_RECOVERY, "RYUU_TSUI_SEN", "POLE_VAULT", "PARRY_BACKHOP")
+            or getattr(self, "wz", 0.0) > 0.45
+            or self.roll_recovery_timer > 0
+            or self.roll_cooldown_timer > 0
+            or self.dash_recovery_timer > 0
+        ):
+            return False
+
+        self.wz = 0.0
+
+        # Direção da esquiva
+        if abs(dwx) > 0.01 or abs(dwy) > 0.01:
+            mag = math.hypot(dwx, dwy)
+            dir_x = dwx / mag
+            dir_y = dwy / mag
+        else:
+            dir_x = self.facing_x
+            dir_y = self.facing_y
+
+        self.facing_x = dir_x
+        self.facing_y = dir_y
+        self.state = STATE_ROLL
+        self.state_timer = self.roll_duration
+        self.is_invulnerable_dodge = True
+        self.invincible = True
+        self.invincible_timer = 0.22  # 13 frames a 60 FPS
+        self.hitbox_active = False
+
+        if particles is not None:
+            # Toque da ponta da bengala no chão levantando poeira e faíscas
+            particles.append(SparkParticle(self.wx, self.wy, 0.12, color=(185, 175, 160)))
+            particles.append(SparkParticle(self.wx + self.facing_x * 0.15, self.wy + self.facing_y * 0.15, 0.15, color=(220, 215, 200)))
+
+        return True
+
+    def trigger_roll(self, dwx: float, dwy: float, particles: list = None, **kwargs) -> bool:
+        """Alias para garantir compatibilidade com roll genérico."""
+        return self.trigger_cane_slip(dwx, dwy, particles=particles)
+
+    def update(self, dt: float, game_map = None, particles: list = None, opponent = None, projectiles: list = None, banners: list = None, cinematic_director = None, **kwargs):
         # Atualizar timers de esquiva e recuperação de roll
         self.update_dodge_timers(dt)
 
@@ -160,7 +231,7 @@ class IchiBlade(Samurai):
         if self.state == STATE_ATTACK:
             self.state_timer -= dt
             # Lunge veloz do saque em pegada invertida
-            step_speed = 3.6
+            step_speed = 3.8
             new_wx = self.wx + self.facing_x * step_speed * dt
             new_wy = self.wy + self.facing_y * step_speed * dt
             if game_map and hasattr(game_map, "cols"):
@@ -179,18 +250,59 @@ class IchiBlade(Samurai):
                 self.hitbox_active = False
             return
 
-        # Atualizar postura de escuta
+        # Atualizar Postura de Escuta Sensorial
         if self.state == STATE_LISTEN:
             self.state_timer -= dt
+
+            # 1. Interceptar e contra-atacar golpes inimigos
+            if self.counter_active and opponent and getattr(opponent, "is_alive", False):
+                opp_attacking = (
+                    getattr(opponent, "hitbox_active", False)
+                    or getattr(opponent, "state", "") in (
+                        "ATTACK", "RYUU_TSUI_SEN", "GATOTSU_CHARGE", "ZEROSHIKI",
+                        "CUTLASS_CLEAVE", "FLECHE", "KIAI", "MAI_DANCE", "POLE_VAULT",
+                        "TACHIAI_TACKLE", "TSUPPARI_RUSH", "TSUPPARI_STRIKE_1", "TSUPPARI_STRIKE_2"
+                    )
+                )
+                dist_opp = math.hypot(opponent.wx - self.wx, opponent.wy - self.wy)
+                if opp_attacking and dist_opp <= 2.2 and self.is_facing_target(opponent.wx, opponent.wy):
+                    # Aparar e interromper o oponente com a bainha de madeira
+                    opponent.hitbox_active = False
+                    opponent.state = STATE_RECOVERY
+                    opponent.state_timer = 0.35
+                    if particles is not None:
+                        for _ in range(6):
+                            particles.append(SparkParticle(self.wx + self.facing_x * 0.6, self.wy + self.facing_y * 0.6, 0.35, color=(240, 230, 200)))
+                    self.trigger_counter_thrust(opponent.wx, opponent.wy, banners=banners, particles=particles, cinematic_director=cinematic_director)
+                    return
+
+            # 2. Interceptar e rebater projéteis frontais
+            if self.counter_active and projectiles:
+                for pr in projectiles:
+                    if not getattr(pr, "is_active", True):
+                        continue
+                    p_dx = pr.wx - self.wx
+                    p_dy = pr.wy - self.wy
+                    p_dist = math.hypot(p_dx, p_dy)
+                    if p_dist <= 1.8 and (p_dx * self.facing_x + p_dy * self.facing_y) > 0:
+                        pr.is_active = False
+                        if particles is not None:
+                            particles.append(SparkParticle(pr.wx, pr.wy, 0.40, color=(255, 230, 180)))
+                        tgt_x = opponent.wx if (opponent and opponent.is_alive) else (self.wx + self.facing_x * 2.0)
+                        tgt_y = opponent.wy if (opponent and opponent.is_alive) else (self.wy + self.facing_y * 2.0)
+                        self.trigger_counter_thrust(tgt_x, tgt_y, banners=banners, particles=particles, cinematic_director=cinematic_director)
+                        return
+
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
                 self.counter_active = False
+                self.invincible = False
             return
 
         elif self.state == STATE_COUNTER_THRUST:
             self.state_timer -= dt
             # Estocada perfurante instantânea
-            step_speed = 4.2
+            step_speed = 4.5
             new_wx = self.wx + self.facing_x * step_speed * dt
             new_wy = self.wy + self.facing_y * step_speed * dt
             if game_map and hasattr(game_map, "cols"):
@@ -224,9 +336,14 @@ class IchiBlade(Samurai):
     def render(self, surface: pygame.Surface, camera):
         extra = {}
         if self.state == STATE_LISTEN:
-            extra = {"pose": "listen_stance"}
+            extra = {"pose": "listen_stance", "is_listen": True}
         elif self.state == STATE_COUNTER_THRUST:
-            extra = {"is_pierce": True}
+            extra = {"pose": "counter_thrust", "is_pierce": True}
+        elif self.state == STATE_ROLL:
+            roll_p = 1.0 - (self.state_timer / max(0.001, self.roll_duration))
+            extra = {"pose": "cane_slip", "is_roll": True, "roll_prog": roll_p}
+        elif self.state == STATE_PARRY:
+            extra = {"pose": "sheath_parry", "is_parry": True}
 
         render_voxel_humanoid(
             surface=surface,

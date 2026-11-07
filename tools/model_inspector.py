@@ -669,6 +669,20 @@ CHARACTER_ANIM_BUTTONS = {
         ("FINISHER_1", "F1. Finisher A: Kuwa Skull Cleave (鍬頭砕断)", 1.25),
         ("FINISHER_2", "F2. Finisher B: Earthquake Stomp Crush (地鳴踏潰)", 1.30),
     ],
+    "ichi": [
+        ("IDLE", "1. Idle (Postura da Bengala de Viagem)", 0.0),
+        ("WALK", "2. Walk (Caminhada Tateante de Bengala)", 0.0),
+        ("GYAKU_IAI_QUICKDRAW", "3. Primário: Gyaku-Iai Cego (Saque Relâmpago 1.8m)", 0.38),
+        ("LISTEN_STANCE", "4. Secundário: Postura de Escuta Sensorial (Ecolocalização)", 0.42),
+        ("BLIND_COUNTER_THRUST", "5. Contra-Ataque: Blind Counter-Thrust (Estocada 1.7m)", 0.38),
+        ("CANE_TAP_SLIP", "6. Esquiva: Desvio Evasivo da Bengala (13 i-frames)", 0.35),
+        ("SHEATH_PARRY", "7. Defesa: Bloqueio Técnico com a Bainha de Madeira", 0.36),
+        ("PARRY_REACTION", "8. Reação: Desvio Táctil & Repelência de Lâmina", 0.38),
+        ("INTRO", "9. Intro: Caminhada Tateante -> Destrave do Aço -> Guarda Serena", 2.20),
+        ("VICTORY", "0. Vitória: Limpeza de Lâmina na Manga -> Embainhar Zen -> Brisa", 2.40),
+        ("FINISHER_1", "F1. Finisher A: Blind Carotid Slice (盲刃頚断)", 1.25),
+        ("FINISHER_2", "F2. Finisher B: Blind Spine Pierce (盲背心貫)", 1.30),
+    ],
 }
 # Aliases para chaves alternativas do catálogo
 CHARACTER_ANIM_BUTTONS["joe"] = CHARACTER_ANIM_BUTTONS["american"]
@@ -685,6 +699,8 @@ CHARACTER_ANIM_BUTTONS["nodachi"] = CHARACTER_ANIM_BUTTONS["chiyo"]
 CHARACTER_ANIM_BUTTONS["sohei"] = CHARACTER_ANIM_BUTTONS["benkei"]
 CHARACTER_ANIM_BUTTONS["minstrel"] = CHARACTER_ANIM_BUTTONS["orin"]
 CHARACTER_ANIM_BUTTONS["farmer"] = CHARACTER_ANIM_BUTTONS["goro"]
+CHARACTER_ANIM_BUTTONS["blind"] = CHARACTER_ANIM_BUTTONS["ichi"]
+CHARACTER_ANIM_BUTTONS["shikomizue"] = CHARACTER_ANIM_BUTTONS["ichi"]
 
 DEFAULT_ANIM_BUTTONS = [
     ("IDLE", "1. Idle (Respiração)", 0.0),
@@ -843,6 +859,14 @@ OVERHAUL_DE_PARA_NOTES = {
         "Rolamento de Lavrador (13 i-frames) & Cancelamento Evasivo Pocket Dirt (Micro-stun 0.22s com nuvem de terra)",
         "Fatalidades Cinematográficas: Kuwa Skull Cleave (鍬頭砕断) e Earthquake Stomp Crush (地鳴踏潰)",
     ],
+    "ichi": [
+        "SSAA 2x Offscreen + Iluminação Isométrica 3D Direcional e Sombra Projetada",
+        "Rosto Anime 3D: Olhos cerrados serenos com cílios alados, lábios delicados e coque Mage alto com Kanzashi dourado",
+        "Materiais Realistas: Seda Chirimen Ameixa, Linho Branco Juban, Cerejeira Polida e Lâmina Tamahagane com Fio Navalha",
+        "Pose LERP 0.08s + 12 Poses Articuladas + Saque Invertido Gyaku-Iai (Startup 7f / 0.11s e alcance 1.80m)",
+        "Postura de Escuta Auditiva com Contra-Ataque Automático (Blind Counter-Thrust) e Desvio Evasivo de Bengala (13 i-frames)",
+        "Fatalidades Cinematográficas: Blind Carotid Slice (盲刃頚断) e Blind Spine Pierce (盲背心貫)",
+    ],
 }
 OVERHAUL_DE_PARA_NOTES["joe"] = OVERHAUL_DE_PARA_NOTES["american"]
 OVERHAUL_DE_PARA_NOTES["hanzo"] = OVERHAUL_DE_PARA_NOTES["ninja"]
@@ -858,6 +882,8 @@ OVERHAUL_DE_PARA_NOTES["nodachi"] = OVERHAUL_DE_PARA_NOTES["chiyo"]
 OVERHAUL_DE_PARA_NOTES["sohei"] = OVERHAUL_DE_PARA_NOTES["benkei"]
 OVERHAUL_DE_PARA_NOTES["minstrel"] = OVERHAUL_DE_PARA_NOTES["orin"]
 OVERHAUL_DE_PARA_NOTES["farmer"] = OVERHAUL_DE_PARA_NOTES["goro"]
+OVERHAUL_DE_PARA_NOTES["blind"] = OVERHAUL_DE_PARA_NOTES["ichi"]
+OVERHAUL_DE_PARA_NOTES["shikomizue"] = OVERHAUL_DE_PARA_NOTES["ichi"]
 
 
 # =============================================================================
@@ -982,9 +1008,9 @@ class ModelInspector:
         self.action_duration = dur
         if action_id in POSES:
             self.current_pose_idx = POSES.index(action_id)
-        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "ATTACK_1", "ATTACK_2", "ATTACK_3", "CROSS_SHOCKWAVE", "ROLL_CANCEL", "FINISHER_1", "FINISHER_2", "KAMA_STRIKE", "CHAIN_DRAG", "KODACHI_CROSS", "MAI_DANCE", "ACROBAT_LUNGE", "NAGINATA_CLEAVE", "NAGINATA_THRUST", "NAGINATA_THROW", "TACKLE_CHARGE", "SONIC_CLEAVE_1", "SONIC_CLEAVE_2", "RESONANCE_360", "EVASIVE_CANCEL", "KUWA_HEAVY_CLEAVE", "EARTH_STOMP_ACTION", "POCKET_DIRT"):
+        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "ATTACK_1", "ATTACK_2", "ATTACK_3", "CROSS_SHOCKWAVE", "ROLL_CANCEL", "FINISHER_1", "FINISHER_2", "KAMA_STRIKE", "CHAIN_DRAG", "KODACHI_CROSS", "MAI_DANCE", "ACROBAT_LUNGE", "NAGINATA_CLEAVE", "NAGINATA_THRUST", "NAGINATA_THROW", "TACKLE_CHARGE", "SONIC_CLEAVE_1", "SONIC_CLEAVE_2", "RESONANCE_360", "EVASIVE_CANCEL", "KUWA_HEAVY_CLEAVE", "EARTH_STOMP_ACTION", "POCKET_DIRT", "GYAKU_IAI_QUICKDRAW", "BLIND_COUNTER_THRUST"):
             self.current_pose_idx = POSES.index("ATTACK")
-        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY", "CROSS_GUARD", "TACTICAL_ROLL", "BACKFLIP", "DODGE_CANCEL", "SHADOW_STEP", "ADAMANTINE_PUSH", "SILK_GLIDE", "MUD_ROLL"):
+        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY", "CROSS_GUARD", "TACTICAL_ROLL", "BACKFLIP", "DODGE_CANCEL", "SHADOW_STEP", "ADAMANTINE_PUSH", "SILK_GLIDE", "MUD_ROLL", "LISTEN_STANCE", "CANE_TAP_SLIP", "SHEATH_PARRY", "PARRY_REACTION"):
             self.current_pose_idx = POSES.index("RECOVERY")
 
     def select_character(self, idx: int | str):
@@ -2129,10 +2155,45 @@ class ModelInspector:
             extra_props["pose"] = "iron_guard"
             extra_props["is_parry"] = True
             extra_props["p"] = prog
+        elif act == "GYAKU_IAI_QUICKDRAW":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.16)
+            extra_props["p"] = prog
+            wx = 0.22 * prog
+            wy = 0.22 * prog
+        elif act == "LISTEN_STANCE":
+            state = "LISTEN"
+            state_timer = max(0.01, (1.0 - prog) * 0.40)
+            extra_props["is_listen"] = True
+            extra_props["pose"] = "listen_stance"
+            extra_props["p"] = prog
+        elif act == "BLIND_COUNTER_THRUST":
+            state = "COUNTER_THRUST"
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            extra_props["is_pierce"] = True
+            extra_props["pose"] = "counter_thrust"
+            extra_props["p"] = prog
+            wx = 0.32 * prog
+            wy = 0.32 * prog
+        elif act == "CANE_TAP_SLIP":
+            state = "ROLL"
+            state_timer = max(0.01, (1.0 - prog) * 0.28)
+            extra_props["is_roll"] = True
+            extra_props["pose"] = "cane_slip"
+            extra_props["roll_prog"] = prog
+            extra_props["p"] = prog
+            wx = 0.40 * prog
+            wy = 0.40 * prog
+        elif act in ("SHEATH_PARRY", "PARRY_REACTION"):
+            state = "PARRY"
+            state_timer = max(0.01, (1.0 - prog) * 0.36)
+            extra_props["is_parry"] = True
+            extra_props["pose"] = "sheath_parry"
+            extra_props["p"] = prog
         elif act in ("INTRO", "VICTORY"):
             kind = "intro" if act == "INTRO" else "victory"
             p_sample = prog if dur > 0.0 else ((self.anim_time * 0.42) % 1.0)
-            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american", "joe", "saitou", "teppo", "rifleman", "murasaki", "purple", "kasumi", "gray", "okuni", "kabuki", "anne", "pirate", "julie", "musketeer", "tomoe", "archer", "ren", "shaolin", "chiyo", "nodachi", "benkei", "sohei", "orin", "minstrel", "goro", "farmer"):
+            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american", "joe", "saitou", "teppo", "rifleman", "murasaki", "purple", "kasumi", "gray", "okuni", "kabuki", "anne", "pirate", "julie", "musketeer", "tomoe", "archer", "ren", "shaolin", "chiyo", "nodachi", "benkei", "sohei", "orin", "minstrel", "goro", "farmer", "ichi", "blind", "shikomizue"):
                 # Roteiro legado pré-Fase 2 (apenas IDLE + ATTACK simples)
                 if p_sample < 0.25 or p_sample > 0.75:
                     state = "IDLE"
@@ -2314,6 +2375,17 @@ class ModelInspector:
                     extra_props["p"] = prog
                     wx = 0.22 * math.sin(prog * math.pi)
                     wy = 0.22 * math.sin(prog * math.pi)
+            elif char_type in ("ichi", "blind", "shikomizue"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - prog) * 0.16)
+                    extra_props["pose"] = "gyaku_iai"
+                    extra_props["p"] = prog
+                    wx = 0.25 * math.sin(prog * math.pi)
+                    wy = 0.25 * math.sin(prog * math.pi)
             else:
                 # 2.1.4a: Ittou Ryoudan
                 state = "RECOVERY"
@@ -2496,6 +2568,18 @@ class ModelInspector:
                     extra_props["p"] = prog
                     wx = 0.12 * math.sin(prog * math.pi)
                     wy = 0.12 * math.sin(prog * math.pi)
+            elif char_type in ("ichi", "blind", "shikomizue"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "COUNTER_THRUST"
+                    state_timer = max(0.01, (1.0 - prog) * 0.20)
+                    extra_props["is_pierce"] = True
+                    extra_props["pose"] = "counter_thrust"
+                    extra_props["p"] = prog
+                    wx = 0.30 * math.sin(prog * math.pi)
+                    wy = 0.30 * math.sin(prog * math.pi)
             else:
                 # 2.1.4b: Divisão Celestial de Bambu (Ápice + Queda Meteórica)
                 if prog < 0.42:

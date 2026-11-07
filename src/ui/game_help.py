@@ -1090,24 +1090,26 @@ FIGHTERS_GUIDE_DATA = [
             "title": "A Lâmina Cega",
             "style": "Shikomizue (Gyaku-Iai) & Escuta",
             "vel": "[5/5] Reflexo Extremo",
-            "dano": "Saque Gyaku-Iai (0.14s / 2 HP)",
-            "especial": "Postura de Escuta (Contra-Ataque Perfurante)",
-            "keys_p1": "[E] Gyaku-Iai | [R] Escuta",
-            "keys_p2": "[U] Gyaku-Iai | [I] Escuta",
+            "dano": "Saque Gyaku-Iai (0.11s | Alcance 1.8m)",
+            "especial": "Postura de Escuta & Desvio da Bengala (13 i-frames)",
+            "keys_p1": "[E] Gyaku-Iai | [R] Escuta | [T] Desvio da Bengala",
+            "keys_p2": "[U] Gyaku-Iai | [I] Escuta | [O] Desvio da Bengala",
             "conceito": (
-                "Mestra espadachim cega lendária inspirada no clássico Zatoichi. Caminha com uma bengala de madeira "
-                "que oculta uma katana afiada como navalha, guiando-se pelo som e pela vibração do ar."
+                "Mestra espadachim cega lendária inspirada no clássico Zatoichi. Caminha com uma bengala de cerejeira "
+                "que oculta uma lâmina afiada como navalha, guiando-se pelo som e pela vibração do ar."
             ),
             "habilidades": (
-                "• Gyaku-Iai [E]: Saque relâmpago em empunhadura invertida a partir da bengala oculta (0.14s, 2 HP).\n"
-                "• Postura de Escuta [R]: Assume foco auditivo sereno. Se atingida nesta janela, bloqueia o ataque e desfere contra-ataque perfurante automático."
+                "• Gyaku-Iai [E]: Saque relâmpago em empunhadura invertida a partir da bengala oculta (startup 7 frames / 0.11s, alcance 1.80m, 2 HP).\n"
+                "• Postura de Escuta [R]: Assume foco auditivo sensorial e proteção com a bainha. Ao detectar ataques ou projéteis frontais, apara o impacto e desfere contra-ataque perfurante automático (Blind Counter-Thrust).\n"
+                "• Desvio da Bengala [T]: Deslize evasivo fluído com 13 i-frames (0.22s de invulnerabilidade) guiado pelo toque da bengala, ideal para escapar de ataques em área e perigos de arena."
             ),
             "estrategia_ofensiva": (
-                "• Avance com calma e aproveite o saque mais rápido do jogo para punir tentativas afobadas do rival.\n"
-                "• Ative a Postura de Escuta [R] na meia-distância para atrair ataques impulsivos e contra-atacar letalmente."
+                "• Avance com calma e aproveite o saque mais rápido do jogo [E] para punir tentativas afobadas do rival.\n"
+                "• Ative a Postura de Escuta [R] na meia-distância para atrair ataques e disparos de projéteis, punindo com o contra-ataque letal.\n"
+                "• Use o Desvio da Bengala [T] para reposicionar-se instantaneamente atrás do adversário ou desviar de carruagens de Kyoto."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Ichi: Jamais ataque diretamente quando ela estiver na Postura de Escuta. Use fintas, projéteis ou armas de longo alcance para atacá-la com segurança."
+                "• Como vencer Ichi: Jamais ataque diretamente de frente quando ela estiver na Postura de Escuta [R]. Use fintas, ataques por trás ou espere o término da janela ativa de escuta para castigar sua recuperação."
             )
         },
         "en": {
@@ -1115,24 +1117,26 @@ FIGHTERS_GUIDE_DATA = [
             "title": "The Blind Blade",
             "style": "Shikomizue (Gyaku-Iai) & Sensory Stance",
             "vel": "[5/5] Extreme Reflexes",
-            "dano": "Gyaku-Iai Lightning Draw (0.14s / 2 HP)",
-            "especial": "Listen Stance (Sensory Counter-Thrust)",
-            "keys_p1": "[E] Gyaku-Iai | [R] Listen Stance",
-            "keys_p2": "[U] Gyaku-Iai | [I] Listen Stance",
+            "dano": "Gyaku-Iai Lightning Draw (0.11s | Reach 1.8m)",
+            "especial": "Listen Stance & Cane Tap Slip (13 i-frames)",
+            "keys_p1": "[E] Gyaku-Iai | [R] Listen Stance | [T] Cane Slip",
+            "keys_p2": "[U] Gyaku-Iai | [I] Listen Stance | [O] Cane Slip",
             "conceito": (
-                "Serene blind master swordsman. Wields a disguised wooden walking cane concealing a razor-sharp blade, "
+                "Serene blind master swordsman inspired by Zatoichi. Wields a disguised cherry wood walking cane concealing a razor-sharp blade, "
                 "sensing opponents through vibrations, footsteps, and rustling air."
             ),
             "habilidades": (
-                "• Gyaku-Iai [E]: Blindingly swift reverse-grip draw strike from her concealed cane (0.14s, 2 HP).\n"
-                "• Listen Stance [R]: Closes senses to focus purely on sound; automatically counters incoming strikes with a lethal forward thrust."
+                "• Gyaku-Iai [E]: Blindingly swift reverse-grip draw strike from her concealed cane (startup 7 frames / 0.11s, reach 1.80m, 2 HP).\n"
+                "• Listen Stance [R]: Closes senses to focus purely on sound; automatically parries incoming frontal strikes/projectiles with the wooden sheath and counters with a lethal thrust.\n"
+                "• Cane Tap Slip [T]: Fluid evasive slide with 13 i-frames (0.22s of invulnerability) guided by the cane tip, allowing complete avoidance of stage hazards and Kyoto carriages."
             ),
             "estrategia_ofensiva": (
-                "• Utilize her lightning draw to interrupt opposing attacks in close quarters.\n"
-                "• Bait aggressive rushdown foes into your Listen Stance [R] for an unblockable counter-thrust."
+                "• Utilize her lightning draw [E] to interrupt opposing attacks in close quarters.\n"
+                "• Bait aggressive rushdown foes or projectile fire into your Listen Stance [R] for an unblockable counter-thrust.\n"
+                "• Use Cane Tap Slip [T] to slip past stage hazards or reposition instantly behind the opponent."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Ichi: Do not swing blindly into her Listen Stance. Bait the stance with feints or zone her with projectiles."
+                "• How to defeat Ichi: Do not swing blindly into her Listen Stance [R]. Bait the stance with feints, attack from behind, or punish during her cooldown recovery."
             )
         }
     },

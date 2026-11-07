@@ -194,11 +194,11 @@ INTRO = {
         _idle(0.35, 0.70, pose="tenugui_tighten_plant"),
         _idle(0.70, 1.0, pose="peasant_rebel_stance"),
     ],
-    # Ichi (Lâmina Cega): Postura de escuta sensorial, saque relâmpago Gyaku-Iai em leque e embainhar sereno
+    # Ichi (Lâmina Cega): Caminhada tateante da bengala -> Destrave do aço pelo polegar -> Guarda serena
     "ichi": [
-        _idle(0.0, 0.25, pose="listen_stance"),
-        _seg(0.25, 0.65, "ATTACK", 0.0, 1.0),
-        _idle(0.65, 1.0, pose="sheath_click"),
+        _idle(0.0, 0.35, pose="cane_ground_listen"),
+        _idle(0.35, 0.70, pose="blade_unlock_thumb"),
+        _idle(0.70, 1.0, pose="serene_ready_stance"),
     ],
     # Valerius (Necromante Prussiano): Vórtice fúnebre, corte cerimonial da foice e postura aristocrática
     "valerius": [
@@ -334,12 +334,11 @@ VICTORY = {
         _idle(0.38, 0.75, pose="sweat_wipe"),
         _idle(0.75, 1.0, pose="farmer_proud_laugh"),
     ],
-    # Ichi: Corte em arco, embainhar silencioso com clique oco e postura serena
+    # Ichi: Limpeza da lâmina no forro da manga -> Embainhar com clique audível -> Repouso sereno da bengala
     "ichi": [
-        _idle(0.0, 0.15),
-        _seg(0.15, 0.55, "ATTACK", 0.0, 0.7),
-        _idle(0.55, 0.85, pose="sheath_click"),
-        _idle(0.85, 1.0),
+        _idle(0.0, 0.38, pose="blade_sleeve_wipe"),
+        _idle(0.38, 0.72, pose="sheath_click_lock"),
+        _idle(0.72, 1.0, pose="serene_cane_rest"),
     ],
     # Valerius: Giro cerimonial da foice, estalar de dedos e reverência prussiana solene
     "valerius": [
@@ -394,7 +393,7 @@ BEATS = {
         "benkei": [(0.18, "sfx:dodge_whoosh"), (0.42, "sfx:obstacle_hit"), (0.44, "fx:sparks"), (0.72, "fx:petals")],
         "orin": [(0.22, "sfx:sword_slash"), (0.50, "fx:petals")],
         "goro": [(0.24, "sfx:obstacle_hit"), (0.45, "sfx:sword_slash"), (0.50, "fx:sparks")],
-        "ichi": [(0.18, "sfx:dodge_whoosh"), (0.32, "sfx:sword_slash"), (0.68, "sfx:parry")],
+        "ichi": [(0.12, "sfx:dodge_whoosh"), (0.48, "sfx:parry"), (0.75, "fx:petals")],
         "valerius": [(0.22, "sfx:sword_slash"), (0.45, "fx:smoke")],
         "seimei": [(0.20, "sfx:kunai_throw"), (0.40, "fx:sparks"), (0.65, "fx:petals")],
         "daiki": [(0.25, "sfx:dodge_whoosh"), (0.48, "sfx:obstacle_hit")],
@@ -419,7 +418,7 @@ BEATS = {
         "benkei": [(0.15, "sfx:sword_slash"), (0.38, "sfx:parry"), (0.40, "fx:sparks"), (0.78, "fx:petals")],
         "orin": [(0.24, "sfx:sword_slash"), (0.40, "fx:petals"), (0.75, "fx:petals")],
         "goro": [(0.15, "sfx:obstacle_hit"), (0.40, "sfx:sword_slash"), (0.45, "fx:sparks")],
-        "ichi": [(0.15, "sfx:sword_slash"), (0.55, "sfx:parry"), (0.65, "fx:petals")],
+        "ichi": [(0.12, "sfx:sword_slash"), (0.50, "sfx:parry"), (0.75, "fx:petals")],
         "valerius": [(0.18, "sfx:sword_slash"), (0.50, "fx:smoke")],
         "seimei": [(0.15, "sfx:kunai_throw"), (0.35, "fx:sparks"), (0.70, "fx:petals")],
         "daiki": [(0.18, "sfx:dodge_whoosh"), (0.44, "sfx:obstacle_hit")],

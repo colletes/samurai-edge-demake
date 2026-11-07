@@ -830,6 +830,10 @@ def draw_portrait_face_3d(
 
     is_fierce = getattr(c, "is_melee", False) or state in ("ATTACK", "IAI_STARTUP", "RYUU_TSUI_SEN", "GATOTSU_CHARGE", "ZEROSHIKI")
     is_shocked = state in ("DYING_FREEZE", "STUNNED")
+    is_blind_char = style.get("blind_eyes", False)
+    if is_blind_char and not is_fierce and not is_shocked:
+        eyes_closed = True
+
     if is_fierce:
         tilt += 0.16
     elif is_shocked:
@@ -968,7 +972,7 @@ def draw_portrait_face_3d(
             _p3(ir_x + pupil_w * 0.3, ir_y - pupil_h * 0.6, 0.004),
             _p3(ir_x - pupil_w * 0.3, ir_y - pupil_h * 0.6, 0.004),
         ]
-        pupil_col = style.get("pupil", (24, 20, 26))
+        pupil_col = (205, 218, 238) if is_blind_char else style.get("pupil", (24, 20, 26))
         pygame.draw.polygon(surface, pupil_col, pupil_poly)
 
         # Núcleo brilhante da íris (profundidade anime)

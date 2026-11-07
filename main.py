@@ -837,6 +837,8 @@ def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: f
         success = fighter.trigger_silk_glide(dwx, dwy, particles=particles, banners=banners, opponent=opponent, game_map=game_map, projectiles=projectiles)
     elif isinstance(fighter, GoroFarmer):
         success = fighter.trigger_mud_roll(dwx, dwy, particles=particles, game_map=game_map)
+    elif isinstance(fighter, IchiBlade):
+        success = fighter.trigger_cane_slip(dwx, dwy, particles=particles, game_map=game_map)
     else:
         # Demais personagens (BlueSamurai, YellowNinja, AmericanNinja, GrayNinja, PurpleNinja, SaitouSamurai)
         if hasattr(fighter, "trigger_roll"):

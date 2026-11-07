@@ -1,14 +1,14 @@
 """
-Ichi, a Lâmina Cega e Mestra do Shikomizue (Ciclo 3):
+Ichi, a Lâmina Cega e Mestra do Shikomizue (Ciclo 3 — Overhaul 2.18):
 - Espadachim cega extraordinária de audição aguçada e reflexos imperceptíveis (homenagem à lenda de Zatoichi).
 - Postura serena e equilibrada, ouvindo o respirar do vento, passos e corte de ar do adversário.
 - Quimono de viagem ameixa-escuro com forro e colarinho branco puro em malha contínua 3D, envolto por xale de viagem.
-- Cabelos negros refinados presos em coque tradicional com grampo de madeira nobre (kanzashi).
-- Olhos leitosos fechados em contemplação serena e foco absoluto.
+- Cabelos negros refinados presos em coque tradicional elevado (Mage) com grampo de madeira nobre (kanzashi).
+- Olhos suaves leitosos/cerrados em contemplação serena e foco absoluto.
 - Espada-Bengala Oculta (Shikomizue):
   - Bastão de madeira nobre lisa de cerejeira parecendo uma bengala de caminhada inofensiva.
   - Lâmina interna de aço dobrado de altíssima pureza com fio de navalha e rastro prateado reluzente.
-  - Ordenação dinâmica Painter's Algorithm para oclusão 360°.
+  - Ordenação dinâmica Painter's Algorithm para oclusão 360° e rig de membros com Pose LERP 0.08s.
 """
 import math
 import pygame
@@ -88,6 +88,8 @@ MATERIALS = {
     "geta": "wood",
 }
 
+LEGACY_MATERIALS = {k: "matte" for k in MATERIALS}
+
 
 def pal() -> dict:
     return PALETTE
@@ -102,6 +104,7 @@ def idle_arms(c):
     Postura da Bengala de Viagem de Ichi:
     - Mão direita apoia o topo da empunhadura da shikomizue em repouso vertical.
     - Mão esquerda levemente apoiada no corpo da bengala.
+    - Respiração viva contínua.
     """
     breathe = math.sin(c.walk_timer * 2.2) * 0.010
     tz = c.torso_z + breathe
@@ -141,7 +144,7 @@ def walk_arms(c):
 
 def attack_arms(c):
     """
-    Golpe Gyaku-Iai Cego:
+    Golpe Gyaku-Iai Cego (Opção A):
     - O aço prateado se desvencilha da madeira da bengala em fração de segundo.
     - Saque horizontal relâmpago com pegada invertida.
     """
@@ -156,8 +159,17 @@ def attack_arms(c):
         return left, right
 
     if prog < 0.25:
-        left = (bx + fx * 0.12 + px * 0.08, by + fy * 0.12 + py * 0.08, tz + 0.10)
-        right = (bx + fx * 0.10 - px * 0.08, by + fy * 0.10 - py * 0.08, tz + 0.14)
+        p_sub = prog / 0.25
+        left = (
+            bx + fx * (0.14 - p_sub * 0.02) + px * (0.06 + p_sub * 0.04),
+            by + fy * (0.14 - p_sub * 0.02) + py * (0.06 + p_sub * 0.04),
+            tz + 0.04 + p_sub * 0.06
+        )
+        right = (
+            bx + fx * (0.16 - p_sub * 0.06) + px * (0.08 - p_sub * 0.16),
+            by + fy * (0.16 - p_sub * 0.06) + py * (0.08 - p_sub * 0.16),
+            tz + 0.16 - p_sub * 0.02
+        )
     elif prog < 0.65:
         p_sub = (prog - 0.25) / 0.40
         arc_ang = -1.2 + p_sub * 2.5
@@ -166,10 +178,176 @@ def attack_arms(c):
         ry = by + fy * 0.25 + py * (math.sin(arc_ang) * 0.28)
         right = (rx, ry, tz + 0.12)
     else:
-        left = (bx - fx * 0.06 + px * 0.10, by - fy * 0.06 + py * 0.10, tz + 0.09)
-        right = (bx + fx * 0.28 + px * 0.22, by + fy * 0.28 + py * 0.22, tz + 0.13)
+        p_sub = (prog - 0.65) / 0.35
+        left = (
+            bx - fx * (0.10 - p_sub * 0.04) + px * (0.12 - p_sub * 0.02),
+            by - fy * (0.10 - p_sub * 0.04) + py * (0.12 - p_sub * 0.02),
+            tz + 0.08 + p_sub * 0.01
+        )
+        right = (
+            bx + fx * (0.28 - p_sub * 0.04) + px * (0.22 - p_sub * 0.06),
+            by + fy * (0.28 - p_sub * 0.04) + py * (0.22 - p_sub * 0.06),
+            tz + 0.12 + p_sub * 0.02
+        )
 
     return left, right
+
+
+def _hands(c):
+    """Calcula posição instantânea das mãos para ordenação de profundidade e renderização articulada."""
+    extra = c.extra_props if c.extra_props else {}
+    pose = extra.get("pose")
+    u = extra.get("seg_u", extra.get("p", 0.0))
+    bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
+
+    # 1. Esquiva Evasiva / Cane Tap Slip (13 i-frames)
+    if extra.get("is_roll", False) or pose in ("cane_slip", "cane_tap_slip"):
+        roll_p = extra.get("roll_prog", u)
+        slip_s = math.sin(roll_p * math.pi)
+        right = (
+            bx + fx * (0.16 + slip_s * 0.08) + px * 0.10,
+            by + fy * (0.16 + slip_s * 0.08) + py * 0.10,
+            tz + 0.14 - slip_s * 0.05
+        )
+        left = (
+            bx - fx * (0.04 + slip_s * 0.06) - px * 0.08,
+            by - fy * (0.04 + slip_s * 0.06) - py * 0.08,
+            tz + 0.06 - slip_s * 0.03
+        )
+        return left, right
+
+    # 2. Postura de Escuta Sensorial (Listen Stance)
+    if pose == "listen_stance" or extra.get("is_listen", False):
+        listen_w = math.sin(u * math.pi * 3.0) * 0.008
+        right = (
+            bx + fx * 0.14 + px * 0.05,
+            by + fy * 0.14 + py * 0.05,
+            tz + 0.18 + listen_w
+        )
+        left = (
+            bx + fx * 0.12 + px * 0.04,
+            by + fy * 0.12 + py * 0.04,
+            tz + 0.06 + listen_w
+        )
+        return left, right
+
+    # 3. Contra-Ataque Perfurante / Blind Counter-Thrust
+    if pose in ("counter_thrust", "blind_counter_thrust") or extra.get("is_pierce", False):
+        left = (bx - fx * 0.08 + px * 0.12, by - fy * 0.08 + py * 0.12, tz + 0.10)
+        right = (bx + fx * 0.38 - px * 0.02, by + fy * 0.38 - py * 0.02, tz + 0.14)
+        return left, right
+
+    # 4. Defesa com a Bainha / Sheath Parry
+    if pose in ("sheath_parry", "parry_reaction") or extra.get("is_parry", False):
+        left = (bx + fx * 0.16 - px * 0.08, by + fy * 0.16 - py * 0.08, tz + 0.16)
+        right = (bx + fx * 0.20 + px * 0.08, by + fy * 0.20 + py * 0.08, tz + 0.18)
+        return left, right
+
+    # 5. Intro Fase 1: Caminhada Tateante da Bengala (0.00 -> 0.35)
+    if pose == "cane_ground_listen":
+        tap = math.sin(u * math.pi * 3.5) * 0.06
+        right = (
+            bx + fx * (0.16 + tap * 0.05) + px * 0.08,
+            by + fy * (0.16 + tap * 0.05) + py * 0.08,
+            tz + 0.16 + abs(tap) * 0.02
+        )
+        left = (
+            bx + fx * 0.12 - px * 0.06,
+            by + fy * 0.12 - py * 0.06,
+            tz + 0.05
+        )
+        return left, right
+
+    # 6. Intro Fase 2: Destrave do Aço com o Polegar (0.35 -> 0.70)
+    if pose == "blade_unlock_thumb":
+        click = math.sin(min(1.0, u * 1.5) * (math.pi * 0.5))
+        left = (
+            bx + fx * 0.14 + px * 0.06,
+            by + fy * 0.14 + py * 0.06,
+            tz + 0.06
+        )
+        right = (
+            bx + fx * 0.15 + px * (0.07 + click * 0.015),
+            by + fy * 0.15 + py * (0.07 + click * 0.015),
+            tz + 0.16 + click * 0.025
+        )
+        return left, right
+
+    # 7. Intro Fase 3: Postura Serena de Combate com Respiração Viva (0.70 -> 1.00)
+    if pose == "serene_ready_stance":
+        breathe = math.sin(u * math.pi * 4.0) * 0.010
+        right = (
+            bx + fx * 0.16 + px * 0.08,
+            by + fy * 0.16 + py * 0.08,
+            tz + 0.17 + breathe
+        )
+        left = (
+            bx + fx * 0.14 + px * 0.06,
+            by + fy * 0.14 + py * 0.06,
+            tz + 0.05 + breathe * 0.5
+        )
+        return left, right
+
+    # 8. Vitória Fase 1: Limpeza da Lâmina no Forro da Manga (0.00 -> 0.38)
+    if pose == "blade_sleeve_wipe":
+        wipe = math.sin(u * math.pi)
+        left = (
+            bx + fx * 0.12 - px * 0.10,
+            by + fy * 0.12 - py * 0.10,
+            tz + 0.12
+        )
+        right = (
+            bx + fx * 0.14 - px * (0.06 + wipe * 0.08),
+            by + fy * 0.14 - py * (0.06 + wipe * 0.08),
+            tz + 0.14 - wipe * 0.04
+        )
+        return left, right
+
+    # 9. Vitória Fase 2: Embainhar com Clique Audível (0.38 -> 0.72)
+    if pose == "sheath_click_lock":
+        slide = min(1.0, u * 1.2)
+        left = (
+            bx + fx * 0.14 + px * 0.06,
+            by + fy * 0.14 + py * 0.06,
+            tz + 0.04
+        )
+        right = (
+            bx + fx * 0.15 + px * (0.08 - slide * 0.01),
+            by + fy * 0.15 + py * (0.08 - slide * 0.01),
+            tz + 0.22 - slide * 0.06
+        )
+        return left, right
+
+    # 10. Vitória Fase 3: Repouso Sereno da Bengala (0.72 -> 1.00)
+    if pose == "serene_cane_rest":
+        breathe = math.sin(u * math.pi * 4.0) * 0.010
+        right = (
+            bx + fx * 0.16 + px * 0.08,
+            by + fy * 0.16 + py * 0.08,
+            tz + 0.16 + breathe
+        )
+        left = (
+            bx + fx * 0.14 + px * 0.06,
+            by + fy * 0.14 + py * 0.06,
+            tz + 0.03 + breathe * 0.6
+        )
+        return left, right
+
+    # 11. Ataque de Golpe Primário / Secundário
+    if getattr(c, "is_melee", False):
+        return attack_arms(c)
+
+    # 12. Movimento / Caminhada
+    if getattr(c, "is_moving", False):
+        return walk_arms(c)
+
+    # 13. Padrão Idle
+    return idle_arms(c)
+
+
+def get_arms(c):
+    """Interface padrão para consulta modular de membros superiores articulados."""
+    return _hands(c)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -179,14 +357,13 @@ def attack_arms(c):
 def draw_behind(c):
     """
     Camada traseira (Painter's Algorithm):
-    - Coque nobre elevado com kanzashi de cerejeira (se visto de costas).
-    - Pontas do xale de viagem caindo pelas costas.
+    - Coque tradicional elevado (Mage) com kanzashi de cerejeira (se visto de costas).
+    - Pontas do xale de viagem caindo pelas costas em malha contínua 3D.
     - Se a bengala estiver atrás do corpo, desenha aqui antes do quimono.
     """
     P = pal()
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
     hz = c.head_z
-    hw = c.head_w
     d_torso = mk.depth(c, bx, by)
 
     # Coque tradicional elevado (Mage) nas costas da cabeça
@@ -217,7 +394,7 @@ def draw_behind(c):
     )
 
     # Ordenação dinâmica da bengala
-    hand_l, hand_r = idle_arms(c)
+    hand_l, hand_r = _hands(c)
     w_mid = ((hand_l[0] + hand_r[0]) * 0.5, (hand_l[1] + hand_r[1]) * 0.5)
     if mk.depth(c, w_mid[0], w_mid[1]) < d_torso:
         _render_shikomizue(c, hand_l, hand_r)
@@ -249,53 +426,74 @@ def draw_legs(c):
         draw_ribbon_mesh_3d(
             c.surface, c.camera,
             spine_points=[top, knee, hem],
-            widths=[0.115, 0.125, 0.135],
-            depth_thick=0.100,
+            widths=[0.115, 0.125, 0.130],
+            depth_thick=0.032,
             colors=[P["kimono"], P["kimono_dark"]],
-            side_vec=(c.px, c.py, 0.0),
-            normal_vec=(c.fx, c.fy, 0.0),
-            outline=True,
-            alpha=c.alpha,
-        )
-
-        # Meia Tabi branca em malha contínua descendo do quimono até o calçado
-        draw_ribbon_mesh_3d(
-            c.surface, c.camera,
-            spine_points=[hem, ankle],
-            widths=[0.065, 0.054],
-            depth_thick=0.054,
-            colors=[P["tabi"], P["tabi"]],
             side_vec=(c.px, c.py, 0.0),
             normal_vec=(c.fx, c.fy, 0.0),
             outline=False,
             alpha=c.alpha,
         )
 
-        # Calçado Geta de madeira com tiras escuras
-        flen, fwidth = 0.12, 0.062
-        mk.obox(c, (foot[0] - c.fx * 0.02, foot[1] - c.fy * 0.02, foot[2]), (c.fx, c.fy, 0.0), flen, fwidth, 0.030, P["geta"])
-        mk.obox(c, (foot[0] + c.fx * 0.01, foot[1] + c.fy * 0.01, foot[2] + 0.025), (c.fx, c.fy, 0.0), 0.04, 0.066, 0.018, P["strap"], outline=False)
+        # Bainha inferior com forro claro
+        mk.band(c, [
+            (hem[0] - c.px * 0.055, hem[1] - c.py * 0.055, hem[2]),
+            (hem[0] + c.px * 0.055, hem[1] + c.py * 0.055, hem[2]),
+            (hem[0] + c.px * 0.052, hem[1] + c.py * 0.052, hem[2] - 0.02),
+            (hem[0] - c.px * 0.052, hem[1] - c.py * 0.052, hem[2] - 0.02),
+        ], P["kimono_trim"])
 
+        # Tornozelo com meia Tabi branca
+        draw_tapered_frustum_3d(
+            c.surface, c.camera,
+            hem, ankle,
+            w_start=0.040, h_start=0.038,
+            w_end=0.034, h_end=0.032,
+            color=P["tabi"],
+            up=(c.fx, c.fy, 0.0),
+            outline=False,
+            alpha=c.alpha,
+        )
 
-def draw_obi(c):
-    """Faixa Obi estreita com cordão dourado (obijime) no centro."""
-    P = pal()
-    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
-    z = c.pelvis_z + 0.065
-
-    mk.cbox(c, bx, by, z, c.pelvis_w - 0.005, c.pelvis_w * 0.72, 0.075, P["obi"])
-    mk.cbox(c, bx + fx * 0.082, by + fy * 0.082, z + 0.015, c.pelvis_w - 0.01, 0.014, 0.016, P["obijime"], outline=False)
+        # Calçado Geta de madeira tradicional
+        sole_pos = (foot[0] + c.fx * 0.015, foot[1] + c.fy * 0.015, foot[2] + 0.012)
+        mk.obox(c, sole_pos, (c.fx, c.fy, 0.0), 0.080, 0.038, 0.018, P["geta"], texture="wood")
+        # Correias (Hanao)
+        mk.obox(c, (sole_pos[0] + c.fx * 0.01, sole_pos[1] + c.fy * 0.01, sole_pos[2] + 0.012), (c.px, c.py, 0.0), 0.036, 0.010, 0.010, P["strap"], outline=False)
 
 
 def draw_torso(c):
     """
-    Tronco elegante de espadachim cega:
-    - Quimono ameixa cruzado sobre colarinho branco puro em V.
-    - Xale de viagem cinza sobre os ombros.
+    Tronco e Quimono de Ichi:
+    - Obi elegante com cordão Obijime dourado.
+    - Colarinho branco puro em V (Juban) e decote modesto.
+    - Xale de viagem cinza envolto nos ombros.
     """
     P = pal()
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
-    front = 0.088
+    front = 0.065
+
+    # Torso principal do quimono ameixa
+    torso_top = (bx, by, tz + 0.24)
+    torso_mid = (bx, by, tz + 0.12)
+    torso_bot = (bx, by, tz + 0.01)
+
+    draw_ribbon_mesh_3d(
+        c.surface, c.camera,
+        spine_points=[torso_top, torso_mid, torso_bot],
+        widths=[0.160, 0.150, 0.145],
+        depth_thick=0.080,
+        colors=[P["kimono"], P["kimono_dark"]],
+        side_vec=(px, py, 0.0),
+        normal_vec=(fx, fy, 0.0),
+        outline=False,
+        alpha=c.alpha,
+    )
+
+    # Faixa Obi preta ajustada na cintura
+    mk.obox(c, (bx, by, tz + 0.07), (0.0, 0.0, 1.0), 0.075, 0.155, 0.086, P["obi"], outline=False)
+    # Cordão Obijime dourado no centro do Obi
+    mk.obox(c, (bx + fx * (front + 0.005), by + fy * (front + 0.005), tz + 0.07), (px, py, 0.0), 0.156, 0.008, 0.008, P["obijime"], outline=False)
 
     if mk.depth(c, fx, fy) > -0.05:
         # Colarinho interno branco (Juban)
@@ -307,7 +505,7 @@ def draw_torso(c):
         # Pele do decote
         mk.obox(c, (bx + fx * (front - 0.006), by + fy * (front - 0.006), tz + 0.14), (0.0, 0.0, 1.0), 0.08, 0.045, 0.014, P["skin"], up=(fx, fy, 0.0), outline=False)
 
-        # Xale de viagem cinza cobrindo os ombros e clavícula
+        # Xale de viagem cobrindo os ombros e clavícula
         mk.obox(c, (bx + fx * 0.03, by + fy * 0.03, tz + 0.21), (0.0, 0.0, 1.0), 0.16, 0.15, 0.045, P["scarf"], up=(fx, fy, 0.0), outline=False)
 
 
@@ -327,8 +525,8 @@ def draw_arm(c, shoulder, hand, side):
 def draw_head(c):
     """
     Cabeça e Cabelos de Ichi:
-    - Cabelo negro com calota esculpida e mechas fluidas.
-    - Feições serenas com olhos leitosos cegos via draw_portrait_face_3d.
+    - Feições serenas com olhos suaves cerrados/leitosos via draw_portrait_face_3d.
+    - Cabelo negro com calota esculpida, franja contornada e coque tradicional Mage alto com Kanzashi dourado.
     """
     P = pal()
     bx, by, hz, fx, fy, px, py, hw = c.base_x, c.base_y, c.head_z, c.fx, c.fy, c.px, c.py, c.head_w
@@ -345,13 +543,43 @@ def draw_head(c):
         alpha=c.alpha,
     )
 
+    # Coque tradicional elevado (Mage) no topo posterior
+    bun_pos = (bx - fx * 0.045, by - fy * 0.045, hz + 0.165)
+    mk.obox(c, bun_pos, (-fx, -fy, 0.0), 0.065, 0.075, 0.065, P["hair_dark"], outline=True)
+    # Grampo Kanzashi de madeira nobre com ponta dourada
+    mk.obox(c, (bun_pos[0] - px * 0.08, bun_pos[1] - py * 0.08, bun_pos[2] + 0.01), (px, py, 0.0), 0.16, 0.014, 0.014, P["kanzashi"], outline=False)
+    mk.obox(c, (bun_pos[0] + px * 0.08, bun_pos[1] + py * 0.08, bun_pos[2] + 0.01), (px, py, 0.0), 0.02, 0.018, 0.018, P["kanzashi_gold"], outline=False)
+
+    # Mechas laterais (tsuya-kami) emoldurando as maçãs do rosto
+    for s in (-1.0, 1.0):
+        lock_top = (bx + fx * 0.02 + px * 0.052 * s, by + fy * 0.02 + py * 0.052 * s, hz + 0.12)
+        lock_bot = (bx + fx * 0.03 + px * 0.048 * s, by + fy * 0.03 + py * 0.048 * s, hz + 0.02)
+        draw_tapered_frustum_3d(
+            c.surface, c.camera,
+            lock_top, lock_bot,
+            w_start=0.018, h_start=0.012,
+            w_end=0.010, h_end=0.008,
+            color=P["hair_dark"],
+            up=(fx, fy, 0.0),
+            outline=False,
+            alpha=c.alpha,
+        )
+
+    # Franja suave acima das sobrancelhas
+    bang_pos = (bx + fx * 0.055, by + fy * 0.055, hz + 0.122)
+    mk.obox(c, bang_pos, (px, py, 0.0), 0.09, 0.025, 0.018, P["hair_dark"], outline=False)
+
+    # Rostinho sereno em alta definição com olhos cerrados e lábios delicados
+    draw_portrait_face_3d(c, char_type="ichi")
+    c._face_drawn = True
+
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Renderização da Shikomizue (Espada-Bengala Oculta) e Efeitos
 # ---------------------------------------------------------------------------------------------------------------------
 
 def _draw_cane_scabbard(c, hand_pt, direction, length=0.88):
-    """Bainha/corpo de madeira nobre da bengala de caminhada."""
+    """Bainha/corpo de madeira nobre de cerejeira da bengala de caminhada."""
     P = pal()
     d = mk.norm(direction)
     mk.obox(c, hand_pt, d, length, 0.030, 0.030, P["cane_wood"], texture="wood")
@@ -363,9 +591,11 @@ def _draw_shikomizue_blade(c, hand_pt, direction, length=0.82):
     P = pal()
     d = mk.norm(direction)
 
+    # Empunhadura de cerejeira (topo da bengala que se solta)
     mk.obox(c, mk.add(hand_pt, d, -0.15), d, 0.15, 0.032, 0.032, P["cane_wood"], texture="wood")
     mk.obox(c, hand_pt, d, 0.022, 0.036, 0.036, P["brass_fitting"], outline=False)
 
+    # Lâmina de aço retificado com linha de corte
     mk.obox(c, mk.add(hand_pt, d, 0.022), d, length, 0.034, 0.020, P["steel_blade"])
     mk.obox(c, mk.add(hand_pt, d, 0.030), d, max(0.0, length - 0.02), 0.014, 0.022, P["steel_edge"], outline=False)
 
@@ -376,13 +606,18 @@ def _render_shikomizue(c, left_hand, right_hand):
     """Renderiza a Shikomizue e os cortes Gyaku-Iai em combate."""
     P = pal()
     fx, fy, px, py = c.fx, c.fy, c.px, c.py
+    extra = c.extra_props if c.extra_props else {}
+    pose = extra.get("pose")
+    u = extra.get("seg_u", extra.get("p", 0.0))
 
+    # Mãos humanas
     for hand in (left_hand, right_hand):
         mk.cbox(c, hand[0], hand[1], hand[2] - 0.015, 0.048, 0.048, 0.045, P["skin"], outline=True)
 
+    # A. Ataque Primário (Gyaku-Iai) ou Contra-Ataque (Pierce)
     if c.is_melee:
         prog = c.atk_progress
-        is_pierce = c.extra_props.get("is_pierce", False) if c.extra_props else False
+        is_pierce = extra.get("is_pierce", False)
 
         if is_pierce:
             b_dir = mk.norm((fx * 0.95, fy * 0.95, 0.0))
@@ -405,10 +640,45 @@ def _render_shikomizue(c, left_hand, right_hand):
                     prev_mid = (mid[0] - fx * 0.10, mid[1] - fy * 0.10, mid[2] + 0.03)
                     mk.band(c, (mid, tip, prev_tip, prev_mid), P["slash_silver"] + (210,))
                     mk.band(c, (mk.lerp(mid, tip, 0.6), tip, prev_tip, mk.lerp(prev_mid, prev_tip, 0.6)), P["slash_core"] + (250,))
-    else:
-        # Bengala de caminhada vertical apoiada no chão
+        return
+
+    # B. Intro e Vitória
+    if pose == "blade_unlock_thumb":
+        # Destrave do aço pelo polegar: bengala com 2cm de lâmina exposta
         cane_dir = mk.norm((fx * 0.08 + px * 0.05, fy * 0.08 + py * 0.05, -0.98))
-        _draw_cane_scabbard(c, right_hand, cane_dir, length=0.88)
+        _draw_cane_scabbard(c, left_hand, cane_dir, length=0.86)
+        # Ponta de aço exposta
+        mk.obox(c, (left_hand[0], left_hand[1], left_hand[2] + 0.03), (0.0, 0.0, 1.0), 0.035, 0.024, 0.016, P["steel_blade"])
+        return
+
+    if pose == "blade_sleeve_wipe":
+        # Limpeza zen da lâmina no forro da manga
+        b_dir = mk.norm((-fx * 0.30 - px * 0.80, -fy * 0.30 - py * 0.80, -0.20))
+        _draw_shikomizue_blade(c, right_hand, b_dir, length=0.78)
+        _draw_cane_scabbard(c, left_hand, mk.norm((fx * 0.20 + px * 0.20, fy * 0.20 + py * 0.20, -0.92)), length=0.85)
+        return
+
+    if pose == "sheath_click_lock":
+        if u < 0.82:
+            # Deslizando de volta na madeira
+            b_dir = mk.norm((0.0, 0.0, -0.98))
+            _draw_shikomizue_blade(c, right_hand, b_dir, length=0.76)
+            _draw_cane_scabbard(c, left_hand, mk.norm((0.0, 0.0, -0.98)), length=0.86)
+        else:
+            # Travada e fechada
+            cane_dir = mk.norm((fx * 0.08 + px * 0.05, fy * 0.08 + py * 0.05, -0.98))
+            _draw_cane_scabbard(c, right_hand, cane_dir, length=0.88)
+        return
+
+    # C. Defesa com a Bainha (Sheath Parry)
+    if pose in ("sheath_parry", "parry_reaction") or extra.get("is_parry", False):
+        p_dir = mk.norm((px * 0.90 + fx * 0.15, py * 0.90 + fy * 0.15, 0.35))
+        _draw_cane_scabbard(c, left_hand, p_dir, length=0.88)
+        return
+
+    # D. Estado Padrão: Bengala de caminhada vertical apoiada no chão
+    cane_dir = mk.norm((fx * 0.08 + px * 0.05, fy * 0.08 + py * 0.05, -0.98))
+    _draw_cane_scabbard(c, right_hand, cane_dir, length=0.88)
 
 
 def draw_front(c, left_hand, right_hand):
