@@ -28,7 +28,6 @@ STUCK_WEAPON = {
     "FOREHEAD_PIN": "kunai", "HEART_THROAT_STAB": "blade",
     "PINNED_TO_EARTH": "arrow", "HAMAYA_HOLY_PIERCE": "arrow",
     "SPEAR_HEART_SLIDE": "naginata", "TRAP_AND_EXECUTE": "kunai",
-    "SHADOW_LOTUS_FLURRY": "dual_kodachi",
 }
 
 
@@ -515,9 +514,10 @@ class VoxelCorpse:
                                  piece_type="legs", region=lambda c: c.band(WAIST_Z, None), rot_target=75.0, rot_speed=135.0, rot_delay=0.22))
 
         elif style == "SHADOW_LOTUS_FLURRY":
-            # Chiyo Finisher B: Lótus das Sombras - Duas Kodachis cravadas em cruz no peito com fontes de sangue
-            self.pieces.append(P(x, y, 0.0, 0.28, 0.22, 1.05, self.col_torso,
-                                 piece_type="impaled_body", rot_target=FALL_DEG, rot_speed=125.0, rot_delay=0.15))
+            # Chiyo Finisher B: Lótus das Sombras — Oponente é completamente desintegrado no tornado de sangue (não sobra nada)
+            self.pieces = []
+            for _ in range(48):
+                self._add_blood_drop(spread=1.1)
 
         elif style in ("KAMAITACHI_CHAIN_DECAP", "MURASAKI_DECAP", "CLEAN_DECAP", "MOUJIN_SHUNDAN"):
             self.headless_body = P(x, y, 0.0, 0.28, 0.22, 0.85, self.col_torso, piece_type="body",

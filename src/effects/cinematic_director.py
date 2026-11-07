@@ -1915,7 +1915,7 @@ class CinematicDirector:
                             vic.extra_props["kneel_prog"] = 0.75 + u * 0.25
 
                     elif self.finisher_style == "SHADOW_LOTUS_FLURRY":
-                        # Chiyo: Finisher B (EIGEN RANBU / Lótus das Sombras - com fontes de sangue das kodachis)
+                        # Chiyo: Finisher B (EIGEN RANBU / Lótus das Sombras - Tornado de sangue que desintegra o oponente)
                         anim_p = prog
                         try:
                             from src.audio.sound_manager import get_sound_manager
@@ -1938,21 +1938,22 @@ class CinematicDirector:
                         atk.wy = vic.wy + math.sin(spin_angle) * orbit_r
                         atk.set_facing(vic.wx, vic.wy)
 
-                        if particles is not None and 0.15 <= prog <= 0.85:
+                        # Tornado de sangue ascendente em vórtice espiral denso
+                        if particles is not None and 0.12 <= prog <= 0.95:
                             from src.effects.particles import BloodParticle, SparkParticle
-                            tip1_x = atk.wx + atk.facing_x * 0.45 + atk.facing_y * 0.35
-                            tip1_y = atk.wy + atk.facing_y * 0.45 - atk.facing_x * 0.35
-                            tip2_x = atk.wx + atk.facing_x * 0.45 - atk.facing_y * 0.35
-                            tip2_y = atk.wy + atk.facing_y * 0.45 + atk.facing_x * 0.35
-                            for tx, ty in ((tip1_x, tip1_y), (tip2_x, tip2_y)):
-                                if random.random() < 0.75:
-                                    bp = BloodParticle(tx, ty, 0.72)
-                                    bp.vz = random.uniform(2.4, 4.8)
-                                    bp.vx = random.uniform(-0.6, 0.6)
-                                    bp.vy = random.uniform(-0.6, 0.6)
-                                    particles.append(bp)
-                                    sp = SparkParticle(tx, ty, 0.70, color=(235, 45, 60))
-                                    particles.append(sp)
+                            for _ in range(4):
+                                v_ang = spin_angle * 1.6 + random.uniform(0, math.pi * 2)
+                                v_r = random.uniform(0.12, 0.70) * (1.0 + prog * 0.4)
+                                v_z = random.uniform(0.08, 1.95) * prog
+                                bx = vic.wx + math.cos(v_ang) * v_r
+                                by = vic.wy + math.sin(v_ang) * v_r
+                                bp = BloodParticle(bx, by, v_z)
+                                bp.vz = random.uniform(3.5, 7.2)
+                                bp.vx = -math.sin(v_ang) * random.uniform(1.2, 2.8)
+                                bp.vy = math.cos(v_ang) * random.uniform(1.2, 2.8)
+                                particles.append(bp)
+                                if random.random() < 0.45:
+                                    particles.append(SparkParticle(bx, by, v_z, color=(235, 35, 55)))
 
                         if prog >= 0.48 and not getattr(self, "chiyo_lotus_played", False):
                             self.chiyo_lotus_played = True
@@ -1960,14 +1961,20 @@ class CinematicDirector:
                                 sm.play(SoundEvent.SWORD_SLASH, volume_scale=1.1)
                                 sm.play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
 
-                        if prog < 0.65:
+                        # O oponente vai desaparecendo no tornado de sangue até sumir completamente (sem sobrar nada)
+                        if prog < 0.40:
                             vic.state = "DYING_FREEZE"
                             vic.extra_props["shiver"] = math.sin(prog * 45.0) * 0.02
-                            vic.extra_props["kneel_prog"] = (prog / 0.65) * 0.60
+                            vic.extra_props["kneel_prog"] = (prog / 0.40) * 0.40
+                            vic.alpha = 1.0
                         else:
                             vic.state = "DYING_FREEZE"
-                            vic.extra_props["kneel_prog"] = 0.60 + ((prog - 0.65) / 0.35) * 0.40
-                            vic.extra_props["shiver"] = math.sin(prog * 15.0) * 0.006
+                            vic.extra_props["shiver"] = math.sin(prog * 25.0) * 0.01
+                            fade_u = (prog - 0.40) / 0.50
+                            vic.alpha = max(0.0, min(1.0, 1.0 - fade_u))
+                            if vic.alpha <= 0.02:
+                                vic.alpha = 0.0
+                                vic.is_alive = False
 
                     elif self.finisher_style in ("PINNED_TO_EARTH", "ARROW_PIN"):
                         # Tomoe: Finisher A (Jifuu Kyoukyuu / Flecha Pregada à Terra)

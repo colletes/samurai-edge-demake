@@ -176,23 +176,23 @@ INTRO = {
         _seg(0.35, 0.70, "IDLE", 0.0, 1.0, pose="kodachi_spin_twirl", sheathed=False),
         _idle(0.70, 1.0, pose="kunoichi_feline_stance", sheathed=False),
     ],
-    # Benkei (Sōhei Warrior Monk): Bate o cabo de ferro da naginata no chão, ergue a manopla em desafio e assume guarda inabalável
+    # Benkei (2.15): Monge Guerreiro Sōhei (Giro de Haste -> Cravada Ishizuki -> Guarda de Ferro Viva)
     "benkei": [
-        _idle(0.0, 0.20),
-        _seg(0.20, 0.65, "ATTACK", 0.0, 1.0),
-        _idle(0.65, 1.0, pose="iron_guard"),
+        _idle(0.0, 0.35, pose="naginata_twirl_intro"),
+        _idle(0.35, 0.70, pose="ishizuki_plant"),
+        _idle(0.70, 1.0, pose="iron_guard"),
     ],
-    # O-Rin (Menestrel Shamisen): Dedilha o shamisen com o plectro bachi, gira com leveza e assume postura de cortesã
+    # O-Rin (Menestrel Shamisen): Dedilha as cordas -> Giro com mangas furisode -> Postura viva de cortesã
     "orin": [
-        _idle(0.0, 0.20),
-        _seg(0.20, 0.68, "ATTACK", 0.0, 1.0),
-        _idle(0.68, 1.0, pose="courtesan_stance"),
+        _idle(0.0, 0.35, pose="shamisen_tuning_pluck"),
+        _idle(0.35, 0.70, pose="furisode_flourish"),
+        _idle(0.70, 1.0, pose="courtesan_stance"),
     ],
-    # Goro (Fazendeiro da Kuwa): Descida da Kuwa rachando o solo, poeira e guarda de ferro
+    # Goro (Fazendeiro da Kuwa): Enxada no ombro -> Cospe de lado e crava no solo -> Postura rebelde
     "goro": [
-        _idle(0.0, 0.20),
-        _seg(0.20, 0.65, "ATTACK", 0.0, 1.0),
-        _idle(0.65, 1.0, pose="iron_guard"),
+        _idle(0.0, 0.35, pose="kuwa_shoulder_carry"),
+        _idle(0.35, 0.70, pose="tenugui_tighten_plant"),
+        _idle(0.70, 1.0, pose="peasant_rebel_stance"),
     ],
     # Ichi (Lâmina Cega): Postura de escuta sensorial, saque relâmpago Gyaku-Iai em leque e embainhar sereno
     "ichi": [
@@ -316,23 +316,23 @@ VICTORY = {
         _seg(0.40, 0.75, "IDLE", 0.0, 1.0, pose="kodachi_reverse_sheath", sheathed=False),
         _idle(0.75, 1.0, pose="kunoichi_triumphant", sheathed=True),
     ],
-    # Benkei: Apoia a naginata sobre os ombros, cruza os braços com presença de fortaleza
+    # Benkei (2.15): Chiburi em moinho helicoidal -> Pouso firme nos ombros -> Reverência Sōhei
     "benkei": [
-        _idle(0.0, 0.25),
-        _seg(0.25, 0.70, "ATTACK", 0.0, 0.5),
-        _idle(0.70, 1.0, pose="benkei_shoulder_rest"),
+        _idle(0.0, 0.38, pose="naginata_chiburi_mill"),
+        _idle(0.38, 0.75, pose="benkei_shoulder_rest"),
+        _idle(0.75, 1.0, pose="sohei_reverence"),
     ],
-    # O-Rin: Toca acorde melancólico, vira de costas e olha por cima do ombro com pétalas de higanbana
+    # O-Rin: Acorde triunfal kamaitachi -> Giro dando as costas -> Olhar por cima do ombro com pétalas de higanbana
     "orin": [
-        _idle(0.0, 0.20),
-        _seg(0.20, 0.55, "ATTACK", 0.0, 1.0),
-        _idle(0.55, 1.0, pose="orin_backward_glance"),
+        _idle(0.0, 0.38, pose="triumphant_chord"),
+        _idle(0.38, 0.75, pose="turning_retune"),
+        _idle(0.75, 1.0, pose="orin_backward_glance"),
     ],
-    # Goro: Pisotão sísmico triunfante, giro da enxada e descanso sobre o ombro
+    # Goro: Crava a enxada e apoia as mãos -> Enxuga suor com Tenugui -> Risada orgulhosa de camponês
     "goro": [
-        _idle(0.0, 0.20, pose="earth_stomp"),
-        _seg(0.20, 0.65, "ATTACK", 0.0, 0.5),
-        _idle(0.65, 1.0),
+        _idle(0.0, 0.38, pose="kuwa_earth_rest"),
+        _idle(0.38, 0.75, pose="sweat_wipe"),
+        _idle(0.75, 1.0, pose="farmer_proud_laugh"),
     ],
     # Ichi: Corte em arco, embainhar silencioso com clique oco e postura serena
     "ichi": [
@@ -391,7 +391,7 @@ BEATS = {
         "musketeer": [(0.15, "sfx:dodge_whoosh"), (0.45, "sfx:parry"), (0.75, "sfx:sword_slash")],
         "ren": [(0.26, "sfx:dodge_whoosh"), (0.50, "sfx:sword_slash"), (0.58, "fx:sparks")],
         "chiyo": [(0.02, "fx:smoke"), (0.02, "sfx:smoke_puff"), (0.30, "sfx:sword_slash"), (0.56, "sfx:sword_slash"), (0.60, "fx:petals")],
-        "benkei": [(0.24, "sfx:obstacle_hit"), (0.45, "sfx:sword_slash"), (0.50, "fx:sparks")],
+        "benkei": [(0.18, "sfx:dodge_whoosh"), (0.42, "sfx:obstacle_hit"), (0.44, "fx:sparks"), (0.72, "fx:petals")],
         "orin": [(0.22, "sfx:sword_slash"), (0.50, "fx:petals")],
         "goro": [(0.24, "sfx:obstacle_hit"), (0.45, "sfx:sword_slash"), (0.50, "fx:sparks")],
         "ichi": [(0.18, "sfx:dodge_whoosh"), (0.32, "sfx:sword_slash"), (0.68, "sfx:parry")],
@@ -416,7 +416,7 @@ BEATS = {
         "musketeer": [(0.20, "sfx:parry"), (0.48, "sfx:flintlock_shot"), (0.75, "fx:smoke")],
         "ren": [(0.08, "sfx:dodge_whoosh"), (0.34, "sfx:sword_clash"), (0.36, "fx:sparks"), (0.68, "fx:petals")],
         "chiyo": [(0.08, "sfx:sword_slash"), (0.38, "sfx:parry"), (0.42, "fx:petals"), (0.72, "fx:petals")],
-        "benkei": [(0.28, "sfx:parry"), (0.35, "fx:sparks")],
+        "benkei": [(0.15, "sfx:sword_slash"), (0.38, "sfx:parry"), (0.40, "fx:sparks"), (0.78, "fx:petals")],
         "orin": [(0.24, "sfx:sword_slash"), (0.40, "fx:petals"), (0.75, "fx:petals")],
         "goro": [(0.15, "sfx:obstacle_hit"), (0.40, "sfx:sword_slash"), (0.45, "fx:sparks")],
         "ichi": [(0.15, "sfx:sword_slash"), (0.55, "sfx:parry"), (0.65, "fx:petals")],

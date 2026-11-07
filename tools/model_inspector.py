@@ -627,6 +627,48 @@ CHARACTER_ANIM_BUTTONS = {
         ("FINISHER_1", "F1. Finisher A: Triple Scissor Cleave (双刃十字)", 1.20),
         ("FINISHER_2", "F2. Finisher B: Shadow Lotus Flurry (影蓮乱舞)", 1.35),
     ],
+    "benkei": [
+        ("IDLE", "1. Idle (Postura do Monge Guardião)", 0.0),
+        ("WALK", "2. Walk (Passos Firmes de Tanque)", 0.0),
+        ("NAGINATA_CLEAVE", "3. Golpe 1: Varredura Circular 170°", 0.40),
+        ("NAGINATA_THRUST", "4. Golpe 2: Estocada Colossal 2.8m", 0.45),
+        ("NAGINATA_THROW", "5. Secundário: Arremesso Supersônico", 0.45),
+        ("TACKLE_CHARGE", "6. Desarmado: Tackle de Atropelo com Stun", 0.50),
+        ("ADAMANTINE_PUSH", "7. Terceira Ação: Adamantine Guard Push", 0.45),
+        ("PARRY_REACTION", "8. Reação: Guarda Defensiva de Ferro", 0.40),
+        ("INTRO", "9. Intro: Giro de Haste -> Cravada Ishizuki -> Guarda", 2.20),
+        ("VICTORY", "0. Vitória: Chiburi Helicoidal -> Descanso -> Reverência", 2.40),
+        ("FINISHER_1", "F1. Finisher A: Kongou Tataki-Otoshi (金剛叩落)", 1.25),
+        ("FINISHER_2", "F2. Finisher B: Naginata Souki (薙刀槍旗)", 1.30),
+    ],
+    "orin": [
+        ("IDLE", "1. Idle (Postura de Cortesã com Shamisen)", 0.0),
+        ("WALK", "2. Walk (Passo Leve e Fluido)", 0.0),
+        ("SONIC_CLEAVE_1", "3. Golpe 1: Kamaitachi Sônico (1 Lâmina)", 0.40),
+        ("SONIC_CLEAVE_2", "4. Golpe 2: Kamaitachi Duplo em V", 0.42),
+        ("RESONANCE_360", "5. Secundário: Ressonância Acústica 360°", 0.45),
+        ("SILK_GLIDE", "6. Esquiva: Deslize de Seda (Silk Sleeve Glide)", 0.40),
+        ("EVASIVE_CANCEL", "7. Cancelamento: Corte Sônico Evasivo", 0.38),
+        ("PARRY_REACTION", "8. Reação: Guarda Acústica de Seda", 0.40),
+        ("INTRO", "9. Intro: Afinação -> Giro Furisode -> Postura de Cortesã", 2.20),
+        ("VICTORY", "0. Vitória: Acorde Triunfal -> Giro Costas -> Pétalas", 2.40),
+        ("FINISHER_1", "F1. Finisher A: Kamaitachi Mince (鎌鼬千切)", 1.20),
+        ("FINISHER_2", "F2. Finisher B: Resonance Wind Gale (風鳴共鳴)", 1.30),
+    ],
+    "goro": [
+        ("IDLE", "1. Idle (Postura do Fazendeiro com Kuwa)", 0.0),
+        ("WALK", "2. Walk (Passadas Pesadas de Lavrador)", 0.0),
+        ("KUWA_HEAVY_CLEAVE", "3. Golpe Primário: Corte da Kuwa (Hiper-Inércia 2.4m)", 0.44),
+        ("EARTH_STOMP_ACTION", "4. Secundário: Pisotão Sísmico (Terremoto 4.2m)", 0.45),
+        ("MUD_ROLL", "5. Esquiva: Rolamento de Lama (Peasant Mud Roll)", 0.40),
+        ("POCKET_DIRT", "6. Cancelamento: Pocket Dirt (Terra nos Olhos)", 0.35),
+        ("IRON_GUARD", "7. Guarda: Defesa de Ferro com o Cabo da Kuwa", 0.40),
+        ("PARRY_REACTION", "8. Reação: Bloqueio Firme Telúrico", 0.40),
+        ("INTRO", "9. Intro: Enxada no Ombro -> Cravada no Solo -> Desafio", 2.20),
+        ("VICTORY", "0. Vitória: Apoio na Enxada -> Limpeza de Suor -> Risada", 2.40),
+        ("FINISHER_1", "F1. Finisher A: Kuwa Skull Cleave (鍬頭砕断)", 1.25),
+        ("FINISHER_2", "F2. Finisher B: Earthquake Stomp Crush (地鳴踏潰)", 1.30),
+    ],
 }
 # Aliases para chaves alternativas do catálogo
 CHARACTER_ANIM_BUTTONS["joe"] = CHARACTER_ANIM_BUTTONS["american"]
@@ -640,6 +682,9 @@ CHARACTER_ANIM_BUTTONS["musketeer"] = CHARACTER_ANIM_BUTTONS["julie"]
 CHARACTER_ANIM_BUTTONS["archer"] = CHARACTER_ANIM_BUTTONS["tomoe"]
 CHARACTER_ANIM_BUTTONS["shaolin"] = CHARACTER_ANIM_BUTTONS["ren"]
 CHARACTER_ANIM_BUTTONS["nodachi"] = CHARACTER_ANIM_BUTTONS["chiyo"]
+CHARACTER_ANIM_BUTTONS["sohei"] = CHARACTER_ANIM_BUTTONS["benkei"]
+CHARACTER_ANIM_BUTTONS["minstrel"] = CHARACTER_ANIM_BUTTONS["orin"]
+CHARACTER_ANIM_BUTTONS["farmer"] = CHARACTER_ANIM_BUTTONS["goro"]
 
 DEFAULT_ANIM_BUTTONS = [
     ("IDLE", "1. Idle (Respiração)", 0.0),
@@ -774,6 +819,30 @@ OVERHAUL_DE_PARA_NOTES = {
         "Esquiva Evasiva Shadow Step Slip (14 i-frames + Rastro de pétalas de Higanbana)",
         "Fatalidades Cinematográficas: Triple Scissor Cleave (双刃十字) e Shadow Lotus Flurry (影蓮乱舞)",
     ],
+    "benkei": [
+        "SSAA 2x Offscreen (Zero serrilhado no cabo da naginata, lâmina e couraça Dō-maru)",
+        "Olhos Anime HD & Barba Marcial (Esclera marfim, íris âmbar/avelã profunda, barba encorpada esculpida)",
+        "Materiais PBR Realistas: Placas de ferro negro laqueado, Madeira de carvalho escuro, Aço temperado e Linho cru",
+        "Pose LERP 0.08s + 12 Poses Articuladas + Combo de Inércia (Varredura 170° -> Estocada Colossal 2.8m)",
+        "Adamantine Guard Push (12 i-frames + Deflexão de projéteis 1.8m + Empurrão com deslocamento forçado)",
+        "Fatalidades Cinematográficas: Kongou Tataki-Otoshi (金剛叩落) e Naginata Souki (薙刀槍旗)",
+    ],
+    "orin": [
+        "SSAA 2x Offscreen (Zero serrilhado nas mangas Furisode, cordas do shamisen e penteado Shimada)",
+        "Olhos Anime HD Âmbar Luminosos com Delineado Carmesim Kumadori & Tatuagem de Higanbana na Clavícula",
+        "Materiais PBR Realistas: Seda Chirimen do quimono e obi, Madeira de cerejeira do shamisen, Marfim polido e Prata dos sinos",
+        "Pose LERP 0.08s + 12 Poses Articuladas + Combo Acústico em 2 Etapas (Kamaitachi Sônico -> Duplo em V)",
+        "Esquiva Deslize de Seda / Silk Sleeve Glide (13 i-frames + Fluidez evasiva com mangas esvoaçantes)",
+        "Fatalidades Cinematográficas: Kamaitachi Mince (鎌鼬千切) e Resonance Wind Gale (風鳴共鳴)",
+    ],
+    "goro": [
+        "SSAA 2x Offscreen (Zero serrilhado na haste de carvalho da Kuwa, lâmina de ferro e faixa Tenugui)",
+        "Rosto Anime HD Masculino & Barba Rústica (Esclera marfim, íris castanho profundo, cavanhaque/stubble esculpido)",
+        "Materiais PBR Realistas: Cânhamo cru do colete Noragi com costura Sashiko, Ferro rústico oxidado e Madeira áspera",
+        "Pose LERP 0.08s + 12 Poses Articuladas + Kuwa Heavy Cleave (Hiper-Inércia, 2.40m de alcance e Quebra de Guarda)",
+        "Rolamento de Lavrador (13 i-frames) & Cancelamento Evasivo Pocket Dirt (Micro-stun 0.22s com nuvem de terra)",
+        "Fatalidades Cinematográficas: Kuwa Skull Cleave (鍬頭砕断) e Earthquake Stomp Crush (地鳴踏潰)",
+    ],
 }
 OVERHAUL_DE_PARA_NOTES["joe"] = OVERHAUL_DE_PARA_NOTES["american"]
 OVERHAUL_DE_PARA_NOTES["hanzo"] = OVERHAUL_DE_PARA_NOTES["ninja"]
@@ -786,6 +855,9 @@ OVERHAUL_DE_PARA_NOTES["musketeer"] = OVERHAUL_DE_PARA_NOTES["julie"]
 OVERHAUL_DE_PARA_NOTES["archer"] = OVERHAUL_DE_PARA_NOTES["tomoe"]
 OVERHAUL_DE_PARA_NOTES["shaolin"] = OVERHAUL_DE_PARA_NOTES["ren"]
 OVERHAUL_DE_PARA_NOTES["nodachi"] = OVERHAUL_DE_PARA_NOTES["chiyo"]
+OVERHAUL_DE_PARA_NOTES["sohei"] = OVERHAUL_DE_PARA_NOTES["benkei"]
+OVERHAUL_DE_PARA_NOTES["minstrel"] = OVERHAUL_DE_PARA_NOTES["orin"]
+OVERHAUL_DE_PARA_NOTES["farmer"] = OVERHAUL_DE_PARA_NOTES["goro"]
 
 
 # =============================================================================
@@ -910,9 +982,9 @@ class ModelInspector:
         self.action_duration = dur
         if action_id in POSES:
             self.current_pose_idx = POSES.index(action_id)
-        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "ATTACK_1", "ATTACK_2", "ATTACK_3", "CROSS_SHOCKWAVE", "ROLL_CANCEL", "FINISHER_1", "FINISHER_2", "KAMA_STRIKE", "CHAIN_DRAG", "KODACHI_CROSS", "MAI_DANCE", "ACROBAT_LUNGE"):
+        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "ATTACK_1", "ATTACK_2", "ATTACK_3", "CROSS_SHOCKWAVE", "ROLL_CANCEL", "FINISHER_1", "FINISHER_2", "KAMA_STRIKE", "CHAIN_DRAG", "KODACHI_CROSS", "MAI_DANCE", "ACROBAT_LUNGE", "NAGINATA_CLEAVE", "NAGINATA_THRUST", "NAGINATA_THROW", "TACKLE_CHARGE", "SONIC_CLEAVE_1", "SONIC_CLEAVE_2", "RESONANCE_360", "EVASIVE_CANCEL", "KUWA_HEAVY_CLEAVE", "EARTH_STOMP_ACTION", "POCKET_DIRT"):
             self.current_pose_idx = POSES.index("ATTACK")
-        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY", "CROSS_GUARD", "TACTICAL_ROLL", "BACKFLIP", "DODGE_CANCEL", "SHADOW_STEP"):
+        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY", "CROSS_GUARD", "TACTICAL_ROLL", "BACKFLIP", "DODGE_CANCEL", "SHADOW_STEP", "ADAMANTINE_PUSH", "SILK_GLIDE", "MUD_ROLL"):
             self.current_pose_idx = POSES.index("RECOVERY")
 
     def select_character(self, idx: int | str):
@@ -1751,6 +1823,12 @@ class ModelInspector:
                 extra_props["pose"] = "iron_palm_parry"
             elif char_type in ("chiyo", "nodachi"):
                 extra_props["pose"] = "kodachi_x_pose"
+            elif char_type in ("benkei", "sohei"):
+                extra_props["pose"] = "iron_guard_reaction"
+            elif char_type in ("orin", "minstrel"):
+                extra_props["pose"] = "parry_reaction"
+            elif char_type in ("goro", "farmer"):
+                extra_props["pose"] = "iron_guard"
             elif char_type in ("anne", "pirate", "julie", "musketeer"):
                 extra_props["pose"] = "en_garde"
             else:
@@ -1946,10 +2024,115 @@ class ModelInspector:
             extra_props["is_roll"] = True
             wx = 0.42 * prog
             wy = 0.42 * prog
+        elif act == "NAGINATA_CLEAVE":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.21)
+            extra_props["combo_step"] = 1
+            extra_props["p"] = prog
+            wx = 0.12 * math.sin(prog * math.pi)
+            wy = 0.12 * math.sin(prog * math.pi)
+        elif act == "NAGINATA_THRUST":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.18)
+            extra_props["combo_step"] = 2
+            extra_props["p"] = prog
+            wx = 0.45 * prog
+            wy = 0.45 * prog
+        elif act == "NAGINATA_THROW":
+            state = "NAGINATA_THROW"
+            state_timer = max(0.01, (1.0 - prog) * 0.22)
+            extra_props["is_throwing"] = True
+            extra_props["p"] = prog
+            wx = 0.10 * math.sin(prog * math.pi)
+            wy = 0.10 * math.sin(prog * math.pi)
+        elif act == "TACKLE_CHARGE":
+            state = "TACKLE_CHARGE"
+            state_timer = max(0.01, (1.0 - prog) * 0.38)
+            extra_props["has_naginata"] = False
+            extra_props["is_charging"] = True
+            extra_props["p"] = prog
+            wx = 0.55 * prog
+            wy = 0.55 * prog
+        elif act == "ADAMANTINE_PUSH":
+            state = "ROLL"
+            extra_props["pose"] = "adamantine_push"
+            extra_props["is_roll"] = True
+            extra_props["roll_prog"] = prog
+            extra_props["p"] = prog
+            wx = 0.38 * prog
+            wy = 0.38 * prog
+        elif act == "SONIC_CLEAVE_1":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            extra_props["combo_step"] = 1
+            extra_props["p"] = prog
+            wx = 0.08 * math.sin(prog * math.pi)
+            wy = 0.08 * math.sin(prog * math.pi)
+        elif act == "SONIC_CLEAVE_2":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            extra_props["combo_step"] = 2
+            extra_props["p"] = prog
+            wx = 0.20 * prog
+            wy = 0.20 * prog
+        elif act == "RESONANCE_360":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.25)
+            extra_props["is_resonance"] = True
+            extra_props["p"] = prog
+        elif act == "SILK_GLIDE":
+            state = "ROLL"
+            extra_props["pose"] = "silk_glide"
+            extra_props["is_roll"] = True
+            extra_props["roll_prog"] = prog
+            extra_props["p"] = prog
+            wx = 0.35 * prog
+            wy = 0.35 * prog
+        elif act == "EVASIVE_CANCEL":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.18)
+            extra_props["combo_step"] = 1
+            extra_props["p"] = prog
+            wx = -0.15 * prog
+            wy = -0.15 * prog
+        elif act == "KUWA_HEAVY_CLEAVE":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.22)
+            extra_props["p"] = prog
+            wx = 0.24 * prog
+            wy = 0.24 * prog
+        elif act == "EARTH_STOMP_ACTION":
+            state = "EARTH_STOMP"
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            extra_props["is_stomp"] = True
+            extra_props["pose"] = "earth_stomp"
+            extra_props["p"] = prog
+        elif act == "MUD_ROLL":
+            state = "ROLL"
+            extra_props["pose"] = "mud_roll"
+            extra_props["is_mud_roll"] = True
+            extra_props["roll_prog"] = prog
+            extra_props["p"] = prog
+            wx = 0.35 * prog
+            wy = 0.35 * prog
+        elif act == "POCKET_DIRT":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.22)
+            extra_props["pose"] = "pocket_dirt"
+            extra_props["is_pocket_dirt"] = True
+            extra_props["p"] = prog
+            wx = 0.12 * math.sin(prog * math.pi)
+            wy = 0.12 * math.sin(prog * math.pi)
+        elif act == "IRON_GUARD":
+            state = "PARRY"
+            state_timer = max(0.01, (1.0 - prog) * 0.40)
+            extra_props["pose"] = "iron_guard"
+            extra_props["is_parry"] = True
+            extra_props["p"] = prog
         elif act in ("INTRO", "VICTORY"):
             kind = "intro" if act == "INTRO" else "victory"
             p_sample = prog if dur > 0.0 else ((self.anim_time * 0.42) % 1.0)
-            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american", "joe", "saitou", "teppo", "rifleman", "murasaki", "purple", "kasumi", "gray", "okuni", "kabuki", "anne", "pirate", "julie", "musketeer", "tomoe", "archer", "ren", "shaolin", "chiyo", "nodachi"):
+            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american", "joe", "saitou", "teppo", "rifleman", "murasaki", "purple", "kasumi", "gray", "okuni", "kabuki", "anne", "pirate", "julie", "musketeer", "tomoe", "archer", "ren", "shaolin", "chiyo", "nodachi", "benkei", "sohei", "orin", "minstrel", "goro", "farmer"):
                 # Roteiro legado pré-Fase 2 (apenas IDLE + ATTACK simples)
                 if p_sample < 0.25 or p_sample > 0.75:
                     state = "IDLE"
@@ -2095,6 +2278,42 @@ class ModelInspector:
                     extra_props["pose"] = "finisher_scissor_spin"
                     extra_props["p"] = prog
                     wx, wy = 0.14 * prog, 0.14 * prog
+            elif char_type in ("benkei", "sohei"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    if prog < 0.65:
+                        extra_props["hoist_slam_phase"] = "HOIST"
+                        extra_props["hoist_slam_prog"] = prog / 0.65
+                    else:
+                        extra_props["hoist_slam_phase"] = "SLAM"
+                        extra_props["hoist_slam_prog"] = (prog - 0.65) / 0.35
+                    extra_props["p"] = prog
+                    wx = 0.12 * prog
+                    wy = 0.12 * prog
+            elif char_type in ("orin", "minstrel"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - prog) * 0.20)
+                    extra_props["combo_step"] = 2
+                    extra_props["p"] = prog
+                    wx = 0.15 * math.sin(prog * math.pi)
+                    wy = 0.15 * math.sin(prog * math.pi)
+            elif char_type in ("goro", "farmer"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - prog) * 0.22)
+                    extra_props["p"] = prog
+                    wx = 0.22 * math.sin(prog * math.pi)
+                    wy = 0.22 * math.sin(prog * math.pi)
             else:
                 # 2.1.4a: Ittou Ryoudan
                 state = "RECOVERY"
@@ -2244,6 +2463,39 @@ class ModelInspector:
                     extra_props["p"] = prog
                     wx = 0.15 * math.sin(prog * math.pi)
                     wy = 0.15 * math.sin(prog * math.pi)
+            elif char_type in ("benkei", "sohei"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "NAGINATA_THROW"
+                    extra_props["is_throwing"] = True
+                    extra_props["p"] = prog
+                    wx = 0.20 * math.sin(prog * math.pi)
+                    wy = 0.20 * math.sin(prog * math.pi)
+            elif char_type in ("orin", "minstrel"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - prog) * 0.25)
+                    extra_props["is_resonance"] = True
+                    extra_props["p"] = prog
+                    wx = 0.10 * math.sin(prog * math.pi)
+                    wy = 0.10 * math.sin(prog * math.pi)
+            elif char_type in ("goro", "farmer"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "EARTH_STOMP"
+                    state_timer = max(0.01, (1.0 - prog) * 0.22)
+                    extra_props["is_stomp"] = True
+                    extra_props["pose"] = "earth_stomp"
+                    extra_props["p"] = prog
+                    wx = 0.12 * math.sin(prog * math.pi)
+                    wy = 0.12 * math.sin(prog * math.pi)
             else:
                 # 2.1.4b: Divisão Celestial de Bambu (Ápice + Queda Meteórica)
                 if prog < 0.42:

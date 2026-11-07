@@ -44,10 +44,10 @@ Consulte o documento mestre [`docs/EXPANSION_ROADMAP_AND_DESIGN.md`](EXPANSION_R
    - ⚜️ `2.12`: Julie (Mosqueteira Real — Fleche Thrust & Pederneira de Bolso) **[CONCLUÍDO ✅]**
    - 📿 `2.13`: Ren (Monge Shaolin — Palma de Ferro & Rugido Kiai) **[CONCLUÍDO ✅]**
    - 🗡️ `2.14`: Chiyo (Kunoichi das Sombras — Kodachi Dupla Invertida) **[CONCLUÍDO ✅]**
-   - 🛡️ `2.15`: Benkei (Monge Guardião — Naginata Pesada & Hoist Slam) **[PRÓXIMO NA FILA 🎯]**
-   - 🎶 `2.16`: O-Rin (Menestrel Cega — Shamisen & Lâminas de Vácuo Kamaitachi)
-   - 🌾 `2.17`: Goro (Fazendeiro Rebelde — Enxada Kuwa & Fissura Terrestre)
-   - 🦯 `2.18`: Ichi (Espadachim Cega — Saque Rápido da Shikomizue & Escuta)
+   - 🛡️ `2.15`: Benkei (Monge Guardião — Naginata Pesada & Hoist Slam) **[CONCLUÍDO ✅]**
+   - 🎶 `2.16`: O-Rin (Menestrel Cega — Shamisen & Lâminas de Vácuo Kamaitachi) **[CONCLUÍDO ✅]**
+   - 🌾 `2.17`: Goro (Fazendeiro Rebelde — Enxada Kuwa & Fissura Terrestre) **[CONCLUÍDO ✅]**
+   - 🦯 `2.18`: Ichi (Espadachim Cega — Saque Rápido da Shikomizue & Escuta) **[PRÓXIMO NA FILA 🎯]**
    - 🕯️ `2.19`: Valerius (Necromante Prussiano — Chamas Espectrais & Servo Esqueleto)
    - ☯️ `2.20`: Seimei (Mestre Onmyoji — Rajada de Talismãs Ofuda & Barreira Sagrada)
    - 🎋 `2.21`: Daiki (Peregrino Yamabushi — Varredura com Bastão Bō & Salto com Vara)

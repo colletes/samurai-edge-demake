@@ -605,16 +605,17 @@ PORTRAIT_FACE_STYLES = {
         "eye_z": 0.080, "brow_z": 0.104, "spacing": 0.038,
     },
     "orin": {
-        "iris": (158, 82, 172), "iris_core": (224, 156, 238), "iris_limbal": (64, 24, 75),
+        "iris": (228, 154, 38), "iris_core": (255, 198, 80), "iris_limbal": (130, 75, 18),
         "brow": (34, 24, 38), "lip": (218, 42, 68), "lip_lower": (248, 72, 98), "lip_shadow": (148, 22, 42),
         "brow_tilt": 0.10, "kumadori": True, "lashes": True, "delicate_nose": True, "feminine_lips": True,
         "hairline_mid": 0.66, "hairline_lat": 0.48,
         "eye_z": 0.082, "brow_z": 0.106, "spacing": 0.033, "mouth_w": 0.024,
     },
     "goro": {
-        "iris": (68, 48, 34), "iris_core": (118, 88, 62), "iris_limbal": (28, 20, 16),
+        "iris": (68, 48, 34), "iris_core": (128, 92, 65), "iris_limbal": (28, 20, 16),
         "brow": (38, 32, 28), "lip": (172, 122, 106),
-        "brow_tilt": 0.28, "stubble": True, "delicate_nose": False,
+        "brow_tilt": 0.28, "stubble": True, "beard": True, "beard_col": (32, 26, 26),
+        "delicate_nose": False,
         "eye_z": 0.080, "brow_z": 0.104, "spacing": 0.038, "mouth_w": 0.028,
     },
     "ichi": {

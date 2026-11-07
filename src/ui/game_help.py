@@ -913,53 +913,57 @@ FIGHTERS_GUIDE_DATA = [
             "name": "BENKEI",
             "title": "Guardião Sōhei",
             "style": "Naginata & Armadura Pesada",
-            "vel": "[2/5] Tanque",
-            "dano": "Estocada Colossal (Alcance 3.0)",
-            "especial": "Arremesso de Haste & Tackle com Stun",
-            "keys_p1": "[E] Estocada/Tackle | [R] Arremesso",
-            "keys_p2": "[U] Estocada/Tackle | [I] Arremesso",
+            "vel": "[2/5] Walking Tank",
+            "dano": "Varredura 170° (2.4m) / Estocada (2.8m)",
+            "especial": "Adamantine Push, Arremesso & Tackle",
+            "keys_p1": "[E] Combo Naginata/Tackle | [R] Arremesso | [T] Adamantine Push",
+            "keys_p2": "[U] Combo Naginata/Tackle | [I] Arremesso | [O] Adamantine Push",
             "conceito": (
-                "Monge guerreiro sōhei colossal e inabalável que acumulou 999 armas na Ponte Gojo. "
-                "Não possui aparo técnico, compensando com armadura maciça, alcance desmedido da naginata "
-                "e um tackle desarmado brutal de atropelamento."
+                "Monge guerreiro sōhei colossal e inabalável que acumulou 999 armas na Ponte Gojō. "
+                "Não possui aparo técnico, compensando com armadura maciça, alcance desmedido da naginata em combo de inércia, "
+                "um avanço blindado que repele projéteis e um tackle desarmado brutal de atropelamento."
             ),
             "habilidades": (
-                "• Estocada Colossal [E]: Golpe frontal penetrante de 3.0 tiles de alcance com alto knockback.\n"
-                "• Arremesso de Naginata [R]: Lança a haste pesada a longa distância que se crava no solo sem cair em buracos ou água.\n"
-                "• Tackle Atropelo [E desarmado]: Investida de choque que aplica STUN garantido (1.2s) e recupera a arma."
+                "• Combo de Inércia da Naginata [E]: Passo 1 Varredura Circular em Arco (170°, 2.40m, rec 0.16s) conectando em Passo 2 Estocada Perfurante Monumental (2.8m com avanço de 0.45m).\n"
+                "• Arremesso de Naginata [R]: Lança a haste pesada a longa distância que se crava no solo sem jamais cair em buracos ou água.\n"
+                "• Tackle Atropelo [E desarmado]: Investida brutal que causa 0 dano letal, aplica STUN garantido (1.2s) e recupera a arma.\n"
+                "• Adamantine Guard Push [T]: Deslize firme com o ombro encouraçado (12 i-frames) que reflete/destrói projéteis em raio de 1.8m e empurra oponentes adjacentes."
             ),
             "estrategia_ofensiva": (
-                "• Domine o centro da arena e a ponte usando a estocada de 3 tiles antes que o rival chegue perto.\n"
-                "• Se o adversário fugir, arremesse a naginata [R] e em seguida use o Tackle [E] para atordoá-lo e recuperar a haste."
+                "• Domine o centro da arena e a ponte usando a varredura circular de 170° e encadeie de imediato na estocada colossal de 2.8m.\n"
+                "• Use o Adamantine Guard Push [T] para passar ileso por projéteis e empurrar rivais agressivos para trás.\n"
+                "• Se o adversário recuar, arremesse a naginata [R] e em seguida use o Tackle [E] para atordoá-lo e recuperar a haste."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Benkei: Benkei não tem parry e é o lutador mais lento (Velocidade 4.0). Flanqueie pelas diagonais ou use rolamentos para entrar na sua guarda."
+                "• Como vencer Benkei: Benkei não tem parry e possui velocidade 4.35. Espere o fim de sua estocada colossal (recovery de 0.22s) ou flanqueie durante o arremesso para puni-lo antes do tackle."
             )
         },
         "en": {
             "name": "BENKEI",
             "title": "Sōhei Warrior Monk",
-            "style": "Naginata & Heavy Plate Armor",
+            "style": "Heavy Plate Armor & Naginata",
             "vel": "[2/5] Walking Tank",
-            "dano": "Colossal Spear Thrust (Range 3.0)",
-            "especial": "Naginata Throw & Stun Tackle",
-            "keys_p1": "[E] Thrust/Tackle | [R] Throw",
-            "keys_p2": "[U] Thrust/Tackle | [I] Throw",
+            "dano": "170° Cleave (2.4m) / Thrust (2.8m)",
+            "especial": "Adamantine Push, Spear Throw & Tackle",
+            "keys_p1": "[E] Naginata Combo/Tackle | [R] Throw | [T] Adamantine Push",
+            "keys_p2": "[U] Naginata Combo/Tackle | [I] Throw | [O] Adamantine Push",
             "conceito": (
-                "Colossal warrior monk of legend on Gojo Bridge. Lacks technical parry, relying on heavy lacquered iron armor, "
-                "massive naginata reach, and an unstoppable unarmed charging tackle."
+                "Colossal warrior monk of legend on Gojō Bridge. Lacks technical parry, relying on heavy lacquered iron armor, "
+                "massive naginata reach in a 2-step inertia combo, a projectile-repelling armored shoulder push, and an unstoppable unarmed charging tackle."
             ),
             "habilidades": (
-                "• Colossal Thrust [E]: Penetrating 3.0-tile reach spear strike with devastating knockback.\n"
-                "• Naginata Throw [R]: Hurls the heavy spear across long range, embedding safely in the ground.\n"
-                "• Stun Tackle [E unarmed]: High-speed kinetic charge that inflicts guaranteed STUN (1.2s) and recovers the weapon."
+                "• Naginata Inertia Combo [E]: Step 1 Wide Cleave Arc (170°, 2.40m, 0.16s rec) linking into Step 2 Colossal Thrust (2.8m reach with 0.45m forward step).\n"
+                "• Naginata Throw [R]: Hurls the heavy spear across long range, embedding safely in solid ground.\n"
+                "• Stun Tackle [E unarmed]: High-speed kinetic charge that inflicts 0 lethal damage, applies guaranteed STUN (1.2s), and recovers the weapon.\n"
+                "• Adamantine Guard Push [T]: Armored shoulder charge (12 i-frames) that deflects/destroys projectiles within 1.8m and displaces adjacent foes."
             ),
             "estrategia_ofensiva": (
-                "• Dominate corridors and bridge choke points with your 3.0-tile reach.\n"
+                "• Dominate corridors and bridge choke points with your 170° sweep, buffering directly into the 2.8m colossal thrust.\n"
+                "• Use Adamantine Guard Push [T] to slip invulnerably through enemy projectiles and shove aggressive rivals.\n"
                 "• Throw the naginata [R] to catch retreating foes, then tackle with [E] for guaranteed stun and weapon recovery."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Benkei: Benkei cannot parry and has 4.0 movement speed. Sidestep his linear thrusts and strike during recovery."
+                "• How to defeat Benkei: Benkei cannot parry and has 4.35 movement speed. Sidestep his linear colossal thrust and punish during his 0.22s recovery window."
             )
         }
     },
@@ -969,52 +973,54 @@ FIGHTERS_GUIDE_DATA = [
         "char_type": "orin",
         "pt": {
             "name": "O-RIN",
-            "title": "Menestrel de Yoshiwara",
-            "style": "Tsugaru Shamisen Acústico",
-            "vel": "[5/5] Evasiva",
-            "dano": "Lâmina Sônica Kamaitachi (Alcance 6.0)",
-            "especial": "Ressonância 360° Repelente",
-            "keys_p1": "[E] Kamaitachi | [R] Ressonância",
-            "keys_p2": "[U] Kamaitachi | [I] Ressonância",
+            "title": "A Menestrel de Yoshiwara",
+            "style": "Tsugaru Shamisen Acústico & Kamaitachi",
+            "vel": "[5/5] Zoner Evasiva de Elite",
+            "dano": "Combo Kamaitachi (5.5m) | V-Twin Blades",
+            "especial": "Ressonância 360° Repelente & Deslize de Seda",
+            "keys_p1": "[E] Kamaitachi | [R] Ressonância | [T] Deslize",
+            "keys_p2": "[U] Kamaitachi | [I] Ressonância | [O] Deslize",
             "conceito": (
-                "Cortesã e musicista genial dos becos de Yoshiwara. Nunca empunha uma lâmina física: "
-                "seus ataques são ondas sônicas de alta frequência e vácuo disparadas pelas cordas do shamisen com precisão cirúrgica."
+                "Cortesã lendária e virtuose do Tsugaru Shamisen de Yoshiwara. Jamais empunha uma lâmina física: "
+                "seus golpes são lâminas invisíveis de vácuo acústico Kamaitachi que fatiam o ar com precisão letal."
             ),
             "habilidades": (
-                "• Kamaitachi [E]: Lâmina em crescente de vácuo sônico disparada pelo dedilhado rápido. 1-Hit Kill com alcance de 6.0 tiles.\n"
-                "• Ressonância 360° [R]: Acorde potente que emite um pulso acústico concêntrico, desviando projéteis e repelindo oponentes próximos."
+                "• Combo Kamaitachi [E]: Rítmica em 2 etapas. Etapa 1 dispara lâmina sônica linear de 5.5m; Etapa 2 executa dedilhado duplo em V cruzado (±0.14 rad) com micro-passo de 0.20m.\n"
+                "• Ressonância 360° [R]: Acorde devastador com onda de choque concêntrica (2.0m). Deflete projéteis, empurra rivais com 0.35s de atordoamento e lança 3 ondas em espiral (120°).\n"
+                "• Deslize de Seda [T]: Esquiva acrobática com 13 i-frames e imunidade a projéteis, deslizando suavemente com o esvoaçar das mangas longas Furisode."
             ),
             "estrategia_ofensiva": (
-                "• Mantenha o espaçamento máximo: Kamaitachi tem 6.0 tiles de alcance e atravessa a arena velozmente.\n"
-                "• Use a Ressonância [R] se o rival avançar de perto para empurrá-lo para longe e cancelar ataques dele."
+                "• Controle o ritmo da arena: use a Etapa 1 para forçar a esquiva do adversário e emende a Etapa 2 em V para punir rolamentos laterais.\n"
+                "• Se o rival tentar fechar distância, ative a Ressonância [R] para desviar ataques, atordoá-lo e restabelecer o zoneamento ideal com o Deslize de Seda [T]."
             ),
             "estrategia_defensiva": (
-                "• Como vencer O-Rin: O-Rin é extremamente frágil e não tem golpe corpo a corpo físico. Use o Roll [T] para atravessar o Kamaitachi e ataque à queima-roupa."
+                "• Como vencer O-Rin: O-Rin é frágil e possui 1.4s de recarga na Ressonância 360°. Esquive pelas aberturas diagonais entre as ondas e ataque à queima-roupa durante o intervalo de dedilhado."
             )
         },
         "en": {
             "name": "O-RIN",
-            "title": "Yoshiwara Minstrel",
-            "style": "Tsugaru Shamisen Acoustic",
-            "vel": "[5/5] Evasive Zoner",
-            "dano": "Kamaitachi Vacuum Blade (Range 6.0)",
-            "especial": "360° Acoustic Resonance",
-            "keys_p1": "[E] Kamaitachi | [R] Resonance",
-            "keys_p2": "[U] Kamaitachi | [I] Resonance",
+            "title": "The Yoshiwara Minstrel",
+            "style": "Acoustic Tsugaru Shamisen & Kamaitachi",
+            "vel": "[5/5] Elite Evasive Zoner",
+            "dano": "Kamaitachi Combo (5.5m) | Twin V-Blades",
+            "especial": "360° Repulsion Resonance & Silk Sleeve Glide",
+            "keys_p1": "[E] Kamaitachi | [R] Resonance | [T] Glide",
+            "keys_p2": "[U] Kamaitachi | [I] Resonance | [O] Glide",
             "conceito": (
-                "Brilliant courtesan and acoustic minstrel of Yoshiwara. Never wields a physical blade; "
-                "attacks entirely through razor-sharp vacuum soundwaves produced by her Tsugaru shamisen."
+                "Legendary courtesan and acoustic virtuoso of Yoshiwara. Never touches a steel blade: "
+                "attacks entirely through razor-sharp acoustic vacuum blades (Kamaitachi) generated by her Tsugaru shamisen."
             ),
             "habilidades": (
-                "• Kamaitachi [E]: Crescent vacuum soundwave blade plucked from the shamisen strings. 1-Hit Kill with 6.0-tile reach.\n"
-                "• 360° Resonance [R]: Expanding acoustic pulse that reflects light projectiles and shoves nearby rivals away."
+                "• Kamaitachi Combo [E]: 2-step rhythmic strike. Step 1 unleashes a linear 5.5m sonic wave; Step 2 unleashes crossed twin V-blades (±0.14 rad) with a 0.20m micro-step.\n"
+                "• 360° Resonance Chord [R]: Expanding acoustic repulsion shockwave (2.0m radius). Deflects projectiles, pushes rivals with 0.35s stun, and emits 3 spiral waves at 120°.\n"
+                "• Silk Sleeve Glide [T]: Graceful evasive dodge with 13 i-frames and projectile immunity, gliding past danger with flowing Furisode sleeves."
             ),
             "estrategia_ofensiva": (
-                "• Keep maximum zoning distance: Kamaitachi has a massive 6.0-tile reach and flies at high speed.\n"
-                "• Activate Resonance [R] whenever opponents dash or dive in close to repel them."
+                "• Control arena pacing: bait rival dodges with Step 1 and punish recovery angles with the twin V-blades of Step 2.\n"
+                "• When opponents rush in, pop 360° Resonance [R] to repel projectiles, stun them, and reset distance using Silk Sleeve Glide [T]."
             ),
             "estrategia_defensiva": (
-                "• How to defeat O-Rin: O-Rin has no physical melee blade. Use Roll [T] i-frames to pass cleanly through her Kamaitachi wave."
+                "• How to defeat O-Rin: O-Rin has high vulnerability during her 1.4s Resonance cooldown. Bait her shockwave, roll diagonally through her wave gaps, and punish at point-blank range."
             )
         }
     },
@@ -1025,51 +1031,53 @@ FIGHTERS_GUIDE_DATA = [
         "pt": {
             "name": "GORO",
             "title": "O Camponês Rebelde",
-            "style": "Kuwa de Ferro & Pisotão Sísmico",
-            "vel": "[3/5] Camponês Robusto",
-            "dano": "Kuwa Cleave Pesado (2 HP)",
-            "especial": "Pisotão Sísmico (Stun e Onda de Choque)",
-            "keys_p1": "[E] Kuwa Cleave | [R] Pisotão",
-            "keys_p2": "[U] Kuwa Cleave | [I] Pisotão",
+            "style": "Enxada Kuwa de Ferro & Terremoto",
+            "vel": "[3/5] Guerreiro Telúrico",
+            "dano": "Kuwa Heavy Cleave (2.4m | Quebra de Guarda)",
+            "especial": "Pisotão Sísmico (4.2m) & Pocket Dirt",
+            "keys_p1": "[E] Corte da Kuwa | [R] Pisotão | [T] Rolamento / Terra",
+            "keys_p2": "[U] Corte da Kuwa | [I] Pisotão | [O] Rolamento / Terra",
             "conceito": (
-                "Guerreiro camponês rebelde do Bakumatsu forjado no trabalho duro da terra. "
-                "Empunha uma enxada agrícola pesada de ferro forjado capaz de esmagar armaduras e destruir obstáculos."
+                "Líder camponês e rebelde implacável da era Bakumatsu, forjado no trabalho bruto da terra. "
+                "Não empunha aço refinado, mas sim uma enxada pesada de carvalho e ferro forjado que esmaga defesas e racha o solo."
             ),
             "habilidades": (
-                "• Kuwa Cleave [E]: Golpe descendente demolidor que causa 2 de dano e quebra coberturas no cenário.\n"
-                "• Pisotão Sísmico [R]: Bate a bota pesada no solo, liberando uma onda de choque que causa knockback e stun de 0.8s em área."
+                "• Corte da Kuwa [E]: Pancada vertical demolidora com alcance de 2.40m e hiper-inércia. Quebra guardas e escudos adversários.\n"
+                "• Pisotão Sísmico [R]: Golpe violento no solo criando uma fissura telúrica de 4.2m que levanta pedras, dissipa projéteis e atordoa por 0.8s.\n"
+                "• Rolamento de Lavrador & Pocket Dirt [T]: Esquiva rente à terra com 13 i-frames. Pressionar ataque [E] durante o rolamento lança um punhado de terra no rosto do rival (micro-stun de 0.22s)."
             ),
             "estrategia_ofensiva": (
-                "• Abra caminho com o Pisotão Sísmico [R] para atordoar alvos rápidos ou esquivos.\n"
-                "• Conecte imediatamente o Kuwa Cleave [E] durante o stun para garantir dano letal massivo."
+                "• Controle o espaço com o Pisotão Sísmico [R] para quebrar investidas e atordoar oponentes rápidos.\n"
+                "• Cancele a esquiva em Pocket Dirt [E] para cegar o adversário à queima-roupa e conectar o Corte da Kuwa [E] indefensável."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Goro: O golpe de kuwa tem recuperação mais lenta. Esquive-se para os lados ou use recuo para punir suas investidas."
+                "• Como vencer Goro: A descida da Kuwa possui grande inércia e recuperação. Esquive diagonalmente e puna pelas costas antes que ele desenganche a lâmina do solo."
             )
         },
         "en": {
             "name": "GORO",
-            "title": "The Rebel Farmer",
-            "style": "Forged Kuwa & Earth Stomp",
-            "vel": "[3/5] Heavy Peasant",
-            "dano": "Heavy Kuwa Cleave (2 HP)",
-            "especial": "Earth Stomp (AoE Stun & Shockwave)",
-            "keys_p1": "[E] Kuwa Cleave | [R] Earth Stomp",
-            "keys_p2": "[U] Kuwa Cleave | [I] Earth Stomp",
+            "title": "The Rebel Peasant",
+            "style": "Forged Iron Kuwa & Earthquake",
+            "vel": "[3/5] Earthborn Brawler",
+            "dano": "Heavy Kuwa Cleave (2.4m | Guard Break)",
+            "especial": "Seismic Stomp (4.2m) & Pocket Dirt",
+            "keys_p1": "[E] Kuwa Cleave | [R] Earth Stomp | [T] Mud Roll / Dirt",
+            "keys_p2": "[U] Kuwa Cleave | [I] Earth Stomp | [O] Mud Roll / Dirt",
             "conceito": (
-                "Battle-hardened peasant rebel of the Bakumatsu era. "
-                "Wields a heavy hand-forged agricultural hoe capable of crushing armor and shattering obstacles."
+                "Unyielding peasant rebel leader of the Bakumatsu era, hardened by relentless soil work. "
+                "Wields a heavy forged-iron agricultural hoe that shatters armor and cracks the bedrock open."
             ),
             "habilidades": (
-                "• Kuwa Cleave [E]: Downward crushing cleave dealing 2 damage and destroying destructible cover.\n"
-                "• Earth Stomp [R]: Slams boot into the terrain, unleashing a radial shockwave with knockback and 0.8s stun."
+                "• Heavy Kuwa Cleave [E]: Downward crushing smash with 2.40m reach and hyper-inertia. Penetrates blocks and breaks guard.\n"
+                "• Seismic Earth Stomp [R]: Slams boot into the soil, creating a 4.2m fissure that raises earth, deflects ground projectiles, and stuns for 0.8s.\n"
+                "• Peasant Mud Roll & Pocket Dirt [T]: Low dodge with 13 i-frames. Pressing attack [E] during the roll flings a handful of pocket dirt into the rival's eyes (0.22s micro-stun)."
             ),
             "estrategia_ofensiva": (
-                "• Disrupt evasive foes with Earth Stomp [R] to stop their momentum.\n"
-                "• Punish their recovery immediately with the devastating Kuwa Cleave [E]."
+                "• Halt aggressive opponents with Seismic Stomp [R] to stop their momentum and leave them vulnerable.\n"
+                "• Cancel Mud Roll into Pocket Dirt [E] to blind foes at point-blank range and follow up with a devastating Kuwa Cleave [E]."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Goro: His agricultural hoe has longer recovery frames. Sidestep his vertical swing and punish from behind."
+                "• How to defeat Goro: His heavy hoe swing has significant recovery frames. Evade diagonally and punish from behind while his weapon is lodged in the ground."
             )
         }
     },

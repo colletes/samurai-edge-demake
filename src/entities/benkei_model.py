@@ -9,13 +9,19 @@ Benkei, o Guardião da Naginata / Walking Tank Colossal:
   - Lâmina curva pesada de aço brilhante forjado com colarinho de ouro (habaki) e tsuba circular.
   - Ordenação dinâmica de profundidade (Painter's Algorithm) para renderizar a naginata e punhos atrás do tronco se estiver de costas.
 - Feixe de armas troféu das 999 lutas na Ponte Gojō compacto e firme nas costas.
+- Single-pass weapon rendering: quando desarmado, não projeta lâminas duplicadas.
+- 100% Continuous Intro, Victory e Finishers ($C^0/C^1$).
 """
 import math
 import pygame
 
 from src.entities import model_kit as mk
 from src.isometric import cloth
-from src.isometric.mesh_primitives import draw_tapered_frustum_3d, draw_ribbon_mesh_3d
+from src.isometric.mesh_primitives import (
+    draw_tapered_frustum_3d,
+    draw_ribbon_mesh_3d,
+    draw_portrait_face_3d,
+)
 
 SKIN = (218, 172, 138)
 SKIN_SHADOW = (180, 134, 104)
@@ -86,6 +92,8 @@ MATERIALS = {
     "waraji": "canvas",
 }
 
+LEGACY_MATERIALS = {k: "matte" for k in MATERIALS}
+
 
 def pal() -> dict:
     return PALETTE
@@ -116,10 +124,11 @@ def idle_arms(c):
 
 def attack_arms(c):
     """Animações de Ataque Melee de Benkei."""
-    p = c.atk_progress
+    p = c.atk_progress if c.atk_progress is not None else 0.5
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
     is_throw = c.extra_props.get("is_throwing", False) if c.extra_props else False
     is_charge = c.extra_props.get("is_charging", False) if c.extra_props else False
+    combo_step = c.extra_props.get("combo_step", 1) if c.extra_props else 1
 
     hoist_phase = c.extra_props.get("hoist_slam_phase") if c.extra_props else None
     hoist_prog = c.extra_props.get("hoist_slam_prog", 0.0) if c.extra_props else 0.0
@@ -158,16 +167,34 @@ def attack_arms(c):
             right = (bx + fx * (0.35 + thrust * 0.25) - px * 0.06, by + fy * (0.35 + thrust * 0.25) - py * 0.06, tz + 0.20)
         return left, right
 
-    # Estocada Frontal Colossal (Walking Tank Thrust)
+    # Passo 1 do Combo: Varredura Circular em Arco (170° Cleave Sweep)
+    if combo_step == 1:
+        # Giro horizontal da Naginata da direita para a frente-esquerda
+        ang = -1.2 + p * 2.5
+        cos_a = math.cos(ang)
+        sin_a = math.sin(ang)
+        left = (
+            bx + fx * (0.18 + cos_a * 0.18) + px * (sin_a * 0.22),
+            by + fy * (0.18 + cos_a * 0.18) + py * (sin_a * 0.22),
+            tz + 0.15 + math.sin(p * math.pi) * 0.04
+        )
+        right = (
+            bx + fx * (0.02 - cos_a * 0.14) - px * (sin_a * 0.18),
+            by + fy * (0.02 - cos_a * 0.14) - py * (sin_a * 0.18),
+            tz + 0.11
+        )
+        return left, right
+
+    # Passo 2 do Combo: Estocada Frontal Colossal (Walking Tank Thrust)
     thrust_curve = math.sin(p * math.pi)
     left = (
-        bx + fx * (0.24 + thrust_curve * 0.38) + px * 0.04,
-        by + fy * (0.24 + thrust_curve * 0.38) + py * 0.04,
+        bx + fx * (0.24 + thrust_curve * 0.44) + px * 0.04,
+        by + fy * (0.24 + thrust_curve * 0.44) + py * 0.04,
         tz + 0.16 + thrust_curve * 0.04
     )
     right = (
-        bx + fx * (0.02 + thrust_curve * 0.46) - px * 0.06,
-        by + fy * (0.02 + thrust_curve * 0.46) - py * 0.06,
+        bx + fx * (0.02 + thrust_curve * 0.50) - px * 0.06,
+        by + fy * (0.02 + thrust_curve * 0.50) - py * 0.06,
         tz + 0.14 + thrust_curve * 0.04
     )
     return left, right
@@ -175,17 +202,95 @@ def attack_arms(c):
 
 def _hands(c):
     """Calcula posição instantânea das mãos para ordenação de profundidade e renderização."""
+    extra = c.extra_props if c.extra_props else {}
+    pose = extra.get("pose")
+    u = extra.get("seg_u", extra.get("p", 0.0))
+    bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
+    has_weapon = extra.get("has_naginata", True)
+
+    # 1. Terceira Ação / Esquiva: Adamantine Guard Push (Avanço Blindado & Empurrão com o Cabo)
+    if extra.get("is_roll", False) or pose == "adamantine_push":
+        roll_p = extra.get("roll_prog", u)
+        # Ombro blindado à frente em aríete, haste horizontal firme em guarda impenetrável
+        push_heave = math.sin(roll_p * math.pi) * 0.08
+        if has_weapon:
+            left = (bx + fx * (0.26 + push_heave) + px * 0.18, by + fy * (0.26 + push_heave) + py * 0.18, tz + 0.14)
+            right = (bx + fx * (0.20 + push_heave) - px * 0.16, by + fy * (0.20 + push_heave) - py * 0.16, tz + 0.16)
+        else:
+            left = (bx + fx * 0.32 + px * 0.10, by + fy * 0.32 + py * 0.10, tz + 0.15)
+            right = (bx + fx * 0.30 - px * 0.12, by + fy * 0.30 - py * 0.12, tz + 0.17)
+        return left, right
+
+    # 2. Intro Fase 1: Giro de Haste (0.0 -> 0.35)
+    if pose == "naginata_twirl_intro":
+        rot = u * math.pi * 2.0
+        cos_r, sin_r = math.cos(rot), math.sin(rot)
+        left = (bx + fx * 0.18 + px * (cos_r * 0.16), by + fy * 0.18 + py * (cos_r * 0.16), tz + 0.18 + sin_r * 0.06)
+        right = (bx - fx * 0.04 - px * (cos_r * 0.14), by - fy * 0.04 - py * (cos_r * 0.14), tz + 0.12 - sin_r * 0.05)
+        return left, right
+
+    # 3. Intro Fase 2: Cravada Ishizuki no Solo (0.35 -> 0.70)
+    if pose == "ishizuki_plant":
+        plant_s = u ** 1.6
+        z_drop = -0.06 * plant_s
+        left = (bx + fx * 0.22 + px * 0.05, by + fy * 0.22 + py * 0.05, tz + 0.22 + z_drop)
+        right = (bx + fx * 0.10 - px * 0.06, by + fy * 0.10 - py * 0.06, tz + 0.34 + z_drop)
+        return left, right
+
+    # 4. Intro Fase 3: Guarda de Ferro com Respiração Contínua (0.70 -> 1.0)
+    if pose == "iron_guard":
+        live_breath = math.sin(u * 8.0) * 0.015
+        left = (bx + fx * 0.12 + px * 0.04, by + fy * 0.12 + py * 0.04, tz + 0.20 + live_breath)  # Mão no Mala
+        right = (bx + fx * 0.14 - px * 0.08, by + fy * 0.14 - py * 0.08, tz + 0.32 + live_breath)
+        return left, right
+
+    # 5. Vitória Fase 1: Chiburi em Moinho Helicoidal (0.0 -> 0.38)
+    if pose == "naginata_chiburi_mill":
+        spin_ang = u * math.pi * 3.0
+        cos_s, sin_s = math.cos(spin_ang), math.sin(spin_ang)
+        left = (bx + fx * 0.20 + px * (cos_s * 0.20), by + fy * 0.20 + py * (cos_s * 0.20), tz + 0.18 + sin_s * 0.08)
+        right = (bx - fx * 0.02 - px * (cos_s * 0.16), by - fy * 0.02 - py * (cos_s * 0.16), tz + 0.10 - sin_s * 0.06)
+        return left, right
+
+    # 6. Vitória Fase 2: Descanso nos Ombros (0.38 -> 0.75)
+    if pose == "benkei_shoulder_rest":
+        settle = min(1.0, u * 1.5)
+        live_breath = math.sin(u * 6.0) * 0.012
+        left = (bx + px * (0.24 * settle), by + py * (0.24 * settle), tz + 0.26 + live_breath)
+        right = (bx - px * (0.24 * settle), by - py * (0.24 * settle), tz + 0.26 + live_breath)
+        return left, right
+
+    # 7. Vitória Fase 3: Reverência Sōhei (0.75 -> 1.0)
+    if pose == "sohei_reverence":
+        bow_depth = math.sin(u * math.pi) * 0.06
+        live_breath = math.sin(u * 6.0) * 0.010
+        left = (bx + px * 0.24, by + py * 0.24, tz + 0.24 - bow_depth + live_breath)
+        right = (bx - px * 0.24, by - py * 0.24, tz + 0.24 - bow_depth + live_breath)
+        return left, right
+
+    # 8. Reação de Guarda de Ferro (Parry Reaction)
+    if pose in ("parry_reaction", "iron_guard_reaction") or c.state == "PARRY":
+        left = (bx + fx * 0.18 + px * 0.14, by + fy * 0.18 + py * 0.14, tz + 0.20)
+        right = (bx + fx * 0.12 - px * 0.14, by + fy * 0.12 - py * 0.14, tz + 0.14)
+        return left, right
+
+    # 9. Ataques e Finishers
     if c.is_melee and c.atk_progress is not None:
         return attack_arms(c)
+
+    # 10. Marcha
     if c.is_moving and hasattr(c, "walk_timer"):
-        # Marcha pesada de tanque com a Naginata segura
         sw = math.sin(c.walk_timer * 7.5) * 0.05
-        tz = c.torso_z
-        bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
         left = (bx + fx * 0.20 + px * 0.08 + fx * sw, by + fy * 0.20 + py * 0.08 + fy * sw, tz + 0.15)
         right = (bx - fx * 0.06 - px * 0.12 - fx * sw, by - fy * 0.06 - py * 0.12 - fy * sw, tz + 0.05)
         return left, right
+
     return idle_arms(c)
+
+
+def get_arms(c):
+    """Interface padrão para consulta modular de membros superiores articulados."""
+    return _hands(c)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -261,7 +366,10 @@ def _render_weapon_and_hands(c, left_hand, right_hand):
     """Renderiza as manoplas Tekkō e a Naginata."""
     P = pal()
     fx, fy, px, py = c.fx, c.fy, c.px, c.py
-    has_weapon = c.extra_props.get("has_naginata", True) if c.extra_props else True
+    extra = c.extra_props if c.extra_props else {}
+    has_weapon = extra.get("has_naginata", True)
+    pose = extra.get("pose")
+    u = extra.get("seg_u", extra.get("p", 0.0))
 
     # Manoplas de ferro Tekkō articuladas nos punhos
     for hand, s_sign in ((left_hand, 1.0), (right_hand, -1.0)):
@@ -269,8 +377,9 @@ def _render_weapon_and_hands(c, left_hand, right_hand):
         # Placa de proteção dos nós dos dedos
         mk.obox(c, mk.add(hand, (fx, fy, 0.0), 0.030), (fx, fy, 0.0), 0.035, 0.065, 0.030, P["iron_light"], outline=False)
 
+    # Se estiver desarmado, NÃO desenha nenhuma arma (Single Pass Weapon Rendering Directives)
     if not has_weapon:
-        is_charge = c.extra_props.get("is_charging", False) if c.extra_props else False
+        is_charge = extra.get("is_charging", False)
         if is_charge:
             shock_c = (c.base_x + fx * 0.35, c.base_y + fy * 0.35, c.torso_z + 0.12)
             pts = [
@@ -282,12 +391,56 @@ def _render_weapon_and_hands(c, left_hand, right_hand):
             mk.band(c, pts, P["thrust_trail"] + (185,))
         return
 
-    # Desenho da Naginata empunhada
+    # Desenho da Naginata empunhada segundo a ação / pose
+    if extra.get("is_roll", False) or pose == "adamantine_push":
+        # Empunhadura horizontal à frente do tronco (Guarda Adamantina)
+        push_dir = mk.norm((fx * 0.20 + px * 0.95, fy * 0.20 + py * 0.95, 0.0))
+        mid_grip = mk.lerp(left_hand, right_hand, 0.5)
+        _draw_naginata_prop(c, mid_grip, push_dir, length=1.75)
+        return
+
+    if pose == "naginata_twirl_intro":
+        rot = u * math.pi * 2.0
+        w_dir = mk.norm((fx * math.sin(rot) + px * math.cos(rot), fy * math.sin(rot) + py * math.cos(rot), math.sin(rot * 2.0) * 0.35))
+        _draw_naginata_prop(c, right_hand, w_dir, length=1.80)
+        return
+
+    if pose == "ishizuki_plant":
+        plant_dir = mk.norm((fx * 0.15, fy * 0.15, -0.98))
+        _draw_naginata_prop(c, right_hand, plant_dir, length=1.85)
+        return
+
+    if pose == "iron_guard":
+        guard_dir = mk.norm((fx * 0.10 + px * 0.05, fy * 0.10 + py * 0.05, 0.98))
+        _draw_naginata_prop(c, right_hand, guard_dir, length=1.85)
+        return
+
+    if pose == "naginata_chiburi_mill":
+        spin_ang = u * math.pi * 3.0
+        c_dir = mk.norm((fx * math.cos(spin_ang) + px * math.sin(spin_ang), fy * math.cos(spin_ang) + py * math.sin(spin_ang), math.sin(spin_ang * 2.0) * 0.25))
+        tip = _draw_naginata_prop(c, right_hand, c_dir, length=1.85)
+        trail_c = mk.lerp(right_hand, tip, 0.70)
+        pts = [
+            (tip[0] + px * 0.08, tip[1] + py * 0.08, tip[2] + 0.08),
+            (tip[0] - px * 0.08, tip[1] - py * 0.08, tip[2] - 0.08),
+            (trail_c[0] - px * 0.05, trail_c[1] - py * 0.05, trail_c[2] - 0.12),
+            (trail_c[0] + px * 0.05, trail_c[1] + py * 0.05, trail_c[2] - 0.12),
+        ]
+        mk.band(c, pts, (180, 25, 25, 190))
+        return
+
+    if pose in ("benkei_shoulder_rest", "sohei_reverence"):
+        rest_dir = mk.norm((px, py, 0.02))
+        mid_pt = mk.lerp(left_hand, right_hand, 0.5)
+        _draw_naginata_prop(c, mid_pt, rest_dir, length=1.80)
+        return
+
     if c.is_melee:
-        p = c.atk_progress
-        is_throw = c.extra_props.get("is_throwing", False) if c.extra_props else False
-        hoist_phase = c.extra_props.get("hoist_slam_phase") if c.extra_props else None
-        hoist_prog = c.extra_props.get("hoist_slam_prog", 0.0) if c.extra_props else 0.0
+        p = c.atk_progress if c.atk_progress is not None else 0.5
+        is_throw = extra.get("is_throwing", False)
+        combo_step = extra.get("combo_step", 1)
+        hoist_phase = extra.get("hoist_slam_phase")
+        hoist_prog = extra.get("hoist_slam_prog", 0.0)
 
         if hoist_phase == "HOIST":
             dir_hoist = mk.norm((fx * (0.95 - hoist_prog * 0.65) + px * 0.04, fy * (0.95 - hoist_prog * 0.65) + py * 0.04, 0.08 + hoist_prog * 0.88))
@@ -318,12 +471,29 @@ def _render_weapon_and_hands(c, left_hand, right_hand):
 
         elif is_throw:
             dir_throw = mk.norm((fx * 0.85, fy * 0.85, 0.20 - p * 0.10))
-            tip = _draw_naginata_prop(c, right_hand, dir_throw, length=1.75)
+            _draw_naginata_prop(c, right_hand, dir_throw, length=1.75)
+
+        elif combo_step == 1:
+            # Varredura Circular em Arco (Passo 1 Cleave Sweep)
+            ang = -1.2 + p * 2.5
+            dir_cleave = mk.norm((fx * math.cos(ang) + px * math.sin(ang), fy * math.cos(ang) + py * math.sin(ang), 0.04))
+            tip = _draw_naginata_prop(c, right_hand, dir_cleave, length=1.85)
+            if 0.10 < p < 0.90:
+                trail_c = mk.lerp(right_hand, tip, 0.65)
+                pts = [
+                    (tip[0] + px * 0.14, tip[1] + py * 0.14, tip[2] + 0.06),
+                    (tip[0] - px * 0.14, tip[1] - py * 0.14, tip[2] - 0.06),
+                    (trail_c[0] - px * 0.06, trail_c[1] - py * 0.06, trail_c[2] - 0.05),
+                    (trail_c[0] + px * 0.06, trail_c[1] + py * 0.06, trail_c[2] + 0.05),
+                ]
+                mk.band(c, pts, P["thrust_trail"] + (210,))
+                mk.band(c, (mk.lerp(pts[0], pts[1], 0.3), mk.lerp(pts[0], pts[1], 0.7), mk.lerp(pts[2], pts[3], 0.7), mk.lerp(pts[2], pts[3], 0.3)), (255, 255, 220, 240))
         else:
+            # Estocada Frontal Colossal (Passo 2 Colossal Thrust)
             dir_thrust = mk.norm((fx * 0.96 + px * 0.04, fy * 0.96 + py * 0.04, 0.05))
-            tip = _draw_naginata_prop(c, right_hand, dir_thrust, length=1.80)
+            tip = _draw_naginata_prop(c, right_hand, dir_thrust, length=1.85)
             if 0.12 < p < 0.85:
-                r_cone = 0.10 * math.sin(p * math.pi)
+                r_cone = 0.11 * math.sin(p * math.pi)
                 c_mid = mk.lerp(right_hand, tip, 0.50)
                 p0 = (tip[0] + px * r_cone, tip[1] + py * r_cone, tip[2] + r_cone)
                 p1 = (tip[0] - px * r_cone, tip[1] - py * r_cone, tip[2] - r_cone)
@@ -493,7 +663,6 @@ def draw_torso(c):
                     (px * t_side * 0.35, py * t_side * 0.35, -0.92), 0.08, 0.018, 0.018, P["odoshi"], outline=False)
 
     # Ombreiras monumentais pesadas articuladas (Ō-sode)
-    # Assentadas perfeitamente no topo e laterais dos ombros (tz + 0.235)
     sh_x = 0.185
     order = sorted((-1.0, 1.0), key=lambda s: mk.depth(c, bx + px * (sh_x * s), by + py * (sh_x * s)))
     up_sode = (fx, fy, 0.0)
@@ -504,7 +673,6 @@ def draw_torso(c):
         sode_dir = mk.norm((px * side * 0.25, py * side * 0.25, -0.95))
 
         # 1. Placa superior monumental do Ō-sode (Kamuri-ita e 1ª lamelar)
-        # Cobre o ombro desde a frente do peitoral até a escápula dorsal (span de 0.24m)
         p1 = (sx - fx * 0.015 + px * side * 0.012, sy - fy * 0.015 + py * side * 0.012, sz)
         mk.obox(c, p1, sode_dir, 0.160, 0.058, 0.240, P["iron"], up=up_sode, texture="metal")
         # Rebordos reforçados de bronze brilhante e odoshi carmim
@@ -542,15 +710,14 @@ def draw_head(c):
     """
     Cabeça do Monge Guerreiro Benkei:
     - Capuz monástico de linho cru (zukin) esculpido com facetas integradas.
-    - O rosto marcial severo, olhos determinados, nariz forte e barba/mustache em 3D
-      são esculpidos por draw_sculpted_head_3d e draw_portrait_face_3d.
-    - Aqui são modeladas as dobras de tecido do capuz ao redor da fronte e têmporas,
-      completamente livres de caixas fechadas ou artefatos de chaminé.
+    - Feições marciais severas com barba encorpada e olhos focados via draw_portrait_face_3d.
+    - Dobras de tecido de linho cru ao redor da fronte e têmporas.
     """
     P = pal()
     bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
     hz = c.head_z
     hw = c.head_w
+    legacy_mode = c.extra_props.get("legacy_mode", False) if c.extra_props else False
 
     # 1. Dobra frontal de linho do capuz na testa (acima da linha das sobrancelhas)
     z_b0 = hz + 0.106
@@ -602,6 +769,12 @@ def draw_head(c):
     if d_nape > d_torso - 0.02:
         nape_pt = (bx - fx * 0.075, by - fy * 0.075, hz + 0.035)
         mk.obox(c, nape_pt, (-fx * 0.2, -fy * 0.2, -0.95), 0.13, 0.040, 0.075, P["cowl_shadow"], outline=False)
+
+    # 3. Rosto HD esculpido via draw_portrait_face_3d
+    if mk.depth(c, fx, fy) > -0.05:
+        if not legacy_mode:
+            draw_portrait_face_3d(c, char_type="benkei")
+        c._face_drawn = True
 
 
 def draw_front(c, left_hand, right_hand):

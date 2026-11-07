@@ -319,11 +319,17 @@ def get_fighter_action_labels(fighter):
         return "Corte Kodachi", "Dança Mai / Lunge"
     elif isinstance(fighter, BenkeiSamurai):
         if getattr(fighter, "has_naginata", True):
-            return "Estocada Naginata", "Arremesso Haste"
+            combo = getattr(fighter, "combo_step", 0)
+            primary_name = "Estocada Colossal" if combo == 1 else "Varredura Naginata"
+            return primary_name, "Arremesso Haste"
         return "Tackle Atropelo", "Recuperar Arma"
     elif isinstance(fighter, OrinMinstrel):
-        return "Kamaitachi Sônico", "Ressonância 360°"
+        combo = getattr(fighter, "combo_step", 0)
+        primary_name = "Kamaitachi Duplo" if combo == 1 else "Kamaitachi Sônico"
+        return primary_name, "Ressonância 360°"
     elif isinstance(fighter, GoroFarmer):
+        if getattr(fighter, "state", "") == "ROLL":
+            return "Pocket Dirt", "Pisotão Sísmico"
         return "Corte da Kuwa", "Pisotão Sísmico"
     elif isinstance(fighter, IchiBlade):
         return "Gyaku-Iai", "Postura Escuta"
@@ -631,7 +637,7 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
             play_sfx(SoundEvent.SLASH_KATANA)
             success = True
     elif isinstance(fighter, BenkeiSamurai):
-        if fighter.trigger_naginata_thrust(aim_x, aim_y):
+        if fighter.trigger_naginata_thrust(aim_x, aim_y, game_map=game_map):
             play_sfx(SoundEvent.SLASH_HEAVY)
             success = True
     elif isinstance(fighter, OrinMinstrel):
@@ -639,7 +645,11 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
             play_sfx(SoundEvent.SWING_SHAMISEN)
             success = True
     elif isinstance(fighter, GoroFarmer):
-        if fighter.trigger_kuwa_cleave(aim_x, aim_y):
+        if getattr(fighter, "state", "") == "ROLL":
+            if fighter.trigger_pocket_dirt(opponent=opponent, particles=particles, game_map=game_map):
+                play_sfx(SoundEvent.SWORD_SLASH)
+                success = True
+        elif fighter.trigger_kuwa_cleave(aim_x, aim_y):
             play_sfx(SoundEvent.SLASH_HEAVY)
             success = True
     elif isinstance(fighter, IchiBlade):
@@ -754,7 +764,7 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
             success = True
     elif isinstance(fighter, GoroFarmer):
         # Goro: Pisotão Sísmico
-        if fighter.trigger_earth_stomp(aim_x, aim_y, shockwaves=projectiles, particles=particles, banners=banners):
+        if fighter.trigger_earth_stomp(aim_x, aim_y, shockwaves=projectiles, particles=particles, banners=banners, opponent=opponent, game_map=game_map):
             play_sfx(SoundEvent.OBSTACLE_HIT)
             success = True
     elif isinstance(fighter, IchiBlade):
@@ -794,7 +804,7 @@ def execute_fighter_secondary(fighter, aim_x: float, aim_y: float, dwx: float, d
             success = True
     return success
 
-def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None, opponent=None, banners=None):
+def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: float, particles: list, decoys: list = None, game_map=None, opponent=None, banners=None, projectiles: list = None):
     """Executa a Terceira Ação (Roll / Dash dedicado) com invulnerabilidade temporária (i-frames)."""
     success = False
     if isinstance(fighter, RedSamurai):
@@ -821,6 +831,12 @@ def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: f
         success = fighter.trigger_jump(dwx, dwy)
     elif isinstance(fighter, ChiyoKunoichi):
         success = fighter.trigger_shadow_step(dwx, dwy, particles=particles)
+    elif isinstance(fighter, BenkeiSamurai):
+        success = fighter.trigger_adamantine_push(dwx, dwy, particles=particles, banners=banners, opponent=opponent, game_map=game_map, projectiles=projectiles)
+    elif isinstance(fighter, OrinMinstrel):
+        success = fighter.trigger_silk_glide(dwx, dwy, particles=particles, banners=banners, opponent=opponent, game_map=game_map, projectiles=projectiles)
+    elif isinstance(fighter, GoroFarmer):
+        success = fighter.trigger_mud_roll(dwx, dwy, particles=particles, game_map=game_map)
     else:
         # Demais personagens (BlueSamurai, YellowNinja, AmericanNinja, GrayNinja, PurpleNinja, SaitouSamurai)
         if hasattr(fighter, "trigger_roll"):
@@ -831,7 +847,7 @@ def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: f
 
 def execute_fighter_dash(fighter, aim_x: float, aim_y: float, dwx: float, dwy: float, projectiles: list, particles: list, decoys: list, opponent=None, game_map=None, poison_clouds=None, powder_traps=None):
     """Compatibilidade legada: direciona para a terceira ação de roll/dash dedicado."""
-    execute_fighter_roll(fighter, dwx, dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map)
+    execute_fighter_roll(fighter, dwx, dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=opponent, projectiles=projectiles)
 
 def get_random_arena_spawns(game_map, min_distance: float = 7.0) -> tuple[tuple[float, float], tuple[float, float]]:
     """Duas posições válidas (chão firme) separadas por pelo menos min_distance, segundo a regra de spawn da arena."""
@@ -2045,7 +2061,7 @@ def run_game():
                         execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
                     elif event.key == controls.get("P1_DASH", pygame.K_t):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                        execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p2, banners=banners)
+                        execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p2, banners=banners, projectiles=projectiles)
 
                 # Comandos Jogador 2 (Teclado)
                 if not vs_ai_mode and p2.is_alive and round_winner is None and round_in_progress:
@@ -2057,7 +2073,7 @@ def run_game():
                         execute_fighter_secondary(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p1, game_map=game_map, banners=banners)
                     elif event.key == controls.get("P2_DASH", pygame.K_o):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
-                        execute_fighter_roll(p2, p2_dwx, p2_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p1, banners=banners)
+                        execute_fighter_roll(p2, p2_dwx, p2_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p1, banners=banners, projectiles=projectiles)
 
             elif event.type == pygame.JOYBUTTONDOWN:
                 if ctrl_mgr.is_event_menu_pause(event, 0) or ctrl_mgr.is_event_menu_pause(event, 1):
@@ -2085,7 +2101,7 @@ def run_game():
                         execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
                     elif ctrl_mgr.is_event_action(event, 0, "dash"):
                         aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                        execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p2, banners=banners)
+                        execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p2, banners=banners, projectiles=projectiles)
 
                 # Gamepad Jogador 2
                 if not vs_ai_mode and p2.is_alive and round_winner is None and round_in_progress:
@@ -2100,7 +2116,7 @@ def run_game():
                         execute_fighter_secondary(p2, aim_x, aim_y, p2_dwx, p2_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p1, game_map=game_map, banners=banners)
                     elif ctrl_mgr.is_event_action(event, 1, "dash"):
                         aim_x, aim_y = get_player_aim_target(p2, controls, "P2", move_dir=p2_active_dir)
-                        execute_fighter_roll(p2, p2_dwx, p2_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p1, banners=banners)
+                        execute_fighter_roll(p2, p2_dwx, p2_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p1, banners=banners, projectiles=projectiles)
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if round_winner is not None:
@@ -2126,7 +2142,7 @@ def run_game():
                 execute_fighter_secondary(p1, aim_x, aim_y, p1_dwx, p1_dwy, projectiles, particles, decoys, poison_clouds, powder_traps, opponent=p2, game_map=game_map, banners=banners)
             elif touch_controls.is_dash_just_pressed():
                 aim_x, aim_y = get_player_aim_target(p1, controls, "P1", move_dir=p1_active_dir)
-                execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p2, banners=banners)
+                execute_fighter_roll(p1, p1_dwx, p1_dwy, aim_x, aim_y, particles, decoys=decoys, game_map=game_map, opponent=p2, banners=banners, projectiles=projectiles)
 
         # Hitstop congelado
         if combat_system.hitstop_timer > 0:
@@ -2324,9 +2340,9 @@ def run_game():
                 elif isinstance(f, (RenMonk, ChiyoKunoichi)):
                     f.update(f_dt, game_map, particles, opponent=opp)
                 elif isinstance(f, BenkeiSamurai):
-                    f.update(f_dt, game_map, particles, opponent=opp, banners=banners)
+                    f.update(f_dt, game_map, particles, opponent=opp, banners=banners, projectiles=projectiles)
                 elif isinstance(f, OrinMinstrel):
-                    f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles)
+                    f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles, banners=banners)
                 elif isinstance(f, (GoroFarmer, IchiBlade, ValeriusNecromancer, SeimeiOnmyoji, DaikiPilgrim, AoiHuntress, RaidenSumo, HendrikaAlchemist)):
                     f.update(f_dt, game_map, particles, opponent=opp, projectiles=projectiles, banners=banners, cinematic_director=cinematic_director)
                 else:

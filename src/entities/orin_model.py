@@ -80,8 +80,12 @@ MATERIALS = {
     "collar_white": "silk",
     "geta": "wood",
     "shamisen_wood": "wood",
+    "shamisen_skin": "matte",
     "bell_silver": "metal",
+    "bell_silver_bright": "metal",
+    "kanzashi_gold": "metal",
 }
+LEGACY_MATERIALS = {k: "matte" for k in MATERIALS}
 
 
 def pal() -> dict:
@@ -137,23 +141,191 @@ def walk_arms(c):
 def attack_arms(c):
     """
     Dedilhada de Shamisen: Golpe acústico veloz da palheta de marfim (bachi).
+    Suporta o combo rítmico em 2 etapas:
+    - Etapa 1: Dedilhada sônica ampla descendente.
+    - Etapa 2: Corte duplo em V cruzado ultrarrápido.
     """
     p = c.atk_progress
-    stroke = math.sin(p * math.pi)
+    extra = c.extra_props if c.extra_props else {}
+    combo_step = extra.get("combo_step", getattr(c, "combo_step", 1))
     tz = c.torso_z
     bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
 
-    left = (
-        bx + fx * 0.18 + px * 0.14,
-        by + fy * 0.18 + py * 0.14,
-        tz + 0.24 + stroke * 0.02
-    )
-    right = (
-        bx + fx * (0.12 + p * 0.08) - px * 0.04,
-        by + fy * (0.12 + p * 0.08) - py * 0.04,
-        tz + 0.08 - stroke * 0.14
-    )
+    if combo_step == 2:
+        # Corte duplo em V com duas palhetadas rápidas
+        stroke = math.sin(p * math.pi * 2.0)
+        cross = math.cos(p * math.pi * 2.0) * 0.08
+        left = (
+            bx + fx * 0.20 + px * 0.12,
+            by + fy * 0.20 + py * 0.12,
+            tz + 0.26 + stroke * 0.03
+        )
+        right = (
+            bx + fx * (0.16 + p * 0.10) + px * cross,
+            by + fy * (0.16 + p * 0.10) + py * cross,
+            tz + 0.10 - stroke * 0.16
+        )
+    else:
+        stroke = math.sin(p * math.pi)
+        left = (
+            bx + fx * 0.18 + px * 0.14,
+            by + fy * 0.18 + py * 0.14,
+            tz + 0.24 + stroke * 0.02
+        )
+        right = (
+            bx + fx * (0.12 + p * 0.08) - px * 0.04,
+            by + fy * (0.12 + p * 0.08) - py * 0.04,
+            tz + 0.08 - stroke * 0.14
+        )
     return left, right
+
+
+def _hands(c):
+    """Calcula posição instantânea das mãos para ordenação de profundidade e renderização articulada."""
+    extra = c.extra_props if c.extra_props else {}
+    pose = extra.get("pose")
+    u = extra.get("seg_u", extra.get("p", 0.0))
+    bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
+
+    # 1. Esquiva / Silk Sleeve Glide (Deslize de Seda)
+    if extra.get("is_roll", False) or pose == "silk_glide":
+        roll_p = extra.get("roll_prog", u)
+        glide_s = math.sin(roll_p * math.pi)
+        left = (
+            bx + fx * (0.12 - glide_s * 0.06) + px * 0.18,
+            by + fy * (0.12 - glide_s * 0.06) + py * 0.18,
+            tz + 0.14 - glide_s * 0.04
+        )
+        right = (
+            bx - fx * (0.04 + glide_s * 0.08) - px * 0.12,
+            by - fy * (0.04 + glide_s * 0.08) - py * 0.12,
+            tz + 0.06 - glide_s * 0.02
+        )
+        return left, right
+
+    # 2. Intro Fase 1: Dedilhada de Afinação e Teste de Ressonância (0.0 -> 0.35)
+    if pose == "shamisen_tuning_pluck":
+        tune_w = math.sin(u * math.pi * 3.0) * 0.015
+        pluck_w = math.sin(u * math.pi * 4.0) * 0.025
+        left = (
+            bx + fx * 0.16 + px * 0.22,
+            by + fy * 0.16 + py * 0.22,
+            tz + 0.38 + tune_w
+        )
+        right = (
+            bx + fx * 0.12 - px * 0.06,
+            by + fy * 0.12 - py * 0.06,
+            tz + 0.06 - pluck_w
+        )
+        return left, right
+
+    # 3. Intro Fase 2: Giro Gracioso com Mangas Furisode (0.35 -> 0.70)
+    if pose == "furisode_flourish":
+        flourish = math.sin(u * math.pi)
+        left = (
+            bx + fx * (0.16 * (1.0 - u) + 0.16 * u) + px * (0.22 * (1.0 - u) + 0.16 * u),
+            by + fy * (0.16 * (1.0 - u) + 0.16 * u) + py * (0.22 * (1.0 - u) + 0.16 * u),
+            tz + 0.38 * (1.0 - u) + 0.22 * u
+        )
+        right = (
+            bx + fx * (0.12 + flourish * 0.14) - px * (0.06 * (1.0 - u) + 0.08 * u - flourish * 0.06),
+            by + fy * (0.12 + flourish * 0.14) - py * (0.06 * (1.0 - u) + 0.08 * u - flourish * 0.06),
+            tz + 0.06 + flourish * 0.22
+        )
+        return left, right
+
+    # 4. Intro Fase 3 / Guarda: Postura de Cortesã com Respiração Viva (0.70 -> 1.00)
+    if pose == "courtesan_stance":
+        breathe = math.sin(u * math.pi * 4.0) * 0.012
+        left = (
+            bx + fx * 0.16 + px * 0.16,
+            by + fy * 0.16 + py * 0.16,
+            tz + 0.22 + breathe
+        )
+        right = (
+            bx + fx * 0.12 - px * 0.08,
+            by + fy * 0.12 - py * 0.08,
+            tz + 0.06 + breathe * 0.5
+        )
+        return left, right
+
+    # 5. Vitória Fase 1: Acorde Triunfal Kamaitachi (0.0 -> 0.38)
+    if pose == "triumphant_chord":
+        chord_strike = math.sin(u * math.pi)
+        left = (
+            bx + fx * 0.18 + px * 0.15,
+            by + fy * 0.18 + py * 0.15,
+            tz + 0.24
+        )
+        right = (
+            bx + fx * (0.14 + chord_strike * 0.14) - px * 0.04,
+            by + fy * (0.14 + chord_strike * 0.14) - py * 0.04,
+            tz + 0.10 + chord_strike * 0.18
+        )
+        return left, right
+
+    # 6. Vitória Fase 2: Giro Serena Dando as Costas (0.38 -> 0.75)
+    if pose == "turning_retune":
+        start_l = (bx + fx * 0.18 + px * 0.15, by + fy * 0.18 + py * 0.15, tz + 0.24)
+        start_r = (bx + fx * 0.14 - px * 0.04, by + fy * 0.14 - py * 0.04, tz + 0.10)
+        end_l = (bx - fx * 0.09 + px * 0.12, by - fy * 0.09 + py * 0.12, tz + 0.17)
+        end_r = (bx - fx * 0.11 - px * 0.05, by - fy * 0.11 - py * 0.05, tz + 0.11)
+        left = (
+            start_l[0] * (1.0 - u) + end_l[0] * u,
+            start_l[1] * (1.0 - u) + end_l[1] * u,
+            start_l[2] * (1.0 - u) + end_l[2] * u
+        )
+        right = (
+            start_r[0] * (1.0 - u) + end_r[0] * u,
+            start_r[1] * (1.0 - u) + end_r[1] * u,
+            start_r[2] * (1.0 - u) + end_r[2] * u
+        )
+        return left, right
+
+    # 7. Vitória Fase 3: Olhar por Cima do Ombro com Pétalas de Higanbana (0.75 -> 1.00)
+    if pose == "orin_backward_glance":
+        breathe = math.sin(u * math.pi * 4.0) * 0.010
+        left = (
+            bx - fx * 0.09 + px * 0.12,
+            by - fy * 0.09 + py * 0.12,
+            tz + 0.17 + breathe
+        )
+        right = (
+            bx - fx * 0.11 - px * 0.05,
+            by - fy * 0.11 - py * 0.05,
+            tz + 0.11 + breathe * 0.6
+        )
+        return left, right
+
+    # 8. Reação de Guarda / Bloqueio Acústico
+    if pose == "parry_reaction" or extra.get("is_parry", False):
+        left = (
+            bx + fx * 0.20 + px * 0.14,
+            by + fy * 0.20 + py * 0.14,
+            tz + 0.26
+        )
+        right = (
+            bx + fx * 0.16 - px * 0.06,
+            by + fy * 0.16 - py * 0.06,
+            tz + 0.14
+        )
+        return left, right
+
+    # 9. Ataque Físico / Acústico
+    if getattr(c, "is_melee", False):
+        return attack_arms(c)
+
+    # 10. Movimento / Caminhada
+    if getattr(c, "is_moving", False):
+        return walk_arms(c)
+
+    # 11. Padrão Idle
+    return idle_arms(c)
+
+
+def get_arms(c):
+    """Interface padrão para consulta modular de membros superiores articulados."""
+    return _hands(c)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -198,7 +370,7 @@ def draw_behind(c):
         )
 
     # Ordenação dinâmica: se o Shamisen estiver no lado oposto à câmera
-    hand_l, hand_r = idle_arms(c)
+    hand_l, hand_r = _hands(c)
     w_mid = ((hand_l[0] + hand_r[0]) * 0.5, (hand_l[1] + hand_r[1]) * 0.5)
     if mk.depth(c, w_mid[0], w_mid[1]) < d_torso:
         _render_shamisen(c, hand_l, hand_r)
@@ -374,6 +546,11 @@ def draw_head(c):
         mk.obox(c, (ear_x, ear_y, hz + 0.040), (0.0, 0.0, -1.0), 0.045, 0.006, 0.006, P["bell_silver"], outline=False)
         mk.obox(c, (ear_x, ear_y, hz - 0.015), (0.0, 0.0, 1.0), 0.018, 0.018, 0.018, P["bell_silver_bright"], outline=True)
 
+    legacy_mode = c.extra_props.get("legacy_mode", False) if c.extra_props else False
+    if not legacy_mode and mk.depth(c, fx, fy) > -0.05:
+        draw_portrait_face_3d(c, char_type="orin")
+        c._face_drawn = True
+
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Renderizador Especializado do Tsugaru Shamisen
@@ -426,10 +603,12 @@ def _render_shamisen(c, left_hand, right_hand):
 
     if c.is_melee:
         p = c.atk_progress
-        is_resonance = c.extra_props.get("is_resonance", False) if c.extra_props else False
+        extra = c.extra_props if c.extra_props else {}
+        is_resonance = extra.get("is_resonance", False)
+        combo_step = extra.get("combo_step", getattr(c, "combo_step", 1))
 
         if is_resonance:
-            wave_r = 0.35 * math.sin(p * math.pi)
+            wave_r = 0.45 * math.sin(p * math.pi)
             if wave_r > 0.04:
                 rc = (c.base_x + fx * 0.15, c.base_y + fy * 0.15, c.torso_z + 0.08)
                 pts = [
@@ -439,6 +618,26 @@ def _render_shamisen(c, left_hand, right_hand):
                     (rc[0] - fx * wave_r * 0.9, rc[1] - fy * wave_r * 0.9, rc[2] - wave_r * 0.6),
                 ]
                 mk.band(c, pts, P["res_shock"] + (190,))
+        elif combo_step == 2:
+            # Etapa 2: Lâminas gêmeas em V cruzadas (Crescente Dourada e Crescente Ciano)
+            if 0.08 < p < 0.92:
+                arc_w = 0.32 * math.sin(p * math.pi)
+                wf1 = (do_pt[0] + (fx + px * 0.25) * (0.35 + p * 0.60), do_pt[1] + (fy + py * 0.25) * (0.35 + p * 0.60), do_pt[2] + 0.08)
+                wf2 = (do_pt[0] + (fx - px * 0.25) * (0.35 + p * 0.60), do_pt[1] + (fy - py * 0.25) * (0.35 + p * 0.60), do_pt[2] + 0.04)
+
+                # Lâmina 1 (Ciano Sônico)
+                q0 = (wf1[0] + px * arc_w * 0.7, wf1[1] + py * arc_w * 0.7, wf1[2] + 0.12)
+                q1 = (wf1[0] - px * arc_w * 0.7, wf1[1] - py * arc_w * 0.7, wf1[2] + 0.12)
+                q2 = (wf1[0] - px * arc_w * 0.4, wf1[1] - py * arc_w * 0.4, wf1[2] - 0.08)
+                q3 = (wf1[0] + px * arc_w * 0.4, wf1[1] + py * arc_w * 0.4, wf1[2] - 0.08)
+                mk.band(c, (q0, q1, q2, q3), P["sonic_cyan"] + (210,))
+
+                # Lâmina 2 (Ouro Sônico)
+                r0 = (wf2[0] + px * arc_w * 0.7, wf2[1] + py * arc_w * 0.7, wf2[2] + 0.10)
+                r1 = (wf2[0] - px * arc_w * 0.7, wf2[1] - py * arc_w * 0.7, wf2[2] + 0.10)
+                r2 = (wf2[0] - px * arc_w * 0.4, wf2[1] - py * arc_w * 0.4, wf2[2] - 0.08)
+                r3 = (wf2[0] + px * arc_w * 0.4, wf2[1] + py * arc_w * 0.4, wf2[2] - 0.08)
+                mk.band(c, (r0, r1, r2, r3), P["sonic_gold"] + (220,))
         else:
             if 0.10 < p < 0.90:
                 arc_w = 0.28 * math.sin(p * math.pi)

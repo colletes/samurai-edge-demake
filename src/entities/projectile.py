@@ -1939,6 +1939,7 @@ class KamaitachiProjectile:
         self.dir_y = dir_y
 
         speed = 21.0
+        self.speed = speed
         self.vx = dir_x * speed
         self.vy = dir_y * speed
 
