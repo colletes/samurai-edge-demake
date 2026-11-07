@@ -193,6 +193,10 @@ class Samurai:
             from src.effects.particles import FloatingBanner
             banners.append(FloatingBanner(t("banner_confused"), self.wx, self.wy, wz=1.85, color=(215, 90, 255), duration=1.4))
 
+    def get_extra_props(self) -> dict:
+        """Propriedades visuais e mecânicas adicionais para renderização e cinemáticas."""
+        return {}
+
     def set_facing(self, target_wx: float, target_wy: float):
         """Vira o samurai para encarar o alvo."""
         dx = target_wx - self.wx

@@ -190,33 +190,70 @@ def attack_arms(c):
 
 def _current_hands(c):
     """Mapeamento contínuo de braços e gestos rituais Onmyōdō."""
-    extra = getattr(c, "extra", {}) or {}
+    extra = getattr(c, "extra_props", None) or getattr(c, "extra", None) or {}
     pose = extra.get("pose", "")
     p = extra.get("p", 0.0)
     bx, by, tz, fx, fy, px, py = _coords(c)
 
-    # 1. Poses de Intro
+    # 1. Poses de Intro (100% Contínuas C0/C1)
     if pose == "shikigami_descent":
-        # Levitação suave com braços abertos flutuando
+        # Descida e levitação suave com braços abertos flutuando
         u = extra.get("seg_u", p / 0.35 if p <= 0.35 else 1.0)
         float_w = math.sin(u * math.pi) * 0.04
-        right = (bx + px * 0.18 - fx * 0.04, by + py * 0.18 - fy * 0.04, tz + 0.14 + float_w)
-        left = (bx - px * 0.18 - fx * 0.04, by - py * 0.18 - fy * 0.04, tz + 0.14 + float_w)
+        r_start = (bx + px * 0.20 - fx * 0.02, by + py * 0.20 - fy * 0.02, tz + 0.22)
+        r_end   = (bx + fx * 0.08 + px * 0.12, by + fy * 0.08 + py * 0.12, tz + 0.16)
+        l_start = (bx - px * 0.20 - fx * 0.02, by - py * 0.20 - fy * 0.02, tz + 0.22)
+        l_end   = (bx + fx * 0.06 - px * 0.12, by + fy * 0.06 - py * 0.12, tz + 0.08)
+
+        right = (
+            (1.0 - u) * r_start[0] + u * r_end[0],
+            (1.0 - u) * r_start[1] + u * r_end[1],
+            (1.0 - u) * r_start[2] + u * r_end[2] + float_w
+        )
+        left = (
+            (1.0 - u) * l_start[0] + u * l_end[0],
+            (1.0 - u) * l_start[1] + u * l_end[1],
+            (1.0 - u) * l_start[2] + u * l_end[2] + float_w
+        )
         return left, right
 
     elif pose == "sensu_fan_flick":
-        # Abre o leque Sensu em arco e traz ao peito
+        # Abre o leque Sensu em arco gracioso e projeta o talismã para a guarda
         u = extra.get("seg_u", (p - 0.35) / 0.35 if 0.35 <= p <= 0.70 else 0.5)
-        arc = math.sin(u * math.pi) * 0.06
-        right = (bx + fx * (0.12 + 0.06 * u) + px * (0.14 - 0.08 * u), by + fy * (0.12 + 0.06 * u) + py * (0.14 - 0.08 * u), tz + 0.18 + arc)
-        left = (bx + fx * 0.08 - px * 0.12, by + fy * 0.08 - py * 0.12, tz + 0.08)
+        flick_arc = math.sin(u * math.pi) * 0.04
+        r_start = (bx + fx * 0.08 + px * 0.12, by + fy * 0.08 + py * 0.12, tz + 0.16)
+        r_end   = (bx + fx * 0.18 + px * 0.05, by + fy * 0.18 + py * 0.05, tz + 0.16)
+        l_start = (bx + fx * 0.06 - px * 0.12, by + fy * 0.06 - py * 0.12, tz + 0.08)
+        l_end   = (bx + fx * 0.08 - px * 0.10, by + fy * 0.08 - py * 0.10, tz + 0.06)
+
+        right = (
+            (1.0 - u) * r_start[0] + u * r_end[0],
+            (1.0 - u) * r_start[1] + u * r_end[1],
+            (1.0 - u) * r_start[2] + u * r_end[2] + flick_arc
+        )
+        left = (
+            (1.0 - u) * l_start[0] + u * l_end[0],
+            (1.0 - u) * l_start[1] + u * l_end[1],
+            (1.0 - u) * l_start[2] + u * l_end[2] + flick_arc * 0.5
+        )
         return left, right
 
     elif pose == "onmyoji_ready":
-        # Guarda cerimonial pronta com respiração sutil
-        breath = math.sin(c.walk_timer * 2.4) * 0.008
-        right = (bx + fx * 0.18 + px * 0.05, by + fy * 0.18 + py * 0.05, tz + 0.16 + breath)
-        left = (bx + fx * 0.08 - px * 0.10, by + fy * 0.08 - py * 0.10, tz + 0.06 - breath)
+        # Guarda cerimonial pronta com respiração rítmica, flutuação e ondulação contínua do talismã
+        u = extra.get("seg_u", (p - 0.70) / 0.30 if p >= 0.70 else 1.0)
+        breath = math.sin(u * math.pi * 3.0) * 0.012
+        flutter = math.sin(u * math.pi * 5.0) * 0.008
+        hover = math.sin(u * math.pi * 2.0) * 0.015
+        right = (
+            bx + fx * (0.16 + 0.04 * math.sin(u * math.pi * 1.5)) + px * 0.05,
+            by + fy * (0.16 + 0.04 * math.sin(u * math.pi * 1.5)) + py * 0.05,
+            tz + 0.16 + breath + hover + flutter
+        )
+        left = (
+            bx + fx * 0.08 - px * (0.10 + 0.02 * math.cos(u * math.pi * 2.0)),
+            by + fy * 0.08 - py * (0.10 + 0.02 * math.cos(u * math.pi * 2.0)),
+            tz + 0.06 - breath + hover * 0.5
+        )
         return left, right
 
     # 2. Poses de Vitória
@@ -224,25 +261,47 @@ def _current_hands(c):
         # Giro gracioso do leque Sensu
         u = extra.get("seg_u", p / 0.38 if p <= 0.38 else 1.0)
         twirl_ang = u * math.pi * 2.0
-        right = (bx + fx * 0.14 + px * (0.08 + math.cos(twirl_ang) * 0.05),
-                 by + fy * 0.14 + py * (0.08 + math.cos(twirl_ang) * 0.05),
-                 tz + 0.18 + math.sin(twirl_ang) * 0.04)
-        left = (bx + fx * 0.06 - px * 0.10, by + fy * 0.06 - py * 0.10, tz + 0.06)
+        r_start = (bx + fx * 0.18 + px * 0.05, by + fy * 0.18 + py * 0.05, tz + 0.16)
+        r_end   = (bx + fx * 0.12 + px * 0.06, by + fy * 0.12 + py * 0.06, tz + 0.16)
+        right = (
+            (1.0 - u) * r_start[0] + u * r_end[0],
+            (1.0 - u) * r_start[1] + u * r_end[1],
+            (1.0 - u) * r_start[2] + u * r_end[2]
+        )
+        left = (
+            bx + fx * 0.10 - px * (0.08 + math.cos(twirl_ang) * 0.06),
+            by + fy * 0.10 - py * (0.08 + math.cos(twirl_ang) * 0.06),
+            tz + 0.10 + math.sin(twirl_ang) * 0.06
+        )
         return left, right
 
     elif pose == "birds_ascend":
         # Braços elevam-se convocando pássaros de origami
         u = extra.get("seg_u", (p - 0.38) / 0.34 if 0.38 <= p <= 0.72 else 0.5)
-        right = (bx + fx * 0.12 + px * (0.06 + 0.10 * u), by + fy * 0.12 + py * (0.06 + 0.10 * u), tz + 0.16 + 0.14 * u)
-        left = (bx + fx * 0.12 - px * (0.06 + 0.10 * u), by + fy * 0.12 - py * (0.06 + 0.10 * u), tz + 0.16 + 0.14 * u)
+        r_start = (bx + fx * 0.12 + px * 0.06, by + fy * 0.12 + py * 0.06, tz + 0.16)
+        r_end   = (bx + fx * 0.12 + px * 0.16, by + fy * 0.12 + py * 0.16, tz + 0.30)
+        l_start = (bx + fx * 0.12 - px * 0.06, by + fy * 0.12 - py * 0.06, tz + 0.16)
+        l_end   = (bx + fx * 0.12 - px * 0.16, by + fy * 0.12 - py * 0.16, tz + 0.30)
+
+        right = (
+            (1.0 - u) * r_start[0] + u * r_end[0],
+            (1.0 - u) * r_start[1] + u * r_end[1],
+            (1.0 - u) * r_start[2] + u * r_end[2]
+        )
+        left = (
+            (1.0 - u) * l_start[0] + u * l_end[0],
+            (1.0 - u) * l_start[1] + u * l_end[1],
+            (1.0 - u) * l_start[2] + u * l_end[2]
+        )
         return left, right
 
     elif pose in ("imperial_bow", "heian_bow"):
         # Reverência imperial da corte Heian com mãos cruzadas no regaço
         u = extra.get("seg_u", (p - 0.72) / 0.28 if p >= 0.72 else 1.0)
         bow_depth = math.sin(min(1.0, u * 1.5) * math.pi * 0.5) * 0.03
-        right = (bx + fx * 0.10 + px * 0.02, by + fy * 0.10 + py * 0.02, tz + 0.02 - bow_depth)
-        left = (bx + fx * 0.10 - px * 0.02, by + fy * 0.10 - py * 0.02, tz + 0.02 - bow_depth)
+        breath = math.sin(u * math.pi * 3.0) * 0.005
+        right = (bx + fx * 0.10 + px * 0.02, by + fy * 0.10 + py * 0.02, tz + 0.04 - bow_depth + breath)
+        left = (bx + fx * 0.10 - px * 0.02, by + fy * 0.10 - py * 0.02, tz + 0.04 - bow_depth + breath)
         return left, right
 
     # 3. Poses de Ação e Combate
@@ -634,8 +693,8 @@ def draw_front(c, hand_l, hand_r):
     P = pal()
     r_x, r_y, r_z = hand_r
     l_x, l_y, l_z = hand_l
-    fx, fy, px, py = c.fx, c.fy, c.px, c.py
-    extra = getattr(c, "extra", {}) or {}
+    bx, by, tz, fx, fy, px, py = _coords(c)
+    extra = getattr(c, "extra_props", None) or getattr(c, "extra", None) or {}
     elem = extra.get("element", "wood")
 
     # Mapeamento da cor do elemento ativo
@@ -660,14 +719,16 @@ def draw_front(c, hand_l, hand_r):
         mk.obox(c, (ofuda_pos[0] + fx * 0.01, ofuda_pos[1] + fy * 0.01, ofuda_pos[2] + 0.02), (fx * 0.4, fy * 0.4, 0.9), 0.09, 0.032, 0.014, col_aura, up=(px, py, 0.0), outline=False)
 
         # Brilho místico ao conjurar / atacar
-        if c.is_melee and c.atk_progress is not None:
-            prog = c.atk_progress
+        is_melee = getattr(c, "is_melee", False)
+        atk_p = getattr(c, "atk_progress", None)
+        if is_melee and atk_p is not None:
+            prog = atk_p
             if 0.20 <= prog <= 0.80:
                 mk.cbox(c, ofuda_pos[0] + fx * 0.08, ofuda_pos[1] + fy * 0.08, ofuda_pos[2], 0.16, 0.16, 0.16, col_aura, outline=False)
                 mk.cbox(c, ofuda_pos[0] + fx * 0.08, ofuda_pos[1] + fy * 0.08, ofuda_pos[2], 0.09, 0.09, 0.09, P["spiritual_core"], outline=False)
 
     # 2. Leque Sensu Cerimonial na mão esquerda
-    is_fan_open = pose in ("sensu_fan_flick", "sensu_twirl", "astral_guard", "parry")
+    is_fan_open = pose in ("sensu_fan_flick", "onmyoji_ready", "sensu_twirl", "astral_guard", "parry") or extra.get("is_parry", False)
     fan_pos = (l_x - fx * 0.02 - px * 0.02, l_y - fy * 0.02 - py * 0.02, l_z + 0.04)
 
     if is_fan_open:
@@ -679,14 +740,15 @@ def draw_front(c, hand_l, hand_r):
         mk.obox(c, fan_pos, (fx * 0.6, fy * 0.6, -0.8), 0.20, 0.035, 0.022, P["sensu_wood"], up=(px, py, 0.0), outline=True)
 
     # 3. Pássaros de Papel Origami Shikigami (em voo orbital durante intro, vitória e deslize)
-    if pose in ("shikigami_descent", "birds_ascend", "shikigami_glide"):
-        p_val = extra.get("p", c.walk_timer)
+    if pose in ("shikigami_descent", "sensu_fan_flick", "onmyoji_ready", "birds_ascend", "shikigami_glide"):
+        walk_t = getattr(c, "walk_timer", 0.0)
+        p_val = extra.get("p", walk_t)
         for i, ang_off in enumerate((0.0, 2.1, 4.2)):
             bird_ang = p_val * 6.0 + ang_off
             bird_r = 0.28 + 0.08 * math.sin(bird_ang * 2.0)
-            bird_x = c.base_x + math.cos(bird_ang) * bird_r
-            bird_y = c.base_y + math.sin(bird_ang) * bird_r
-            bird_z = c.torso_z + 0.15 + 0.06 * math.cos(bird_ang * 3.0)
+            bird_x = bx + math.cos(bird_ang) * bird_r
+            bird_y = by + math.sin(bird_ang) * bird_r
+            bird_z = tz + 0.15 + 0.06 * math.cos(bird_ang * 3.0)
 
             # Asas de origami facetadas
             wing_flap = math.sin(p_val * 16.0 + i) * 0.03

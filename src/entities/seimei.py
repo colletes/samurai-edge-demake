@@ -316,6 +316,8 @@ class SeimeiOnmyoji(Samurai):
 
     def render(self, surface: pygame.Surface, camera):
         extra = {"element": self.current_element}
+        if hasattr(self, "extra_props") and self.extra_props:
+            extra.update(self.extra_props)
         if self.state in ("DEFEND", "PARRY") or getattr(self, "is_parrying", False):
             extra["pose"] = "astral_guard"
         elif self.state == STATE_ROLL:
@@ -333,7 +335,7 @@ class SeimeiOnmyoji(Samurai):
             state_timer=self.state_timer,
             is_alive=self.is_alive,
             char_type="seimei",
-            walk_timer=getattr(self, "walk_cycle", 0.0),
+            walk_timer=getattr(self, "walk_cycle", 0.0) or getattr(self, "walk_timer", 0.0),
             alpha=getattr(self, "alpha", 255),
             is_moving=getattr(self, "is_moving", False),
             extra_props=extra

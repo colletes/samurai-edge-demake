@@ -349,7 +349,7 @@ class GoroFarmer(Samurai):
             ]
 
     def get_extra_props(self) -> dict:
-        extra = super().get_extra_props()
+        extra = {}
         if self.state == STATE_EARTH_STOMP:
             extra.update({"is_stomp": True, "pose": "earth_stomp"})
         elif self.state == STATE_POCKET_DIRT:
