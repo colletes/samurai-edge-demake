@@ -2424,39 +2424,39 @@ class OfudaProjectile:
 
         # Configuração de velocidade, massa, alcance e dano por afinidade elemental (Dano 2 HP padrão)
         if element == "metal":
-            self.speed = 28.0
+            self.speed = 18.5
             self.damage = 2
-            self.radius = 0.34
+            self.radius = 0.32
             self.is_unblockable = True
             self.is_homing = False
         elif element == "earth":
-            self.speed = 13.5
+            self.speed = 12.0
             self.damage = 2
-            self.radius = 0.48
+            self.radius = 0.44
             self.is_unblockable = False
             self.is_homing = False
         elif element == "fire":
-            self.speed = 17.5
+            self.speed = 15.5
             self.damage = 2
-            self.radius = 0.42
+            self.radius = 0.38
             self.is_unblockable = False
             self.is_homing = False
         elif element == "water":
-            self.speed = 16.0
+            self.speed = 14.0
             self.damage = 2
-            self.radius = 0.40
+            self.radius = 0.36
             self.is_unblockable = False
             self.is_homing = True
         elif element == "yinyang":
-            self.speed = 15.5
+            self.speed = 13.5
             self.damage = 2
-            self.radius = 0.42
+            self.radius = 0.38
             self.is_unblockable = False
             self.is_homing = False
         else:  # wood (default)
-            self.speed = 17.0
+            self.speed = 14.5
             self.damage = 2
-            self.radius = 0.38
+            self.radius = 0.35
             self.is_unblockable = False
             self.is_homing = False
 
@@ -2468,6 +2468,7 @@ class OfudaProjectile:
         self.spin_timer = 0.0
         self.has_been_reflected = False
         self.bounce_count = 0
+        self.evaded_targets = set()
 
     def update(self, dt: float, game_map, particles: list, opponent=None) -> bool:
         if not self.is_active:
@@ -2871,9 +2872,9 @@ class TalismanWard:
                         is_evading = is_fighter_evading(f)
                         dist = world_distance(self.wx, self.wy, f.wx, f.wy)
                         if dist <= self.pillar_radius:
-                            # Se o combatente estiver esquivando e o feitiço for não-explosivo (todos exceto pilar de fogo):
-                            # desvia completamente da barreira e é registrado para não sofrer dano posterior desta detonação
-                            if is_evading and self.element != "fire":
+                            # Se o combatente estiver esquivando, desvia completamente da detonação
+                            # da barreira e é registrado para não sofrer dano posterior
+                            if is_evading:
                                 self.hit_fighters.add(id(f))
                                 continue
                             self.hit_fighters.add(id(f))

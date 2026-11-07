@@ -1,10 +1,11 @@
 """
 Daiki (O Peregrino do Bastão Bō - Ciclo 5):
 Monge andarilho Yamabushi / Komusō das montanhas de pinheiros sagrados.
-- Arquétipo: Especialista de longo alcance, espaçamento e mobilidade aérea (velocidade 4.75, 2 HP).
+- Arquétipo: Especialista de longo alcance, espaçamento e mobilidade aérea acrobática.
 - Guarda Giratória (Parry técnico girando o bastão de carvalho de 6 shaku / 1.82m).
-- Ataque Primário: Estocada & Giro de Bastão Bō (BO_STRIKE) - golpe longo de duas mãos com ponteiras de ferro (alcance 2.65m, raio 1.25m).
-- Ação Secundária: Salto com Vara / Impacto Meteoro (POLE_VAULT) - apoia o bastão no solo para saltar sobre ataques rasteiros e armadilhas (wz até 1.35m) e desce esmagando a guarda frontal com impacto letal. Cooldown 3.6s.
+- Ataque Primário: Varredura Helicoidal de 180° com Bastão Bō (Six-Shaku Bo Staff Sweep) - alcance longo 2.40m, raio 1.35m com cadência anti-spam.
+- Ação Secundária: Salto com Vara / Impacto Meteoro (POLE_VAULT) - impulsiona-se no bastão sobre ataques baixos e obstáculos (wz até 2.2m) e desce com rotação mortal do bastão quebrando a guarda frontal (2 HP de dano). Cooldown 4.2s.
+- Terceira Ação: Salto com Apoio de Bastão (Staff Vault Hop) - salto ágil acrobático com 13 i-frames completos, cruzando buracos estreitos.
 """
 import math
 import random
@@ -14,12 +15,14 @@ from src.config import (
 )
 from src.entities.samurai import (
     Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY,
-    STATE_STUNNED, STATE_DEAD, STATE_ROLL, STATE_PARRY, resolve_playable_bounds
+    STATE_STUNNED, STATE_DEAD, STATE_ROLL, STATE_PARRY, resolve_playable_bounds,
+    slide_movement_against_obstacles
 )
 from src.entities.voxel_models import render_voxel_humanoid
 from src.effects.particles import SparkParticle, SmokeParticle, FloatingBanner
 
 STATE_POLE_VAULT = "POLE_VAULT"
+STATE_STAFF_HOP = "STAFF_HOP"
 
 
 class DaikiPilgrim(Samurai):
@@ -31,30 +34,37 @@ class DaikiPilgrim(Samurai):
         self.hp = 2
         self.can_parry = True
 
-        # Ataque Primário: Estocada & Varredura de Bastão Bō (Longo Alcance)
-        self.bo_duration = 0.20
-        self.bo_recovery = 0.26        # Recovery veloz eliminando vulnerabilidade prolongada
-        self.bo_reach = 2.35           # Alcance ampliado condizente com a envergadura do bastão
-        self.bo_radius = 1.30
+        # Ataque Primário: Varredura Helicoidal de 180° & Estocada (Longo Alcance, Anti-Spam)
+        self.bo_duration = 0.22
+        self.bo_recovery = 0.26        # Recovery balanceado eliminando vulnerabilidade prolongada
+        self.bo_cooldown = 0.42        # Anti-spam estrito entre ataques consecutivos
+        self.bo_cooldown_timer = 0.0
+        self.bo_reach = 2.40           # Alcance longo condizente com os 1.82m do bastão
+        self.bo_radius = 1.35
         self.flourish_spin_active = False
         self.recovery_max_time = self.bo_recovery
 
-        # Ação Secundária: Salto com Vara / Impacto Meteoro (Pole Vault)
-        self.vault_cooldown = 4.6      # Cooldown calibrado
+        # Ação Secundária: Salto com Vara / Impacto Meteoro (Pole Vault - 2 HP)
+        self.vault_cooldown = 4.2      # Cooldown calibrado
         self.vault_timer = 0.0
-        self.vault_duration = 0.36
-        self.vault_speed = 9.5
+        self.vault_duration = 0.42
+        self.vault_speed = 9.2
         self.vault_dir_x = 1.0
         self.vault_dir_y = 0.0
         self.vault_slammed = False
+        self.pole_vault_deflect_active = False
 
-        # Esquiva firme de peregrino da montanha
+        # Terceira Ação: Salto Acrobático com Apoio no Bastão (Staff Vault Hop)
         self.is_agile_dodge = True
+        self.staff_hop_duration = 0.24
         self.roll_speed = 8.8
         self.roll_duration = 0.22
         self.roll_recovery_duration = 0.16
         self.roll_cooldown_duration = 0.36
         self.recovery_duration = self.bo_recovery
+
+        self.extra_props = {}
+        self.action_name = "Bastão Bō"
 
     def trigger_parry(self) -> bool:
         """Guarda Giratória com o Bastão Bō de carvalho e anéis de ferro."""
@@ -62,6 +72,7 @@ class DaikiPilgrim(Samurai):
             return False
         self.state = STATE_PARRY
         self.state_timer = 0.38
+        self.action_name = "Guarda Giratória"
         return True
 
     def on_parried(self, opponent=None, game_map=None, banners: list = None, particles: list = None):
@@ -71,7 +82,6 @@ class DaikiPilgrim(Samurai):
         self.state = STATE_RECOVERY
         self.state_timer = self.bo_recovery * 1.25
         if particles is not None:
-            from src.effects.particles import SparkParticle
             for _ in range(8):
                 particles.append(SparkParticle(self.wx, self.wy, 0.35, color=(235, 195, 95)))
 
@@ -79,33 +89,52 @@ class DaikiPilgrim(Samurai):
         return (
             self.is_alive
             and self.state in (STATE_IDLE, STATE_WALK)
+            and self.bo_cooldown_timer <= 0
             and self.roll_recovery_timer <= 0
             and self.dash_recovery_timer <= 0
         )
 
     def trigger_bo_strike(self, aim_x: float, aim_y: float, particles: list = None) -> bool:
-        """Ataque Primário: Estocada e giro longo com o Bastão Bō de 1.82m."""
-        if not self.can_act():
+        """Ataque Primário: Varredura helicoidal de 180° e estocada longa com o Bastão Bō de 1.82m."""
+        if not self.can_act() or self.bo_cooldown_timer > 0:
             return False
 
         self.set_facing(aim_x, aim_y)
         self.state = STATE_ATTACK
         self.state_timer = self.bo_duration
+        self.bo_cooldown_timer = self.bo_cooldown
         self.hitbox_active = True
         self.hitbox_damage = 2
 
         self.hitbox_center = (
-            self.wx + self.facing_x * 1.15,
-            self.wy + self.facing_y * 1.15
+            self.wx + self.facing_x * 1.35,
+            self.wy + self.facing_y * 1.35
         )
         self.hitbox_radius = self.bo_radius
         self.slash_dir = (self.facing_x, self.facing_y)
+        self.action_name = "Varredura de Bō"
+
+        if particles is not None:
+            for _ in range(8):
+                particles.append(SparkParticle(
+                    self.wx + self.facing_x * 0.8,
+                    self.wy + self.facing_y * 0.8,
+                    0.25,
+                    color=(215, 185, 125)
+                ))
         return True
+
+    def trigger_attack(self, aim_x: float = None, aim_y: float = None, **kwargs) -> bool:
+        """Compatibilidade com interface universal Samurai."""
+        if aim_x is None or aim_y is None:
+            aim_x = self.wx + self.facing_x * 2.0
+            aim_y = self.wy + self.facing_y * 2.0
+        return self.trigger_bo_strike(aim_x, aim_y, particles=kwargs.get("particles"))
 
     def trigger_pole_vault(self, aim_x: float = None, aim_y: float = None, particles: list = None, banners: list = None, opponent=None, game_map=None) -> bool:
         """
         Ação Secundária: Salto com Vara / Impacto Meteoro (Pole Vault).
-        Impulsiona-se no bastão Bō sobre ataques rasteiros e desce com golpe vertical quebra-guarda.
+        Impulsiona-se no bastão Bō sobre ataques rasteiros e desce com rotação vertical quebra-guarda (2 HP).
         """
         if not self.can_act() or self.vault_timer > 0:
             return False
@@ -119,37 +148,101 @@ class DaikiPilgrim(Samurai):
         self.state_timer = self.vault_duration
         self.vault_timer = self.vault_cooldown
         self.vault_slammed = False
+        self.pole_vault_deflect_active = True
         self.hitbox_active = False
-        self.pit_cross_timer = self.vault_duration + 0.08
+        self.pit_cross_timer = self.vault_duration + 0.12
+        self.action_name = "Salto com Vara"
 
         if particles is not None:
-            for _ in range(10):
+            for _ in range(12):
                 particles.append(SparkParticle(self.wx, self.wy, 0.25, color=(235, 195, 95)))
 
         if banners is not None:
-            banners.append(FloatingBanner("POLE VAULT!", self.wx, self.wy, wz=1.65, color=COLOR_DAIKI_AURA, duration=0.80))
+            banners.append(FloatingBanner("POLE VAULT!", self.wx, self.wy, wz=1.75, color=COLOR_DAIKI_AURA, duration=0.85))
 
         return True
+
+    def trigger_staff_hop(self, dwx: float, dwy: float, particles: list = None, game_map=None) -> bool:
+        """Terceira Ação: Salto Acrobático com apoio no Bastão Bō (13 i-frames, cruza buracos estreitos)."""
+        if not self.is_alive or self.state in (STATE_ROLL, STATE_STAFF_HOP, STATE_STUNNED, STATE_DEAD, STATE_ATTACK, STATE_POLE_VAULT):
+            return False
+        if self.roll_cooldown_timer > 0 or self.roll_recovery_timer > 0:
+            return False
+
+        dist = math.hypot(dwx, dwy)
+        if dist > 0.05:
+            self.facing_x = dwx / dist
+            self.facing_y = dwy / dist
+        else:
+            self.facing_x = -self.facing_x
+            self.facing_y = -self.facing_y
+
+        self.state = STATE_STAFF_HOP
+        self.state_timer = self.staff_hop_duration
+        self.is_invulnerable_dodge = True
+        self.invulnerable = True
+        self.hitbox_active = False
+        self.pit_cross_timer = 0.28
+        self.action_name = "Salto de Peregrino"
+
+        if particles is not None:
+            for _ in range(10):
+                particles.append(SparkParticle(self.wx, self.wy, 0.30, color=(235, 195, 110)))
+        return True
+
+    def trigger_roll(self, dwx: float, dwy: float, particles: list = None, **kwargs) -> bool:
+        """Compatibilidade com interface universal Samurai."""
+        return self.trigger_staff_hop(dwx, dwy, particles=particles, game_map=kwargs.get("game_map"))
+
+    def update_roll(self, dt: float, game_map=None, particles: list = None):
+        """Atualiza a translação física e cronômetro do salto acrobático com bastão."""
+        if self.state not in (STATE_ROLL, STATE_STAFF_HOP):
+            return
+
+        self.state_timer -= dt
+        prog = 1.0 - max(0.0, self.state_timer / max(0.001, self.staff_hop_duration))
+        # Arco sutil de salto acrobático
+        self.wz = max(0.0, math.sin(prog * math.pi) * 0.45)
+
+        step = self.roll_speed * dt
+        dx = self.facing_x * step
+        dy = self.facing_y * step
+        new_wx, new_wy = slide_movement_against_obstacles(self.wx, self.wy, dx, dy, self.radius, game_map)
+        self.wx, self.wy = new_wx, new_wy
+
+        if self.state_timer <= 0:
+            self.state = STATE_IDLE
+            self.wz = 0.0
+            self.is_invulnerable_dodge = False
+            self.invulnerable = False
+            self.roll_recovery_timer = self.roll_recovery_duration
+            self.roll_cooldown_timer = self.roll_cooldown_duration
+            self.dash_recovery_timer = self.roll_recovery_duration
 
     def update(self, dt: float, game_map=None, particles: list = None, opponent=None, projectiles: list = None, banners: list = None, **kwargs):
         self.update_dodge_timers(dt)
 
-        if self.state not in (STATE_POLE_VAULT, "JUMP") and self.wz > 0.0:
-            self.wz = max(0.0, self.wz - 16.0 * dt)
+        if self.bo_cooldown_timer > 0:
+            self.bo_cooldown_timer = max(0.0, self.bo_cooldown_timer - dt)
 
         if self.vault_timer > 0:
             self.vault_timer = max(0.0, self.vault_timer - dt)
 
-        if self.state == STATE_ROLL:
+        if self.state not in (STATE_POLE_VAULT, "JUMP", STATE_STAFF_HOP) and self.wz > 0.0:
+            self.wz = max(0.0, self.wz - 16.0 * dt)
+
+        if self.state in (STATE_ROLL, STATE_STAFF_HOP):
             self.update_roll(dt, game_map, particles)
             return
 
         if not self.is_alive:
             self.wz = 0.0
+            self.pole_vault_deflect_active = False
             return
 
         if self.state == STATE_STUNNED:
             self.wz = 0.0
+            self.pole_vault_deflect_active = False
             self.state_timer -= dt
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
@@ -157,7 +250,7 @@ class DaikiPilgrim(Samurai):
 
         if self.state == STATE_ATTACK:
             self.state_timer -= dt
-            step_speed = 2.6
+            step_speed = 2.4
             new_wx = self.wx + self.facing_x * step_speed * dt
             new_wy = self.wy + self.facing_y * step_speed * dt
             if game_map is not None:
@@ -183,10 +276,10 @@ class DaikiPilgrim(Samurai):
             self.state_timer -= dt
             prog = 1.0 - max(0.0, self.state_timer / max(0.001, self.vault_duration))
 
-            # Trajetória parabólica no eixo Z (atinge 1.35m no ápice, saltando sobre ataques baixos e armadilhas)
-            self.wz = max(0.0, math.sin(prog * math.pi) * 1.35)
+            # Trajetória parabólica no eixo Z (atinge 2.2m no ápice, saltando sobre ataques baixos e armadilhas)
+            self.wz = max(0.0, math.sin(prog * math.pi) * 2.20)
 
-            # Avanço horizontal impulsionado pela vara
+            # Avanço horizontal impulsionado pela alavanca do bastão
             new_wx = self.wx + self.vault_dir_x * self.vault_speed * dt
             new_wy = self.wy + self.vault_dir_y * self.vault_speed * dt
             if game_map is not None:
@@ -196,56 +289,52 @@ class DaikiPilgrim(Samurai):
             else:
                 self.wx, self.wy = new_wx, new_wy
 
-            # No início do salto (prog < 0.35), o giro do bastão desvia projéteis frontais próximos
-            if prog < 0.35 and projectiles:
-                for p in projectiles:
-                    if getattr(p, "is_active", False) and getattr(p, "owner", None) is not self:
-                        px, py = getattr(p, "wx", -999.0), getattr(p, "wy", -999.0)
-                        if math.hypot(px - self.wx, py - self.wy) < 1.35 and hasattr(p, "vx"):
-                            p.vx = -p.vx
-                            p.vy = -p.vy
-                            if hasattr(p, "dir_x"):
-                                p.dir_x = -p.dir_x
-                                p.dir_y = -p.dir_y
-                            p.owner = self
+            # No impulso inicial (prog < 0.40), o giro veloz do bastão deflete projéteis frontais
+            if prog < 0.40:
+                self.pole_vault_deflect_active = True
+            else:
+                self.pole_vault_deflect_active = False
 
-            # Na descida final (prog >= 0.72), ativa o Impacto Meteoro quebra-guarda
-            if prog >= 0.72 and not self.vault_slammed:
+            # Na descida final com rotação do bastão (prog >= 0.65), desfere o Impacto Meteoro (2 HP) quebrando guarda
+            if prog >= 0.65 and not self.vault_slammed:
                 self.vault_slammed = True
                 self.hitbox_active = True
                 self.hitbox_damage = 2
                 self.hitbox_center = (
-                    self.wx + self.facing_x * 1.15,
-                    self.wy + self.facing_y * 1.15
+                    self.wx + self.facing_x * 1.25,
+                    self.wy + self.facing_y * 1.25
                 )
-                self.hitbox_radius = 1.35
+                self.hitbox_radius = 1.45
                 self.slash_dir = (self.facing_x, self.facing_y)
+
                 # Quebra a guarda frontal (STATE_PARRY) do oponente se estiver na área de impacto
                 if opponent and getattr(opponent, "is_alive", False) and getattr(opponent, "state", "") == STATE_PARRY:
                     dist_opp = math.hypot(opponent.wx - self.hitbox_center[0], opponent.wy - self.hitbox_center[1])
                     if dist_opp <= self.hitbox_radius + getattr(opponent, "radius", 0.35):
-                        opponent.stun(0.55)
+                        opponent.stun(0.65)
                         if banners is not None:
-                            banners.append(FloatingBanner("GUARD CRUSH!", opponent.wx, opponent.wy, wz=1.7, color=(255, 160, 50)))
+                            banners.append(FloatingBanner("GUARD CRUSH! (2 HP)", opponent.wx, opponent.wy, wz=1.8, color=(255, 175, 60)))
 
                 if particles is not None:
-                    for _ in range(14):
-                        particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.20, color=(235, 185, 90)))
-            elif prog >= 0.72:
+                    for _ in range(16):
+                        particles.append(SparkParticle(self.hitbox_center[0], self.hitbox_center[1], 0.25, color=(235, 185, 90)))
+            elif prog >= 0.65:
                 self.hitbox_center = (
-                    self.wx + self.facing_x * 1.15,
-                    self.wy + self.facing_y * 1.15
+                    self.wx + self.facing_x * 1.25,
+                    self.wy + self.facing_y * 1.25
                 )
 
             if self.state_timer <= 0:
                 self.wz = 0.0
+                self.pole_vault_deflect_active = False
                 self.hitbox_active = False
                 self.state = STATE_RECOVERY
-                self.state_timer = 0.18
+                self.state_timer = 0.24
             return
 
         elif self.state == STATE_RECOVERY:
             self.wz = 0.0
+            self.pole_vault_deflect_active = False
             self.state_timer -= dt
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
@@ -254,20 +343,32 @@ class DaikiPilgrim(Samurai):
 
         elif self.state == STATE_PARRY:
             self.wz = 0.0
+            self.pole_vault_deflect_active = False
             self.state_timer -= dt
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
             return
 
-    def render(self, surface: pygame.Surface, camera):
+    def get_extra_props(self) -> dict:
         extra = {}
         if self.state == STATE_POLE_VAULT:
-            extra = {"pose": "pole_vault", "is_vaulting": True}
+            prog = 1.0 - max(0.0, self.state_timer / max(0.001, self.vault_duration))
+            extra = {"pose": "pole_vault", "is_vaulting": True, "vault_prog": prog}
+        elif self.state == STATE_STAFF_HOP:
+            prog = 1.0 - max(0.0, self.state_timer / max(0.001, self.staff_hop_duration))
+            extra = {"pose": "staff_vault_hop", "hop_prog": prog}
         elif self.state == STATE_RECOVERY and getattr(self, "flourish_spin_active", False):
             prog = 1.0 - max(0.0, min(1.0, self.state_timer / max(0.001, getattr(self, "recovery_max_time", 0.45))))
             extra = {"pose": "bo_twirl", "twirl_progress": prog}
         elif self.state in ("DEFEND", "PARRY") or getattr(self, "is_parrying", False):
             extra = {"pose": "bo_spin_guard"}
+
+        if hasattr(self, "extra_props") and self.extra_props:
+            extra.update(self.extra_props)
+        return extra
+
+    def render(self, surface: pygame.Surface, camera):
+        extra = self.get_extra_props()
 
         render_voxel_humanoid(
             surface=surface,

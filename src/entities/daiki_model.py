@@ -5,8 +5,9 @@ Daiki, o Peregrino do Bastão Bō (Ciclo 5):
 - Túnica rústica de cânhamo azul-ardósia com o ombro e peitoral esquerdo musculoso expostos.
 - Grande colar de contas Juzu de madeira de sândalo cruzando o peito e chapéu Kasa de palha nas costas.
 - Munhequeiras brancas (Tekko), faixa de cânhamo na cintura, calças escuras (Hakama-shita) com polainas Kyahan em malha 3D contínua e sandálias Waraji.
-- Bastão Longo Bō de Carvalho (Roku-shaku Bō ~1.85m) reforçado com ponteiras e anéis de ferro forjado.
-- Ordenação dinâmica Painter's Algorithm para oclusão 360° perfeita.
+- Bastão Longo Bō de Carvalho Vermelho (Roku-shaku Bō ~1.85m) reforçado com ponteiras e anéis de ferro forjado.
+- Single-pass rendering modular via `get_arms(c)` e ordenação dinâmica Painter's Algorithm para oclusão 360° perfeita.
+- Animações 100% contínuas (C0/C1) sem static freeze para Intro, Vitória e Finishers.
 """
 import math
 import pygame
@@ -62,13 +63,13 @@ PALETTE = {
     "brow": (26, 22, 20),
     "lip": (172, 118, 104),
 
-    # Bastão Bō de Carvalho e Ponteiras de Ferro
-    "bo_wood": (122, 76, 42),
-    "bo_wood_dark": (84, 50, 26),
+    # Bastão Bō de Carvalho Vermelho e Ponteiras de Ferro
+    "bo_wood": (136, 68, 38),
+    "bo_wood_dark": (92, 42, 22),
     "bo_grip": (228, 222, 208),
     "bo_iron": (68, 74, 84),
     "bo_steel_ring": (195, 204, 216),
-    "bo_gold_ring": (212, 172, 78),
+    "bo_gold_ring": (218, 178, 82),
     "wind_aura": (190, 238, 215),
     "wind_core": (240, 255, 248),
 }
@@ -76,6 +77,7 @@ PALETTE = {
 MATERIALS = {
     "tunic": "canvas",
     "tunic_dark": "canvas",
+    "tunic_light": "canvas",
     "pants": "canvas",
     "kyahan": "canvas",
     "sash": "canvas",
@@ -83,7 +85,11 @@ MATERIALS = {
     "bo_iron": "metal",
     "bo_steel_ring": "steel",
     "bo_gold_ring": "gold",
+    "straw_band": "straw",
+    "kasa_straw": "straw",
 }
+
+LEGACY_MATERIALS = {k: "matte" for k in MATERIALS}
 
 
 def pal() -> dict:
@@ -91,8 +97,13 @@ def pal() -> dict:
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# Poses dos Braços e Animação do Bastão Bō
+# Poses dos Braços e Cinemática do Bastão Bō
 # ---------------------------------------------------------------------------------------------------------------------
+
+def get_arms(c):
+    """Exposição modular da cinemática dos braços para sincronização com o renderizador humanoide."""
+    return _current_hands(c)
+
 
 def idle_arms(c):
     """
@@ -103,28 +114,96 @@ def idle_arms(c):
     breathe = math.sin(c.walk_timer * 2.5) * 0.010
     tz = c.torso_z + breathe
     bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
-    pose = c.extra_props.get("pose") if c.extra_props else None
+    extra = c.extra_props if c.extra_props else {}
+    pose = extra.get("pose")
 
-    if pose == "pilgrim_bow":
-        # Saudação Gassho com o bastão vertical junto ao braço direito
-        left = (bx + fx * 0.14 + px * 0.04, by + fy * 0.14 + py * 0.04, tz + 0.16)
-        right = (bx + fx * 0.14 - px * 0.04, by + fy * 0.14 - py * 0.04, tz + 0.16)
+    # 1. Poses de Intro
+    if pose == "intro_bo_twirl":
+        u = extra.get("seg_u", 0.0)
+        angle = u * math.pi * 6.0  # 3 rotações helicoidais completas
+        rot_cos = math.cos(angle)
+        rot_sin = math.sin(angle)
+        bob = math.sin(u * math.pi * 4.0) * 0.02
+        left = (bx + fx * (0.16 + rot_cos * 0.04) + px * (0.05 + rot_sin * 0.04),
+                by + fy * (0.16 + rot_cos * 0.04) + py * (0.05 + rot_sin * 0.04),
+                tz + 0.16 + bob)
+        right = (bx + fx * (0.14 - rot_cos * 0.04) - px * (0.05 - rot_sin * 0.04),
+                 by + fy * (0.14 - rot_cos * 0.04) - py * (0.05 - rot_sin * 0.04),
+                 tz + 0.14 - bob)
+        return left, right
+
+    if pose == "intro_bo_plant":
+        u = extra.get("seg_u", 0.0)
+        t = math.sin(u * math.pi * 0.5)
+        # Transição da mão direita cravando o bastão no chão e esquerda no peito
+        rx = bx + fx * 0.12 - px * 0.16
+        ry = by + fy * 0.12 - py * 0.16
+        rz = tz + 0.28 - (1.0 - t) * 0.05
+        right = (rx, ry, rz)
+        left = (bx + fx * (0.14 - t * 0.06) + px * (0.08 + t * 0.04),
+                by + fy * (0.14 - t * 0.06) + py * (0.08 + t * 0.04),
+                tz + 0.14 + math.sin(u * math.pi) * 0.02)
+        return left, right
+
+    if pose == "zen_guard":
+        u = extra.get("seg_u", 0.0)
+        sway = math.sin(u * math.pi * 2.0) * 0.008
+        right = (bx + fx * 0.12 - px * 0.16, by + fy * 0.12 - py * 0.16, tz + 0.28 + sway)
+        left = (bx + fx * 0.08 + px * 0.12, by + fy * 0.08 + py * 0.12, tz + 0.12 + sway)
+        return left, right
+
+    # 2. Poses de Vitória
+    if pose == "victory_palm_balance":
+        u = extra.get("seg_u", 0.0)
+        # Mão esquerda aberta na frente sustentando a ponta do bastão em equilíbrio perfeito
+        bob = math.sin(u * math.pi * 3.0) * 0.012
+        left = (bx + fx * 0.22, by + fy * 0.22, tz + 0.10 + bob)
+        right = (bx - fx * 0.06 - px * 0.14, by - fy * 0.06 - py * 0.14, tz + 0.06)
+        return left, right
+
+    if pose == "victory_reverence":
+        u = extra.get("seg_u", 0.0)
+        bow_deg = math.sin(u * math.pi) * 0.04
+        right = (bx + fx * 0.12 - px * 0.14, by + fy * 0.12 - py * 0.14, tz + 0.24 - bow_deg)
+        left = (bx + fx * 0.12 + px * 0.06, by + fy * 0.12 + py * 0.06, tz + 0.16 - bow_deg)
+        return left, right
+
+    if pose == "victory_zen_meditation":
+        u = extra.get("seg_u", 0.0)
+        breathe_deep = math.sin(u * math.pi * 2.0) * 0.010
+        right = (bx + fx * 0.12 - px * 0.14, by + fy * 0.12 - py * 0.14, tz + 0.24 + breathe_deep)
+        left = (bx + fx * 0.10 + px * 0.08, by + fy * 0.10 + py * 0.08, tz + 0.14 + breathe_deep)
+        return left, right
+
+    # 3. Poses de Mobilidade e Defesa
+    if pose == "staff_vault_hop":
+        hop_prog = extra.get("hop_prog", 0.0)
+        hop_arc = math.sin(hop_prog * math.pi)
+        # Mão direita segura o bastão apoiado no chão; mão esquerda guia o salto ágil
+        right = (bx + fx * 0.10 - px * 0.08, by + fy * 0.10 - py * 0.08, tz + 0.05 + hop_arc * 0.15)
+        left = (bx + fx * 0.18 + px * 0.10, by + fy * 0.18 + py * 0.10, tz + 0.18 + hop_arc * 0.10)
+        return left, right
+
+    if pose == "bo_spin_guard":
+        # Guarda giratória parry
+        tw = math.sin(c.walk_timer * 14.0) * 0.06
+        left = (bx + fx * 0.18 + px * 0.06, by + fy * 0.18 + py * 0.06, tz + 0.16 + tw)
+        right = (bx + fx * 0.14 - px * 0.06, by + fy * 0.14 - py * 0.06, tz + 0.12 - tw)
         return left, right
 
     if pose == "bo_plant_stance":
-        # Posição de monge sentinela com o Bō cravado verticalmente na vertical ao lado
         right = (bx + fx * 0.12 - px * 0.16, by + fy * 0.12 - py * 0.16, tz + 0.28)
         left = (bx + fx * 0.08 + px * 0.12, by + fy * 0.08 + py * 0.12, tz + 0.12)
         return left, right
 
     if pose == "bo_twirl":
-        # Braços sustentando o centro de gravidade do bastão giratório em transição acrobática
-        twirl_prog = c.extra_props.get("twirl_progress", 0.0) if c.extra_props else 0.0
+        twirl_prog = extra.get("twirl_progress", 0.0)
         bob = math.sin(twirl_prog * math.pi * 4.0) * 0.02
         left = (bx + fx * 0.16 + px * 0.06, by + fy * 0.16 + py * 0.06, tz + 0.14 + bob)
         right = (bx + fx * 0.16 - px * 0.06, by + fy * 0.16 - py * 0.06, tz + 0.14 - bob)
         return left, right
 
+    # Posição neutra Chudan-no-Kamae
     left = (
         bx + fx * 0.18 + px * 0.10,
         by + fy * 0.18 + py * 0.10,
@@ -160,45 +239,64 @@ def walk_arms(c):
 def attack_arms(c):
     """
     Ataques de Bojutsu:
-    - Salto com Vara / Impacto Meteoro (`is_vault=True` ou `state == 'POLE_VAULT'`): ergue o bastão acima e crava/desce em arco.
-    - Golpe Primário: Estocada de longo alcance (2.8m) seguida de varredura giratória repelente.
+    - Salto com Vara / Impacto Meteoro (POLE_VAULT): ergue o bastão no ápice e desce girando com força esmagadora.
+    - Golpe Primário: Varredura helicoidal ampla de 180° com estocada no ápice.
     """
     tz = c.torso_z
     bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
     prog = c.atk_progress if c.atk_progress is not None else 0.0
-    is_vault = (c.state == "POLE_VAULT") or (c.extra_props.get("is_vault", False) if c.extra_props else False)
+    extra = c.extra_props if c.extra_props else {}
+    is_vault = (c.state == "POLE_VAULT") or extra.get("is_vault", False) or extra.get("is_vaulting", False)
 
     if is_vault:
-        if prog < 0.40:
-            # Impulso na vara
-            t = prog / 0.40
-            left = (bx + fx * 0.16 + px * 0.08, by + fy * 0.16 + py * 0.08, tz + 0.24 + t * 0.18)
-            right = (bx + fx * 0.14 - px * 0.08, by + fy * 0.14 - py * 0.08, tz + 0.20 + t * 0.18)
+        v_prog = extra.get("vault_prog", prog)
+        if v_prog < 0.45:
+            # Impulso de ascensão no bastão
+            t = v_prog / 0.45
+            left = (bx + fx * 0.16 + px * 0.08, by + fy * 0.16 + py * 0.08, tz + 0.22 + t * 0.22)
+            right = (bx + fx * 0.14 - px * 0.08, by + fy * 0.14 - py * 0.08, tz + 0.18 + t * 0.20)
+        elif v_prog < 0.70:
+            # Ápice aéreo: rotação rápida do bastão em hélice
+            t = (v_prog - 0.45) / 0.25
+            spin = t * math.pi * 2.0
+            left = (bx + fx * (0.18 + math.cos(spin) * 0.12) + px * 0.06,
+                    by + fy * (0.18 + math.cos(spin) * 0.12) + py * 0.06,
+                    tz + 0.45)
+            right = (bx + fx * (0.12 - math.cos(spin) * 0.12) - px * 0.06,
+                     by + fy * (0.12 - math.cos(spin) * 0.12) - py * 0.06,
+                     tz + 0.40)
         else:
-            # Queda meteórica esmagadora a duas mãos
-            t = (prog - 0.40) / 0.60
-            drop = t ** 1.6
-            reach = 0.22 + drop * 0.24
-            z_h = tz + 0.42 - drop * 0.44
+            # Descida meteórica esmagadora a duas mãos (2 HP Guard Crush)
+            t = (v_prog - 0.70) / 0.30
+            drop = t ** 1.8
+            reach = 0.22 + drop * 0.26
+            z_h = tz + 0.40 - drop * 0.46
             left = (bx + fx * reach + px * 0.06, by + fy * reach + py * 0.06, z_h + 0.04)
             right = (bx + fx * (reach - 0.10) - px * 0.06, by + fy * (reach - 0.10) - py * 0.06, z_h)
         return left, right
 
-    # Estocada de Longo Alcance + Giro Varredura
-    if prog < 0.25:
-        # Recuo de alavanca junto ao quadril
-        t = prog / 0.25
+    # Varredura Helicoidal de 180° + Estocada Frontal (Six-Shaku Sweep)
+    if prog < 0.22:
+        # Preparação / Recuo com alavanca no quadril
+        t = prog / 0.22
         left = (bx + fx * (0.14 - t * 0.06) + px * 0.12, by + fy * (0.14 - t * 0.06) + py * 0.12, tz + 0.14)
         right = (bx - fx * (0.08 + t * 0.10) - px * 0.14, by - fy * (0.08 + t * 0.10) - py * 0.14, tz + 0.10)
-    elif prog < 0.68:
-        # Estocada explosiva de ponta + varredura lateral
-        t = (prog - 0.25) / 0.43
+    elif prog < 0.65:
+        # Varredura de 180° com arco amplo e estocada penetrante
+        t = (prog - 0.22) / 0.43
         thrust = math.sin(t * math.pi)
-        left = (bx + fx * (0.28 + thrust * 0.22) + px * (0.06 - t * 0.10), by + fy * (0.28 + thrust * 0.22) + py * (0.06 - t * 0.10), tz + 0.16)
-        right = (bx + fx * (0.10 + thrust * 0.18) - px * 0.08, by + fy * (0.10 + thrust * 0.18) - py * 0.08, tz + 0.15)
+        sweep_angle = (t - 0.5) * math.pi * 1.1
+        sw_cos = math.cos(sweep_angle)
+        sw_sin = math.sin(sweep_angle)
+        left = (bx + fx * (0.24 + thrust * 0.22 * sw_cos) + px * (0.08 + sw_sin * 0.20),
+                by + fy * (0.24 + thrust * 0.22 * sw_cos) + py * (0.08 + sw_sin * 0.20),
+                tz + 0.16 + thrust * 0.04)
+        right = (bx + fx * (0.08 + thrust * 0.16 * sw_cos) - px * 0.08,
+                 by + fy * (0.08 + thrust * 0.16 * sw_cos) - py * 0.08,
+                 tz + 0.14)
     else:
-        # Retorno à guarda Chudan
-        t = (prog - 0.68) / 0.32
+        # Recuperação e reajuste da empunhadura
+        t = (prog - 0.65) / 0.35
         left = (bx + fx * (0.24 - t * 0.06) + px * 0.10, by + fy * (0.24 - t * 0.06) + py * 0.10, tz + 0.15)
         right = (bx - fx * 0.04 - px * 0.13, by - fy * 0.04 - py * 0.13, tz + 0.08)
 
@@ -470,7 +568,13 @@ def draw_head(c):
         alpha=c.alpha,
     )
 
-    # 3. Rosto masculino marcial 3D
+    # 3. Rosto masculino marcial 3D com suporte a meditação (olhos fechados)
+    extra = c.extra_props if c.extra_props else {}
+    pose = extra.get("pose", "")
+    if extra.get("eyes_closed", False) or pose == "victory_zen_meditation":
+        if c.extra_props is not None:
+            c.extra_props["eyes_closed"] = True
+
     if not getattr(c, "_face_drawn", False):
         draw_portrait_face_3d(c, char_type="daiki")
         c._face_drawn = True
@@ -490,17 +594,18 @@ def draw_front(c, hand_l, hand_r):
 
 def _render_bo_staff(c, hand_l, hand_r):
     """
-    Renderiza o Bastão Bō de carvalho reforçado com ponteiras e anéis de ferro:
+    Renderiza o Bastão Bō de carvalho vermelho reforçado com ponteiras e anéis de ferro:
     - Comprimento longo (1.82m) conectando ambas as mãos.
     - Empunhadura central enfaixada em linho branco.
     - Ponteiras de ferro forjado com anéis dourados/aço nas duas extremidades.
     """
     P = pal()
     fx, fy, px, py = c.fx, c.fy, c.px, c.py
-    pose = c.extra_props.get("pose") if c.extra_props else None
+    extra = c.extra_props if c.extra_props else {}
+    pose = extra.get("pose")
 
-    if pose == "bo_plant_stance":
-        # Bastão cravado verticalmente no solo ao lado da mão direita
+    # Caso 1: Cravado no solo (Intro plant / Zen guard)
+    if pose in ("bo_plant_stance", "intro_bo_plant", "zen_guard"):
         rx, ry, rz = hand_r
         bot = (rx, ry, c.base_z)
         mk.obox(c, bot, (0.0, 0.0, 1.0), 1.82, 0.042, 0.042, P["bo_wood"], up=(fx, fy, 0.0), texture="wood")
@@ -510,10 +615,32 @@ def _render_bo_staff(c, hand_l, hand_r):
         mk.obox(c, (rx, ry, c.base_z + 1.64), (0.0, 0.0, 1.0), 0.03, 0.050, 0.050, P["bo_gold_ring"], up=(fx, fy, 0.0), outline=False)
         return
 
-    if pose == "bo_twirl":
-        # Giro acrobático do bastão Yamabushi entre golpes (reduz frequência de ataque)
-        twirl_prog = c.extra_props.get("twirl_progress", 0.0) if c.extra_props else 0.0
-        angle = twirl_prog * math.pi * 4.0  # 2 rotações de 360° no recovery
+    # Caso 2: Equilíbrio Zen na palma da mão esquerda (Vitória)
+    if pose == "victory_palm_balance":
+        lx, ly, lz = hand_l
+        base_staff = (lx, ly, lz + 0.02)
+        mk.obox(c, base_staff, (0.0, 0.0, 1.0), 1.82, 0.042, 0.042, P["bo_wood"], up=(fx, fy, 0.0), texture="wood")
+        mk.obox(c, (lx, ly, lz + 0.72), (0.0, 0.0, 1.0), 0.36, 0.045, 0.045, P["bo_grip"], up=(fx, fy, 0.0), outline=False)
+        mk.obox(c, base_staff, (0.0, 0.0, 1.0), 0.16, 0.046, 0.046, P["bo_iron"], up=(fx, fy, 0.0))
+        mk.obox(c, (lx, ly, lz + 1.66), (0.0, 0.0, 1.0), 0.16, 0.046, 0.046, P["bo_iron"], up=(fx, fy, 0.0))
+        mk.obox(c, (lx, ly, lz + 1.64), (0.0, 0.0, 1.0), 0.03, 0.050, 0.050, P["bo_gold_ring"], up=(fx, fy, 0.0), outline=False)
+        return
+
+    # Caso 3: Reverência de Vitória e Meditação
+    if pose in ("victory_reverence", "victory_zen_meditation"):
+        rx, ry, rz = hand_r
+        bot = (rx, ry, c.base_z)
+        mk.obox(c, bot, (0.0, 0.0, 1.0), 1.82, 0.042, 0.042, P["bo_wood"], up=(fx, fy, 0.0), texture="wood")
+        mk.obox(c, (rx, ry, c.base_z + 0.72), (0.0, 0.0, 1.0), 0.36, 0.045, 0.045, P["bo_grip"], up=(fx, fy, 0.0), outline=False)
+        mk.obox(c, bot, (0.0, 0.0, 1.0), 0.16, 0.046, 0.046, P["bo_iron"], up=(fx, fy, 0.0))
+        mk.obox(c, (rx, ry, c.base_z + 1.66), (0.0, 0.0, 1.0), 0.16, 0.046, 0.046, P["bo_iron"], up=(fx, fy, 0.0))
+        mk.obox(c, (rx, ry, c.base_z + 1.64), (0.0, 0.0, 1.0), 0.03, 0.050, 0.050, P["bo_gold_ring"], up=(fx, fy, 0.0), outline=False)
+        return
+
+    # Caso 4: Giro Acrobático em Hélice (Intro / Recovery)
+    if pose in ("bo_twirl", "intro_bo_twirl"):
+        twirl_prog = extra.get("twirl_progress", extra.get("seg_u", 0.0))
+        angle = twirl_prog * math.pi * 6.0  # Rotações suaves
         rot_cos = math.cos(angle)
         rot_sin = math.sin(angle)
 
@@ -550,7 +677,7 @@ def _render_bo_staff(c, hand_l, hand_r):
         mk.cbox(c, tip_end2[0], tip_end2[1], tip_end2[2], 0.10, 0.10, 0.10, P["wind_aura"], outline=False)
         return
 
-    # Vetor direcional ligando a mão direita (traseira) à mão esquerda (dianteira)
+    # Caso 5: Posição de Combate padrão conectando as mãos
     dx = hand_l[0] - hand_r[0]
     dy = hand_l[1] - hand_r[1]
     dz = hand_l[2] - hand_r[2]
@@ -572,7 +699,7 @@ def _render_bo_staff(c, hand_l, hand_r):
     tip_cap = (mid_x + dx * (half_len - 0.18), mid_y + dy * (half_len - 0.18), mid_z + dz * (half_len - 0.18))
     grip_pos = (mid_x - dx * 0.22, mid_y - dy * 0.22, mid_z - dz * 0.22)
 
-    # 1. Haste principal de carvalho
+    # 1. Haste principal de carvalho vermelho
     mk.obox(c, tail_pos, (dx, dy, dz), staff_len, 0.040, 0.040, P["bo_wood"], texture="wood")
 
     # 2. Faixa central de aderência em pano branco
@@ -586,7 +713,7 @@ def _render_bo_staff(c, hand_l, hand_r):
     mk.obox(c, (tip_cap[0] - dx * 0.02, tip_cap[1] - dy * 0.02, tip_cap[2] - dz * 0.02), (dx, dy, dz), 0.03, 0.050, 0.050, P["bo_gold_ring"], outline=False)
 
     # 4. Rastro de vento montanhês nos frames ativos de ataque
-    if c.is_melee and c.atk_progress is not None and 0.25 <= c.atk_progress <= 0.72:
+    if c.is_melee and c.atk_progress is not None and 0.22 <= c.atk_progress <= 0.68:
         tip_end = (mid_x + dx * half_len, mid_y + dy * half_len, mid_z + dz * half_len)
         mk.cbox(c, tip_end[0], tip_end[1], tip_end[2], 0.18, 0.18, 0.18, P["wind_aura"], outline=False)
         mk.cbox(c, tip_end[0], tip_end[1], tip_end[2], 0.10, 0.10, 0.10, P["wind_core"], outline=False)

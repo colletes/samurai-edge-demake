@@ -29,7 +29,7 @@ def test_rondel_cycle_progression():
     for expected_el in expected_sequence:
         assert s.current_element == expected_el, f"Esperado {expected_el}, obteve {s.current_element}"
         s.state = "IDLE"
-        res = s.trigger_ofuda_toss(15.0, 10.0, projectiles)
+        res = s.trigger_ofuda_toss(15.0, 10.0, projectiles, immediate=True)
         assert res is True
         proj = projectiles[-1]
         assert isinstance(proj, OfudaProjectile)

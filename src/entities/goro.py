@@ -180,6 +180,9 @@ class GoroFarmer(Samurai):
         if dist > 0.05:
             self.facing_x = dwx / dist
             self.facing_y = dwy / dist
+        else:
+            self.facing_x = -self.facing_x
+            self.facing_y = -self.facing_y
 
         self.state = STATE_ROLL
         self.state_timer = self.roll_duration
@@ -257,6 +260,7 @@ class GoroFarmer(Samurai):
         if self.state_timer <= 0:
             self.state = STATE_RECOVERY
             self.state_timer = self.roll_recovery_duration
+            self.roll_recovery_timer = self.roll_recovery_duration
             self.roll_cooldown_timer = self.roll_cooldown_duration
             self.is_invulnerable_dodge = False
             self.invulnerable = False

@@ -1162,8 +1162,8 @@ class SamuraiAI:
                 if getattr(ai_fighter, "resonance_timer", 0.0) <= 0 and dist <= 2.2 and random.random() < 0.80:
                     ai_fighter.trigger_resonance_shockwave(opponent.wx, opponent.wy, projectiles)
                     return
-                # Ataque Kamaitachi a média/longa distância
-                if dist <= 6.8 and random.random() < 0.80:
+                # Ataque Kamaitachi a média/longa distância com cadência anti-spam
+                if dist <= 6.2 and getattr(ai_fighter, "kamaitachi_timer", 0.0) <= 0 and random.random() < 0.38:
                     aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
                     ai_fighter.trigger_kamaitachi_pluck(aim_x, aim_y, projectiles)
                     return

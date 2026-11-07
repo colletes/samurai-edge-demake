@@ -130,7 +130,7 @@ class SeimeiOnmyoji(Samurai):
             and self.dash_recovery_timer <= 0
         )
 
-    def trigger_ofuda_toss(self, aim_x: float, aim_y: float, projectiles: list = None, particles: list = None, banners: list = None) -> bool:
+    def trigger_ofuda_toss(self, aim_x: float, aim_y: float, projectiles: list = None, particles: list = None, banners: list = None, immediate: bool = False) -> bool:
         """Ataque Primário: Dispara o talismã sagrado reto (6.5m, 2 HP) com o elemento ativo no Rondel e avança o ciclo."""
         if not self.can_act() or self.ofuda_timer > 0:
             return False
@@ -141,7 +141,8 @@ class SeimeiOnmyoji(Samurai):
         self.set_facing(aim_x, aim_y)
         self.ofuda_timer = self.ofuda_cooldown
         self.state = STATE_ATTACK
-        self.state_timer = 0.24  # Windup de conjuração para leitura justa
+        self.state_timer = 0.28  # Duração total do ritual
+        self.cast_windup_timer = 0.12  # Windup telegrafado para leitura e esquiva justa
 
         dx = aim_x - self.wx
         dy = aim_y - self.wy
@@ -159,30 +160,38 @@ class SeimeiOnmyoji(Samurai):
         p_name = ELEMENT_SPELL_NAMES[el][0]
         col = ELEMENT_COLORS[el]
 
-        # Disparo único em linha reta com alta precisão e velocidade
-        ofuda = OfudaProjectile(
-            spawn_x, spawn_y,
-            wz=0.45,
-            dir_x=dir_x,
-            dir_y=dir_y,
-            owner=self,
-            max_range=6.5,
-            element=el
-        )
-        projectiles.append(ofuda)
+        if immediate:
+            self.pending_ofuda = None
+            self.cast_windup_timer = 0.0
+            ofuda = OfudaProjectile(
+                spawn_x, spawn_y,
+                wz=0.45,
+                dir_x=dir_x,
+                dir_y=dir_y,
+                owner=self,
+                max_range=6.5,
+                element=el
+            )
+            projectiles.append(ofuda)
+            if banners is not None:
+                banners.append(FloatingBanner(f"{p_name}!", self.wx, self.wy, wz=1.75, color=col, duration=0.75))
+            if particles is not None:
+                for _ in range(12):
+                    particles.append(SparkParticle(spawn_x, spawn_y, 0.45, color=col))
+            self.advance_rondel(banners=banners)
+            return True
 
-        if banners is not None:
-            banners.append(FloatingBanner(f"{p_name}!", self.wx, self.wy, wz=1.75, color=col, duration=0.75))
+        self.pending_ofuda = (spawn_x, spawn_y, dir_x, dir_y, el, p_name, col, projectiles, particles, banners)
 
+        # Partículas iniciais de preparação do ritual nos dedos de Seimei
         if particles is not None:
-            for _ in range(12):
+            for _ in range(6):
                 particles.append(SparkParticle(
-                    spawn_x, spawn_y, 0.45,
+                    self.wx + self.facing_x * 0.35,
+                    self.wy + self.facing_y * 0.35,
+                    0.50,
                     color=col
                 ))
-
-        # Avança o Rondel para o próximo elemento
-        self.advance_rondel(banners=banners)
         return True
 
     def trigger_sacred_ward(self, aim_x: float = None, aim_y: float = None, projectiles: list = None, particles: list = None, banners: list = None, game_map=None) -> bool:
@@ -286,17 +295,51 @@ class SeimeiOnmyoji(Samurai):
             self.update_roll(dt, game_map, particles)
             return
 
-        if not self.is_alive:
-            return
-
-        if self.state == STATE_STUNNED:
-            self.state_timer -= dt
-            if self.state_timer <= 0:
-                self.state = STATE_IDLE
+        if not self.is_alive or self.state == STATE_STUNNED:
+            self.pending_ofuda = None
+            if self.state == STATE_STUNNED:
+                self.state_timer -= dt
+                if self.state_timer <= 0:
+                    self.state = STATE_IDLE
             return
 
         if self.state == STATE_ATTACK:
             self.state_timer -= dt
+            if hasattr(self, "cast_windup_timer") and self.cast_windup_timer > 0:
+                self.cast_windup_timer -= dt
+                if particles is not None and random.random() < 0.65:
+                    col = ELEMENT_COLORS.get(self.current_element, (255, 255, 255))
+                    particles.append(SparkParticle(
+                        self.wx + self.facing_x * 0.38,
+                        self.wy + self.facing_y * 0.38,
+                        0.52,
+                        color=col
+                    ))
+                if self.cast_windup_timer <= 0 and hasattr(self, "pending_ofuda") and self.pending_ofuda:
+                    spawn_x, spawn_y, dir_x, dir_y, el, p_name, col, proj_list, part_list, ban_list = self.pending_ofuda
+                    self.pending_ofuda = None
+                    ofuda = OfudaProjectile(
+                        spawn_x, spawn_y,
+                        wz=0.45,
+                        dir_x=dir_x,
+                        dir_y=dir_y,
+                        owner=self,
+                        max_range=6.5,
+                        element=el
+                    )
+                    if proj_list is not None:
+                        proj_list.append(ofuda)
+                    if ban_list is not None:
+                        ban_list.append(FloatingBanner(f"{p_name}!", self.wx, self.wy, wz=1.75, color=col, duration=0.75))
+                    if part_list is not None:
+                        for _ in range(12):
+                            part_list.append(SparkParticle(spawn_x, spawn_y, 0.45, color=col))
+                    self.advance_rondel(banners=ban_list)
+                    try:
+                        from src.audio import play_sfx, SoundEvent
+                        play_sfx(SoundEvent.SHURIKEN_THROW)
+                    except Exception:
+                        pass
             if self.state_timer <= 0:
                 self.state = STATE_RECOVERY
                 self.state_timer = self.recovery_duration

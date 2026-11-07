@@ -179,7 +179,7 @@ def is_fighter_evading(target) -> bool:
     state = getattr(target, "state", None)
     if state in (
         "ROLL", "DASH", "CAPE_FLOURISH", "SHUKUCHI", "KAWARIMI_ROLL", "DODGE",
-        "PARRY_BACKHOP", "RIFLE_ROLL", "KABUKI_ROLL", "SHIKIGAMI_GLIDE"
+        "PARRY_BACKHOP", "RIFLE_ROLL", "KABUKI_ROLL", "SHIKIGAMI_GLIDE", "STAFF_HOP"
     ):
         return True
     if state == "JUMP" and (getattr(target, "wz", 0.0) > 0.15 or getattr(target, "is_invulnerable_dodge", False)):
@@ -1028,8 +1028,8 @@ class CombatSystem:
             elif isinstance(proj, OfudaProjectile) and proj.is_active:
                 target = p2 if proj.owner == p1 else p1
                 winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
-                ofuda_rad = getattr(proj, "radius", 0.40)
-                if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (ofuda_rad + 0.25 + target.radius):
+                ofuda_rad = getattr(proj, "radius", 0.35)
+                if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (ofuda_rad + 0.08 + target.radius):
                     if not self.check_projectile_dodge_evasion(proj, target):
                         el = getattr(proj, "element", "wood")
                         is_metal_break = (el == "metal")

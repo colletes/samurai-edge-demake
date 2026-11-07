@@ -43,9 +43,9 @@ class OrinMinstrel(Samurai):
         self.combo_target_step = 0
         self.combo_window_timer = 0.0
         self.combo_window = 0.50
-        self.attack_duration = 0.14
-        self.attack_recovery = 0.16
-        self.kamaitachi_cooldown = 0.35
+        self.attack_duration = 0.16
+        self.attack_recovery = 0.22
+        self.kamaitachi_cooldown = 0.52
         self.kamaitachi_timer = 0.0
 
         # Ação Secundária: Acorde de Ressonância Mortal com Repulsão 360°

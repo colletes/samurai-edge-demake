@@ -663,7 +663,6 @@ def execute_fighter_attack(fighter, aim_x: float, aim_y: float, projectiles: lis
             success = True
     elif isinstance(fighter, SeimeiOnmyoji):
         if fighter.trigger_ofuda_toss(aim_x, aim_y, projectiles, particles):
-            play_sfx(SoundEvent.SHURIKEN_THROW)
             success = True
     elif isinstance(fighter, DaikiPilgrim):
         if fighter.trigger_bo_strike(aim_x, aim_y):
@@ -840,6 +839,8 @@ def execute_fighter_roll(fighter, dwx: float, dwy: float, aim_x: float, aim_y: f
         success = fighter.trigger_mud_roll(dwx, dwy, particles=particles, game_map=game_map)
     elif isinstance(fighter, IchiBlade):
         success = fighter.trigger_cane_slip(dwx, dwy, particles=particles, game_map=game_map)
+    elif isinstance(fighter, DaikiPilgrim):
+        success = fighter.trigger_staff_hop(dwx, dwy, particles=particles, game_map=game_map)
     else:
         # Demais personagens (BlueSamurai, YellowNinja, AmericanNinja, GrayNinja, PurpleNinja, SaitouSamurai)
         if hasattr(fighter, "trigger_roll"):

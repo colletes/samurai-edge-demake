@@ -212,11 +212,11 @@ INTRO = {
         _idle(0.35, 0.70, pose="sensu_fan_flick"),
         _idle(0.70, 1.0, pose="onmyoji_ready"),
     ],
-    # Daiki (Peregrino do Bastão Bō): Saudação de peregrino, giro veloz de Bō levantando folhas e guarda Chudan
+    # Daiki (Peregrino do Bastão Bō): Giro helicoidal do bastão Bō levantando folhas e cravada Zen
     "daiki": [
-        _idle(0.0, 0.22, pose="pilgrim_bow"),
-        _seg(0.22, 0.68, "ATTACK", 0.0, 1.0),
-        _idle(0.68, 1.0),
+        _idle(0.0, 0.42, pose="intro_bo_twirl"),
+        _idle(0.42, 0.72, pose="intro_bo_plant"),
+        _idle(0.72, 1.0, pose="zen_guard"),
     ],
     # Aoi (Caçadora Ainu de Hokkaido): Rastreia o solo nevado, estoca a lança Op e assume guarda de caça
     "aoi": [
@@ -352,11 +352,11 @@ VICTORY = {
         _idle(0.38, 0.72, pose="birds_ascend"),
         _idle(0.72, 1.0, pose="imperial_bow"),
     ],
-    # Daiki: Giro aéreo do bastão Bō, cravada firme no chão e saudação de monge peregrino
+    # Daiki: Equilíbrio Zen na palma da mão estendida, reverência monástica e meditação
     "daiki": [
-        _seg(0.0, 0.45, "POLE_VAULT", 0.0, 1.0, is_vault=True),
-        _idle(0.45, 0.75, pose="bo_plant_stance"),
-        _idle(0.75, 1.0, pose="pilgrim_bow"),
+        _idle(0.0, 0.42, pose="victory_palm_balance"),
+        _idle(0.42, 0.75, pose="victory_reverence"),
+        _idle(0.75, 1.0, pose="victory_zen_meditation"),
     ],
     # Aoi: Giro de lança Op e prece tradicional Ainu (Inonno) aos espíritos Kamuy
     "aoi": [
@@ -396,7 +396,7 @@ BEATS = {
         "ichi": [(0.12, "sfx:dodge_whoosh"), (0.48, "sfx:parry"), (0.75, "fx:petals")],
         "valerius": [(0.12, "fx:smoke"), (0.45, "sfx:sword_slash"), (0.75, "sfx:parry")],
         "seimei": [(0.12, "sfx:dodge_whoosh"), (0.42, "sfx:parry"), (0.72, "fx:petals")],
-        "daiki": [(0.25, "sfx:dodge_whoosh"), (0.48, "sfx:obstacle_hit")],
+        "daiki": [(0.12, "sfx:dodge_whoosh"), (0.42, "sfx:obstacle_hit"), (0.75, "fx:petals")],
         "aoi": [(0.24, "sfx:sword_slash"), (0.52, "sfx:dodge_whoosh")],
         "raiden": [(0.12, "sfx:parry"), (0.24, "sfx:parry"), (0.38, "fx:sparks"), (0.40, "sfx:dodge_whoosh")],
     },
@@ -421,7 +421,7 @@ BEATS = {
         "ichi": [(0.12, "sfx:sword_slash"), (0.50, "sfx:parry"), (0.75, "fx:petals")],
         "valerius": [(0.12, "fx:smoke"), (0.48, "sfx:parry"), (0.75, "fx:petals")],
         "seimei": [(0.12, "sfx:parry"), (0.40, "fx:sparks"), (0.72, "fx:petals")],
-        "daiki": [(0.18, "sfx:dodge_whoosh"), (0.44, "sfx:obstacle_hit")],
+        "daiki": [(0.10, "sfx:dodge_whoosh"), (0.42, "sfx:parry"), (0.75, "fx:petals")],
         "aoi": [(0.16, "sfx:sword_slash"), (0.50, "fx:petals")],
         "raiden": [(0.20, "sfx:dodge_whoosh"), (0.45, "sfx:obstacle_hit"), (0.46, "fx:smoke"), (0.76, "sfx:sword_slash")],
     },
