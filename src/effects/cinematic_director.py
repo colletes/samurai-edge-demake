@@ -1642,26 +1642,52 @@ class CinematicDirector:
                         pass
                 if particles is not None:
                     from src.effects.particles import FlameVoxelParticle, SparkParticle, SmokeParticle
+                    ds = getattr(self, "finisher_style", "")
+                    if ds == "SEIMEI_FATAL_WATER":
+                        flame_cols = [(60, 180, 255), (120, 225, 255), (200, 245, 255)]
+                        spark_cols = [(80, 200, 255), (160, 240, 255), (230, 250, 255)]
+                        smoke_col = (180, 220, 245)
+                    elif ds == "SEIMEI_FATAL_WOOD":
+                        flame_cols = [(50, 200, 85), (90, 235, 120), (255, 195, 220)]
+                        spark_cols = [(70, 220, 100), (140, 250, 150), (255, 210, 235)]
+                        smoke_col = (30, 60, 40)
+                    elif ds == "SEIMEI_FATAL_METAL":
+                        flame_cols = [(255, 215, 60), (255, 245, 180), (210, 225, 250)]
+                        spark_cols = [(255, 230, 90), (255, 255, 210), (180, 210, 245)]
+                        smoke_col = (50, 55, 65)
+                    elif ds == "SEIMEI_FATAL_EARTH":
+                        flame_cols = [(255, 210, 70), (210, 180, 120), (160, 140, 100)]
+                        spark_cols = [(255, 225, 90), (235, 205, 130), (180, 155, 115)]
+                        smoke_col = (75, 70, 65)
+                    elif ds == "SEIMEI_FATAL_YINYANG":
+                        flame_cols = [(255, 255, 255), (190, 175, 255), (40, 20, 65)]
+                        spark_cols = [(255, 255, 255), (220, 210, 255), (80, 50, 120)]
+                        smoke_col = (25, 15, 35)
+                    else:
+                        flame_cols = [(40, 220, 100), (80, 255, 140), (180, 255, 210)]
+                        spark_cols = [(60, 255, 130), (140, 255, 200), (220, 255, 240)]
+                        smoke_col = (25, 45, 30)
+
                     for _ in range(4):
                         particles.append(FlameVoxelParticle(
                             vic.wx + random.uniform(-0.22, 0.22),
                             vic.wy + random.uniform(-0.22, 0.22),
                             random.uniform(0.1, 0.95),
-                            color=random.choice([(40, 220, 100), (80, 255, 140), (180, 255, 210)])
+                            color=random.choice(flame_cols)
                         ))
                     for _ in range(3):
                         particles.append(SparkParticle(
                             vic.wx + random.uniform(-0.25, 0.25),
                             vic.wy + random.uniform(-0.25, 0.25),
                             random.uniform(0.1, 1.1),
-                            color=random.choice([(60, 255, 130), (140, 255, 200), (220, 255, 240)])
+                            color=random.choice(spark_cols)
                         ))
                     if random.random() < 0.35:
                         particles.append(SmokeParticle(
                             vic.wx + random.uniform(-0.15, 0.15),
                             vic.wy + random.uniform(-0.15, 0.15),
                             wz=0.6,
-                            color=(25, 45, 30),
+                            color=smoke_col,
                             radius=0.25
                         ))
 

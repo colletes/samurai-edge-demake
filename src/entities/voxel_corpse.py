@@ -330,6 +330,16 @@ class VoxelCorpse:
         self.geyser_timer = 0.0
         self.is_ash_mound = False
         self.ash_mound_time = 0.0
+        self.is_water_dissolved = False
+        self.water_dissolve_time = 0.0
+        self.is_sacred_tree = False
+        self.sacred_tree_time = 0.0
+        self.is_metal_impaled = False
+        self.metal_impale_time = 0.0
+        self.is_stone_petrified = False
+        self.stone_petrify_time = 0.0
+        self.is_spirit_banished = False
+        self.spirit_banish_time = 0.0
         self.is_acid_pool = False
         self.is_frozen_statue = False
         self.has_impact_crater = False
@@ -868,17 +878,47 @@ class VoxelCorpse:
             for _ in range(16):
                 self._add_blood_drop(spread=0.55)
 
-        elif style in (
-            "SEAL_STASIS_COLLAPSE", "OFUDA_PURIFICATION_PILLAR",
-            "SEIMEI_FATAL_WOOD", "SEIMEI_FATAL_FIRE", "SEIMEI_FATAL_EARTH",
-            "SEIMEI_FATAL_METAL", "SEIMEI_FATAL_WATER", "SEIMEI_FATAL_YINYANG",
-            "ALCHEMIC_FIRE_ASH"
-        ):
-            # Seimei (todos os 6 elementos) & Hendrika Fogo Grego: O alvo é consumido até restarem apenas cinzas fumegantes
+        elif style in ("SEIMEI_FATAL_FIRE", "OFUDA_PURIFICATION_PILLAR", "SEAL_STASIS_COLLAPSE", "ALCHEMIC_FIRE_ASH"):
+            # Seimei Fogo (Seien Kaijin) / Hendrika Fogo Grego: Consumido em chamas verdes até restarem cinzas e brasas
             self.is_ash_mound = True
             self.ash_mound_time = 0.0
-            self.pieces = []  # O corpo foi totalmente desintegrado em cinzas
-            self.blood_droplets = []  # Sem carne ou sangue residual
+            self.pieces = []
+            self.blood_droplets = []
+
+        elif style == "SEIMEI_FATAL_WATER":
+            # Seimei Água (Suisou Shouka): Dissolvido em orvalho espiritual e poça d'água cristalina com lótus sagrada
+            self.is_water_dissolved = True
+            self.water_dissolve_time = 0.0
+            self.pieces = []
+            self.blood_droplets = []
+
+        elif style == "SEIMEI_FATAL_WOOD":
+            # Seimei Madeira (Shinju Rinne): O corpo se transforma em uma árvore sagrada Bonsai/Kodama com fita Shimenawa
+            self.is_sacred_tree = True
+            self.sacred_tree_time = 0.0
+            self.pieces = []
+            self.blood_droplets = []
+
+        elif style == "SEIMEI_FATAL_METAL":
+            # Seimei Metal (Kongou Fuubaku): Empalado ao solo por 5 lâminas astrais adamantinas em círculo pentagonal
+            self.is_metal_impaled = True
+            self.metal_impale_time = 0.0
+            self.pieces = []
+            self.blood_droplets = []
+
+        elif style == "SEIMEI_FATAL_EARTH":
+            # Seimei Terra (Ganshuku Kaseki): Petrificado em estátua de templo com fissuras de ouro Kintsugi e musgo
+            self.is_stone_petrified = True
+            self.stone_petrify_time = 0.0
+            self.pieces = []
+            self.blood_droplets = []
+
+        elif style == "SEIMEI_FATAL_YINYANG":
+            # Seimei Yin-Yang (In-You Tenchuu): Banido em portal astral cósmico Taijitu de luz e sombras
+            self.is_spirit_banished = True
+            self.spirit_banish_time = 0.0
+            self.pieces = []
+            self.blood_droplets = []
 
         # ---------------------------------------------------------------
         # Ciclo 5 Fatalities: Okuni, Tomoe, Daiki, Aoi
@@ -1301,7 +1341,7 @@ class VoxelCorpse:
                         lifetime=0.45
                     ))
 
-        # Cinzas fumegantes e brasas verdes sagradas de Seimei
+        # Cinzas fumegantes e brasas verdes sagradas de Seimei (Fogo)
         if getattr(self, "is_ash_mound", False):
             self.ash_mound_time = getattr(self, "ash_mound_time", 0.0) + dt
             if self.ash_mound_time < 3.5 and particles is not None:
@@ -1320,6 +1360,95 @@ class VoxelCorpse:
                         wz=0.06,
                         color=(35, 38, 40),
                         radius=0.18
+                    ))
+
+        # Seimei Água (Suisou Shouka): névoa e orvalho espiritual
+        if getattr(self, "is_water_dissolved", False):
+            self.water_dissolve_time = getattr(self, "water_dissolve_time", 0.0) + dt
+            if self.water_dissolve_time < 3.5 and particles is not None:
+                from src.effects.particles import SparkParticle, SmokeParticle
+                if random.random() < 0.22:
+                    particles.append(SparkParticle(
+                        self.wx + random.uniform(-0.20, 0.20),
+                        self.wy + random.uniform(-0.20, 0.20),
+                        0.02 + random.uniform(0.0, 0.25),
+                        color=random.choice([(70, 190, 255), (140, 230, 255), (220, 245, 255)])
+                    ))
+                if random.random() < 0.12:
+                    particles.append(SmokeParticle(
+                        self.wx + random.uniform(-0.14, 0.14),
+                        self.wy + random.uniform(-0.14, 0.14),
+                        wz=0.08,
+                        color=(190, 225, 245),
+                        radius=0.22
+                    ))
+
+        # Seimei Madeira (Shinju Rinne): pétalas sagradas e folhas de esmeralda
+        if getattr(self, "is_sacred_tree", False):
+            self.sacred_tree_time = getattr(self, "sacred_tree_time", 0.0) + dt
+            if self.sacred_tree_time < 3.5 and particles is not None:
+                from src.effects.particles import SparkParticle
+                if random.random() < 0.25:
+                    particles.append(SparkParticle(
+                        self.wx + random.uniform(-0.22, 0.22),
+                        self.wy + random.uniform(-0.22, 0.22),
+                        0.15 + random.uniform(0.0, 0.45),
+                        color=random.choice([(70, 210, 100), (120, 245, 140), (255, 185, 210)])
+                    ))
+
+        # Seimei Metal (Kongou Fuubaku): fulgor adamantino dourado e estilhaços astrais
+        if getattr(self, "is_metal_impaled", False):
+            self.metal_impale_time = getattr(self, "metal_impale_time", 0.0) + dt
+            if self.metal_impale_time < 3.5 and particles is not None:
+                from src.effects.particles import SparkParticle
+                if random.random() < 0.22:
+                    particles.append(SparkParticle(
+                        self.wx + random.uniform(-0.24, 0.24),
+                        self.wy + random.uniform(-0.24, 0.24),
+                        0.05 + random.uniform(0.0, 0.35),
+                        color=random.choice([(255, 215, 60), (255, 245, 180), (210, 225, 245)])
+                    ))
+
+        # Seimei Terra (Ganshuku Kaseki): poeira mineral e fagulhas de kintsugi dourado
+        if getattr(self, "is_stone_petrified", False):
+            self.stone_petrify_time = getattr(self, "stone_petrify_time", 0.0) + dt
+            if self.stone_petrify_time < 3.5 and particles is not None:
+                from src.effects.particles import SparkParticle, SmokeParticle
+                if random.random() < 0.18:
+                    particles.append(SparkParticle(
+                        self.wx + random.uniform(-0.16, 0.16),
+                        self.wy + random.uniform(-0.16, 0.16),
+                        0.05 + random.uniform(0.0, 0.30),
+                        color=random.choice([(255, 220, 80), (230, 200, 100)])
+                    ))
+                if random.random() < 0.08:
+                    particles.append(SmokeParticle(
+                        self.wx + random.uniform(-0.12, 0.12),
+                        self.wy + random.uniform(-0.12, 0.12),
+                        wz=0.10,
+                        color=(115, 110, 105),
+                        radius=0.16
+                    ))
+
+        # Seimei Yin-Yang (In-You Tenchuu): motes astrais de dualidade luz e trevas
+        if getattr(self, "is_spirit_banished", False):
+            self.spirit_banish_time = getattr(self, "spirit_banish_time", 0.0) + dt
+            if self.spirit_banish_time < 3.5 and particles is not None:
+                from src.effects.particles import SparkParticle, SmokeParticle
+                if random.random() < 0.26:
+                    particles.append(SparkParticle(
+                        self.wx + random.uniform(-0.25, 0.25),
+                        self.wy + random.uniform(-0.25, 0.25),
+                        0.04 + random.uniform(0.0, 0.40),
+                        color=random.choice([(255, 255, 255), (200, 190, 255), (140, 80, 220)])
+                    ))
+                if random.random() < 0.12:
+                    particles.append(SmokeParticle(
+                        self.wx + random.uniform(-0.15, 0.15),
+                        self.wy + random.uniform(-0.15, 0.15),
+                        wz=0.12,
+                        color=(20, 12, 28),
+                        radius=0.20
                     ))
 
         if getattr(self, "is_grave_pit", False):
@@ -1418,9 +1547,24 @@ class VoxelCorpse:
         if getattr(self, "reanimated_skeleton", False):
             self._render_reanimated_skeleton(surface, camera)
 
-        # 1.7. Montículo de cinzas sagradas de Seimei
+        # 1.7. Elementos Onmyōdō de Seimei
         if getattr(self, "is_ash_mound", False):
             self._render_ash_mound(surface, camera)
+
+        if getattr(self, "is_water_dissolved", False):
+            self._render_water_dissolution(surface, camera)
+
+        if getattr(self, "is_sacred_tree", False):
+            self._render_sacred_tree(surface, camera)
+
+        if getattr(self, "is_metal_impaled", False):
+            self._render_metal_impaled(surface, camera)
+
+        if getattr(self, "is_stone_petrified", False):
+            self._render_stone_petrified(surface, camera)
+
+        if getattr(self, "is_spirit_banished", False):
+            self._render_spirit_banished(surface, camera)
 
         # 1.8. Fenda tumular profunda de Valerius (DRAGGED_TO_GRAVE)
         if getattr(self, "is_grave_pit", False):
@@ -1568,6 +1712,221 @@ class VoxelCorpse:
         pygame.draw.polygon(ash_surf, (25, 25, 25), ofuda_pts, 1)
 
         surface.blit(ash_surf, (sx - cx, sy - cy))
+
+    def _render_water_dissolution(self, surface: pygame.Surface, camera):
+        """Renderiza a poça cristalina de orvalho e névoa espiritual de Seimei (Suisou Shouka)."""
+        sx, sy = camera.apply(self.wx, self.wy, 0.01)
+        aw = int(36 * camera.zoom)
+        ah = int(20 * camera.zoom)
+
+        puddle_surf = pygame.Surface((aw * 2 + 10, ah * 2 + 10), pygame.SRCALPHA)
+        cx, cy = aw + 5, ah + 5
+        t = getattr(self, "water_dissolve_time", 0.0)
+
+        # 1. Anel externo de umidade no solo
+        pygame.draw.ellipse(puddle_surf, (30, 60, 90, 160), (cx - aw, cy - ah, aw * 2, ah * 2))
+
+        # 2. Poça cristalina azul-turquesa
+        bw, bh = int(aw * 0.78), int(ah * 0.78)
+        pygame.draw.ellipse(puddle_surf, (55, 140, 210, 210), (cx - bw, cy - bh, bw * 2, bh * 2))
+
+        # 3. Centro espelhado límpido
+        cw, ch = int(aw * 0.50), int(ah * 0.50)
+        pygame.draw.ellipse(puddle_surf, (120, 215, 255, 230), (cx - cw, cy - ch, cw * 2, ch * 2))
+
+        # 4. Ondulações concêntricas animadas (water ripples)
+        ripple_phase = (t * 1.5) % 1.0
+        rw = int(aw * (0.3 + 0.6 * ripple_phase))
+        rh = int(ah * (0.3 + 0.6 * ripple_phase))
+        rip_alpha = max(0, int(200 * (1.0 - ripple_phase)))
+        pygame.draw.ellipse(puddle_surf, (200, 240, 255, rip_alpha), (cx - rw, cy - rh, rw * 2, rh * 2), 1)
+
+        # 5. Pétalas de lótus sagrada flutuando na superfície
+        lotus_pts = [
+            (cx - int(5 * camera.zoom), cy - int(2 * camera.zoom)),
+            (cx - int(1 * camera.zoom), cy - int(6 * camera.zoom)),
+            (cx + int(3 * camera.zoom), cy - int(1 * camera.zoom)),
+            (cx - int(1 * camera.zoom), cy + int(3 * camera.zoom)),
+        ]
+        pygame.draw.polygon(puddle_surf, (255, 245, 250), lotus_pts)
+        pygame.draw.circle(puddle_surf, (255, 210, 80), (cx, cy), max(1, int(1.8 * camera.zoom)))
+
+        # 6. Talismã Ofuda da Água flutuando
+        ofuda_pts = [
+            (cx + int(4 * camera.zoom), cy + int(1 * camera.zoom)),
+            (cx + int(12 * camera.zoom), cy - int(2 * camera.zoom)),
+            (cx + int(14 * camera.zoom), cy + int(4 * camera.zoom)),
+            (cx + int(6 * camera.zoom), cy + int(7 * camera.zoom)),
+        ]
+        pygame.draw.polygon(puddle_surf, (235, 240, 255), ofuda_pts)
+        pygame.draw.polygon(puddle_surf, (40, 110, 180), ofuda_pts, 1)
+
+        surface.blit(puddle_surf, (sx - cx, sy - cy))
+
+    def _render_sacred_tree(self, surface: pygame.Surface, camera):
+        """Renderiza a árvore sagrada Bonsai/Kodama com fita Shimenawa de Seimei (Shinju Rinne)."""
+        from src.isometric.voxel_renderer import draw_voxel_box
+        bx, by = self.wx, self.wy
+        t = getattr(self, "sacred_tree_time", 0.0)
+        sway = math.sin(t * 1.8) * 0.015
+
+        # 1. Raízes e base de solo sagrado
+        draw_voxel_box(surface, camera, bx - 0.16, by - 0.16, 0.0, 0.32, 0.32, 0.05, (70, 48, 30), outline=True)
+        draw_voxel_box(surface, camera, bx - 0.22, by - 0.08, 0.0, 0.44, 0.16, 0.04, (85, 58, 36), outline=True)
+
+        # 2. Tronco retorcido de cedro sagrado
+        draw_voxel_box(surface, camera, bx - 0.07, by - 0.07, 0.05, 0.14, 0.14, 0.28, (95, 62, 38), outline=True)
+        draw_voxel_box(surface, camera, bx - 0.06 + sway * 0.5, by - 0.06, 0.33, 0.12, 0.12, 0.24, (105, 70, 44), outline=True)
+
+        # 3. Corda sagrada Shimenawa trançada ao redor do tronco com pingentes Shide
+        draw_voxel_box(surface, camera, bx - 0.09, by - 0.09, 0.22, 0.18, 0.18, 0.04, (238, 230, 200), outline=True)
+        # Pingentes Shide de papel branco
+        draw_voxel_box(surface, camera, bx - 0.08, by - 0.10, 0.16, 0.04, 0.02, 0.06, (255, 255, 255), outline=False)
+        draw_voxel_box(surface, camera, bx + 0.04, by - 0.10, 0.16, 0.04, 0.02, 0.06, (255, 255, 255), outline=False)
+
+        # 4. Galhos bifurcados
+        draw_voxel_box(surface, camera, bx - 0.18 + sway, by - 0.06, 0.52, 0.14, 0.08, 0.08, (95, 62, 38), outline=True)
+        draw_voxel_box(surface, camera, bx + 0.04 + sway, by - 0.06, 0.54, 0.16, 0.08, 0.08, (95, 62, 38), outline=True)
+
+        # 5. Copa de folhas de esmeralda volumétricas
+        draw_voxel_box(surface, camera, bx - 0.22 + sway, by - 0.20, 0.58, 0.44, 0.40, 0.22, (45, 155, 75), outline=True)
+        draw_voxel_box(surface, camera, bx - 0.16 + sway * 1.2, by - 0.14, 0.78, 0.32, 0.28, 0.18, (70, 195, 95), outline=True)
+        draw_voxel_box(surface, camera, bx - 0.08 + sway * 1.5, by - 0.08, 0.94, 0.16, 0.16, 0.12, (100, 225, 125), outline=True)
+
+        # 6. Flores místicas de sakura/ouro nos ramos
+        for fx, fy, fz in ((-0.18, -0.12, 0.68), (0.16, -0.08, 0.70), (-0.05, 0.14, 0.74), (0.08, 0.10, 0.86)):
+            draw_voxel_box(surface, camera, bx + fx + sway, by + fy, fz, 0.04, 0.04, 0.04, (255, 190, 215), outline=False)
+
+    def _render_metal_impaled(self, surface: pygame.Surface, camera):
+        """Renderiza o círculo pentagonal com 5 lâminas astrais adamantinas de Seimei (Kongou Fuubaku)."""
+        from src.isometric.voxel_renderer import draw_voxel_box
+        bx, by = self.wx, self.wy
+        sx, sy = camera.apply(bx, by, 0.01)
+
+        # 1. Pentagrama e círculo Onmyōdō ritual no piso
+        pr = int(32 * camera.zoom)
+        circle_surf = pygame.Surface((pr * 2 + 12, pr * 2 + 12), pygame.SRCALPHA)
+        cx, cy = pr + 6, pr + 6
+
+        pygame.draw.ellipse(circle_surf, (255, 215, 60, 180), (cx - pr, cy - pr // 2, pr * 2, pr), 2)
+        penta_pts = []
+        for i in range(5):
+            ang = math.radians(i * 72 - 90)
+            px = cx + int(pr * 0.85 * math.cos(ang))
+            py = cy + int((pr // 2) * 0.85 * math.sin(ang))
+            penta_pts.append((px, py))
+        # Traçar linhas da estrela de 5 pontas
+        star_order = [0, 2, 4, 1, 3, 0]
+        star_coords = [penta_pts[k] for k in star_order]
+        pygame.draw.lines(circle_surf, (255, 235, 120, 220), False, star_coords, 2)
+        surface.blit(circle_surf, (sx - cx, sy - cy))
+
+        # 2. 5 Lâminas astrais adamantinas empaladas verticalmente em círculo
+        r_world = 0.28
+        for i in range(5):
+            ang = math.radians(i * 72 - 90)
+            lx = bx + r_world * math.cos(ang)
+            ly = by + r_world * math.sin(ang)
+
+            # Lâmina prateada reluzente cravada
+            draw_voxel_box(surface, camera, lx - 0.015, ly - 0.015, 0.0, 0.03, 0.03, 0.50, (230, 235, 245), outline=True)
+            # Fio dourado diamantino
+            draw_voxel_box(surface, camera, lx - 0.008, ly - 0.008, 0.10, 0.016, 0.016, 0.35, (255, 220, 80), outline=False)
+            # Guarda Tsuba de ouro Onmyōdō
+            draw_voxel_box(surface, camera, lx - 0.05, ly - 0.05, 0.50, 0.10, 0.10, 0.025, (255, 195, 45), outline=True)
+            # Empunhadura e pomo sagrado
+            draw_voxel_box(surface, camera, lx - 0.02, ly - 0.02, 0.525, 0.04, 0.04, 0.14, (60, 65, 75), outline=True)
+            draw_voxel_box(surface, camera, lx - 0.03, ly - 0.03, 0.665, 0.06, 0.06, 0.03, (255, 215, 60), outline=True)
+
+        # 3. Talismã Ofuda de Metal no epicentro
+        draw_voxel_box(surface, camera, bx - 0.03, by - 0.03, 0.01, 0.06, 0.06, 0.02, (255, 245, 200), outline=True)
+
+    def _render_stone_petrified(self, surface: pygame.Surface, camera):
+        """Renderiza a estátua de granito ancestral petrificada com fissuras douradas Kintsugi de Seimei (Ganshuku Kaseki)."""
+        from src.isometric.voxel_renderer import draw_voxel_box
+        bx, by = self.wx, self.wy
+
+        c_base = (70, 72, 75)
+        c_moss = (50, 110, 60)
+        c_stone_dark = (90, 92, 96)
+        c_stone_mid = (115, 118, 122)
+        c_stone_light = (135, 138, 144)
+        c_kintsugi = (255, 220, 75)
+
+        # 1. Base pedestal de templo e musgo
+        draw_voxel_box(surface, camera, bx - 0.20, by - 0.20, 0.0, 0.40, 0.40, 0.06, c_base, outline=True)
+        draw_voxel_box(surface, camera, bx - 0.18, by + 0.08, 0.06, 0.16, 0.10, 0.02, c_moss, outline=False)
+        draw_voxel_box(surface, camera, bx + 0.06, by - 0.18, 0.06, 0.12, 0.12, 0.02, c_moss, outline=False)
+
+        # 2. Pernas e quadris petrificados ajoelhados
+        draw_voxel_box(surface, camera, bx - 0.14, by - 0.14, 0.06, 0.28, 0.28, 0.18, c_stone_dark, outline=True)
+        # Fissura dourada Kintsugi nas pernas
+        draw_voxel_box(surface, camera, bx - 0.02, by - 0.142, 0.10, 0.03, 0.01, 0.10, c_kintsugi, outline=False)
+
+        # 3. Torso petrificado curvado em reverência solene
+        draw_voxel_box(surface, camera, bx - 0.11, by - 0.11, 0.24, 0.22, 0.22, 0.32, c_stone_mid, outline=True)
+        # Veio de ouro Kintsugi no peitoral
+        draw_voxel_box(surface, camera, bx - 0.06, by - 0.112, 0.30, 0.12, 0.01, 0.03, c_kintsugi, outline=False)
+        draw_voxel_box(surface, camera, bx + 0.02, by - 0.112, 0.33, 0.03, 0.01, 0.15, c_kintsugi, outline=False)
+
+        # 4. Braços e ombros petrificados
+        draw_voxel_box(surface, camera, bx - 0.15, by - 0.08, 0.32, 0.07, 0.16, 0.22, c_stone_mid, outline=True)
+        draw_voxel_box(surface, camera, bx + 0.08, by - 0.08, 0.32, 0.07, 0.16, 0.22, c_stone_mid, outline=True)
+
+        # 5. Cabeça de granito prostrada
+        draw_voxel_box(surface, camera, bx - 0.07, by - 0.08, 0.54, 0.14, 0.14, 0.14, c_stone_light, outline=True)
+        # Talismã de terra petrificado cravado na testa
+        draw_voxel_box(surface, camera, bx - 0.03, by - 0.09, 0.58, 0.06, 0.02, 0.08, (230, 220, 185), outline=True)
+        # Rachadura de ouro na têmpora
+        draw_voxel_box(surface, camera, bx + 0.04, by - 0.06, 0.60, 0.03, 0.01, 0.05, c_kintsugi, outline=False)
+
+    def _render_spirit_banished(self, surface: pygame.Surface, camera):
+        """Renderiza o vórtice celestial Taijitu Yin-Yang de Seimei (In-You Tenchuu)."""
+        from src.isometric.voxel_renderer import draw_voxel_box
+        bx, by = self.wx, self.wy
+        sx, sy = camera.apply(bx, by, 0.01)
+        t = getattr(self, "spirit_banish_time", 0.0)
+
+        pr = int(34 * camera.zoom)
+        ph = int(18 * camera.zoom)
+        portal_surf = pygame.Surface((pr * 2 + 16, ph * 2 + 16), pygame.SRCALPHA)
+        cx, cy = pr + 8, ph + 8
+
+        # 1. Halo cósmico externo violeta e dourado
+        pygame.draw.ellipse(portal_surf, (80, 45, 120, 170), (cx - pr, cy - ph, pr * 2, ph * 2))
+        pygame.draw.ellipse(portal_surf, (255, 230, 120, 220), (cx - pr, cy - ph, pr * 2, ph * 2), 2)
+
+        # 2. Vórtice Taijitu Yin-Yang (metade clara e metade escura)
+        ir = int(pr * 0.75)
+        ih = int(ph * 0.75)
+        # Metade preta / trevas
+        pygame.draw.ellipse(portal_surf, (15, 10, 25, 245), (cx - ir, cy - ih, ir * 2, ih * 2))
+        # Metade branca / luz
+        white_arc = [
+            (cx, cy - ih),
+            (cx + ir, cy),
+            (cx, cy + ih),
+            (cx, cy),
+        ]
+        pygame.draw.polygon(portal_surf, (250, 250, 255, 245), white_arc)
+        # Círculos opostos de equilíbrio
+        pygame.draw.circle(portal_surf, (250, 250, 255), (cx, cy - ih // 2), max(1, int(3 * camera.zoom)))
+        pygame.draw.circle(portal_surf, (15, 10, 25), (cx, cy + ih // 2), max(1, int(3 * camera.zoom)))
+
+        # 3. Trigramas Bagua orbitando o anel
+        for i in range(8):
+            ang = math.radians(i * 45 + t * 30.0)
+            tx = cx + int(pr * 0.90 * math.cos(ang))
+            ty = cy + int(ph * 0.90 * math.sin(ang))
+            pygame.draw.circle(portal_surf, (255, 240, 160), (tx, ty), max(1, int(1.5 * camera.zoom)))
+
+        surface.blit(portal_surf, (sx - cx, sy - cy))
+
+        # 4. Pilar astral de luz cósmica vertical
+        pulse = 0.5 + 0.5 * math.sin(t * 3.0)
+        c_beam = (220, 215, 255)
+        draw_voxel_box(surface, camera, bx - 0.05, by - 0.05, 0.02, 0.10, 0.10, 0.85 + pulse * 0.15, c_beam, outline=False)
+        draw_voxel_box(surface, camera, bx - 0.02, by - 0.02, 0.05, 0.04, 0.04, 0.95, (255, 255, 255), outline=False)
 
     def _render_grave_pit(self, surface: pygame.Surface, camera):
         """Renderiza a fenda profunda no solo de onde a vítima foi arrastada para as profundezas."""

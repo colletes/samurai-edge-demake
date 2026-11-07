@@ -1,13 +1,14 @@
 """
-Seimei, a Onmyoji dos Talismãs (Ciclo 4):
-- Mestra espiritual dos kami e do yin-yang (Onmyōdō) da era Bakumatsu, herdeira da linhagem de Heian-kyo.
-- Vestes nobres cerimoniais Kariginu / Suikan da corte Heian em seda branca pura com bordas em índigo celestial e fios dourados.
+Seimei, a Onmyoji dos Talismãs (Ciclo 4 - Overhaul 2.20):
+- Mestra espiritual dos kami e do yin-yang (Onmyōdō) da era Bakumatsu, herdeira da linhagem nobre de Heian-kyo.
+- Vestes nobres cerimoniais Kariginu / Suikan da corte Heian em seda branca pura com bordas em índigo celestial e debrum dourado.
 - Mangas amplas esvoaçantes em fita contínua 3D com caimento vertical autêntico (normal_vec frontal).
-- Chapéu cerimonial Eboshi alto preto laqueado, amarrado ao queixo por cordões de seda púrpura.
-- Cabelos negros lustrosos longos descendo pelas costas com mechas laterais (tsuya-kami) ordenadas dinamicamente.
-- Olhos anime luminosos em violeta celestial com brilho duplo, cílios alados e nariz esculpido delicado.
-- Talismãs Ofuda sagrados de papel encantado com caligrafia kanji incandescente em luz espiritual dourada.
-- Ordenação dinâmica Painter's Algorithm para oclusão 360° em todos os ângulos de câmera.
+- Chapéu cerimonial Tate-Eboshi alto preto laqueado com dobra de vinco e cordão de seda púrpura.
+- Cabelos negros lustrosos longos descendo pelas costas com mechas laterais (tsuya-kami) e franja reta Hime-cut.
+- Olhos anime luminosos em ametista celestial com brilho duplo, cílios alados e nariz esculpido delicado.
+- Talismãs Ofuda sagrados incandescentes com caligrafia kanji espiritual que muda de cor conforme o Rondel Elemental Onmyōdō.
+- Leque cerimonial Sensu articulado e espíritos Shikigami de origami em revoada celestial.
+- Exposição mandatória de get_arms(c) e materiais realistas com suporte a SSAA 2x e modo comparativo De / Para.
 """
 import math
 import pygame
@@ -19,6 +20,8 @@ from src.isometric.mesh_primitives import (
     draw_tapered_frustum_3d,
     draw_sculpted_head_3d,
     draw_portrait_face_3d,
+    draw_voxel_box,
+    draw_oriented_voxel_box,
 )
 
 SKIN = (254, 242, 238)
@@ -60,12 +63,22 @@ PALETTE = {
     "zori": (145, 115, 80),
     "zori_strap": (185, 36, 45),
 
-    # Talismãs Ofuda e Magia Onmyodo
+    # Talismãs Ofuda, Leque Sensu e Cores Elementais
     "ofuda_paper": (255, 252, 245),
     "ofuda_gold": (255, 215, 80),
     "ofuda_kanji": (215, 42, 35),
+    "sensu_paper": (250, 246, 238),
+    "sensu_wood": (48, 42, 56),
     "spiritual_aura": (170, 140, 255),
     "spiritual_core": (245, 235, 255),
+
+    # Cores dos 6 Elementos do Rondel
+    "elem_wood": (45, 215, 120),
+    "elem_fire": (255, 75, 45),
+    "elem_earth": (235, 185, 65),
+    "elem_metal": (245, 248, 255),
+    "elem_water": (65, 175, 255),
+    "elem_yinyang": (225, 160, 255),
 }
 
 MATERIALS = {
@@ -78,7 +91,11 @@ MATERIALS = {
     "gold_thread": "gold",
     "purple_cord": "silk",
     "tabi": "silk",
+    "sensu_wood": "lacquer",
+    "ofuda_paper": "paper",
 }
+
+LEGACY_MATERIALS = {k: "matte" for k in MATERIALS}
 
 
 def pal() -> dict:
@@ -89,15 +106,27 @@ def pal() -> dict:
 # Poses dos Braços e Animação Ritual dos Talismãs
 # ---------------------------------------------------------------------------------------------------------------------
 
+def _coords(c):
+    bx = getattr(c, "base_x", getattr(c, "wx", 0.0))
+    by = getattr(c, "base_y", getattr(c, "wy", 0.0))
+    tz = getattr(c, "torso_z", getattr(c, "wz", 0.0) + 0.35)
+    fx = getattr(c, "fx", getattr(c, "facing_x", 1.0))
+    fy = getattr(c, "fy", getattr(c, "facing_y", 0.0))
+    px = getattr(c, "px", -fy)
+    py = getattr(c, "py", fx)
+    return bx, by, tz, fx, fy, px, py
+
+
 def idle_arms(c):
     """
     Postura Onmyoji graciosa:
     - Mão direita sustentando um talismã Ofuda sagrado erguido no nível do peito/olhos.
-    - Mão esquerda recolhida na manga larga de seda branca.
+    - Mão esquerda segurando o leque Sensu fechado junto à manga larga.
     """
-    breathe = math.sin(c.walk_timer * 2.2) * 0.008
-    tz = c.torso_z + breathe
-    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
+    walk_t = getattr(c, "walk_timer", 0.0)
+    breathe = math.sin(walk_t * 2.2) * 0.008
+    bx, by, tz, fx, fy, px, py = _coords(c)
+    tz = tz + breathe
 
     right = (
         bx + fx * 0.16 + px * 0.06,
@@ -114,9 +143,9 @@ def idle_arms(c):
 
 def walk_arms(c):
     """Passo suave e flutuante de sacerdotisa com mangas esvoaçantes."""
-    drift = math.sin(c.walk_timer * 7.0) * 0.05
-    tz = c.torso_z
-    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
+    walk_t = getattr(c, "walk_timer", 0.0)
+    drift = math.sin(walk_t * 7.0) * 0.05
+    bx, by, tz, fx, fy, px, py = _coords(c)
 
     right = (
         bx + fx * (0.16 + drift * 0.03) + px * 0.06,
@@ -136,9 +165,9 @@ def attack_arms(c):
     Lançamento de Talismã Ofuda (Ofuda Slash / Seal Stasis):
     - Gesto ritual gracioso: o braço direito arremessa o talismã para a frente em linha reta com rastro místico.
     """
-    tz = c.torso_z
-    bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
-    prog = c.atk_progress if c.atk_progress is not None else 0.0
+    bx, by, tz, fx, fy, px, py = _coords(c)
+    atk_p = getattr(c, "atk_progress", None)
+    prog = atk_p if atk_p is not None else 0.0
 
     if prog < 0.30:
         # Puxa o talismã junto ao peito carregando energia
@@ -148,7 +177,7 @@ def attack_arms(c):
     elif prog < 0.70:
         # Projeção instantânea do selo para a frente
         t = (prog - 0.30) / 0.40
-        right = (bx + fx * (0.24 + t * 0.16), by + fy * (0.24 + t * 0.16), tz + 0.18)
+        right = (bx + fx * (0.24 + t * 0.18), by + fy * (0.24 + t * 0.18), tz + 0.18)
         left = (bx - fx * 0.06 - px * 0.14, by - fy * 0.06 - py * 0.14, tz + 0.12)
     else:
         # Retorno gracioso com movimento de manga
@@ -160,11 +189,129 @@ def attack_arms(c):
 
 
 def _current_hands(c):
-    if c.is_melee and c.atk_progress is not None:
+    """Mapeamento contínuo de braços e gestos rituais Onmyōdō."""
+    extra = getattr(c, "extra", {}) or {}
+    pose = extra.get("pose", "")
+    p = extra.get("p", 0.0)
+    bx, by, tz, fx, fy, px, py = _coords(c)
+
+    # 1. Poses de Intro
+    if pose == "shikigami_descent":
+        # Levitação suave com braços abertos flutuando
+        u = extra.get("seg_u", p / 0.35 if p <= 0.35 else 1.0)
+        float_w = math.sin(u * math.pi) * 0.04
+        right = (bx + px * 0.18 - fx * 0.04, by + py * 0.18 - fy * 0.04, tz + 0.14 + float_w)
+        left = (bx - px * 0.18 - fx * 0.04, by - py * 0.18 - fy * 0.04, tz + 0.14 + float_w)
+        return left, right
+
+    elif pose == "sensu_fan_flick":
+        # Abre o leque Sensu em arco e traz ao peito
+        u = extra.get("seg_u", (p - 0.35) / 0.35 if 0.35 <= p <= 0.70 else 0.5)
+        arc = math.sin(u * math.pi) * 0.06
+        right = (bx + fx * (0.12 + 0.06 * u) + px * (0.14 - 0.08 * u), by + fy * (0.12 + 0.06 * u) + py * (0.14 - 0.08 * u), tz + 0.18 + arc)
+        left = (bx + fx * 0.08 - px * 0.12, by + fy * 0.08 - py * 0.12, tz + 0.08)
+        return left, right
+
+    elif pose == "onmyoji_ready":
+        # Guarda cerimonial pronta com respiração sutil
+        breath = math.sin(c.walk_timer * 2.4) * 0.008
+        right = (bx + fx * 0.18 + px * 0.05, by + fy * 0.18 + py * 0.05, tz + 0.16 + breath)
+        left = (bx + fx * 0.08 - px * 0.10, by + fy * 0.08 - py * 0.10, tz + 0.06 - breath)
+        return left, right
+
+    # 2. Poses de Vitória
+    elif pose == "sensu_twirl":
+        # Giro gracioso do leque Sensu
+        u = extra.get("seg_u", p / 0.38 if p <= 0.38 else 1.0)
+        twirl_ang = u * math.pi * 2.0
+        right = (bx + fx * 0.14 + px * (0.08 + math.cos(twirl_ang) * 0.05),
+                 by + fy * 0.14 + py * (0.08 + math.cos(twirl_ang) * 0.05),
+                 tz + 0.18 + math.sin(twirl_ang) * 0.04)
+        left = (bx + fx * 0.06 - px * 0.10, by + fy * 0.06 - py * 0.10, tz + 0.06)
+        return left, right
+
+    elif pose == "birds_ascend":
+        # Braços elevam-se convocando pássaros de origami
+        u = extra.get("seg_u", (p - 0.38) / 0.34 if 0.38 <= p <= 0.72 else 0.5)
+        right = (bx + fx * 0.12 + px * (0.06 + 0.10 * u), by + fy * 0.12 + py * (0.06 + 0.10 * u), tz + 0.16 + 0.14 * u)
+        left = (bx + fx * 0.12 - px * (0.06 + 0.10 * u), by + fy * 0.12 - py * (0.06 + 0.10 * u), tz + 0.16 + 0.14 * u)
+        return left, right
+
+    elif pose in ("imperial_bow", "heian_bow"):
+        # Reverência imperial da corte Heian com mãos cruzadas no regaço
+        u = extra.get("seg_u", (p - 0.72) / 0.28 if p >= 0.72 else 1.0)
+        bow_depth = math.sin(min(1.0, u * 1.5) * math.pi * 0.5) * 0.03
+        right = (bx + fx * 0.10 + px * 0.02, by + fy * 0.10 + py * 0.02, tz + 0.02 - bow_depth)
+        left = (bx + fx * 0.10 - px * 0.02, by + fy * 0.10 - py * 0.02, tz + 0.02 - bow_depth)
+        return left, right
+
+    # 3. Poses de Ação e Combate
+    elif pose in ("sacred_ward", "plant_ward"):
+        # Ambas as mãos projetadas para o solo conjurando o selo Kekkai
+        right = (bx + fx * 0.22 + px * 0.06, by + fy * 0.22 + py * 0.06, tz + 0.04)
+        left = (bx + fx * 0.22 - px * 0.06, by + fy * 0.22 - py * 0.06, tz + 0.04)
+        return left, right
+
+    elif pose == "shikigami_glide":
+        # Deslize evasivo com asas de papel
+        right = (bx - fx * 0.15 + px * 0.18, by - fy * 0.15 + py * 0.18, tz + 0.18)
+        left = (bx - fx * 0.15 - px * 0.18, by - fy * 0.15 - py * 0.18, tz + 0.18)
+        return left, right
+
+    elif pose in ("astral_guard", "parry", "onmyo_guard"):
+        # Guarda protetora com mangas elevadas e leque Sensu aberto em escudo
+        right = (bx + fx * 0.14 + px * 0.04, by + fy * 0.14 + py * 0.04, tz + 0.22)
+        left = (bx + fx * 0.10 - px * 0.08, by + fy * 0.10 - py * 0.08, tz + 0.18)
+        return left, right
+
+    elif pose == "parry_reaction":
+        # Repulsa astral rápida
+        right = (bx + fx * 0.25 + px * 0.10, by + fy * 0.25 + py * 0.10, tz + 0.20)
+        left = (bx + fx * 0.20 - px * 0.12, by + fy * 0.20 - py * 0.12, tz + 0.16)
+        return left, right
+
+    # 4. Poses das Fatalidades Elementais
+    elif pose.startswith("finisher_"):
+        elem = pose.split("_")[1] if "_" in pose else "fire"
+        if elem == "fire":
+            # Gesto apontando para a vítima convocando chamas azuis/verdes
+            right = (bx + fx * 0.32, by + fy * 0.32, tz + 0.20)
+            left = (bx + fx * 0.08 - px * 0.12, by + fy * 0.08 - py * 0.12, tz + 0.10)
+        elif elem == "water":
+            # Ambas as mãos subindo em voluta aquática
+            right = (bx + fx * 0.16 + px * 0.12, by + fy * 0.16 + py * 0.12, tz + 0.24)
+            left = (bx + fx * 0.16 - px * 0.12, by + fy * 0.16 - py * 0.12, tz + 0.24)
+        elif elem == "wood":
+            # Mudra vegetal com palma erguida
+            right = (bx + fx * 0.20 + px * 0.04, by + fy * 0.20 + py * 0.04, tz + 0.28)
+            left = (bx - px * 0.10, by - py * 0.10, tz + 0.08)
+        elif elem == "metal":
+            # Dois dedos apontados para baixo convocando as lâminas celestes
+            right = (bx + fx * 0.26 + px * 0.05, by + fy * 0.26 + py * 0.05, tz + 0.05)
+            left = (bx + fx * 0.10 - px * 0.12, by + fy * 0.10 - py * 0.12, tz + 0.18)
+        elif elem == "earth":
+            # Palmas voltadas para o chão ordenando a rocha
+            right = (bx + fx * 0.20 + px * 0.10, by + fy * 0.20 + py * 0.10, tz + 0.02)
+            left = (bx + fx * 0.20 - px * 0.10, by + fy * 0.20 - py * 0.10, tz + 0.02)
+        else:  # yinyang
+            # Ambas as mãos unidas no centro em mudra Taijitu
+            right = (bx + fx * 0.14 + px * 0.02, by + fy * 0.14 + py * 0.02, tz + 0.16)
+            left = (bx + fx * 0.14 - px * 0.02, by + fy * 0.14 - py * 0.02, tz + 0.16)
+        return left, right
+
+    # Fallbacks padrão
+    is_melee = getattr(c, "is_melee", False)
+    atk_p = getattr(c, "atk_progress", None)
+    if is_melee and atk_p is not None:
         return attack_arms(c)
-    if c.is_moving:
+    if getattr(c, "is_moving", False):
         return walk_arms(c)
     return idle_arms(c)
+
+
+def get_arms(c):
+    """Exportação mandatória para compatibilidade com o pipeline modular humanoid."""
+    return _current_hands(c)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -218,11 +365,10 @@ def draw_behind(c):
         alpha=c.alpha,
     )
 
-    # 4. Mechas laterais e cordões do lado OPOSTO à câmera (ocultos pelo crânio e torso)
+    # 4. Mechas laterais e cordões do lado OPOSTO à câmera
     for s in (-1.0, 1.0):
         is_behind = mk.depth(c, px * s, py * s) < -0.01
         if is_behind:
-            # Mecha lateral traseira
             p_top = (bx + px * (hw * 0.48 * s) + fx * 0.010, by + py * (hw * 0.48 * s) + fy * 0.010, hz + 0.150)
             p_mid = (bx + px * (hw * 0.46 * s) + fx * 0.012, by + py * (hw * 0.46 * s) + fy * 0.012, hz + 0.100)
             p_bot = (bx + px * (hw * 0.44 * s) + fx * 0.014, by + py * (hw * 0.44 * s) + fy * 0.014, hz + 0.050)
@@ -237,7 +383,6 @@ def draw_behind(c):
                 outline=False,
                 alpha=c.alpha,
             )
-            # Cordão traseiro que cai por trás da orelha e nuca até as costas (sem atravessar a face)
             c_ear_back = (bx + px * (hw * 0.44 * s) - fx * 0.020, by + py * (hw * 0.44 * s) - fy * 0.020, hz + 0.075)
             c_neck_back = (bx + px * (hw * 0.25 * s) - fx * 0.030, by + py * (hw * 0.25 * s) - fy * 0.030, tz + 0.20)
             mk.limb(c, c_ear_back, c_neck_back, 0.006, P["purple_cord"], outline=False)
@@ -304,14 +449,13 @@ def draw_obi(c):
     z = c.pelvis_z + 0.065
 
     mk.cbox(c, bx, by, z, c.pelvis_w - 0.01, c.pelvis_w * 0.72, 0.070, P["obi"])
-    # Fino arremate dourado central do obi
     mk.obox(c, (bx + fx * 0.078, by + fy * 0.078, z + 0.010), (px, py, 0.0), 0.045, 0.006, 0.006, P["gold_thread"], outline=False)
 
 
 def draw_torso(c):
     """
-    Tronco nobre Kariginu de Seimei (Fiel ao Retrato):
-    - Manto de seda branca pura limpo e sem botões ou faixas artificiais no peito.
+    Tronco nobre Kariginu de Seimei:
+    - Manto de seda branca pura com caimento amplo.
     - Colarinho cerimonial Heian arredondado em índigo celestial com debrum dourado rente ao pescoço.
     - Palas cerimoniais em índigo com bordados dourados no topo dos ombros.
     """
@@ -320,11 +464,11 @@ def draw_torso(c):
     front = 0.088
 
     if mk.depth(c, fx, fy) > -0.05:
-        # Colarinho cerimonial Heian arredondado rente ao pescoço em índigo e seda branca
+        # Colarinho cerimonial Heian arredondado rente ao pescoço
         mk.obox(c, (bx + fx * (front - 0.004), by + fy * (front - 0.004), tz + 0.220), (0.0, 0.0, 1.0), 0.035, 0.080, 0.016, P["robe_white"], up=(fx, fy, 0.0), outline=False)
         mk.obox(c, (bx + fx * front, by + fy * front, tz + 0.222), (0.0, 0.0, 1.0), 0.025, 0.065, 0.010, P["indigo"], up=(fx, fy, 0.0), outline=False)
 
-        # Palas cerimoniais em índigo sobre os ombros com debrum dourado (fiel ao manto Kariginu do retrato)
+        # Palas cerimoniais em índigo sobre os ombros com debrum dourado
         for s in (-1.0, 1.0):
             yoke_pos = (bx + px * 0.085 * s, by + py * 0.085 * s, tz + 0.225)
             mk.obox(c, yoke_pos, (fx, fy, 0.0), 0.052, 0.045, 0.014, P["indigo"], up=(0.0, 0.0, 1.0), outline=False)
@@ -332,7 +476,7 @@ def draw_torso(c):
 
 
 def draw_arm(c, shoulder, hand, side):
-    """Braço ágil com manga ampla de seda branca Kariginu e mangas drapeadas."""
+    """Braço com manga ampla de seda branca Kariginu."""
     P = pal()
     return mk.arm(
         c, shoulder, hand, side,
@@ -347,12 +491,10 @@ def draw_arm(c, shoulder, hand, side):
 def draw_sleeves(c, arm_segments):
     """
     Mangas amplas esvoaçantes de Kariginu pendendo dos ombros aos cotovelos:
-    - Aplicam normal_vec = (fx, fy, 0.0) e side_vec = (px, py, 0.0) conforme diretriz do GEMINI.md
-      para garantir caimento vertical sem projetar asas horizontais.
+    - Aplicam normal_vec = (fx, fy, 0.0) e side_vec = (px, py, 0.0) para caimento vertical natural.
     """
     P = pal()
     for s_pt, e_pt, side in arm_segments:
-        # Ponto de queda da manga abaixo do cotovelo
         drop_z = e_pt[2] - 0.12
         mid_drop = (e_pt[0] - c.fx * 0.03, e_pt[1] - c.fy * 0.03, drop_z)
 
@@ -374,23 +516,22 @@ def draw_sleeves(c, arm_segments):
 def draw_head(c):
     """
     Cabeça de Seimei e Chapéu Cerimonial Eboshi Heian:
-    1. Chapéu Eboshi alto laqueado preto no topo da cabeça (tate-eboshi Heian).
+    1. Chapéu Tate-Eboshi alto laqueado preto no topo da cabeça.
     2. Cordão ornamental fino de seda púrpura subindo pelo flanco esquerdo do Eboshi.
-    3. Cordões de seda púrpura (Kake-o) descendo rente à mandíbula até o nó delicado na garganta.
+    3. Cordões de seda púrpura (Kake-o) descendo rente à mandíbula até o nó na garganta.
     4. Brincos dourados delicados sob as orelhas.
-    5. Rosto anime 3D desenhado com olhos violeta luminosos, cílios alados e lábios facetados.
-    6. Franja reta Hime-cut sobre a testa (acima das sobrancelhas) e mechas laterais (bin-sogi)
-       emoldurando perfeitamente as bochechas.
+    5. Rosto anime 3D desenhado com olhos ametista luminosos, cílios alados e lábios facetados.
+    6. Franja reta Hime-cut sobre a testa e mechas laterais (bin-sogi) emoldurando as bochechas.
     """
     P = pal()
     bx, by, hz, fx, fy, px, py, hw = c.base_x, c.base_y, c.head_z, c.fx, c.fy, c.px, c.py, c.head_w
 
-    # 1. Base do Chapéu Eboshi repousando sobre a coroa da cabeça (envolve o topo do crânio)
+    # 1. Base do Chapéu Eboshi repousando sobre a coroa da cabeça
     crown_z = hz + 0.142
     eboshi_base = (bx - fx * 0.008, by - fy * 0.008, crown_z)
     eboshi_tip = (bx - fx * 0.030, by - fy * 0.030, crown_z + 0.220)
 
-    # Corpo esguio e alto do Eboshi (tate-eboshi Heian de laca negra com reflexos de seda)
+    # Tate-Eboshi Heian de laca negra
     draw_tapered_frustum_3d(
         c.surface, c.camera,
         eboshi_base, eboshi_tip,
@@ -402,7 +543,7 @@ def draw_head(c):
         alpha=c.alpha,
     )
 
-    # Vinco/dobra tradicional no topo do Eboshi
+    # Vinco tradicional no topo do Eboshi
     fold_base = (eboshi_tip[0] + fx * 0.006, eboshi_tip[1] + fy * 0.006, crown_z + 0.155)
     fold_tip = (eboshi_tip[0], eboshi_tip[1], crown_z + 0.222)
     draw_tapered_frustum_3d(
@@ -416,13 +557,13 @@ def draw_head(c):
         alpha=c.alpha,
     )
 
-    # Cordão ornamental fino de seda púrpura subindo pelo flanco esquerdo do Eboshi com pequeno nó na aba
+    # Cordão ornamental no flanco do Eboshi
     cord_eboshi_bot = (eboshi_base[0] + px * (hw * 0.46) - fx * 0.008, eboshi_base[1] + py * (hw * 0.46) - fy * 0.008, crown_z + 0.012)
     cord_eboshi_top = (eboshi_tip[0] + px * (hw * 0.18) - fx * 0.010, eboshi_tip[1] + py * (hw * 0.18) - fy * 0.010, crown_z + 0.185)
     mk.obox(c, cord_eboshi_bot, (0.0, 0.0, 1.0), 0.012, 0.012, 0.012, P["purple_cord"], outline=False)
     mk.limb(c, cord_eboshi_bot, cord_eboshi_top, 0.007, P["purple_cord"], outline=False)
 
-    # 2. Cordões laterais (Kake-o): descem ajustados sob a curva da mandíbula até a garganta
+    # 2. Cordões laterais (Kake-o)
     c_throat = (bx + fx * 0.032, by + fy * 0.032, hz - 0.018)
     for s in (-1.0, 1.0):
         is_behind = mk.depth(c, px * s, py * s) < -0.01
@@ -431,25 +572,22 @@ def draw_head(c):
             c_jaw = (bx + px * (hw * 0.24 * s) - fx * 0.002, by + py * (hw * 0.24 * s) - fy * 0.002, hz + 0.002)
             mk.limb(c, c_ear, c_jaw, 0.003, P["purple_cord"], outline=False)
             mk.limb(c, c_jaw, c_throat, 0.003, P["purple_cord"], outline=False)
-
-            # Brinco de ouro sutil sob o lóbulo da orelha visível
             mk.obox(c, (c_ear[0] + fx * 0.006, c_ear[1] + fy * 0.006, hz + 0.048), (0.0, 0.0, 1.0), 0.008, 0.008, 0.012, P["gold_thread"], outline=False)
 
-    # Laço cerimonial de seda púrpura (Agemaki/Hanamusubi) delicado sob o queixo
+    # Laço cerimonial sob o queixo
     if mk.facing_camera(c):
         mk.obox(c, c_throat, (0.0, 0.0, 1.0), 0.012, 0.014, 0.006, P["purple_cord"], up=(px, py, 0.0), outline=False)
-        # Fitas soltas do laço caindo suavemente sobre o colarinho
         mk.limb(c, (c_throat[0] - px * 0.003, c_throat[1] - py * 0.003, c_throat[2]),
                    (c_throat[0] - px * 0.006 + fx * 0.003, c_throat[1] - py * 0.006 + fy * 0.003, c_throat[2] - 0.022), 0.003, P["purple_cord"], outline=False)
         mk.limb(c, (c_throat[0] + px * 0.003, c_throat[1] + py * 0.003, c_throat[2]),
                    (c_throat[0] + px * 0.006 + fx * 0.003, c_throat[1] + py * 0.006 + fy * 0.003, c_throat[2] - 0.022), 0.003, P["purple_cord"], outline=False)
 
-    # 3. Rosto anime esculpido 3D com olhos luminosos, delineado e lábios facetados
+    # 3. Rosto anime esculpido 3D
     if not getattr(c, "_face_drawn", False):
         draw_portrait_face_3d(c, char_type="seimei")
         c._face_drawn = True
 
-    # 4. Franja Hime-cut reta sobre a testa (z: hz + 0.120 -> hz + 0.144, bem acima das sobrancelhas em hz + 0.106)
+    # 4. Franja Hime-cut reta sobre a testa
     if mk.facing_camera(c):
         front_d = hw * 0.50 + 0.006
         for s in (-1.0, 1.0):
@@ -466,7 +604,7 @@ def draw_head(c):
                 alpha=c.alpha,
             )
 
-    # 5. Mechas laterais Hime-cut (bin-sogi) voltadas para a câmera, descendo até a altura do queixo
+    # 5. Mechas laterais Hime-cut (bin-sogi)
     for s in (-1.0, 1.0):
         is_behind = mk.depth(c, px * s, py * s) < -0.02
         if not is_behind:
@@ -487,20 +625,79 @@ def draw_head(c):
 
 
 def draw_front(c, hand_l, hand_r):
-    """Renderiza o talismã Ofuda sagrado incandescente na mão de Seimei."""
+    """
+    Renderiza os artefatos sagrados:
+    - Talismã Ofuda incandescente na mão direita com a cor do elemento ativo.
+    - Leque cerimonial Sensu (fechado ou aberto em leque).
+    - Pássaros Shikigami de origami em voo astral quando em intro, vitória ou deslize.
+    """
     P = pal()
     r_x, r_y, r_z = hand_r
+    l_x, l_y, l_z = hand_l
     fx, fy, px, py = c.fx, c.fy, c.px, c.py
+    extra = getattr(c, "extra", {}) or {}
+    elem = extra.get("element", "wood")
 
-    # Talismã Ofuda retangular de papel sagrado
-    ofuda_pos = (r_x + fx * 0.04, r_y + fy * 0.04, r_z + 0.04)
-    mk.obox(c, ofuda_pos, (fx * 0.4, fy * 0.4, 0.9), 0.14, 0.065, 0.012, P["ofuda_paper"], up=(px, py, 0.0), outline=True)
-    # Inscrição do kanji vermelho / ouro no centro do talismã
-    mk.obox(c, (ofuda_pos[0] + fx * 0.01, ofuda_pos[1] + fy * 0.01, ofuda_pos[2] + 0.02), (fx * 0.4, fy * 0.4, 0.9), 0.09, 0.032, 0.014, P["ofuda_kanji"], up=(px, py, 0.0), outline=False)
+    # Mapeamento da cor do elemento ativo
+    elem_colors = {
+        "wood": P["elem_wood"],
+        "fire": P["elem_fire"],
+        "earth": P["elem_earth"],
+        "metal": P["elem_metal"],
+        "water": P["elem_water"],
+        "yinyang": P["elem_yinyang"],
+    }
+    col_aura = elem_colors.get(elem, P["spiritual_aura"])
 
-    # Brilho místico ao conjurar / atacar
-    if c.is_melee and c.atk_progress is not None:
-        prog = c.atk_progress
-        if 0.25 <= prog <= 0.75:
-            mk.cbox(c, ofuda_pos[0] + fx * 0.08, ofuda_pos[1] + fy * 0.08, ofuda_pos[2], 0.16, 0.16, 0.16, P["spiritual_aura"], outline=False)
-            mk.cbox(c, ofuda_pos[0] + fx * 0.08, ofuda_pos[1] + fy * 0.08, ofuda_pos[2], 0.09, 0.09, 0.09, P["spiritual_core"], outline=False)
+    # 1. Talismã Ofuda retangular de papel sagrado
+    pose = extra.get("pose", "")
+    show_ofuda = pose not in ("imperial_bow", "heian_bow", "shikigami_glide")
+
+    if show_ofuda:
+        ofuda_pos = (r_x + fx * 0.04, r_y + fy * 0.04, r_z + 0.04)
+        mk.obox(c, ofuda_pos, (fx * 0.4, fy * 0.4, 0.9), 0.14, 0.065, 0.012, P["ofuda_paper"], up=(px, py, 0.0), outline=True)
+        # Inscrição do kanji místico colorido conforme o elemento ativo
+        mk.obox(c, (ofuda_pos[0] + fx * 0.01, ofuda_pos[1] + fy * 0.01, ofuda_pos[2] + 0.02), (fx * 0.4, fy * 0.4, 0.9), 0.09, 0.032, 0.014, col_aura, up=(px, py, 0.0), outline=False)
+
+        # Brilho místico ao conjurar / atacar
+        if c.is_melee and c.atk_progress is not None:
+            prog = c.atk_progress
+            if 0.20 <= prog <= 0.80:
+                mk.cbox(c, ofuda_pos[0] + fx * 0.08, ofuda_pos[1] + fy * 0.08, ofuda_pos[2], 0.16, 0.16, 0.16, col_aura, outline=False)
+                mk.cbox(c, ofuda_pos[0] + fx * 0.08, ofuda_pos[1] + fy * 0.08, ofuda_pos[2], 0.09, 0.09, 0.09, P["spiritual_core"], outline=False)
+
+    # 2. Leque Sensu Cerimonial na mão esquerda
+    is_fan_open = pose in ("sensu_fan_flick", "sensu_twirl", "astral_guard", "parry")
+    fan_pos = (l_x - fx * 0.02 - px * 0.02, l_y - fy * 0.02 - py * 0.02, l_z + 0.04)
+
+    if is_fan_open:
+        # Leque aberto em semicírculo gracioso
+        mk.obox(c, fan_pos, (fx, fy, 0.0), 0.08, 0.18, 0.012, P["sensu_paper"], up=(0.0, 0.0, 1.0), outline=True)
+        mk.obox(c, (fan_pos[0] + fx * 0.005, fan_pos[1] + fy * 0.005, fan_pos[2]), (fx, fy, 0.0), 0.03, 0.04, 0.016, P["sensu_wood"], up=(0.0, 0.0, 1.0), outline=False)
+    else:
+        # Leque dobrado compacto
+        mk.obox(c, fan_pos, (fx * 0.6, fy * 0.6, -0.8), 0.20, 0.035, 0.022, P["sensu_wood"], up=(px, py, 0.0), outline=True)
+
+    # 3. Pássaros de Papel Origami Shikigami (em voo orbital durante intro, vitória e deslize)
+    if pose in ("shikigami_descent", "birds_ascend", "shikigami_glide"):
+        p_val = extra.get("p", c.walk_timer)
+        for i, ang_off in enumerate((0.0, 2.1, 4.2)):
+            bird_ang = p_val * 6.0 + ang_off
+            bird_r = 0.28 + 0.08 * math.sin(bird_ang * 2.0)
+            bird_x = c.base_x + math.cos(bird_ang) * bird_r
+            bird_y = c.base_y + math.sin(bird_ang) * bird_r
+            bird_z = c.torso_z + 0.15 + 0.06 * math.cos(bird_ang * 3.0)
+
+            # Asas de origami facetadas
+            wing_flap = math.sin(p_val * 16.0 + i) * 0.03
+            draw_tapered_frustum_3d(
+                c.surface, c.camera,
+                (bird_x, bird_y, bird_z - 0.02),
+                (bird_x + math.cos(bird_ang) * 0.06, bird_y + math.sin(bird_ang) * 0.06, bird_z + 0.02 + wing_flap),
+                w_start=0.05, h_start=0.01,
+                w_end=0.02, h_end=0.005,
+                color=P["ofuda_paper"],
+                up=(0.0, 0.0, 1.0),
+                outline=True,
+                alpha=c.alpha,
+            )

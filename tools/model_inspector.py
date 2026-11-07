@@ -698,6 +698,23 @@ CHARACTER_ANIM_BUTTONS = {
         ("FINISHER_1", "F2. Finisher A: Soul Reap (首刈骸生)", 1.25),
         ("FINISHER_2", "F3. Finisher B: Dragged to the Grave (黄泉引摺)", 1.30),
     ],
+    "seimei": [
+        ("IDLE", "1. Idle (Flutuação Zen & Leque Sensu)", 0.0),
+        ("WALK", "2. Walk (Passos Espirituais Flutuantes)", 0.0),
+        ("OFUDA_TOSS", "3. Primário: Disparo Ofuda Reto (6.5m, Dano 2)", 0.35),
+        ("SACRED_WARD", "4. Secundário: Selo Kekkai (5.5s, Limite 2)", 0.40),
+        ("SHIKIGAMI_GLIDE", "5. Esquiva: Deslize Shikigami (13 i-frames)", 0.36),
+        ("ASTRAL_GUARD", "6. Guarda: Kekkai Protetor Onmyōdō", 0.36),
+        ("PARRY_REACTION", "7. Reação: Repelência Astral & Pétalas", 0.38),
+        ("INTRO", "8. Intro: Voo Shikigami -> Abertura Sensu -> Foco", 2.20),
+        ("VICTORY", "9. Vitória: Giro do Sensu -> Pássaros -> Vênia", 2.40),
+        ("FATAL_FIRE", "0. Fatal Fogo: Seien Kaijin (青炎灰燼)", 1.30),
+        ("FATAL_WATER", "F1. Fatal Água: Suisou Shouka (水葬昇華)", 1.30),
+        ("FATAL_WOOD", "F2. Fatal Madeira: Shinju Rinne (神樹輪廻)", 1.30),
+        ("FATAL_METAL", "F3. Fatal Metal: Kongou Fuubaku (金剛封縛)", 1.30),
+        ("FATAL_EARTH", "F4. Fatal Terra: Ganshuku Kaseki (岩宿化石)", 1.30),
+        ("FATAL_YINYANG", "F5. Fatal Yin-Yang: In-You Tenchuu (陰陽天誅)", 1.30),
+    ],
 }
 # Aliases para chaves alternativas do catálogo
 CHARACTER_ANIM_BUTTONS["joe"] = CHARACTER_ANIM_BUTTONS["american"]
@@ -718,6 +735,7 @@ CHARACTER_ANIM_BUTTONS["blind"] = CHARACTER_ANIM_BUTTONS["ichi"]
 CHARACTER_ANIM_BUTTONS["shikomizue"] = CHARACTER_ANIM_BUTTONS["ichi"]
 CHARACTER_ANIM_BUTTONS["necromancer"] = CHARACTER_ANIM_BUTTONS["valerius"]
 CHARACTER_ANIM_BUTTONS["faust"] = CHARACTER_ANIM_BUTTONS["valerius"]
+CHARACTER_ANIM_BUTTONS["onmyoji"] = CHARACTER_ANIM_BUTTONS["seimei"]
 
 DEFAULT_ANIM_BUTTONS = [
     ("IDLE", "1. Idle (Respiração)", 0.0),
@@ -893,6 +911,15 @@ OVERHAUL_DE_PARA_NOTES = {
         "Detonação Cadavérica: Estalo de dedos com detonação manual em chamas azuis (raio 1.6m, dano 1)",
         "Fatalidades Cinematográficas: Soul Reap (首刈骸生 - decapitação e corpo esquelético em chamas azuis) e Dragged to Grave (黄泉引摺)",
     ],
+    "seimei": [
+        "SSAA 2x Offscreen + Iluminação Isométrica 3D Direcional e Sombra Projetada",
+        "Rosto Anime 3D: Olhos místicos safira/índigo, chapéu cerimonial Eboshi de laca negra e franja Heian",
+        "Materiais Realistas: Seda Kariginu Branca com Padrão Kikko, Laca Eboshi Lustrosa, Cetim Índigo e Ouro Cerimonial",
+        "Pose LERP 0.08s + 15 Poses Articuladas + Leque Sensu Dobrável + Origami Shikigami Flutuante",
+        "Talismãs Ofuda Retos Bloqueáveis por Obstáculos (Alcance 6.5m, Dano 2) + Rondel Elemental Gogyō Completo",
+        "Selo Sagrado Kekkai Elemental de 5.5s (Limite de 2 simultâneos) + Deslize Shikigami Evasivo (13 i-frames)",
+        "6 Fatalidades Únicas por Elemento: Fogo (Cinzas), Água (Névoa/Orvalho), Madeira (Árvore Sagrada), Metal (5 Lâminas), Terra (Estátua Kintsugi) e Yin-Yang (Vórtice Taijitu)",
+    ],
 }
 OVERHAUL_DE_PARA_NOTES["joe"] = OVERHAUL_DE_PARA_NOTES["american"]
 OVERHAUL_DE_PARA_NOTES["hanzo"] = OVERHAUL_DE_PARA_NOTES["ninja"]
@@ -912,6 +939,7 @@ OVERHAUL_DE_PARA_NOTES["blind"] = OVERHAUL_DE_PARA_NOTES["ichi"]
 OVERHAUL_DE_PARA_NOTES["shikomizue"] = OVERHAUL_DE_PARA_NOTES["ichi"]
 OVERHAUL_DE_PARA_NOTES["necromancer"] = OVERHAUL_DE_PARA_NOTES["valerius"]
 OVERHAUL_DE_PARA_NOTES["faust"] = OVERHAUL_DE_PARA_NOTES["valerius"]
+OVERHAUL_DE_PARA_NOTES["onmyoji"] = OVERHAUL_DE_PARA_NOTES["seimei"]
 
 
 # =============================================================================
@@ -1036,9 +1064,9 @@ class ModelInspector:
         self.action_duration = dur
         if action_id in POSES:
             self.current_pose_idx = POSES.index(action_id)
-        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "ATTACK_1", "ATTACK_2", "ATTACK_3", "CROSS_SHOCKWAVE", "ROLL_CANCEL", "FINISHER_1", "FINISHER_2", "KAMA_STRIKE", "CHAIN_DRAG", "KODACHI_CROSS", "MAI_DANCE", "ACROBAT_LUNGE", "NAGINATA_CLEAVE", "NAGINATA_THRUST", "NAGINATA_THROW", "TACKLE_CHARGE", "SONIC_CLEAVE_1", "SONIC_CLEAVE_2", "RESONANCE_360", "EVASIVE_CANCEL", "KUWA_HEAVY_CLEAVE", "EARTH_STOMP_ACTION", "POCKET_DIRT", "GYAKU_IAI_QUICKDRAW", "BLIND_COUNTER_THRUST", "SCYTHE_REAP", "SUMMON_GRASPER", "SUMMON_SWORDSMAN", "SUMMON_WIGHT", "CORPSE_DETONATION"):
+        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "ATTACK_1", "ATTACK_2", "ATTACK_3", "CROSS_SHOCKWAVE", "ROLL_CANCEL", "FINISHER_1", "FINISHER_2", "KAMA_STRIKE", "CHAIN_DRAG", "KODACHI_CROSS", "MAI_DANCE", "ACROBAT_LUNGE", "NAGINATA_CLEAVE", "NAGINATA_THRUST", "NAGINATA_THROW", "TACKLE_CHARGE", "SONIC_CLEAVE_1", "SONIC_CLEAVE_2", "RESONANCE_360", "EVASIVE_CANCEL", "KUWA_HEAVY_CLEAVE", "EARTH_STOMP_ACTION", "POCKET_DIRT", "GYAKU_IAI_QUICKDRAW", "BLIND_COUNTER_THRUST", "SCYTHE_REAP", "SUMMON_GRASPER", "SUMMON_SWORDSMAN", "SUMMON_WIGHT", "CORPSE_DETONATION", "OFUDA_TOSS", "SACRED_WARD", "FATAL_FIRE", "FATAL_WATER", "FATAL_WOOD", "FATAL_METAL", "FATAL_EARTH", "FATAL_YINYANG"):
             self.current_pose_idx = POSES.index("ATTACK")
-        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY", "CROSS_GUARD", "TACTICAL_ROLL", "BACKFLIP", "DODGE_CANCEL", "SHADOW_STEP", "ADAMANTINE_PUSH", "SILK_GLIDE", "MUD_ROLL", "LISTEN_STANCE", "CANE_TAP_SLIP", "SHEATH_PARRY", "PARRY_REACTION", "MIST_DASH", "SCYTHE_GUARD"):
+        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY", "CROSS_GUARD", "TACTICAL_ROLL", "BACKFLIP", "DODGE_CANCEL", "SHADOW_STEP", "ADAMANTINE_PUSH", "SILK_GLIDE", "MUD_ROLL", "LISTEN_STANCE", "CANE_TAP_SLIP", "SHEATH_PARRY", "PARRY_REACTION", "MIST_DASH", "SCYTHE_GUARD", "SHIKIGAMI_GLIDE", "ASTRAL_GUARD"):
             self.current_pose_idx = POSES.index("RECOVERY")
 
     def select_character(self, idx: int | str):
@@ -2260,10 +2288,51 @@ class ModelInspector:
             extra_props["is_parry"] = True
             extra_props["pose"] = "scythe_guard"
             extra_props["p"] = prog
+        elif act == "OFUDA_TOSS":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            extra_props["pose"] = "ofuda_toss"
+            extra_props["p"] = prog
+            extra_props["talisman_flying"] = True
+            wx = 0.15 * math.sin(prog * math.pi)
+            wy = 0.15 * math.sin(prog * math.pi)
+        elif act == "SACRED_WARD":
+            state = "RECOVERY"
+            state_timer = max(0.01, (1.0 - prog) * 0.22)
+            extra_props["pose"] = "sacred_ward"
+            extra_props["p"] = prog
+        elif act == "SHIKIGAMI_GLIDE":
+            state = "ROLL"
+            state_timer = max(0.01, (1.0 - prog) * 0.22)
+            extra_props["is_roll"] = True
+            extra_props["pose"] = "shikigami_glide"
+            extra_props["roll_prog"] = prog
+            extra_props["p"] = prog
+            wx = 0.40 * prog
+            wy = 0.40 * prog
+        elif act == "ASTRAL_GUARD":
+            state = "PARRY"
+            state_timer = max(0.01, (1.0 - prog) * 0.36)
+            extra_props["is_parry"] = True
+            extra_props["pose"] = "astral_guard"
+            extra_props["p"] = prog
+        elif act in ("FATAL_FIRE", "FATAL_WATER", "FATAL_WOOD", "FATAL_METAL", "FATAL_EARTH", "FATAL_YINYANG"):
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.25)
+            elem_map = {
+                "FATAL_FIRE": "fire", "FATAL_WATER": "water", "FATAL_WOOD": "wood",
+                "FATAL_METAL": "metal", "FATAL_EARTH": "earth", "FATAL_YINYANG": "yinyang"
+            }
+            elem = elem_map.get(act, "fire")
+            extra_props["pose"] = f"finisher_{elem}"
+            extra_props["current_element"] = elem
+            extra_props["p"] = prog
+            wx = 0.20 * math.sin(prog * math.pi)
+            wy = 0.20 * math.sin(prog * math.pi)
         elif act in ("INTRO", "VICTORY"):
             kind = "intro" if act == "INTRO" else "victory"
             p_sample = prog if dur > 0.0 else ((self.anim_time * 0.42) % 1.0)
-            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american", "joe", "saitou", "teppo", "rifleman", "murasaki", "purple", "kasumi", "gray", "okuni", "kabuki", "anne", "pirate", "julie", "musketeer", "tomoe", "archer", "ren", "shaolin", "chiyo", "nodachi", "benkei", "sohei", "orin", "minstrel", "goro", "farmer", "ichi", "blind", "shikomizue", "valerius", "necromancer", "faust"):
+            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american", "joe", "saitou", "teppo", "rifleman", "murasaki", "purple", "kasumi", "gray", "okuni", "kabuki", "anne", "pirate", "julie", "musketeer", "tomoe", "archer", "ren", "shaolin", "chiyo", "nodachi", "benkei", "sohei", "orin", "minstrel", "goro", "farmer", "ichi", "blind", "shikomizue", "valerius", "necromancer", "faust", "seimei", "onmyoji"):
                 # Roteiro legado pré-Fase 2 (apenas IDLE + ATTACK simples)
                 if p_sample < 0.25 or p_sample > 0.75:
                     state = "IDLE"
@@ -2467,6 +2536,18 @@ class ModelInspector:
                     extra_props["p"] = prog
                     wx = 0.24 * math.sin(prog * math.pi)
                     wy = 0.24 * math.sin(prog * math.pi)
+            elif char_type in ("seimei", "onmyoji"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - prog) * 0.25)
+                    extra_props["pose"] = "finisher_fire"
+                    extra_props["current_element"] = "fire"
+                    extra_props["p"] = prog
+                    wx = 0.20 * math.sin(prog * math.pi)
+                    wy = 0.20 * math.sin(prog * math.pi)
             else:
                 # 2.1.4a: Ittou Ryoudan
                 state = "RECOVERY"
@@ -2670,6 +2751,18 @@ class ModelInspector:
                     state_timer = max(0.01, (1.0 - prog) * 0.35)
                     extra_props["pose"] = "corpse_detonation"
                     extra_props["p"] = prog
+            elif char_type in ("seimei", "onmyoji"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - prog) * 0.25)
+                    extra_props["pose"] = "finisher_water"
+                    extra_props["current_element"] = "water"
+                    extra_props["p"] = prog
+                    wx = 0.20 * math.sin(prog * math.pi)
+                    wy = 0.20 * math.sin(prog * math.pi)
             else:
                 # 2.1.4b: Divisão Celestial de Bambu (Ápice + Queda Meteórica)
                 if prog < 0.42:
@@ -3197,14 +3290,12 @@ class ModelInspector:
                     btns = self.get_anim_buttons()
                     if k_idx < len(btns):
                         self.trigger_action(btns[k_idx][0])
-                elif event.key == pygame.K_F1:
+                elif event.key in (pygame.K_F1, pygame.K_F2, pygame.K_F3, pygame.K_F4, pygame.K_F5, pygame.K_F6):
+                    f_keys = [pygame.K_F1, pygame.K_F2, pygame.K_F3, pygame.K_F4, pygame.K_F5, pygame.K_F6]
+                    f_idx = 10 + f_keys.index(event.key)
                     btns = self.get_anim_buttons()
-                    if len(btns) >= 11:
-                        self.trigger_action(btns[10][0])
-                elif event.key == pygame.K_F2:
-                    btns = self.get_anim_buttons()
-                    if len(btns) >= 12:
-                        self.trigger_action(btns[11][0])
+                    if f_idx < len(btns):
+                        self.trigger_action(btns[f_idx][0])
 
                 # Foco Macro (Rosto / Cabeça)
                 elif event.key == pygame.K_f:

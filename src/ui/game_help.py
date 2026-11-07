@@ -1213,40 +1213,39 @@ FIGHTERS_GUIDE_DATA = [
             "name": "SEIMEI",
             "title": "A Onmyoji dos 6 Elementos",
             "style": "Rondel Onmyōdō Gogyō & Oráculo Sagrado",
-            "vel": "[4/5] Movimento Fluido",
-            "dano": "12 Feitiços Elementais (1 a 2 HP / Efeitos Únicos)",
-            "especial": "Rondel dos 6 Elementos (Madeira, Fogo, Terra, Metal, Água, Yin-Yang)",
+            "vel": "[4/5] Movimento Fluido & Deslize Shikigami",
+            "dano": "Talismãs Ofuda Retos (2 HP / Bloqueados por Obstáculos) + 6 Selos Kekkai",
+            "especial": "Rondel dos 6 Elementos (Madeira, Fogo, Terra, Metal, Água, Yin-Yang) + 6 Fatalidades Elementais Únicas",
             "keys_p1": "[E] Feitiço Primário | [R] Rito Secundário",
             "keys_p2": "[U] Feitiço Primário | [I] Rito Secundário",
             "conceito": (
                 "Suprema mestra Onmyōji descendente da corte imperial Heian. Manipula o Rondel Gogyō de adivinhação oracular, "
-                "que avança continuamente entre os 5 elementos ancestrais e o estado supremo de Yin-Yang a cada feitiço desferido."
+                "que avança continuamente entre os 5 elementos ancestrais e o estado supremo de Yin-Yang a cada ação desferida."
             ),
             "habilidades": (
-                "• Rondel Onmyōdō: Mostrador texturizado no rodapé que avança no ciclo horário a cada ação (Madeira -> Fogo -> Terra -> Metal -> Água -> Yin-Yang).\n"
-                "• 12 Feitiços Elementais:\n"
-                "  - Madeira (木): Primário Kusabi-Bari (enraizamento 0.8s) | Secundário Shinju no Ibuki (muralha de raízes e espinhos).\n"
-                "  - Fogo (火): Primário Guren no Ofuda (lótus incandescente explosiva) | Secundário Hi-bashira (pilar de fogo eruptivo).\n"
-                "  - Terra (土): Primário Ganseki-dan (rocha sísmica com knockback) | Secundário Doryū-heki (megalito com 2 HP de cobertura).\n"
-                "  - Metal (金): Primário Hagane no Yaiba (lâmina de prata a 26 m/s que quebra guarda) | Secundário Kongō-jin (escudo com sino Kagura de contra-stun).\n"
-                "  - Água (水): Primário Suiryū no Ya (torrente ricocheteante com lentidão) | Secundário Kagami-Mizu (espelho d'água que reflete projéteis).\n"
-                "  - Yin-Yang (☯): Primário Senkō / Kurayami (orbes espirais duplas teleguiadas) | Secundário Tenmei no Senkoku (oráculo de estase cósmica)."
+                "• Disparo de Ofuda Reto: Talismã veloz em linha reta (alcance 6.5m, dano 2 HP). Bloqueado por obstáculos sólidos do cenário (árvores, rochas, construções).\n"
+                "• Rondel Onmyōdō: Mostrador no rodapé que avança no ciclo generativo a cada ação (Madeira -> Fogo -> Terra -> Metal -> Água -> Yin-Yang).\n"
+                "• Selo Sagrado Kekkai: Invoca selo elemental persistente por 5.5s (limite de 2 selos ativos simultaneamente).\n"
+                "• Deslize Shikigami: Esquiva com asas de papel origami flutuantes e 13 i-frames (0.22s de invulnerabilidade).\n"
+                "• 6 Fatalidades Elementais Únicas: Fogo (Seien Kaijin - Cinzas e Brasas), Água (Suisou Shouka - Orvalho e Poça Cristalina), "
+                "Madeira (Shinju Rinne - Árvore Sagrada Kodama), Metal (Kongou Fuubaku - Círculo de 5 Lâminas Astrais), "
+                "Terra (Ganshuku Kaseki - Estátua de Granito Kintsugi) e Yin-Yang (In-You Tenchuu - Portal Celestial Taijitu)."
             ),
             "estrategia_ofensiva": (
-                "• Domine a sequência generativa do Rondel para encadear controle (Madeira/Terra) e dano explosivo (Fogo/Metal/Yin-Yang).\n"
-                "• Use o indicador do rodapé para antecipar o próximo elemento e ditar o ritmo da luta."
+                "• Use o alcance de 6.5m dos talismãs em corredores limpos e controle a arena posicionando até 2 selos Kekkai.\n"
+                "• Antecipe o elemento do Rondel para alternar entre contenção, lentidão, refração e explosão máxima."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Seimei: Observe a cor da aura e o Rondel no rodapé para saber qual feitiço ela possui. Esquive de lado nas agulhas de Madeira e não ataque de frente durante o elemento Metal."
+                "• Como vencer Seimei: Use rochas e edifícios para bloquear os talismãs retos. Evite pisar nos selos Kekkai terrestres e avance durante o tempo de recuperação dos seus ritos."
             )
         },
         "en": {
             "name": "SEIMEI",
             "title": "The Onmyoji of the Six Elements",
             "style": "Onmyōdō Gogyō Rondel & Celestial Oracle",
-            "vel": "[4/5] Fluid Motion",
-            "dano": "12 Elemental Spells (1 to 2 HP / Unique Spellcraft)",
-            "especial": "Six-Element Rondel (Wood, Fire, Earth, Metal, Water, Yin-Yang)",
+            "vel": "[4/5] Fluid Motion & Shikigami Glide",
+            "dano": "Straight Ofuda Talismans (2 HP / Blocked by Obstacles) + 6 Kekkai Wards",
+            "especial": "Six-Element Rondel (Wood, Fire, Earth, Metal, Water, Yin-Yang) + 6 Unique Elemental Fatalities",
             "keys_p1": "[E] Primary Spell | [R] Secondary Rite",
             "keys_p2": "[U] Primary Spell | [I] Secondary Rite",
             "conceito": (
@@ -1254,21 +1253,20 @@ FIGHTERS_GUIDE_DATA = [
                 "which continuously rotates through the 5 elemental phases plus divine Yin-Yang with every spell cast."
             ),
             "habilidades": (
+                "• Straight Ofuda Toss: High-speed straight talisman (6.5m range, 2 HP damage). Strictly blocked by solid environment obstacles (trees, rocks, buildings).\n"
                 "• Onmyōdō Rondel: Rotating dial on the bottom HUD advancing clockwise on every action (Wood -> Fire -> Earth -> Metal -> Water -> Yin-Yang).\n"
-                "• 12 Unique Spells:\n"
-                "  - Wood (木): Primary Kusabi-Bari (0.8s root) | Secondary Shinju no Ibuki (sprouting briar root barrier).\n"
-                "  - Fire (火): Primary Guren no Ofuda (lotus explosion) | Secondary Hi-bashira (erupting pillar of flame).\n"
-                "  - Earth (土): Primary Ganseki-dan (heavy seismic rock with knockback) | Secondary Doryū-heki (2-hit solid megalith cover).\n"
-                "  - Metal (金): Primary Hagane no Yaiba (26 m/s silver blade piercing parry) | Secondary Kongō-jin (adamantine Kagura counter-stun shield).\n"
-                "  - Water (水): Primary Suiryū no Ya (bouncing spiral torrent with slow) | Secondary Kagami-Mizu (reflective water mirror dome).\n"
-                "  - Yin-Yang (☯): Primary Senkō / Kurayami (twin homing light/void spiral) | Secondary Tenmei no Senkoku (celestial stasis oracle diagram)."
+                "• Sacred Kekkai Ward: Places a protective/elemental stasis ward for 5.5s (limit 2 active wards simultaneously).\n"
+                "• Shikigami Glide: Evasive paper wing glide with 13 i-frames (0.22s invulnerability).\n"
+                "• 6 Unique Elemental Fatalities: Fire (Seien Kaijin - Azure Ashes & Embers), Water (Suisou Shouka - Mist & Clear Ripple Pond), "
+                "Wood (Shinju Rinne - Sacred Kodama Tree), Metal (Kongou Fuubaku - 5 Astral Impaling Blades), "
+                "Earth (Ganshuku Kaseki - Kintsugi Stone Statue), and Yin-Yang (In-You Tenchuu - Celestial Taijitu Banishing Portal)."
             ),
             "estrategia_ofensiva": (
-                "• Master the predictable generative cycle to plan combo chains and space denial.\n"
+                "• Capitalize on the 6.5m range in open lines of sight and dictate zone control with up to 2 active Kekkai wards.\n"
                 "• Track the dial indicator to adapt instantly between ranged bolts and protective boundaries."
             ),
             "estrategia_defensiva": (
-                "• How to defeat Seimei: Watch her foot aura and bottom Rondel to read her active element. Dodge laterally against Wood needles and avoid striking into Metal's adamantine counter-guard."
+                "• How to defeat Seimei: Take cover behind rocks and buildings to stop incoming talismans. Avoid stepping into ground wards and pressure her during casting recovery."
             )
         }
     },

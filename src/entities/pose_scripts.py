@@ -206,11 +206,11 @@ INTRO = {
         _idle(0.35, 0.70, pose="monocle_adjust"),
         _idle(0.70, 1.0, pose="aristocrat_ready"),
     ],
-    # Seimei (Mestra Onmyoji): Meditação astral, lançamento celestial de Ofuda com leque e reverência
+    # Seimei (Mestra Onmyoji): Descida com Shikigami -> Abertura de leque Sensu -> Guarda Onmyōdō fluida
     "seimei": [
-        _idle(0.0, 0.20),
-        _seg(0.20, 0.65, "ATTACK", 0.0, 1.0),
-        _idle(0.65, 1.0, pose="onmyo_guard"),
+        _idle(0.0, 0.35, pose="shikigami_descent"),
+        _idle(0.35, 0.70, pose="sensu_fan_flick"),
+        _idle(0.70, 1.0, pose="onmyoji_ready"),
     ],
     # Daiki (Peregrino do Bastão Bō): Saudação de peregrino, giro veloz de Bō levantando folhas e guarda Chudan
     "daiki": [
@@ -346,11 +346,11 @@ VICTORY = {
         _idle(0.38, 0.72, pose="finger_snap_bow"),
         _idle(0.72, 1.0, pose="condescending_gaze"),
     ],
-    # Seimei: Ofuda cósmico incandescente, giro de vestes e reverência tradicional Heian
+    # Seimei: Giro do leque Sensu -> Pássaros de origami aos céus -> Reverência imperial serena
     "seimei": [
-        _idle(0.0, 0.15),
-        _seg(0.15, 0.60, "ATTACK", 0.0, 0.9),
-        _idle(0.60, 1.0, pose="heian_bow"),
+        _idle(0.0, 0.38, pose="sensu_twirl"),
+        _idle(0.38, 0.72, pose="birds_ascend"),
+        _idle(0.72, 1.0, pose="imperial_bow"),
     ],
     # Daiki: Giro aéreo do bastão Bō, cravada firme no chão e saudação de monge peregrino
     "daiki": [
@@ -395,7 +395,7 @@ BEATS = {
         "goro": [(0.24, "sfx:obstacle_hit"), (0.45, "sfx:sword_slash"), (0.50, "fx:sparks")],
         "ichi": [(0.12, "sfx:dodge_whoosh"), (0.48, "sfx:parry"), (0.75, "fx:petals")],
         "valerius": [(0.12, "fx:smoke"), (0.45, "sfx:sword_slash"), (0.75, "sfx:parry")],
-        "seimei": [(0.20, "sfx:kunai_throw"), (0.40, "fx:sparks"), (0.65, "fx:petals")],
+        "seimei": [(0.12, "sfx:dodge_whoosh"), (0.42, "sfx:parry"), (0.72, "fx:petals")],
         "daiki": [(0.25, "sfx:dodge_whoosh"), (0.48, "sfx:obstacle_hit")],
         "aoi": [(0.24, "sfx:sword_slash"), (0.52, "sfx:dodge_whoosh")],
         "raiden": [(0.12, "sfx:parry"), (0.24, "sfx:parry"), (0.38, "fx:sparks"), (0.40, "sfx:dodge_whoosh")],
@@ -420,7 +420,7 @@ BEATS = {
         "goro": [(0.15, "sfx:obstacle_hit"), (0.40, "sfx:sword_slash"), (0.45, "fx:sparks")],
         "ichi": [(0.12, "sfx:sword_slash"), (0.50, "sfx:parry"), (0.75, "fx:petals")],
         "valerius": [(0.12, "fx:smoke"), (0.48, "sfx:parry"), (0.75, "fx:petals")],
-        "seimei": [(0.15, "sfx:kunai_throw"), (0.35, "fx:sparks"), (0.70, "fx:petals")],
+        "seimei": [(0.12, "sfx:parry"), (0.40, "fx:sparks"), (0.72, "fx:petals")],
         "daiki": [(0.18, "sfx:dodge_whoosh"), (0.44, "sfx:obstacle_hit")],
         "aoi": [(0.16, "sfx:sword_slash"), (0.50, "fx:petals")],
         "raiden": [(0.20, "sfx:dodge_whoosh"), (0.45, "sfx:obstacle_hit"), (0.46, "fx:smoke"), (0.76, "sfx:sword_slash")],

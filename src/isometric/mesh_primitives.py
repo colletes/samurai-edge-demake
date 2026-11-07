@@ -706,7 +706,7 @@ PORTRAIT_FACE_STYLES = {
     "seimei": {
         "iris": (135, 115, 215), "iris_core": (195, 175, 255), "iris_limbal": (55, 40, 115),
         "brow": (32, 24, 38), "lip": (225, 110, 128), "lip_lower": (245, 140, 155), "lip_shadow": (148, 62, 75),
-        "brow_tilt": 0.12, "lashes": True, "delicate_nose": True, "feminine_lips": True,
+        "brow_tilt": 0.12, "lashes": True, "delicate_nose": True, "feminine_lips": True, "hd_anime_eyes": True,
         "hairline_mid": 0.65, "hairline_lat": 0.46,
         "eye_z": 0.082, "brow_z": 0.106, "spacing": 0.033, "mouth_w": 0.024,
     },

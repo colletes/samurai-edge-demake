@@ -2422,41 +2422,41 @@ class OfudaProjectile:
         self.dir_y = dir_y
         self.element = element
 
-        # Configuração de velocidade, massa, alcance e dano por afinidade elemental
+        # Configuração de velocidade, massa, alcance e dano por afinidade elemental (Dano 2 HP padrão)
         if element == "metal":
-            self.speed = 32.0
+            self.speed = 28.0
             self.damage = 2
             self.radius = 0.34
             self.is_unblockable = True
             self.is_homing = False
         elif element == "earth":
-            self.speed = 11.8
+            self.speed = 13.5
             self.damage = 2
-            self.radius = 0.52
+            self.radius = 0.48
             self.is_unblockable = False
             self.is_homing = False
         elif element == "fire":
-            self.speed = 16.5
+            self.speed = 17.5
             self.damage = 2
-            self.radius = 0.44
+            self.radius = 0.42
             self.is_unblockable = False
             self.is_homing = False
         elif element == "water":
-            self.speed = 15.2
-            self.damage = 1
+            self.speed = 16.0
+            self.damage = 2
             self.radius = 0.40
             self.is_unblockable = False
             self.is_homing = True
         elif element == "yinyang":
-            self.speed = 14.5
+            self.speed = 15.5
             self.damage = 2
             self.radius = 0.42
             self.is_unblockable = False
             self.is_homing = False
         else:  # wood (default)
-            self.speed = 16.0
-            self.damage = 1
-            self.radius = 0.36
+            self.speed = 17.0
+            self.damage = 2
+            self.radius = 0.38
             self.is_unblockable = False
             self.is_homing = False
 

@@ -49,8 +49,8 @@ Consulte o documento mestre [`docs/EXPANSION_ROADMAP_AND_DESIGN.md`](EXPANSION_R
    - 🌾 `2.17`: Goro (Fazendeiro Rebelde — Enxada Kuwa & Fissura Terrestre) **[CONCLUÍDO ✅]**
    - 🦯 `2.18`: Ichi (Espadachim Cega — Saque Rápido da Shikomizue & Escuta) **[CONCLUÍDO ✅]**
    - 🕯️ `2.19`: Valerius (Necromante / Exorcista Prussiano — Foice Espectral & Tríade dos Mortos) **[CONCLUÍDO ✅]**
-   - ☯️ `2.20`: Seimei (Mestre Onmyoji — Rajada de Talismãs Ofuda & Barreira Sagrada) **[PRÓXIMO NA FILA 🎯]**
-   - 🎋 `2.21`: Daiki (Peregrino Yamabushi — Varredura com Bastão Bō & Salto com Vara)
+   - ☯️ `2.20`: Seimei (Mestre Onmyoji — Rajada de Talismãs Ofuda & Barreira Sagrada) **[CONCLUÍDO ✅]**
+   - 🎋 `2.21`: Daiki (Peregrino Yamabushi — Varredura com Bastão Bō & Salto com Vara) **[PRÓXIMO NA FILA 🎯]**
    - ❄️ `2.22`: Aoi (Caçadora Ainu — Lança de Osso de Hokkaido & Armadilha de Urso)
    - 🤼 `2.23`: Raiden (Campeão Yokozuna — Empurrões Tsuppari & Carga Tachiai) **[CONCLUÍDO ✅]**
    - ⚗️ `2.24`: Hendrika (Alquimista de Dejima — Estilete Cirúrgico & Frascos de Ácido)
