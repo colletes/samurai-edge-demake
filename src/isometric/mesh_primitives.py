@@ -718,7 +718,7 @@ PORTRAIT_FACE_STYLES = {
         "hairline_mid": 0.66, "hairline_lat": 0.48,
     },
     "aoi": {
-        "iris": (168, 102, 38), "iris_core": (235, 175, 78), "iris_limbal": (78, 42, 18),
+        "iris": (74, 158, 214), "iris_core": (175, 230, 255), "iris_limbal": (32, 78, 122),
         "brow": (28, 22, 26), "lip": (218, 104, 112), "lip_lower": (242, 134, 142), "lip_shadow": (148, 58, 66),
         "brow_tilt": 0.16, "lashes": True, "delicate_nose": True, "feminine_lips": True,
         "hairline_mid": 0.65, "hairline_lat": 0.46,

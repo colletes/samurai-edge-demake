@@ -1335,17 +1335,17 @@ FIGHTERS_GUIDE_DATA = [
             "title": "A Caçadora Ainu de Hokkaido",
             "style": "Lança Op & Armadilha de Urso",
             "vel": "[4/5] Ágil e Furtiva",
-            "dano": "Estocadas de Lança Op (1 HP)",
-            "especial": "Armadilha de Urso (Dano Letal por Contato)",
-            "keys_p1": "[E] Lança Op | [R] Armadilha",
-            "keys_p2": "[U] Lança Op | [I] Armadilha",
+            "dano": "Estocadas de Lança de Osso (1 HP)",
+            "especial": "Armadilha de Urso (1 HP + Imobilização 1.4s)",
+            "keys_p1": "[E] Lança de Osso | [R] Armadilha",
+            "keys_p2": "[U] Lança de Osso | [I] Armadilha",
             "conceito": (
                 "Jovem caçadora das florestas boreais de Ezo (Hokkaido). Especialista em sobrevivência no rigor do inverno, "
-                "combina perfurações rápidas com sua lança cerimonial Op e armadilhas de urso serrilhadas de ferro pesado."
+                "combina estocadas lineares de 2.20m com sua lança cerimonial Op e armadilhas de urso mecânicas de dentes de ferro."
             ),
             "habilidades": (
-                "• Estocada de Lança Op [E]: Ataque penetrante rápido de longo alcance com ponta de aço e borla de pele.\n"
-                "• Armadilha de Urso [R]: Posiciona uma armadilha mecânica de mandíbulas afiadas no chão. Mata instantaneamente qualquer rival que pisar nela."
+                "• Estocada de Lança de Osso [E]: Bote perfurante rápido e linear de 2.20m com ponta de osso de urso polido e borla de pele.\n"
+                "• Armadilha de Urso [R]: Posiciona uma armadilha mecânica de dentes de ferro no solo (máx. 2). Causa 1 HP de dano e imobiliza a presa por 1.4s."
             ),
             "estrategia_ofensiva": (
                 "• Plante armadilhas em rotas estreitas e induza o rival a recuar em direção às mandíbulas de aço.\n"
@@ -1360,17 +1360,17 @@ FIGHTERS_GUIDE_DATA = [
             "title": "The Ainu Huntress of Hokkaido",
             "style": "Op Spear & Steel Bear Trap",
             "vel": "[4/5] Agile & Elusive",
-            "dano": "Op Spear Piercing (1 HP)",
-            "especial": "Bear Trap (Instant Contact Kill)",
-            "keys_p1": "[E] Op Spear | [R] Bear Trap",
-            "keys_p2": "[U] Op Spear | [I] Bear Trap",
+            "dano": "Bone Spear Thrust (1 HP)",
+            "especial": "Bear Trap (1 HP + 1.4s Root)",
+            "keys_p1": "[E] Bone Spear | [R] Bear Trap",
+            "keys_p2": "[U] Bone Spear | [I] Bear Trap",
             "conceito": (
                 "Fierce young huntress from the snowy wilderness of Ezo (Hokkaido). An expert arctic tracker "
-                "combining quick reach with her traditional Op hunting spear and heavy serrated steel bear traps."
+                "combining 2.20m linear reach with her traditional Op bone spear and heavy iron bear traps."
             ),
             "habilidades": (
-                "• Op Spear Thrust [E]: Swift piercing spear thrust with sharp steel blade and fur tassel.\n"
-                "• Bear Trap [R]: Places a heavy spring-loaded iron jaw trap on the ground. Instantly executes anyone who steps on it."
+                "• Bone Spear Thrust [E]: Swift linear 2.20m piercing spear thrust with carved bear bone tip and wolf fur tassel.\n"
+                "• Bear Trap [R]: Places a mechanical iron jaw trap on the ground (max 2). Deals 1 HP damage and roots victim for 1.4s."
             ),
             "estrategia_ofensiva": (
                 "• Plant bear traps in high-traffic combat lanes to restrict movement.\n"

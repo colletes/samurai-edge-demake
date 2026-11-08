@@ -218,11 +218,11 @@ INTRO = {
         _idle(0.42, 0.72, pose="intro_bo_plant"),
         _idle(0.72, 1.0, pose="zen_guard"),
     ],
-    # Aoi (Caçadora Ainu de Hokkaido): Rastreia o solo nevado, estoca a lança Op e assume guarda de caça
+    # Aoi (Caçadora Ainu de Hokkaido): Saudação sagrada Kamuy -> ajuste de capuz de lobo -> guarda de caçada da taiga
     "aoi": [
-        _idle(0.0, 0.22, pose="huntress_kneel"),
-        _seg(0.22, 0.66, "ATTACK", 0.0, 1.0),
-        _idle(0.66, 1.0),
+        _idle(0.0, 0.38, pose="intro_prayer"),
+        _idle(0.38, 0.72, pose="intro_hood_adjust"),
+        _idle(0.72, 1.0, pose="intro_hunt_stance"),
     ],
     # Raiden (2.23.5): Dupla palmada trovejante com sal ritual -> postura sagrada Sonkyo -> guarda Kamae
     "raiden": [
@@ -358,10 +358,11 @@ VICTORY = {
         _idle(0.42, 0.75, pose="victory_reverence"),
         _idle(0.75, 1.0, pose="victory_zen_meditation"),
     ],
-    # Aoi: Giro de lança Op e prece tradicional Ainu (Inonno) aos espíritos Kamuy
+    # Aoi: Elevação da lança ao céu do norte -> chamado solene da taiga -> vigília do horizonte nevado
     "aoi": [
-        _seg(0.0, 0.45, "ATTACK", 0.0, 1.0),
-        _idle(0.45, 1.0, pose="ainu_prayer"),
+        _idle(0.0, 0.38, pose="victory_spear_lift"),
+        _idle(0.38, 0.72, pose="victory_taiga_cry"),
+        _idle(0.72, 1.0, pose="victory_horizon_watch"),
     ],
     # Raiden (2.23.6): Elevação de perna a 90° em Shiko ritual -> queda telúrica no solo -> punhos no mawashi com rugido
     "raiden": [

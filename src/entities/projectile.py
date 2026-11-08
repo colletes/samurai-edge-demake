@@ -3012,7 +3012,7 @@ class BearTrapProjectile:
       e aplica lentidão residual nas pernas.
     - Se o dano da armadilha matar o oponente, engatilha o fatality 'TRAP_AND_EXECUTE'.
     """
-    def __init__(self, wx: float, wy: float, owner, duration: float = 9.0):
+    def __init__(self, wx: float, wy: float, owner, duration: float = 12.0):
         self.wx = wx
         self.wy = wy
         self.wz = 0.0
@@ -3020,7 +3020,7 @@ class BearTrapProjectile:
         self.duration = duration
         self.timer = duration
         self.state = "ARMED"  # "ARMED" -> "SNAPPED" -> "EXPIRED"
-        self.snap_duration = 0.85
+        self.snap_duration = 1.4
         self.snap_timer = 0.0
         self.trigger_radius = 0.85
         self.is_active = True
@@ -3056,9 +3056,9 @@ class BearTrapProjectile:
 
         elif self.state == "SNAPPED":
             self.snap_timer += dt
-            # Mantém o alvo preso no centro da armadilha enquanto imobilizado
-            if self.trapped_fighter and getattr(self.trapped_fighter, "is_alive", False):
-                if self.snap_timer < 0.95:
+            # Mantém o alvo preso no centro da armadilha enquanto imobilizado (root de 1.4s)
+            if self.trapped_fighter and getattr(self.trapped_fighter, "is_alive", True):
+                if self.snap_timer < 1.35:
                     self.trapped_fighter.wx = self.wx
                     self.trapped_fighter.wy = self.wy
             if self.snap_timer >= self.snap_duration:
@@ -3083,9 +3083,9 @@ class BearTrapProjectile:
             mag = math.hypot(dx, dy) or 1.0
             hit, dead = target.take_hit((dx / mag, dy / mag), damage=1)
             if getattr(target, "is_alive", True):
-                target.stun(0.65)
+                target.stun(1.4)
                 if hasattr(target, "apply_slow"):
-                    target.apply_slow(1.2)
+                    target.apply_slow(1.4)
             elif dead and cinematic_director is not None:
                 cinematic_director.trigger_fatal_strike(self.owner, target, "TRAP_AND_EXECUTE", (dx / mag, dy / mag))
 

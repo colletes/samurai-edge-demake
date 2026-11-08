@@ -728,8 +728,21 @@ CHARACTER_ANIM_BUTTONS = {
         ("FINISHER_1", "F1. Finisher 1: Alavanca Cervical na Garganta", 1.25),
         ("FINISHER_2", "F2. Finisher 2: Meteor Staff Slam no Solo", 1.35),
     ],
+    "aoi": [
+        ("IDLE", "1. Idle (Postura de Caça Neutra)", 0.0),
+        ("WALK", "2. Walk (Passo Rastreador na Neve)", 0.0),
+        ("SPEAR_LUNGE", "3. Primário: Bone Spear Lunge (2.20m, 1 HP)", 0.44),
+        ("BEAR_TRAP", "4. Secundário: Plantar Armadilha (Root 1.4s)", 0.50),
+        ("HUNT_SLIDE", "5. Esquiva: Tundra Hunt Slide (13 i-frames)", 0.36),
+        ("HUNTER_GUARD", "6. Defesa: Guarda Técnica Makiri & Lança", 0.45),
+        ("INTRO", "7. Intro: Saudação Kamuy & Capuz de Pele", 2.00),
+        ("VICTORY", "8. Vitória: Chamado Solene da Taiga", 2.20),
+        ("FINISHER_1", "F1. Finisher 1: Armadilha & Estocada na Jugular", 1.25),
+        ("FINISHER_2", "F2. Finisher 2: Empalação & Arremesso no Solo", 1.35),
+    ],
 }
 # Aliases para chaves alternativas do catálogo
+CHARACTER_ANIM_BUTTONS["huntress"] = CHARACTER_ANIM_BUTTONS["aoi"]
 CHARACTER_ANIM_BUTTONS["pilgrim"] = CHARACTER_ANIM_BUTTONS["daiki"]
 CHARACTER_ANIM_BUTTONS["joe"] = CHARACTER_ANIM_BUTTONS["american"]
 CHARACTER_ANIM_BUTTONS["hanzo"] = CHARACTER_ANIM_BUTTONS["ninja"]
@@ -944,7 +957,18 @@ OVERHAUL_DE_PARA_NOTES = {
         "Fatalidades Cinematográficas: Throat Temple Crush (Alavanca Cervical 360°) e Meteor Staff Slam (Cravada no Solo)",
         "Zero Static Freeze: Intro (Giro Helicoidal com folhas ao vento) e Vitória (Equilíbrio Zen na palma da mão estendida)",
     ],
+    "aoi": [
+        "SSAA 2x Offscreen + Shading Boreal (Pelagem de Lobo Ártico, Tecido Attush com bordados Moreu e Lança de Osso)",
+        "Rosto Anime HD Boreal: Olhos azul-ártico luminosos, delicado nariz de caçadora, bochechas coradas e sutil tatuagem labial Ainu (Sinuye)",
+        "Biblioteca de Materiais Realistas: Pele de lobo ártico com relevo, osso fóssil esculpido, couro de cervo (Ker) e lona Attush",
+        "Golpe Primário Bone-Tipped Spear Lunge: Estocada linear veloz de altíssimo alcance (2.20m, 1 HP) com hitbox frontal estreita",
+        "Ação Secundária Hunting Bear Trap: Posiciona armadilha mecânica de mandíbula de ferro no solo (máx. 2, imobilização de 1.4s e 1 HP)",
+        "Esquiva Tundra Hunt Slide: Deslize rasteiro rente ao solo sobre a neve com 13 i-frames passando por baixo de tiros e flechas",
+        "Fatalidades Bespoke: Trap & Execute (Armadilha fecha na perna e estocada na jugular) e Spear Impalement & Northern Sky Toss",
+        "Zero Static Freeze: Intro (Reverência sagrada Kamuy, ajuste do capuz de lobo e postura de caça) e Vitória (Elevação da lança e chamado da taiga)",
+    ],
 }
+OVERHAUL_DE_PARA_NOTES["huntress"] = OVERHAUL_DE_PARA_NOTES["aoi"]
 OVERHAUL_DE_PARA_NOTES["pilgrim"] = OVERHAUL_DE_PARA_NOTES["daiki"]
 OVERHAUL_DE_PARA_NOTES["joe"] = OVERHAUL_DE_PARA_NOTES["american"]
 OVERHAUL_DE_PARA_NOTES["hanzo"] = OVERHAUL_DE_PARA_NOTES["ninja"]
@@ -1089,9 +1113,9 @@ class ModelInspector:
         self.action_duration = dur
         if action_id in POSES:
             self.current_pose_idx = POSES.index(action_id)
-        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "ATTACK_1", "ATTACK_2", "ATTACK_3", "CROSS_SHOCKWAVE", "ROLL_CANCEL", "FINISHER_1", "FINISHER_2", "KAMA_STRIKE", "CHAIN_DRAG", "KODACHI_CROSS", "MAI_DANCE", "ACROBAT_LUNGE", "NAGINATA_CLEAVE", "NAGINATA_THRUST", "NAGINATA_THROW", "TACKLE_CHARGE", "SONIC_CLEAVE_1", "SONIC_CLEAVE_2", "RESONANCE_360", "EVASIVE_CANCEL", "KUWA_HEAVY_CLEAVE", "EARTH_STOMP_ACTION", "POCKET_DIRT", "GYAKU_IAI_QUICKDRAW", "BLIND_COUNTER_THRUST", "SCYTHE_REAP", "SUMMON_GRASPER", "SUMMON_SWORDSMAN", "SUMMON_WIGHT", "CORPSE_DETONATION", "OFUDA_TOSS", "SACRED_WARD", "FATAL_FIRE", "FATAL_WATER", "FATAL_WOOD", "FATAL_METAL", "FATAL_EARTH", "FATAL_YINYANG", "BO_STRIKE", "POLE_VAULT", "BO_TWIRL"):
+        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "ATTACK_1", "ATTACK_2", "ATTACK_3", "CROSS_SHOCKWAVE", "ROLL_CANCEL", "FINISHER_1", "FINISHER_2", "KAMA_STRIKE", "CHAIN_DRAG", "KODACHI_CROSS", "MAI_DANCE", "ACROBAT_LUNGE", "NAGINATA_CLEAVE", "NAGINATA_THRUST", "NAGINATA_THROW", "TACKLE_CHARGE", "SONIC_CLEAVE_1", "SONIC_CLEAVE_2", "RESONANCE_360", "EVASIVE_CANCEL", "KUWA_HEAVY_CLEAVE", "EARTH_STOMP_ACTION", "POCKET_DIRT", "GYAKU_IAI_QUICKDRAW", "BLIND_COUNTER_THRUST", "SCYTHE_REAP", "SUMMON_GRASPER", "SUMMON_SWORDSMAN", "SUMMON_WIGHT", "CORPSE_DETONATION", "OFUDA_TOSS", "SACRED_WARD", "FATAL_FIRE", "FATAL_WATER", "FATAL_WOOD", "FATAL_METAL", "FATAL_EARTH", "FATAL_YINYANG", "BO_STRIKE", "POLE_VAULT", "BO_TWIRL", "SPEAR_LUNGE", "BEAR_TRAP"):
             self.current_pose_idx = POSES.index("ATTACK")
-        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY", "CROSS_GUARD", "TACTICAL_ROLL", "BACKFLIP", "DODGE_CANCEL", "SHADOW_STEP", "ADAMANTINE_PUSH", "SILK_GLIDE", "MUD_ROLL", "LISTEN_STANCE", "CANE_TAP_SLIP", "SHEATH_PARRY", "PARRY_REACTION", "MIST_DASH", "SCYTHE_GUARD", "SHIKIGAMI_GLIDE", "ASTRAL_GUARD", "STAFF_HOP", "BO_SPIN_GUARD"):
+        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY", "CROSS_GUARD", "TACTICAL_ROLL", "BACKFLIP", "DODGE_CANCEL", "SHADOW_STEP", "ADAMANTINE_PUSH", "SILK_GLIDE", "MUD_ROLL", "LISTEN_STANCE", "CANE_TAP_SLIP", "SHEATH_PARRY", "PARRY_REACTION", "MIST_DASH", "SCYTHE_GUARD", "SHIKIGAMI_GLIDE", "ASTRAL_GUARD", "STAFF_HOP", "BO_SPIN_GUARD", "HUNT_SLIDE", "HUNTER_GUARD"):
             self.current_pose_idx = POSES.index("RECOVERY")
 
     def select_character(self, idx: int | str):
@@ -2385,10 +2409,42 @@ class ModelInspector:
             extra_props["is_parry"] = True
             extra_props["pose"] = "bo_spin_guard"
             extra_props["p"] = prog
+        elif act == "SPEAR_LUNGE":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.18)
+            extra_props["pose"] = "spear_lunge"
+            extra_props["p"] = prog
+            wx = 0.22 * math.sin(prog * math.pi)
+            wy = 0.22 * math.sin(prog * math.pi)
+        elif act == "BEAR_TRAP":
+            state = "RECOVERY"
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            extra_props["pose"] = "bear_trap_place"
+            extra_props["is_trap"] = True
+            extra_props["p"] = prog
+            wx = -0.15 * prog
+            wy = -0.15 * prog
+        elif act == "HUNT_SLIDE":
+            state = "ROLL"
+            state_timer = max(0.01, (1.0 - prog) * 0.22)
+            extra_props["is_roll"] = True
+            extra_props["is_slide"] = True
+            extra_props["pose"] = "tundra_hunt_slide"
+            extra_props["roll_prog"] = prog
+            extra_props["slide_prog"] = prog
+            extra_props["p"] = prog
+            wx = 0.42 * prog
+            wy = 0.42 * prog
+        elif act == "HUNTER_GUARD":
+            state = "PARRY"
+            state_timer = max(0.01, (1.0 - prog) * 0.38)
+            extra_props["is_parry"] = True
+            extra_props["pose"] = "hunter_guard"
+            extra_props["p"] = prog
         elif act in ("INTRO", "VICTORY"):
             kind = "intro" if act == "INTRO" else "victory"
             p_sample = prog if dur > 0.0 else ((self.anim_time * 0.42) % 1.0)
-            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american", "joe", "saitou", "teppo", "rifleman", "murasaki", "purple", "kasumi", "gray", "okuni", "kabuki", "anne", "pirate", "julie", "musketeer", "tomoe", "archer", "ren", "shaolin", "chiyo", "nodachi", "benkei", "sohei", "orin", "minstrel", "goro", "farmer", "ichi", "blind", "shikomizue", "valerius", "necromancer", "faust", "seimei", "onmyoji", "daiki", "pilgrim"):
+            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american", "joe", "saitou", "teppo", "rifleman", "murasaki", "purple", "kasumi", "gray", "okuni", "kabuki", "anne", "pirate", "julie", "musketeer", "tomoe", "archer", "ren", "shaolin", "chiyo", "nodachi", "benkei", "sohei", "orin", "minstrel", "goro", "farmer", "ichi", "blind", "shikomizue", "valerius", "necromancer", "faust", "seimei", "onmyoji", "daiki", "pilgrim", "aoi", "huntress"):
                 # Roteiro legado pré-Fase 2 (apenas IDLE + ATTACK simples)
                 if p_sample < 0.25 or p_sample > 0.75:
                     state = "IDLE"
@@ -2615,6 +2671,17 @@ class ModelInspector:
                     extra_props["p"] = prog
                     wx = 0.20 * math.sin(prog * math.pi)
                     wy = 0.20 * math.sin(prog * math.pi)
+            elif char_type in ("aoi", "huntress"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - prog) * 0.25)
+                    extra_props["pose"] = "finisher_trap_execute"
+                    extra_props["p"] = prog
+                    wx = 0.28 * math.sin(prog * math.pi)
+                    wy = 0.28 * math.sin(prog * math.pi)
             else:
                 # 2.1.4a: Ittou Ryoudan
                 state = "RECOVERY"
@@ -2842,6 +2909,17 @@ class ModelInspector:
                     wz = math.sin(prog * math.pi) * 1.6
                     wx = 0.25 * prog
                     wy = 0.25 * prog
+            elif char_type in ("aoi", "huntress"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - prog) * 0.25)
+                    extra_props["pose"] = "finisher_spear_toss"
+                    extra_props["p"] = prog
+                    wx = 0.18 * math.sin(prog * math.pi)
+                    wy = 0.18 * math.sin(prog * math.pi)
             else:
                 # 2.1.4b: Divisão Celestial de Bambu (Ápice + Queda Meteórica)
                 if prog < 0.42:
