@@ -231,7 +231,7 @@ class Tsukubai(Well):
         super().__init__(wx, wy)
         self.radius = 0.85
 
-    def render(self, surface: pygame.Surface, camera):
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         from src.isometric.voxel_renderer import draw_voxel_box
 
         base_sx, base_sy = camera.apply(self.wx, self.wy, 0.0)
@@ -250,13 +250,30 @@ class Tsukubai(Well):
 
         # 2. Espelho d'água dentro da bacia
         draw_voxel_box(surface, camera, self.wx - 0.35, self.wy - 0.35, 0.45, 0.70, 0.70, 0.15, (25, 75, 110), outline=False)
-        draw_voxel_box(surface, camera, self.wx - 0.25, self.wy - 0.25, 0.58, 0.50, 0.50, 0.04, (65, 175, 215), outline=False)
+        # Ondulação sutil da superfície da água
+        wave_bright = 0.5 + 0.5 * math.sin(time_val * 3.5)
+        w_surf_col = (int(50 + 20 * wave_bright), int(155 + 30 * wave_bright), int(200 + 25 * wave_bright))
+        draw_voxel_box(surface, camera, self.wx - 0.25, self.wy - 0.25, 0.58, 0.50, 0.50, 0.04, w_surf_col, outline=False)
 
         # 3. Bica de bambu (Kakehi)
         draw_voxel_box(surface, camera, self.wx + 0.65, self.wy - 0.45, 0.0, 0.16, 0.16, 0.95, c_bamboo, outline=True)
         draw_voxel_box(surface, camera, self.wx - 0.15, self.wy - 0.42, 0.80, 0.85, 0.12, 0.12, c_bamboo, outline=True)
 
-        # 4. Concha de madeira cerimonial (Hishaku) atravessada sobre a bacia
+        # 4. Gota de água contínua caindo da ponta da bica (-0.15, -0.42, 0.80) até a bacia (z=0.60)
+        drip_cycle = (time_val * 2.4) % 1.0
+        drip_z = 0.80 - drip_cycle * 0.20
+        drip_sx, drip_sy = camera.apply(self.wx - 0.12, self.wy - 0.38, drip_z)
+        pygame.draw.circle(surface, (190, 240, 255), (drip_sx, drip_sy), 2)
+
+        # Micro-ripple na bacia quando a gota atinge a água
+        if drip_cycle > 0.75:
+            rip_t = (drip_cycle - 0.75) / 0.25
+            r_px = int(camera.zoom * 8 * rip_t)
+            if r_px > 1:
+                r_sx, r_sy = camera.apply(self.wx - 0.12, self.wy - 0.38, 0.60)
+                pygame.draw.ellipse(surface, (140, 220, 255), (r_sx - r_px, r_sy - r_px // 2, r_px * 2, max(2, r_px)), 1)
+
+        # 5. Concha de madeira cerimonial (Hishaku) atravessada sobre a bacia
         draw_voxel_box(surface, camera, self.wx - 0.45, self.wy - 0.05, 0.68, 0.90, 0.05, 0.05, (160, 120, 75), outline=False)
         draw_voxel_box(surface, camera, self.wx - 0.48, self.wy - 0.10, 0.65, 0.16, 0.16, 0.12, (140, 100, 60), outline=True)
 

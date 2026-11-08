@@ -377,3 +377,109 @@ class FlameVoxelParticle:
         half_s = self.size * 0.5
         draw_voxel_box(surface, camera, self.wx - half_s, self.wy - half_s, self.wz, self.size, self.size, self.size, col, outline=False)
 
+
+class WaterRippleParticle:
+    """Onda concêntrica expansiva translúcida na superfície da água."""
+
+    def __init__(self, wx: float, wy: float, wz: float = -0.12, radius_max: float = 0.95,
+                 color: tuple = (150, 215, 245), lifetime: float = 0.85):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.radius_max = radius_max
+        self.color = color
+        self.lifetime = lifetime
+        self.age = 0.0
+
+    def update(self, dt: float) -> bool:
+        self.age += dt
+        return self.age < self.lifetime
+
+    def render(self, surface: pygame.Surface, camera):
+        t = self.age / self.lifetime
+        current_r = 0.12 + (self.radius_max - 0.12) * (t ** 0.65)
+        alpha = int((1.0 - t) * 170)
+        if alpha <= 4:
+            return
+
+        cx, cy = camera.apply(self.wx, self.wy, self.wz)
+        zoom = getattr(camera, "zoom", 1.0)
+        rx = max(4, int(current_r * zoom * 42.0))
+        ry = max(2, int(rx * 0.50))
+
+        surf = pygame.Surface((rx * 2 + 4, ry * 2 + 4), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 0))
+        rect = (2, 2, rx * 2, ry * 2)
+        r_c, g_c, b_c = self.color[:3]
+        pygame.draw.ellipse(surf, (r_c, g_c, b_c, alpha), rect, max(1, int(2 * zoom)))
+        inner_rect = (2 + int(zoom * 2), 2 + int(zoom), max(2, rx * 2 - int(zoom * 4)), max(1, ry * 2 - int(zoom * 2)))
+        if inner_rect[2] > 2 and inner_rect[3] > 2:
+            pygame.draw.ellipse(surf, (min(255, r_c + 40), min(255, g_c + 40), min(255, b_c + 40), alpha // 2), inner_rect, 1)
+
+        surface.blit(surf, (cx - rx - 2, cy - ry - 2))
+
+
+class WaterSplashParticle:
+    """Gotículas e respingos de água volumétricos projetados por passos, saltos e lâminas."""
+
+    def __init__(self, wx: float, wy: float, wz: float = -0.10, color: tuple = (195, 235, 255)):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        angle = random.uniform(0, math.pi * 2)
+        speed = random.uniform(0.6, 2.2)
+        self.vx = math.cos(angle) * speed
+        self.vy = math.sin(angle) * speed
+        self.vz = random.uniform(1.2, 3.2)
+        self.lifetime = random.uniform(0.35, 0.60)
+        self.age = 0.0
+        self.color = color
+
+    def update(self, dt: float) -> bool:
+        self.age += dt
+        self.wx += self.vx * dt
+        self.wy += self.vy * dt
+        self.wz += self.vz * dt
+        self.vz -= 9.8 * dt
+        return self.age < self.lifetime
+
+    def render(self, surface: pygame.Surface, camera):
+        sx, sy = camera.apply(self.wx, self.wy, self.wz)
+        t = self.age / self.lifetime
+        alpha = int((1.0 - t) * 220)
+        if alpha <= 4:
+            return
+        s = 2 if camera.zoom < 1.3 else 3
+        pygame.draw.rect(surface, self.color, (sx - s // 2, sy - s // 2, s, s))
+
+
+class PollenMoteParticle:
+    """Partículas sutis de pólen vermelho/dourado e fagulhas de incenso que derivam com o vento."""
+
+    def __init__(self, wx: float, wy: float, wz: float = 0.3, color: tuple = (235, 45, 60), lifetime: float = 1.4):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.color = color
+        self.lifetime = lifetime
+        self.age = 0.0
+        self.drift_phase = random.uniform(0, math.pi * 2)
+
+    def update(self, dt: float) -> bool:
+        self.age += dt
+        self.drift_phase += dt * 3.0
+        self.wx += math.sin(self.drift_phase) * 0.25 * dt
+        self.wy += math.cos(self.drift_phase * 0.7) * 0.20 * dt
+        self.wz += 0.35 * dt
+        return self.age < self.lifetime
+
+    def render(self, surface: pygame.Surface, camera):
+        t = self.age / self.lifetime
+        alpha = int(math.sin(t * math.pi) * 200)
+        if alpha <= 4:
+            return
+        sx, sy = camera.apply(self.wx, self.wy, self.wz)
+        s = 2
+        pygame.draw.rect(surface, self.color, (sx, sy, s, s))
+
+

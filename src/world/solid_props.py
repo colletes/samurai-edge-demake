@@ -734,10 +734,29 @@ class ShrineBell(SolidProp):
         self._hip_roof(surface, camera, x0, y0, w, d, h - 0.2, (60, 66, 82), layers=2, overhang=0.3, step=0.5, thick=0.16)
         swing = 0.18 * math.sin(time_val * 9.0) * (self.ring / self.RING_TIME) ** 2
         bx, by = x0 + w / 2 - 0.26 + swing, y0 + d / 2 - 0.26
-        draw_voxel_box(surface, camera, bx + 0.22, by + 0.22, h - 0.62, 0.08, 0.08, 0.3, (60, 50, 40), outline=False)
+        # Cabeça do Dragão de suspensão (Ryūzu) em bronze escuro
+        draw_voxel_box(surface, camera, bx + 0.18, by + 0.18, h - 0.58, 0.16, 0.16, 0.26, (85, 68, 48), outline=False)
+        # Haste de amarração
+        draw_voxel_box(surface, camera, bx + 0.22, by + 0.22, h - 0.62, 0.08, 0.08, 0.12, (50, 42, 34), outline=False)
         glow = int(60 * (self.ring / self.RING_TIME))
-        draw_voxel_box(surface, camera, bx, by, 0.7, 0.52, 0.52, h - 1.4, (150 + glow, 108 + glow // 2, 54), outline=True)
-        draw_voxel_box(surface, camera, bx - 0.04, by - 0.04, 0.66, 0.60, 0.60, 0.1, (176, 132, 70), outline=False)
+        # Corpo principal da campana budista Bonshō (bronze milenar com pátina)
+        c_bell = (142 + glow, 108 + glow // 2, 62)
+        c_rim = (175 + glow, 134 + glow // 2, 75)
+        c_patina = (78, 112, 96)
+        draw_voxel_box(surface, camera, bx, by, 0.72, 0.52, 0.52, h - 1.40, c_bell, outline=True)
+        # Faixas de relevo e pátina de verdigris no sino
+        draw_voxel_box(surface, camera, bx - 0.02, by - 0.02, 0.95, 0.56, 0.56, 0.08, c_patina, outline=False)
+        # Borda espessa inferior (Koma-no-tsume)
+        draw_voxel_box(surface, camera, bx - 0.04, by - 0.04, 0.66, 0.60, 0.60, 0.10, c_rim, outline=False)
+
+        # Tronco martelo de madeira suspenso (Shumoku) ao lado do sino
+        shumoku_swing = -swing * 1.5 if self.ring > 0.0 else 0.0
+        smk_x = bx + 0.44 + shumoku_swing
+        smk_y = by + 0.18
+        draw_voxel_box(surface, camera, smk_x, smk_y, 0.85, 0.42, 0.14, 0.14, (120, 85, 52), outline=True)
+        # Cordas de sustentação do Shumoku
+        draw_voxel_box(surface, camera, smk_x + 0.08, smk_y + 0.04, 0.99, 0.04, 0.04, h - 1.35, (185, 160, 110), outline=False)
+        draw_voxel_box(surface, camera, smk_x + 0.30, smk_y + 0.04, 0.99, 0.04, 0.04, h - 1.35, (185, 160, 110), outline=False)
 
         # Renderizar anel sonoro expansivo na arena
         if self.soundwave_active:
@@ -747,6 +766,7 @@ class ShrineBell(SolidProp):
                 rx_screen = int(self.soundwave_radius * camera.zoom * 58)
                 ry_screen = int(rx_screen * 0.50)
                 wave_surf = pygame.Surface((rx_screen * 2 + 10, ry_screen * 2 + 10), pygame.SRCALPHA)
+                wave_surf.fill((0, 0, 0, 0))
                 rect = (5, 5, rx_screen * 2, ry_screen * 2)
                 pygame.draw.ellipse(wave_surf, (255, 215, 80, alpha // 3), rect, 6)
                 pygame.draw.ellipse(wave_surf, (255, 245, 180, alpha), rect, 3)

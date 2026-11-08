@@ -901,10 +901,10 @@ Foco: Revisar, rebalancear e enriquecer cada combatente individualmente em **12 
 ### 🏯 Fase 3: Revamp Visual e Atmosférico Geral das Arenas (24 Palcos)
 Foco: Elevar os 24 cenários do jogo ao ápice visual da estética voxel HD-2D, com múltiplas camadas de props, superfícies reflexivas, iluminação dinâmica e destruição reativa.
 
-#### 📦 Entregável A-3.1: Santuários & Jardins Zen (6 Arenas)
+#### 📦 Entregável A-3.1: Santuários & Jardins Zen (6 Arenas) **[CONCLUÍDO ✅]**
 - **Arenas:** `bamboo` (Kenshi), `mountain_shrine` (Joe), `mist_temple` (Kasumi), `shaolin_temple` (Ren), `higanbana_garden` (Chiyo), `heian_shrine` (Seimei).
-- **Recursos:** Água translúcida reflexiva com carpas koi, bambus/árvores estilhaçáveis, tapetes volumétricos de flores vermelhas, incenso dinâmico e lanternas de pedra Toro com sombras longas.
-- **Validação:** `tests/test_cycle6_arenas.py` e auditoria de 60 FPS com cache ativo.
+- **Recursos:** Carpas Nishikigoi 3D multifacetadas com fuga reativa e nado submerso, ondas concêntricas (`WaterRippleParticle`) e respingos nos passos, caustics harmônicos com reflexos especulares isométricos na água, touceiras 3D de lírios da aranha vermelha (`HiganbanaCluster`) com dispersão de pólen, estátuas Jizo com babadores têxteis escarlates e oferendas, sino Bonshō com martelo Shumoku, braseiros astrais Kitsunebi com fogo-fátuo azul/violeta e fonte Tsukubai com gotejamento animado.
+- **Validação:** `tests/test_fase3_zen_arenas.py`, `tests/test_game.py` e auditoria de 60 FPS com cache ativo.
 
 #### 📦 Entregável A-3.2: Cenários Urbanos & Históricos (6 Arenas)
 - **Arenas:** `kyoto` (Murasaki), `yoshiwara_alley` (O-Rin), `kabuki_stage` (Okuni), `baroque_court` (Julie), `dejima_warehouse` (Hendrika), `sacred_dohyo` (Raiden).

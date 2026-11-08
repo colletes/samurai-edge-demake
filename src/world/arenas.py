@@ -29,6 +29,7 @@ from src.world.decor import (
     AkamatsuPine, MountainHokora, TimberLogPile, AinuInauTotem, HideDryingRack, SnowSpruceTree,
     DohyoCornerPost, SacredSaltMound, DohyoBrazier, AlchemyWorkbench, ReagentBarrel, WharfMooringBollard, WarehouseDoorwayArch,
     SacredBushBarrier, WarehouseGlassWall, LargeSacredCenser, WharfPiling,
+    HiganbanaCluster, AstralBrazier,
 )
 from src.world.hazards import (
     ChainPendulum, FireworkMortars, RotatingStage, ShipRoll, TideSurge,
@@ -69,7 +70,7 @@ register_prop("jizo", lambda x, y, **p: JizoStatue(x, y), "rocks")
 register_prop("hanging_chain", lambda x, y, **p: HangingChain(x, y, **p), "lanterns")
 register_prop("pillar", lambda x, y, **p: SolidProp(x, y, style="pillar", **p), "buildings")
 register_prop("pine", lambda x, y, **p: PineTree(x, y), "trees")
-register_prop("koi", lambda x, y, **p: KoiFish(x, y, **p), "lanterns")
+register_prop("koi", lambda x, y, **p: KoiFish(x, y, **p), "koi")
 register_prop("mist", lambda x, y, **p: MistBank(x, y, **p), "lanterns")
 register_prop("forest_tree", lambda x, y, **p: ForestTree(x, y), "trees")
 register_prop("crate", lambda x, y, **p: SupplyCrate(x, y), "rocks")
@@ -127,6 +128,8 @@ register_prop("sacred_bush", lambda x, y, **p: SacredBushBarrier(x, y, **p), "tr
 register_prop("glass_wall", lambda x, y, **p: WarehouseGlassWall(x, y, **p), "buildings")
 register_prop("large_censer", lambda x, y, **p: LargeSacredCenser(x, y), "lanterns")
 register_prop("wharf_piling", lambda x, y, **p: WharfPiling(x, y), "rocks")
+register_prop("higanbana", lambda x, y, **p: HiganbanaCluster(x, y, **p), "lanterns")
+register_prop("astral_brazier", lambda x, y, **p: AstralBrazier(x, y, **p), "rocks")
 register_structure("arched_bridge", ArchedBridge)
 register_structure("roof_beam", RoofBeam)
 register_structure("plank_bridge", PlankBridge)
@@ -198,6 +201,9 @@ BAMBOO_SPEC = ArenaSpec(
         PropSpec("rock", 3.5, 10.0, {"radius": 0.55, "height": 0.75}),
         PropSpec("tree", 17.5, 17.5),
         PropSpec("torii", 10.5, 5.0),
+        PropSpec("koi", 8.4, 11.2, {"radius": 1.4, "speed": 0.50, "phase": 0.0, "variety": "kohaku"}),
+        PropSpec("koi", 13.6, 11.0, {"radius": 1.3, "speed": -0.44, "phase": 2.2, "variety": "yamabuki"}),
+        PropSpec("koi", 11.0, 11.0, {"radius": 2.2, "speed": 0.36, "phase": 4.1, "variety": "shiro"}),
     ) + tuple(PropSpec("stone_lantern", x, y) for x, y in _BAMBOO_LANTERNS),
     scatters=(
         ScatterSpec(
@@ -211,7 +217,7 @@ BAMBOO_SPEC = ArenaSpec(
     structures=(StructureSpec("arched_bridge", TILE_BRIDGE, {"x0": 10.0, "width": 2.0, "y_start": 7, "y_end": 16}),),
     spawns=SpawnRule(margin=3.0, min_distance=7.0, check_obstacles=True, fallback=((10.5, 7.0), (10.5, 15.0))),
     stage=StageSpec(11.0, 11.5, structure=0),
-    reflections=((11, 11), (11, 12), (10, 12)),
+    reflections=((9, 10), (10, 10), (11, 10), (12, 10), (9, 11), (11, 11), (12, 11), (9, 12), (10, 12), (11, 12), (12, 12)),
     lighting=LightingEnvironment(
         ambient_color=(120, 150, 170), ambient_strength=0.35, vignette=0.25,
         lights=tuple(LightSource(x, y, 0.9, (255, 200, 120), 3.0, flicker=0.10) for x, y in _BAMBOO_LANTERNS),
@@ -614,15 +620,17 @@ MIST_TEMPLE_SPEC = ArenaSpec(
     props=(
         PropSpec("dojo", 6.5, 0.4, {"width": 9.0, "depth": 3.3, "height": 2.0}),
         PropSpec("torii", 10.5, 20.2),
-        PropSpec("koi", 6.5, 13.5, {"radius": 1.7, "speed": 0.55, "phase": 0.0}),
-        PropSpec("koi", 6.5, 13.5, {"radius": 1.4, "speed": -0.45, "phase": 2.1, "color": (250, 244, 232)}),
-        PropSpec("koi", 6.5, 13.5, {"radius": 1.9, "speed": 0.4, "phase": 4.0, "color": (240, 190, 60)}),
+        PropSpec("shimenawa", 10.5, 20.2, {"span": 3.8, "z": 2.4, "ribbons": 5}),
+        PropSpec("koi", 6.5, 13.5, {"radius": 1.7, "speed": 0.55, "phase": 0.0, "variety": "kohaku"}),
+        PropSpec("koi", 6.5, 13.5, {"radius": 1.4, "speed": -0.45, "phase": 2.1, "variety": "shiro"}),
+        PropSpec("koi", 6.5, 13.5, {"radius": 1.9, "speed": 0.4, "phase": 4.0, "variety": "yamabuki"}),
     ) + tuple(PropSpec("pine", x, y) for x, y in _MIST_PINES)
       + tuple(PropSpec("stone_lantern", x, y) for x, y in _MIST_LANTERNS)
       + tuple(PropSpec("mist", x, y, {"radius": 3.4}) for x, y in _MIST_BANKS),
     hazards=(HazardSpec("firework_mortars", {"circles": 3, "radius": 1.5, "bounds": (3.0, 5.0, 19.0, 19.0)}),),
     spawns=SpawnRule(x_range=(3.0, 19.0), margin=5.0, min_distance=7.0, fallback=((12.5, 7.5), (14.5, 16.5))),
     stage=StageSpec(11.0, 12.0),
+    reflections=((5, 12), (6, 12), (7, 12), (5, 13), (6, 13), (7, 13), (6, 14), (7, 14)),
     drift_count=24,
     drift_petals=0.8,
     lighting=LightingEnvironment(
@@ -842,8 +850,10 @@ MOUNTAIN_SHRINE_SPEC = ArenaSpec(
             PropSpec("shimenawa", 10.5, 2.6, {"span": 3.4, "z": 2.4, "ribbons": 5}),
             PropSpec("shimenawa", 10.5, 16.2, {"span": 3.4, "z": 2.4, "ribbons": 5}),
             PropSpec("shrine_bell", 5.2, 6.2),
+            PropSpec("tsukubai", 5.2, 11.5),
             PropSpec("mountain_hokora", 3.6, 11.5),
             PropSpec("akamatsu_pine", 19.2, 7.2, {"scale": 0.95}),
+            PropSpec("akamatsu_pine", 2.2, 18.2, {"scale": 1.05}),
         )
         + tuple(PropSpec("archery_target", x, 3.8) for x in (15.7, 16.9, 18.1))
         + (PropSpec("cabin", 14.9, 17.8, {"width": 3.6, "depth": 2.2, "height": 1.3, "color": (176, 142, 100)}),)
@@ -960,6 +970,7 @@ SHAOLIN_SPEC = ArenaSpec(
     ),
     props=(
         (PropSpec("shrine_bell", 4.2, 4.8), PropSpec("shrine_bell", 16.8, 16.2))
+        + (PropSpec("large_censer", 10.5, 4.2), PropSpec("large_censer", 10.5, 16.8))
         + tuple(PropSpec("incense", x, y) for x, y in _SHAOLIN_INCENSE)
         + tuple(PropSpec("stone_lantern", x, y) for x, y in _SHAOLIN_LANTERNS)
         + tuple(PropSpec("pine", x, y) for x, y in _SHAOLIN_PINES)
@@ -996,7 +1007,13 @@ _HIGAN_BAMBOOS = (
     (18.5, 5.0), (18.0, 9.0), (18.5, 13.0), (18.0, 16.5),
 )
 _HIGAN_MIST = ((5.0, 7.0), (16.0, 7.0), (5.0, 14.0), (16.0, 14.0), (10.5, 10.5))
-_HIGAN_JIZO = ((6.0, 6.0), (15.0, 15.0))
+_HIGAN_JIZO = ((6.0, 6.0), (15.0, 15.0), (8.5, 9.5), (12.5, 9.5), (8.5, 11.5), (12.5, 11.5))
+_HIGAN_CLUSTERS = (
+    (4.5, 4.5), (16.5, 4.5), (4.5, 16.5), (16.5, 16.5),
+    (7.5, 8.5), (13.5, 8.5), (7.5, 12.5), (13.5, 12.5),
+    (10.5, 6.5), (10.5, 14.5), (5.5, 10.5), (15.5, 10.5),
+    (3.5, 7.5), (17.5, 7.5), (3.5, 13.5), (17.5, 13.5),
+)
 
 HIGANBANA_SPEC = ArenaSpec(
     id=ARENA_HIGANBANA,
@@ -1025,11 +1042,13 @@ HIGANBANA_SPEC = ArenaSpec(
         + tuple(PropSpec("stone_lantern", x, y) for x, y in _HIGAN_LANTERNS)
         + tuple(PropSpec("mist", x, y, {"radius": 3.0}) for x, y in _HIGAN_MIST)
         + tuple(PropSpec("jizo", x, y) for x, y in _HIGAN_JIZO)
+        + tuple(PropSpec("higanbana", x, y, {"flower_count": 5}) for x, y in _HIGAN_CLUSTERS)
     ),
     spawns=SpawnRule(x_range=(4.0, 17.0), margin=4.0, min_distance=7.0, fallback=((10.5, 6.5), (10.5, 14.5))),
     stage=StageSpec(10.5, 10.5),
     drift_count=55,
     drift_petals=0.95,
+    reflections=((10, 6), (11, 6), (10, 15), (11, 15), (6, 10), (6, 11), (15, 10), (15, 11)),
     lighting=LightingEnvironment(
         ambient_color=(75, 52, 98), ambient_strength=0.38, vignette=0.45,
         lights=tuple(LightSource(x, y, 0.9, (255, 100, 130), 3.2, flicker=0.22) for x, y in _HIGAN_LANTERNS),
@@ -1480,6 +1499,13 @@ _HEIAN_GINKGO = (
     PropSpec("ginkgo_tree", 18.8, 16.5),
 )
 
+_HEIAN_ASTRAL_BRAZIERS = (
+    PropSpec("astral_brazier", 5.2, 5.2),
+    PropSpec("astral_brazier", 15.8, 5.2),
+    PropSpec("astral_brazier", 5.2, 15.8),
+    PropSpec("astral_brazier", 15.8, 15.8),
+)
+
 _HEIAN_LIGHTS = (
     LightSource(6.8, 6.8, 0.9, (255, 190, 80), 2.8, flicker=0.12),
     LightSource(14.2, 6.8, 0.9, (255, 190, 80), 2.8, flicker=0.12),
@@ -1488,6 +1514,10 @@ _HEIAN_LIGHTS = (
     LightSource(7.2, 18.2, 0.9, (255, 180, 70), 2.5, flicker=0.12),
     LightSource(13.8, 18.2, 0.9, (255, 180, 70), 2.5, flicker=0.12),
     LightSource(10.5, 10.5, 0.5, (160, 140, 255), 3.2, flicker=0.08),
+    LightSource(5.2, 5.2, 1.2, (100, 210, 255), 3.4, flicker=0.18),
+    LightSource(15.8, 5.2, 1.2, (100, 210, 255), 3.4, flicker=0.18),
+    LightSource(5.2, 15.8, 1.2, (170, 80, 255), 3.4, flicker=0.18),
+    LightSource(15.8, 15.8, 1.2, (170, 80, 255), 3.4, flicker=0.18),
 )
 
 HEIAN_SHRINE_SPEC = ArenaSpec(
@@ -1526,6 +1556,7 @@ HEIAN_SHRINE_SPEC = ArenaSpec(
         )
         + _HEIAN_GINKGO
         + _HEIAN_TORO_PROPS
+        + _HEIAN_ASTRAL_BRAZIERS
     ),
     hazards=(HazardSpec("heian_shrine_hazard", {}),),
     playable_bounds=(2.0, 2.0, 19.0, 19.0),

@@ -50,13 +50,13 @@ Consulte o documento mestre [`docs/EXPANSION_ROADMAP_AND_DESIGN.md`](EXPANSION_R
    - 🦯 `2.18`: Ichi (Espadachim Cega — Saque Rápido da Shikomizue & Escuta) **[CONCLUÍDO ✅]**
    - 🕯️ `2.19`: Valerius (Necromante / Exorcista Prussiano — Foice Espectral & Tríade dos Mortos) **[CONCLUÍDO ✅]**
    - ☯️ `2.20`: Seimei (Mestre Onmyoji — Rajada de Talismãs Ofuda & Barreira Sagrada) **[CONCLUÍDO ✅]**
-   - 🎋 `2.21`: Daiki (Peregrino Yamabushi — Varredura com Bastão Bō & Salto com Vara) **[PRÓXIMO NA FILA 🎯]**
-   - ❄️ `2.22`: Aoi (Caçadora Ainu — Lança de Osso de Hokkaido & Armadilha de Urso)
+   - 🎋 `2.21`: Daiki (Peregrino Yamabushi — Varredura com Bastão Bō & Salto com Vara) **[CONCLUÍDO ✅]**
+   - ❄️ `2.22`: Aoi (Caçadora Ainu — Lança de Osso de Hokkaido & Armadilha de Urso) **[CONCLUÍDO ✅]**
    - 🤼 `2.23`: Raiden (Campeão Yokozuna — Empurrões Tsuppari & Carga Tachiai) **[CONCLUÍDO ✅]**
-   - ⚗️ `2.24`: Hendrika (Alquimista de Dejima — Estilete Cirúrgico & Frascos de Ácido)
+   - ⚗️ `2.24`: Hendrika (Alquimista de Dejima — Estilete Cirúrgico & Frascos de Ácido) **[CONCLUÍDO ✅]**
 3. **Fase 3: Revamp Visual e Atmosférico das Arenas (24 Palcos)**
-   - 📦 `A-3.1`: Santuários & Jardins Zen (6 Arenas)
-   - 📦 `A-3.2`: Cenários Urbanos & Históricos (6 Arenas)
+   - 📦 `A-3.1`: Santuários & Jardins Zen (6 Arenas: `bamboo`, `mountain_shrine`, `mist_temple`, `shaolin_temple`, `higanbana_garden`, `heian_shrine`) **[CONCLUÍDO ✅]**
+   - 📦 `A-3.2`: Cenários Urbanos & Históricos (6 Arenas: `kyoto`, `yoshiwara_alley`, `kabuki_stage`, `baroque_court`, `dejima_warehouse`, `sacred_dohyo`) **[PRÓXIMO NA FILA 🎯]**
    - 📦 `A-3.3`: Campos de Batalha & Vilarejos Rurais (6 Arenas)
    - 📦 `A-3.4`: Locais Extremos & Noturnos (6 Arenas)
 

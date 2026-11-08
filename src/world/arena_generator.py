@@ -310,7 +310,7 @@ class ArenaSpec:
 # ---------------------------------------------------------------------------
 # Registros
 # ---------------------------------------------------------------------------
-COLLECTIONS = ("rocks", "trees", "torii_gates", "lanterns", "buildings", "bamboos")
+COLLECTIONS = ("rocks", "trees", "torii_gates", "lanterns", "buildings", "bamboos", "koi")
 
 
 @dataclass(frozen=True)
@@ -517,6 +517,7 @@ class ArenaMap:
         self.lanterns: list = []
         self.buildings: list = []
         self.bamboos: list = []
+        self.koi: list = []
         self.interactives: list = []  # props com `tick` e `ignite` (ex.: canhão aceso por golpes e projéteis)
         self.emitters: list = []  # props só com `tick` (ex.: incensário que solta fumaça)
         self.fog = None  # FogVolume ligado pelo main (rastros da Kasumi e banco de névoa)
@@ -525,6 +526,8 @@ class ArenaMap:
         self.carriages: list = []
         self.falling_debris: list = []
         self.wind_impulses: list[dict] = []
+        self.water_ripples: list = []
+        self.water_splashes: list = []
         self.fireflies: list[tuple[float, float, float]] = []
         for effect in spec.lighting.atmosphere:
             if effect.kind == "fireflies":
@@ -874,6 +877,32 @@ class ArenaMap:
         for prop in self.interactives + self.emitters:
             prop.tick(self, dt, fighters, camera, particles, banners)
 
+        # Atualização física de ondas e respingos de água
+        self.water_ripples = [r for r in self.water_ripples if r.update(dt)]
+        self.water_splashes = [s for s in self.water_splashes if s.update(dt)]
+
+        # Gera ondas concêntricas e respingos quando combatentes se movimentam na água
+        for f in fighters:
+            if not getattr(f, "is_alive", True):
+                continue
+            if self.is_water(f.wx, f.wy):
+                speed = math.hypot(getattr(f, "vx", 0.0), getattr(f, "vy", 0.0))
+                state = getattr(f, "state", "")
+                if speed > 0.35 or state in ("ATTACK", "SPECIAL", "ROLL"):
+                    f_time = getattr(f, "_water_ripple_cd", 0.0) - dt
+                    if f_time <= 0.0:
+                        setattr(f, "_water_ripple_cd", 0.16)
+                        from src.effects.particles import WaterRippleParticle, WaterSplashParticle
+                        tx, ty = int(f.wx), int(f.wy)
+                        tile_style = self.style_at(tx, ty) if (0 <= tx < self.cols and 0 <= ty < self.rows) else None
+                        water_depth = getattr(tile_style, "depth", 0.14) if tile_style else 0.14
+                        self.water_ripples.append(WaterRippleParticle(f.wx, f.wy, wz=-water_depth + 0.01))
+                        if speed > 1.2 or state == "ROLL":
+                            for _ in range(3):
+                                self.water_splashes.append(WaterSplashParticle(f.wx, f.wy, wz=-water_depth + 0.02))
+                    else:
+                        setattr(f, "_water_ripple_cd", f_time)
+
     def render_overhead(self, surface: pygame.Surface, camera, time_val: float):
         """Elementos no ar (corrente e peso do pêndulo), desenhados por cima dos lutadores."""
         for hazard in self.hazards:
@@ -910,6 +939,10 @@ class ArenaMap:
                     continue
                 self._draw_water(surface, camera, style, x, y, quad, time_val, (x, y) in reflections)
 
+            # Carpas nadando na água (renderizadas antes de pontes para que pontes as ocluam)
+            for k in self.koi:
+                k.render(surface, camera, time_val)
+
             for struct_spec, struct in zip(self.spec.structures, self.structures):
                 if struct_spec.anchor_tile in visible_anchors:
                     struct.draw(surface, camera, time_val)
@@ -921,6 +954,10 @@ class ArenaMap:
                 draw_ground = getattr(hazard, "render_ground", None)
                 if draw_ground:
                     draw_ground(self, surface, camera, time_val)
+            for rip in self.water_ripples:
+                rip.render(surface, camera)
+            for spl in self.water_splashes:
+                spl.render(surface, camera)
             return
 
         visible_anchors = set()
@@ -949,6 +986,10 @@ class ArenaMap:
                 elif style.kind == "anchor":
                     visible_anchors.add(tile)
 
+        # Carpas nadando na água (renderizadas antes de pontes para que pontes as ocluam)
+        for k in self.koi:
+            k.render(surface, camera, time_val)
+
         for struct_spec, struct in zip(self.spec.structures, self.structures):
             if struct_spec.anchor_tile in visible_anchors:
                 struct.draw(surface, camera, time_val)
@@ -959,6 +1000,10 @@ class ArenaMap:
             draw_ground = getattr(hazard, "render_ground", None)
             if draw_ground:
                 draw_ground(self, surface, camera, time_val)
+        for rip in self.water_ripples:
+            rip.render(surface, camera)
+        for spl in self.water_splashes:
+            spl.render(surface, camera)
 
     _pit_surf_pool: dict[tuple[int, int], tuple[pygame.Surface, pygame.Surface]] = {}
 
@@ -1154,11 +1199,42 @@ class ArenaMap:
             pygame.draw.polygon(surface, colors[0], list(bank))
             pygame.draw.polygon(surface, colors[1], list(bank), 1)
 
-        wave = math.sin(time_val * 3.0 + x * 0.9 + y * 0.9)
-        surface_color = style.colors[1] if (wave > 0.45 and len(style.colors) > 1) else style.colors[0]
+        # Harmonicos de onda senoidais para ondulação orgânica HD-2D
+        w1 = math.sin(time_val * 2.5 + x * 1.1 + y * 0.8)
+        w2 = math.cos(time_val * 1.9 - x * 0.7 + y * 1.2)
+        wave_norm = 0.5 + 0.25 * (w1 + w2)
+
+        if len(style.colors) > 1:
+            c0, c1 = style.colors[0], style.colors[1]
+            surface_color = (
+                max(0, min(255, int(c0[0] + (c1[0] - c0[0]) * wave_norm))),
+                max(0, min(255, int(c0[1] + (c1[1] - c0[1]) * wave_norm))),
+                max(0, min(255, int(c0[2] + (c1[2] - c0[2]) * wave_norm))),
+            )
+        else:
+            surface_color = style.colors[0]
+
         w_quad = [w_top, w_right, w_bottom, w_left]
         pygame.draw.polygon(surface, surface_color, w_quad)
+
+        # Cristas de onda sutis em picos de ondulação
+        if (w1 + w2) > 1.25 and len(style.colors) > 1:
+            c_crest = tuple(min(255, c + 35) for c in style.colors[1])
+            mid_a = ((w_top[0] + w_left[0]) // 2, (w_top[1] + w_left[1]) // 2)
+            mid_b = ((w_right[0] + w_bottom[0]) // 2, (w_right[1] + w_bottom[1]) // 2)
+            pygame.draw.line(surface, c_crest, mid_a, mid_b, 1)
+
         if style.edge:
             pygame.draw.polygon(surface, style.edge, w_quad, 1)
+
         if reflect:
-            pygame.draw.circle(surface, (120, 205, 240, 180), camera.apply(x + 0.5, y + 0.5, z + 0.01), 8)
+            # Reflexo especular suave e cintilante alinhado à perspectiva isométrica
+            rx, ry = camera.apply(x + 0.5 + 0.06 * math.sin(time_val * 2.2 + x), y + 0.5 + 0.06 * math.cos(time_val * 2.2 + y), z + 0.01)
+            zoom = getattr(camera, "zoom", 1.0)
+            gw = max(4, int(10 * zoom))
+            gh = max(2, int(gw * 0.45))
+            glint_pts = [(rx, ry - gh), (rx + gw, ry), (rx, ry + gh), (rx - gw, ry)]
+            pygame.draw.polygon(surface, (140, 215, 245), glint_pts)
+            inner_gw = max(2, gw // 2)
+            inner_gh = max(1, gh // 2)
+            pygame.draw.polygon(surface, (235, 250, 255), [(rx, ry - inner_gh), (rx + inner_gw, ry), (rx, ry + inner_gh), (rx - inner_gw, ry)])
