@@ -92,6 +92,26 @@ MATERIALS = {
     "goggle_brass": "gold",
 }
 
+LEGACY_MATERIALS = {
+    "velvet_blue": "matte",
+    "velvet_dark": "matte",
+    "gold_button": "matte",
+    "lace_jabot": "matte",
+    "leather_strap": "matte",
+    "boot": "matte",
+    "pants": "matte",
+    "stiletto_steel": "matte",
+    "goggle_brass": "matte",
+}
+
+REAGENT_FLASK_COLORS = {
+    "acid": ((65, 240, 140), (140, 245, 250)),
+    "fire": ((255, 120, 35), (255, 205, 80)),
+    "ether": ((200, 95, 255), (240, 185, 255)),
+    "frost": ((90, 225, 255), (210, 248, 255)),
+    "miasma": ((245, 220, 50), (255, 245, 130)),
+}
+
 
 def pal() -> dict:
     return PALETTE
@@ -103,23 +123,102 @@ def pal() -> dict:
 
 def idle_arms(c):
     """
-    Postura Ativa da Alquimista:
-    - Mão esquerda ergue um balão químico borbulhante em análise científica curiosa.
-    - Mão direita empunha o estilete cirúrgico fino apontado em ângulo pronto para corte rápido.
+    Postura Ativa da Alquimista com suporte contínuo a todas as poses de combate,
+    intro, vitória, deslize e finishers.
     """
     breathe = math.sin(c.walk_timer * 2.8) * 0.010
     tz = c.torso_z + breathe
     bx, by, fx, fy, px, py = c.base_x, c.base_y, c.fx, c.fy, c.px, c.py
-    pose = c.extra_props.get("pose") if c.extra_props else None
+    extra = c.extra_props if c.extra_props else {}
+    pose = extra.get("pose", "")
+    p = extra.get("p", 0.0)
+
+    # 1. Poses da Introdução (3 Fases Contínuas)
+    if pose == "intro_inspect_vial":
+        u = extra.get("seg_u", p / 0.38 if p <= 0.38 else 1.0)
+        u = max(0.0, min(1.0, u))
+        sw = math.sin(u * math.pi) * 0.02
+        left = (bx + fx * 0.16 + px * 0.06, by + fy * 0.16 + py * 0.06, tz + 0.22 + sw)
+        right = (bx - fx * 0.04 - px * 0.12, by - fy * 0.04 - py * 0.12, tz + 0.08 + sw)
+        return left, right
+
+    if pose == "intro_stiletto_test":
+        u = extra.get("seg_u", (p - 0.38) / 0.34 if 0.38 <= p <= 0.72 else 1.0)
+        u = max(0.0, min(1.0, u))
+        sw = math.sin(u * math.pi * 2.0) * 0.02
+        left = (bx + fx * 0.14 + px * 0.04, by + fy * 0.14 + py * 0.04, tz + 0.18 + sw)
+        right = (bx + fx * 0.12 - px * 0.02, by + fy * 0.12 - py * 0.02, tz + 0.16 + sw)
+        return left, right
+
+    if pose == "intro_ready_stance":
+        u = extra.get("seg_u", (p - 0.72) / 0.28 if p >= 0.72 else 1.0)
+        u = max(0.0, min(1.0, u))
+        b = math.sin(u * 5.0) * 0.008
+        left = (bx + fx * 0.16 + px * 0.12, by + fy * 0.16 + py * 0.12, tz + 0.15 + b)
+        right = (bx + fx * 0.18 - px * 0.08, by + fy * 0.18 - py * 0.08, tz + 0.10 + b)
+        return left, right
+
+    # 2. Poses da Vitória (3 Fases Contínuas)
+    if pose == "victory_field_notes":
+        u = extra.get("seg_u", p / 0.40 if p <= 0.40 else 1.0)
+        u = max(0.0, min(1.0, u))
+        sw = math.sin(u * math.pi * 3.0) * 0.015
+        left = (bx + fx * 0.12 + px * 0.06, by + fy * 0.12 + py * 0.06, tz + 0.14)
+        right = (bx + fx * 0.10 - px * 0.02, by + fy * 0.10 - py * 0.02, tz + 0.15 + sw)
+        return left, right
+
+    if pose == "victory_pocket_watch":
+        u = extra.get("seg_u", (p - 0.40) / 0.35 if 0.40 <= p <= 0.75 else 1.0)
+        u = max(0.0, min(1.0, u))
+        b = math.sin(u * math.pi) * 0.02
+        left = (bx - px * 0.14, by - py * 0.14, tz + 0.06)
+        right = (bx + fx * 0.14 - px * 0.04, by + fy * 0.14 - py * 0.04, tz + 0.18 + b)
+        return left, right
+
+    if pose == "victory_academic_bow":
+        u = extra.get("seg_u", (p - 0.75) / 0.25 if p >= 0.75 else 1.0)
+        u = max(0.0, min(1.0, u))
+        sw = math.sin(u * math.pi) * 0.04
+        left = (bx + px * 0.12 - fx * 0.02, by + py * 0.12 - fy * 0.02, tz + 0.06 - sw)
+        right = (bx - px * 0.12 - fx * 0.02, by - py * 0.12 - fy * 0.02, tz + 0.06 - sw)
+        return left, right
+
+    # 3. Finishers Bespoke
+    if pose == "finisher_acid_dissolve":
+        t = math.sin(p * math.pi)
+        left = (bx + fx * (0.16 + t * 0.22) + px * 0.04, by + fy * (0.16 + t * 0.22) + py * 0.04, tz + 0.28 - t * 0.20)
+        right = (bx - fx * 0.04 - px * 0.12, by - fy * 0.04 - py * 0.12, tz + 0.08)
+        return left, right
+
+    if pose == "finisher_carotid_vitriol":
+        t = math.sin(p * math.pi)
+        right = (bx + fx * (0.24 + t * 0.26) - px * 0.02, by + fy * (0.24 + t * 0.26) - py * 0.02, tz + 0.16)
+        left = (bx + fx * 0.10 + px * 0.12, by + fy * 0.10 + py * 0.12, tz + 0.14)
+        return left, right
+
+    # 4. Esquiva, Defesa e Arremesso de Frasco
+    if pose == "dejima_slide" or extra.get("is_slide", False) or extra.get("is_roll", False):
+        left = (bx - fx * 0.14 + px * 0.12, by - fy * 0.14 + py * 0.12, tz - 0.04)
+        right = (bx + fx * 0.18 - px * 0.06, by + fy * 0.18 - py * 0.06, tz - 0.02)
+        return left, right
+
+    if pose in ("alchemist_guard", "stiletto_parry") or extra.get("is_parry", False):
+        left = (bx + fx * 0.14 + px * 0.10, by + fy * 0.14 + py * 0.10, tz + 0.18)
+        right = (bx + fx * 0.12 - px * 0.08, by + fy * 0.12 - py * 0.08, tz + 0.22)
+        return left, right
+
+    if pose == "flask_throw":
+        t = math.sin(p * math.pi)
+        left = (bx + fx * (0.14 + t * 0.28) + px * 0.06, by + fy * (0.14 + t * 0.28) + py * 0.06, tz + 0.16 + t * 0.14)
+        right = (bx - fx * 0.06 - px * 0.12, by - fy * 0.06 - py * 0.12, tz + 0.08)
+        return left, right
 
     if pose == "alchemist_inspect":
-        # Balão erguido bem próximo aos olhos para examinar a cor da reação
         left = (bx + fx * 0.16 + px * 0.06, by + fy * 0.16 + py * 0.06, tz + 0.22)
         right = (bx - fx * 0.04 - px * 0.12, by - fy * 0.04 - py * 0.12, tz + 0.08)
         return left, right
 
     if pose == "alchemist_laugh":
-        # Mão direita na cintura e mão esquerda erguendo a poção em triunfo excêntrico
         right = (bx - px * 0.16, by - py * 0.16, tz + 0.06)
         left = (bx + fx * 0.12 + px * 0.14, by + fy * 0.12 + py * 0.14, tz + 0.26)
         return left, right
@@ -136,6 +235,15 @@ def attack_arms(c):
     - Ataque perfurante com o estilete de prata em velocidade relâmpago.
     - Mão esquerda recua mantendo o frasco seguro ou arremessa fumaça cáustica.
     """
+    extra = c.extra_props if c.extra_props else {}
+    if extra.get("pose") == "flask_throw":
+        p = c.atk_progress if c.atk_progress is not None else 0.0
+        bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
+        t = math.sin(p * math.pi)
+        left = (bx + fx * (0.14 + t * 0.28) + px * 0.06, by + fy * (0.14 + t * 0.28) + py * 0.06, tz + 0.16 + t * 0.14)
+        right = (bx - fx * 0.06 - px * 0.12, by - fy * 0.06 - py * 0.12, tz + 0.08)
+        return left, right
+
     p = c.atk_progress if c.atk_progress is not None else 0.0
     bx, by, tz, fx, fy, px, py = c.base_x, c.base_y, c.torso_z, c.fx, c.fy, c.px, c.py
     thrust = math.sin(p * math.pi) * 0.44
@@ -155,6 +263,14 @@ def _current_hands(c):
     if c.is_melee and c.atk_progress is not None:
         return attack_arms(c)
     return idle_arms(c)
+
+
+def get_arms(c):
+    """
+    Exportação canônica de cinemática dos braços para o pipeline modular de voxel_models.py.
+    Garante renderização single-pass e elimina duplicação de braços do rig genérico.
+    """
+    return _current_hands(c)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -471,10 +587,14 @@ def _render_chemical_flask(c, hand_l):
     lx, ly, lz = hand_l[0], hand_l[1], hand_l[2] - 0.060
     flask_pos = (lx + fx * 0.03, ly + fy * 0.03, lz)
 
+    extra = c.extra_props if c.extra_props else {}
+    reagent_key = extra.get("reagent", "acid")
+    reagent_col, vapor_col = REAGENT_FLASK_COLORS.get(reagent_key, (P["reagent_green"], P["vapor_glow"]))
+
     # Frasco de vidro esférico repousado na palma
     mk.cbox(c, flask_pos[0], flask_pos[1], flask_pos[2], 0.065, 0.065, 0.065, P["glass_vial"], outline=False)
-    # Reagente líquido brilhante verde ácido / turquesa
-    mk.cbox(c, flask_pos[0], flask_pos[1], flask_pos[2] - 0.008, 0.050, 0.050, 0.044, P["reagent_green"], outline=False)
+    # Reagente líquido brilhante dinâmico pelo elemento
+    mk.cbox(c, flask_pos[0], flask_pos[1], flask_pos[2] - 0.008, 0.050, 0.050, 0.044, reagent_col, outline=False)
     # Gargalo do frasco com rolha de cortiça seguro pelos dedos
     mk.obox(c, (flask_pos[0], flask_pos[1], flask_pos[2] + 0.042), (0.0, 0.0, 1.0), 0.035, 0.020, 0.020, P["glass_vial"], up=(fx, fy, 0.0), outline=False)
     mk.obox(c, (flask_pos[0], flask_pos[1], flask_pos[2] + 0.062), (0.0, 0.0, 1.0), 0.015, 0.022, 0.022, P["leather_dark"], up=(fx, fy, 0.0), outline=False)
@@ -482,7 +602,7 @@ def _render_chemical_flask(c, hand_l):
     # Vapor químico ascendente com brilho e oscilação
     flicker = math.sin(c.walk_timer * 6.0) * 0.01
     vapor_pos = (flask_pos[0] + fx * 0.01, flask_pos[1] + fy * 0.01, flask_pos[2] + 0.085 + flicker)
-    mk.cbox(c, vapor_pos[0], vapor_pos[1], vapor_pos[2], 0.038, 0.038, 0.038, P["vapor_glow"], outline=False)
+    mk.cbox(c, vapor_pos[0], vapor_pos[1], vapor_pos[2], 0.038, 0.038, 0.038, vapor_col, outline=False)
 
 
 def _render_stiletto(c, hand_r):

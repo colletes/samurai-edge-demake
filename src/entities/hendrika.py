@@ -366,15 +366,98 @@ class HendrikaAlchemist(Samurai):
                 self.state = STATE_IDLE
             return
 
-    def render(self, surface: pygame.Surface, camera):
+    def trigger_slide(self, dwx: float, dwy: float, particles: list = None, game_map=None) -> bool:
+        """
+        Esquiva especial: Deslize do Químico (Dejima Chemist Slide) com 13 i-frames.
+        Deslize ágil rente ao solo com seu manto de couro isolante, conferindo imunidade a poças químicas.
+        """
+        if not self.can_act() or self.roll_cooldown_timer > 0:
+            return False
+
+        mag = math.hypot(dwx, dwy)
+        if mag > 0.05:
+            self.roll_dir_x = dwx / mag
+            self.roll_dir_y = dwy / mag
+            self.set_facing(self.wx + self.roll_dir_x, self.wy + self.roll_dir_y)
+        else:
+            self.roll_dir_x = self.facing_x
+            self.roll_dir_y = self.facing_y
+
+        self.state = STATE_ROLL
+        self.state_timer = self.roll_duration
+
+        if particles is not None:
+            col_core, _ = REAGENT_COLORS.get(self.active_reagent, ((65, 215, 165), (20, 140, 65)))
+            for _ in range(8):
+                particles.append(SparkParticle(
+                    self.wx + random.uniform(-0.20, 0.20),
+                    self.wy + random.uniform(-0.20, 0.20),
+                    random.uniform(0.05, 0.25),
+                    color=col_core
+                ))
+        return True
+
+    def trigger_roll(self, dwx: float, dwy: float, particles: list = None, **kwargs) -> bool:
+        return self.trigger_slide(dwx, dwy, particles=particles, game_map=kwargs.get("game_map"))
+
+    def update_roll(self, dt: float, game_map=None, particles: list = None):
+        """Atualiza a física do deslize tático de Dejima."""
+        self.state_timer -= dt
+        dx = self.roll_dir_x * self.roll_speed * dt
+        dy = self.roll_dir_y * self.roll_speed * dt
+
+        if game_map is not None:
+            from src.entities.samurai import slide_movement_against_obstacles
+            new_wx, new_wy = slide_movement_against_obstacles(self.wx, self.wy, dx, dy, self.radius, game_map)
+            self.wx, self.wy = new_wx, new_wy
+        else:
+            self.wx += dx
+            self.wy += dy
+
+        if particles is not None and random.random() < 0.40:
+            col_core, _ = REAGENT_COLORS.get(self.active_reagent, ((65, 215, 165), (20, 140, 65)))
+            particles.append(SparkParticle(
+                self.wx + random.uniform(-0.15, 0.15),
+                self.wy + random.uniform(-0.15, 0.15),
+                0.08,
+                color=col_core
+            ))
+
+        if self.state_timer <= 0:
+            self.state = STATE_IDLE
+            self.roll_recovery_timer = self.roll_recovery_duration
+            self.roll_cooldown_timer = self.roll_cooldown_duration
+
+    def get_extra_props(self) -> dict:
+        """Garante propriedades extras, poses e reagente ativo para renderização 3D."""
         extra = {
             "reagent": self.active_reagent,
             "reagent_tier": self.reagent_tier
         }
-        if self.state == "FLASK_THROW":
+        if self.state == STATE_ROLL:
+            extra["pose"] = "dejima_slide"
+            extra["is_roll"] = True
+            extra["is_slide"] = True
+            prog = 1.0 - max(0.0, self.state_timer) / max(0.001, self.roll_duration)
+            extra["roll_prog"] = prog
+            extra["slide_prog"] = prog
+            extra["p"] = prog
+        elif self.state == "FLASK_THROW":
             extra["pose"] = "flask_throw"
-        elif self.state in ("DEFEND", "PARRY") or getattr(self, "is_parrying", False):
-            extra["pose"] = "stiletto_parry"
+            prog = 1.0 - max(0.0, self.state_timer) / 0.14
+            extra["p"] = prog
+        elif self.state in ("DEFEND", STATE_PARRY) or getattr(self, "is_parrying", False):
+            extra["pose"] = "alchemist_guard"
+            extra["is_parry"] = True
+        elif self.state == STATE_ATTACK:
+            prog = 1.0 - max(0.0, self.state_timer) / max(0.001, self.stiletto_duration)
+            extra["pose"] = "stiletto_thrust"
+            extra["atk_progress"] = prog
+            extra["p"] = prog
+        return extra
+
+    def render(self, surface: pygame.Surface, camera):
+        extra = self.get_extra_props()
 
         render_voxel_humanoid(
             surface=surface,

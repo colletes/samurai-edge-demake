@@ -740,8 +740,22 @@ CHARACTER_ANIM_BUTTONS = {
         ("FINISHER_1", "F1. Finisher 1: Armadilha & Estocada na Jugular", 1.25),
         ("FINISHER_2", "F2. Finisher 2: Empalação & Arremesso no Solo", 1.35),
     ],
+    "hendrika": [
+        ("IDLE", "1. Idle (Análise Química)", 0.0),
+        ("WALK", "2. Walk (Passo Acadêmico)", 0.0),
+        ("STILETTO_THRUST", "3. Primário: Surgical Stiletto (1.15m)", 0.36),
+        ("FLASK_TOSS", "4. Secundário: Arremesso Frasco Alquímico", 0.42),
+        ("DEJIMA_SLIDE", "5. Esquiva: Dejima Chemist Slide (13 i-frames)", 0.35),
+        ("ALCHEMIST_GUARD", "6. Defesa: Guarda com Estilete & Fumaça", 0.36),
+        ("CYCLE_REAGENT", "7. Síntese: Ciclar Reagente da Bandoleira", 0.30),
+        ("INTRO", "8. Intro: Inspeção de Frasco & Teste no Estilete", 2.00),
+        ("VICTORY", "9. Vitória: Caderno de Campo & Relógio de Bolso", 2.20),
+        ("FINISHER_1", "F1. Finisher 1: Estilete Dissolvente na Carótida", 1.25),
+        ("FINISHER_2", "F2. Finisher 2: Cataclismo Alquímico com Frasco", 1.35),
+    ],
 }
 # Aliases para chaves alternativas do catálogo
+CHARACTER_ANIM_BUTTONS["alchemist"] = CHARACTER_ANIM_BUTTONS["hendrika"]
 CHARACTER_ANIM_BUTTONS["huntress"] = CHARACTER_ANIM_BUTTONS["aoi"]
 CHARACTER_ANIM_BUTTONS["pilgrim"] = CHARACTER_ANIM_BUTTONS["daiki"]
 CHARACTER_ANIM_BUTTONS["joe"] = CHARACTER_ANIM_BUTTONS["american"]
@@ -967,7 +981,19 @@ OVERHAUL_DE_PARA_NOTES = {
         "Fatalidades Bespoke: Trap & Execute (Armadilha fecha na perna e estocada na jugular) e Spear Impalement & Northern Sky Toss",
         "Zero Static Freeze: Intro (Reverência sagrada Kamuy, ajuste do capuz de lobo e postura de caça) e Vitória (Elevação da lança e chamado da taiga)",
     ],
+    "hendrika": [
+        "SSAA 2x Offscreen + Shading Barroco Holandês (Casaca de Veludo Azul-Safira, Jabot de Linho e Quepe Mercantil)",
+        "Rosto Anime HD 'Mad Scientist': Olhos cinzento-aço analíticos, monóculo de latão na aba do quepe e cachos loiros em camadas 3D",
+        "Biblioteca de Materiais Realistas: Vidro borossilicato translúcido, latão polido, veludo azul e couro encerado de cavalaria",
+        "Balão Alquímico Dinâmico: Frasco seguro na mão esquerda com líquido e vapor que mudam de cor conforme o reagente selecionado",
+        "Golpe Primário Surgical Stiletto Arterial Thrust: Estocada cirúrgica precisa nos vasos do pescoço (1.15m) que quebra parry com solvente",
+        "Ação Secundária Alchemic Flask Toss: Arremesso balístico em arco gerando poça química corrosiva de 3.0s com 5 reagentes em ciclo",
+        "Esquiva Dejima Chemist Slide: Deslize com manto de couro com 13 i-frames e imunidade absoluta a dano de poças ácidas",
+        "Fatalidades Bespoke: Surgical Carotid Vitriol (Injeção cáustica na carótida) e Alchemic Acid Dissolve (Dissolução até esqueleto)",
+        "Zero Static Freeze: Intro (Exame do frasco contra a luz e teste cáustico) e Vitória (Anotações no caderno de campo e relógio de bolso)",
+    ],
 }
+OVERHAUL_DE_PARA_NOTES["alchemist"] = OVERHAUL_DE_PARA_NOTES["hendrika"]
 OVERHAUL_DE_PARA_NOTES["huntress"] = OVERHAUL_DE_PARA_NOTES["aoi"]
 OVERHAUL_DE_PARA_NOTES["pilgrim"] = OVERHAUL_DE_PARA_NOTES["daiki"]
 OVERHAUL_DE_PARA_NOTES["joe"] = OVERHAUL_DE_PARA_NOTES["american"]
@@ -1113,9 +1139,9 @@ class ModelInspector:
         self.action_duration = dur
         if action_id in POSES:
             self.current_pose_idx = POSES.index(action_id)
-        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "ATTACK_1", "ATTACK_2", "ATTACK_3", "CROSS_SHOCKWAVE", "ROLL_CANCEL", "FINISHER_1", "FINISHER_2", "KAMA_STRIKE", "CHAIN_DRAG", "KODACHI_CROSS", "MAI_DANCE", "ACROBAT_LUNGE", "NAGINATA_CLEAVE", "NAGINATA_THRUST", "NAGINATA_THROW", "TACKLE_CHARGE", "SONIC_CLEAVE_1", "SONIC_CLEAVE_2", "RESONANCE_360", "EVASIVE_CANCEL", "KUWA_HEAVY_CLEAVE", "EARTH_STOMP_ACTION", "POCKET_DIRT", "GYAKU_IAI_QUICKDRAW", "BLIND_COUNTER_THRUST", "SCYTHE_REAP", "SUMMON_GRASPER", "SUMMON_SWORDSMAN", "SUMMON_WIGHT", "CORPSE_DETONATION", "OFUDA_TOSS", "SACRED_WARD", "FATAL_FIRE", "FATAL_WATER", "FATAL_WOOD", "FATAL_METAL", "FATAL_EARTH", "FATAL_YINYANG", "BO_STRIKE", "POLE_VAULT", "BO_TWIRL", "SPEAR_LUNGE", "BEAR_TRAP"):
+        elif action_id in ("IAI_SLICE", "RYUU_TSUI_SEN", "SHUKUCHI_CANCEL", "TSUPPARI_1", "TSUPPARI_2", "HATAKI_KOMI", "ATTACK_1", "ATTACK_2", "ATTACK_3", "CROSS_SHOCKWAVE", "ROLL_CANCEL", "FINISHER_1", "FINISHER_2", "KAMA_STRIKE", "CHAIN_DRAG", "KODACHI_CROSS", "MAI_DANCE", "ACROBAT_LUNGE", "NAGINATA_CLEAVE", "NAGINATA_THRUST", "NAGINATA_THROW", "TACKLE_CHARGE", "SONIC_CLEAVE_1", "SONIC_CLEAVE_2", "RESONANCE_360", "EVASIVE_CANCEL", "KUWA_HEAVY_CLEAVE", "EARTH_STOMP_ACTION", "POCKET_DIRT", "GYAKU_IAI_QUICKDRAW", "BLIND_COUNTER_THRUST", "SCYTHE_REAP", "SUMMON_GRASPER", "SUMMON_SWORDSMAN", "SUMMON_WIGHT", "CORPSE_DETONATION", "OFUDA_TOSS", "SACRED_WARD", "FATAL_FIRE", "FATAL_WATER", "FATAL_WOOD", "FATAL_METAL", "FATAL_EARTH", "FATAL_YINYANG", "BO_STRIKE", "POLE_VAULT", "BO_TWIRL", "SPEAR_LUNGE", "BEAR_TRAP", "STILETTO_THRUST", "FLASK_TOSS"):
             self.current_pose_idx = POSES.index("ATTACK")
-        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY", "CROSS_GUARD", "TACTICAL_ROLL", "BACKFLIP", "DODGE_CANCEL", "SHADOW_STEP", "ADAMANTINE_PUSH", "SILK_GLIDE", "MUD_ROLL", "LISTEN_STANCE", "CANE_TAP_SLIP", "SHEATH_PARRY", "PARRY_REACTION", "MIST_DASH", "SCYTHE_GUARD", "SHIKIGAMI_GLIDE", "ASTRAL_GUARD", "STAFF_HOP", "BO_SPIN_GUARD", "HUNT_SLIDE", "HUNTER_GUARD"):
+        elif action_id in ("SHUKUCHI", "PARRY_GROUND", "PARRY_AERIAL", "TACHIAI_TACKLE", "SHIKO_SLIP", "GASSHO_PARRY", "CROSS_GUARD", "TACTICAL_ROLL", "BACKFLIP", "DODGE_CANCEL", "SHADOW_STEP", "ADAMANTINE_PUSH", "SILK_GLIDE", "MUD_ROLL", "LISTEN_STANCE", "CANE_TAP_SLIP", "SHEATH_PARRY", "PARRY_REACTION", "MIST_DASH", "SCYTHE_GUARD", "SHIKIGAMI_GLIDE", "ASTRAL_GUARD", "STAFF_HOP", "BO_SPIN_GUARD", "HUNT_SLIDE", "HUNTER_GUARD", "DEJIMA_SLIDE", "ALCHEMIST_GUARD", "CYCLE_REAGENT"):
             self.current_pose_idx = POSES.index("RECOVERY")
 
     def select_character(self, idx: int | str):
@@ -2441,10 +2467,45 @@ class ModelInspector:
             extra_props["is_parry"] = True
             extra_props["pose"] = "hunter_guard"
             extra_props["p"] = prog
+        elif act == "STILETTO_THRUST":
+            state = "ATTACK"
+            state_timer = max(0.01, (1.0 - prog) * 0.16)
+            extra_props["pose"] = "stiletto_thrust"
+            extra_props["p"] = prog
+            wx = 0.20 * math.sin(prog * math.pi)
+            wy = 0.20 * math.sin(prog * math.pi)
+        elif act == "FLASK_TOSS":
+            state = "FLASK_THROW"
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            extra_props["pose"] = "flask_throw"
+            extra_props["p"] = prog
+        elif act == "DEJIMA_SLIDE":
+            state = "ROLL"
+            state_timer = max(0.01, (1.0 - prog) * 0.22)
+            extra_props["is_roll"] = True
+            extra_props["is_slide"] = True
+            extra_props["pose"] = "dejima_slide"
+            extra_props["roll_prog"] = prog
+            extra_props["slide_prog"] = prog
+            extra_props["p"] = prog
+            wx = 0.40 * prog
+            wy = 0.40 * prog
+        elif act == "ALCHEMIST_GUARD":
+            state = "PARRY"
+            state_timer = max(0.01, (1.0 - prog) * 0.36)
+            extra_props["is_parry"] = True
+            extra_props["pose"] = "alchemist_guard"
+            extra_props["p"] = prog
+        elif act == "CYCLE_REAGENT":
+            state = "RECOVERY"
+            state_timer = max(0.01, (1.0 - prog) * 0.20)
+            reagents = ["acid", "fire", "ether", "frost", "miasma"]
+            extra_props["reagent"] = reagents[int(prog * 5) % 5]
+            extra_props["p"] = prog
         elif act in ("INTRO", "VICTORY"):
             kind = "intro" if act == "INTRO" else "victory"
             p_sample = prog if dur > 0.0 else ((self.anim_time * 0.42) % 1.0)
-            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american", "joe", "saitou", "teppo", "rifleman", "murasaki", "purple", "kasumi", "gray", "okuni", "kabuki", "anne", "pirate", "julie", "musketeer", "tomoe", "archer", "ren", "shaolin", "chiyo", "nodachi", "benkei", "sohei", "orin", "minstrel", "goro", "farmer", "ichi", "blind", "shikomizue", "valerius", "necromancer", "faust", "seimei", "onmyoji", "daiki", "pilgrim", "aoi", "huntress"):
+            if is_legacy and char_type in ("kenshin", "raiden", "musashi", "ninja", "american", "joe", "saitou", "teppo", "rifleman", "murasaki", "purple", "kasumi", "gray", "okuni", "kabuki", "anne", "pirate", "julie", "musketeer", "tomoe", "archer", "ren", "shaolin", "chiyo", "nodachi", "benkei", "sohei", "orin", "minstrel", "goro", "farmer", "ichi", "blind", "shikomizue", "valerius", "necromancer", "faust", "seimei", "onmyoji", "daiki", "pilgrim", "aoi", "huntress", "hendrika", "alchemist"):
                 # Roteiro legado pré-Fase 2 (apenas IDLE + ATTACK simples)
                 if p_sample < 0.25 or p_sample > 0.75:
                     state = "IDLE"
@@ -2682,6 +2743,17 @@ class ModelInspector:
                     extra_props["p"] = prog
                     wx = 0.28 * math.sin(prog * math.pi)
                     wy = 0.28 * math.sin(prog * math.pi)
+            elif char_type in ("hendrika", "alchemist"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - prog) * 0.25)
+                    extra_props["pose"] = "finisher_carotid_vitriol"
+                    extra_props["p"] = prog
+                    wx = 0.25 * math.sin(prog * math.pi)
+                    wy = 0.25 * math.sin(prog * math.pi)
             else:
                 # 2.1.4a: Ittou Ryoudan
                 state = "RECOVERY"
@@ -2920,6 +2992,17 @@ class ModelInspector:
                     extra_props["p"] = prog
                     wx = 0.18 * math.sin(prog * math.pi)
                     wy = 0.18 * math.sin(prog * math.pi)
+            elif char_type in ("hendrika", "alchemist"):
+                if is_legacy:
+                    state = "ATTACK"
+                    state_timer = 0.10
+                else:
+                    state = "ATTACK"
+                    state_timer = max(0.01, (1.0 - prog) * 0.25)
+                    extra_props["pose"] = "finisher_acid_dissolve"
+                    extra_props["p"] = prog
+                    wx = 0.15 * math.sin(prog * math.pi)
+                    wy = 0.15 * math.sin(prog * math.pi)
             else:
                 # 2.1.4b: Divisão Celestial de Bambu (Ápice + Queda Meteórica)
                 if prog < 0.42:

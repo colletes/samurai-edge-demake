@@ -79,6 +79,8 @@ def canonical(char_type: str) -> str:
         return "aoi"
     if "raiden" in c or "sumo" in c or "rikishi" in c:
         return "raiden"
+    if "hendrika" in c or "alchemist" in c or "dejima" in c:
+        return "hendrika"
     return c
 
 
@@ -230,6 +232,12 @@ INTRO = {
         _idle(0.38, 0.78, pose="sonkyo_squat"),
         _idle(0.78, 1.0, pose="sumo_kamae"),
     ],
+    # Hendrika (Alquimista de Dejima): Inspeção do frasco de vidro contra a luz -> teste cáustico no estilete -> postura analítica
+    "hendrika": [
+        _idle(0.0, 0.38, pose="intro_inspect_vial"),
+        _idle(0.38, 0.72, pose="intro_stiletto_test"),
+        _idle(0.72, 1.0, pose="intro_ready_stance"),
+    ],
 }
 
 VICTORY = {
@@ -370,6 +378,12 @@ VICTORY = {
         _idle(0.44, 0.74, pose="shiko_stomp", seismic_dust=True),
         _idle(0.74, 1.0, pose="mawashi_fists"),
     ],
+    # Hendrika: Registro dos resultados no caderno de campo -> fechamento do relógio de bolso -> reverência acadêmica
+    "hendrika": [
+        _idle(0.0, 0.40, pose="victory_field_notes"),
+        _idle(0.40, 0.75, pose="victory_pocket_watch"),
+        _idle(0.75, 1.0, pose="victory_academic_bow"),
+    ],
 }
 
 SCRIPTS = {"intro": INTRO, "victory": VICTORY}
@@ -400,6 +414,7 @@ BEATS = {
         "daiki": [(0.12, "sfx:dodge_whoosh"), (0.42, "sfx:obstacle_hit"), (0.75, "fx:petals")],
         "aoi": [(0.24, "sfx:sword_slash"), (0.52, "sfx:dodge_whoosh")],
         "raiden": [(0.12, "sfx:parry"), (0.24, "sfx:parry"), (0.38, "fx:sparks"), (0.40, "sfx:dodge_whoosh")],
+        "hendrika": [(0.12, "sfx:parry"), (0.42, "sfx:bomb_fuse"), (0.75, "fx:smoke")],
     },
     "victory": {
         "kenshin": [(0.08, "sfx:sword_slash"), (0.28, "sfx:dodge_whoosh"), (0.30, "fx:blood"), (0.74, "sfx:parry"), (0.76, "fx:petals")],
@@ -425,6 +440,7 @@ BEATS = {
         "daiki": [(0.10, "sfx:dodge_whoosh"), (0.42, "sfx:parry"), (0.75, "fx:petals")],
         "aoi": [(0.16, "sfx:sword_slash"), (0.50, "fx:petals")],
         "raiden": [(0.20, "sfx:dodge_whoosh"), (0.45, "sfx:obstacle_hit"), (0.46, "fx:smoke"), (0.76, "sfx:sword_slash")],
+        "hendrika": [(0.15, "sfx:sword_slash"), (0.42, "sfx:parry"), (0.75, "fx:smoke")],
     },
 }
 
