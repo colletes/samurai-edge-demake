@@ -152,18 +152,19 @@ class BambooTemplateCache:
         return surf, ax, ay
 
     def warm_up(self, base_zoom: float = 1.0, azimuth: float = 0.0):
-        """Pré-aquece em ~2ms as 32 variações primárias e 3 tocos cortados para 60 FPS garantidos."""
-        z_b = round(base_zoom, 1)
+        """Pré-aquece as variações primárias e tocos cortados para toda a faixa de zoom de combate."""
         az_b = round(azimuth, 2)
-        for h_i in range(len(self.HEIGHT_TIERS)):
-            for s_i in range(self.NUM_SWAYS):
-                key = (h_i, s_i, z_b, az_b)
-                if key not in self._templates:
-                    self._templates[key] = self._bake_bamboo_template(h_i, s_i, z_b, az_b)
-        for st_i in range(len(self.STUMP_TIERS)):
-            s_key = (st_i, z_b, az_b)
-            if s_key not in self._stump_templates:
-                self._stump_templates[s_key] = self._bake_stump_template(st_i, z_b, az_b)
+        zoom_buckets = {round(base_zoom, 1), 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8}
+        for z_b in zoom_buckets:
+            for h_i in range(len(self.HEIGHT_TIERS)):
+                for s_i in range(self.NUM_SWAYS):
+                    key = (h_i, s_i, z_b, az_b)
+                    if key not in self._templates:
+                        self._templates[key] = self._bake_bamboo_template(h_i, s_i, z_b, az_b)
+            for st_i in range(len(self.STUMP_TIERS)):
+                s_key = (st_i, z_b, az_b)
+                if s_key not in self._stump_templates:
+                    self._stump_templates[s_key] = self._bake_stump_template(st_i, z_b, az_b)
 
     def render(self, surface: pygame.Surface, camera, bamboo, time_val: float):
         # Se houver flexão de combate ativa (golpe de katana ou passagem de samurai), desenha ao vivo

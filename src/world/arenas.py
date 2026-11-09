@@ -29,7 +29,7 @@ from src.world.decor import (
     AkamatsuPine, MountainHokora, TimberLogPile, AinuInauTotem, HideDryingRack, SnowSpruceTree,
     DohyoCornerPost, SacredSaltMound, DohyoBrazier, AlchemyWorkbench, ReagentBarrel, WharfMooringBollard, WarehouseDoorwayArch,
     SacredBushBarrier, WarehouseGlassWall, LargeSacredCenser, WharfPiling,
-    HiganbanaCluster, AstralBrazier,
+    HiganbanaCluster, AstralBrazier, KabukiFootlight, DutchCargoCrane,
 )
 from src.world.hazards import (
     ChainPendulum, FireworkMortars, RotatingStage, ShipRoll, TideSurge,
@@ -130,6 +130,8 @@ register_prop("large_censer", lambda x, y, **p: LargeSacredCenser(x, y), "lanter
 register_prop("wharf_piling", lambda x, y, **p: WharfPiling(x, y), "rocks")
 register_prop("higanbana", lambda x, y, **p: HiganbanaCluster(x, y, **p), "lanterns")
 register_prop("astral_brazier", lambda x, y, **p: AstralBrazier(x, y, **p), "rocks")
+register_prop("kabuki_footlight", lambda x, y, **p: KabukiFootlight(x, y), "lanterns")
+register_prop("dutch_crane", lambda x, y, **p: DutchCargoCrane(x, y), "buildings")
 register_structure("arched_bridge", ArchedBridge)
 register_structure("roof_beam", RoofBeam)
 register_structure("plank_bridge", PlankBridge)
@@ -201,9 +203,9 @@ BAMBOO_SPEC = ArenaSpec(
         PropSpec("rock", 3.5, 10.0, {"radius": 0.55, "height": 0.75}),
         PropSpec("tree", 17.5, 17.5),
         PropSpec("torii", 10.5, 5.0),
-        PropSpec("koi", 8.4, 11.2, {"radius": 1.4, "speed": 0.50, "phase": 0.0, "variety": "kohaku"}),
-        PropSpec("koi", 13.6, 11.0, {"radius": 1.3, "speed": -0.44, "phase": 2.2, "variety": "yamabuki"}),
-        PropSpec("koi", 11.0, 11.0, {"radius": 2.2, "speed": 0.36, "phase": 4.1, "variety": "shiro"}),
+        PropSpec("koi", 9.15, 11.2, {"radius": 0.58, "speed": 0.50, "phase": 0.0, "variety": "kohaku"}),
+        PropSpec("koi", 12.85, 11.2, {"radius": 0.58, "speed": -0.44, "phase": 2.2, "variety": "yamabuki"}),
+        PropSpec("koi", 11.0, 11.2, {"radius": 1.15, "speed": 0.36, "phase": 4.1, "variety": "shiro"}),
     ) + tuple(PropSpec("stone_lantern", x, y) for x, y in _BAMBOO_LANTERNS),
     scatters=(
         ScatterSpec(
@@ -275,6 +277,9 @@ KYOTO_SPEC = ArenaSpec(
             PropSpec("guard_post", 13.55, 12.3, {"width": 1.35, "depth": 1.5, "height": 1.5}),
             PropSpec("incense", 7.65, 8.9),
             PropSpec("incense", 14.1, 10.6),
+            PropSpec("crate", 7.45, 4.8),
+            PropSpec("crate", 14.15, 6.8),
+            PropSpec("crate", 7.45, 15.8),
         )
     ),
     hazards=(
@@ -621,9 +626,9 @@ MIST_TEMPLE_SPEC = ArenaSpec(
         PropSpec("dojo", 6.5, 0.4, {"width": 9.0, "depth": 3.3, "height": 2.0}),
         PropSpec("torii", 10.5, 20.2),
         PropSpec("shimenawa", 10.5, 20.2, {"span": 3.8, "z": 2.4, "ribbons": 5}),
-        PropSpec("koi", 6.5, 13.5, {"radius": 1.7, "speed": 0.55, "phase": 0.0, "variety": "kohaku"}),
-        PropSpec("koi", 6.5, 13.5, {"radius": 1.4, "speed": -0.45, "phase": 2.1, "variety": "shiro"}),
-        PropSpec("koi", 6.5, 13.5, {"radius": 1.9, "speed": 0.4, "phase": 4.0, "variety": "yamabuki"}),
+        PropSpec("koi", 6.5, 13.5, {"radius": 1.15, "speed": 0.55, "phase": 0.0, "variety": "kohaku"}),
+        PropSpec("koi", 6.5, 13.5, {"radius": 0.95, "speed": -0.45, "phase": 2.1, "variety": "shiro"}),
+        PropSpec("koi", 6.5, 13.5, {"radius": 1.30, "speed": 0.4, "phase": 4.0, "variety": "yamabuki"}),
     ) + tuple(PropSpec("pine", x, y) for x, y in _MIST_PINES)
       + tuple(PropSpec("stone_lantern", x, y) for x, y in _MIST_LANTERNS)
       + tuple(PropSpec("mist", x, y, {"radius": 3.4}) for x, y in _MIST_BANKS),
@@ -798,7 +803,9 @@ KABUKI_STAGE_SPEC = ArenaSpec(
     props=(
         PropSpec("curtain", 3.0, 0.8, {"length": 16.0, "axis": "x", "height": 3.4, "drop": 3.2}),
     ) + _folding_screen(7.0, 6.2, "x") + _folding_screen(15.0, 6.8, "y") + _folding_screen(7.2, 16.0, "y")
-      + tuple(PropSpec("paper_lantern", x, y, {"color": (220, 60, 44)}) for x, y in _KABUKI_LANTERNS),
+      + tuple(PropSpec("paper_lantern", x, y, {"color": (220, 60, 44)}) for x, y in _KABUKI_LANTERNS)
+      + tuple(PropSpec("kabuki_footlight", x, 19.6) for x in (6.5, 9.5, 12.5, 15.5))
+      + tuple(PropSpec("kabuki_footlight", x, 9.8) for x in (1.5, 3.8, 6.0)),
     hazards=(HazardSpec("rotating_stage", {"cx": 11.0, "cy": 11.0, "radius": 4.3}),),
     spawns=SpawnRule(x_range=(3.0, 19.0), margin=3.5, min_distance=7.0, fallback=((4.5, 13.5), (17.5, 14.0))),
     stage=StageSpec(11.0, 11.0),
@@ -920,6 +927,7 @@ BAROQUE_COURT_SPEC = ArenaSpec(
     ),
     spawns=SpawnRule(x_range=(3.5, 18.5), margin=4.0, min_distance=7.0, fallback=((5.0, 11.0), (17.0, 11.0))),
     stage=StageSpec(11.0, 14.6),
+    reflections=((9, 9), (10, 9), (11, 9), (9, 10), (10, 10), (11, 10), (12, 10), (9, 11), (10, 11), (11, 11), (12, 11), (10, 12), (11, 12)),
     drift_count=42,
     drift_petals=0.90,
     lighting=LightingEnvironment(
@@ -1031,7 +1039,7 @@ HIGANBANA_SPEC = ArenaSpec(
     },
     layers=(
         FillLayer(TILE_HIGAN_FLOWERS),
-        EllipseLayer(TILE_HIGAN_WATER, cx=10.5, cy=10.5, radius=8.2, sx=1.0, sy=0.9),
+        EllipseLayer(TILE_HIGAN_WATER, cx=10.5, cy=10.5, radius=6.4, sx=1.0, sy=0.9),
         RectLayer(TILE_HIGAN_STONE, 9, 12, 0, 21),
         EllipseLayer(TILE_HIGAN_STONE, cx=10.5, cy=10.5, radius=3.8),
         EllipseLayer(TILE_HIGAN_FLOWERS, cx=10.5, cy=10.5, radius=2.2),
@@ -1148,7 +1156,7 @@ TILE_YOSHI_PUDDLE = 76
 
 _YOSHI_LANTERNS = ((6.8, 4.0), (14.2, 4.0), (6.8, 10.5), (14.2, 10.5), (6.8, 17.0), (14.2, 17.0))
 _YOSHI_CURTAINS = ((5.2, 8.5), (15.8, 8.5), (5.2, 13.5), (15.8, 13.5))
-_YOSHI_MACHIAS = (1.5, 5.5, 9.5, 13.5, 17.5)
+_YOSHI_MACHIAS = (0.6, 4.8, 9.0, 13.2, 17.4)
 
 YOSHIWARA_SPEC = ArenaSpec(
     id=ARENA_YOSHIWARA,
@@ -1158,6 +1166,7 @@ YOSHIWARA_SPEC = ArenaSpec(
     bg_color=(22, 14, 26),
     music="bgm_yoshiwara_alley",
     wind=WindSpec(1, 0.2, 0.35, 0.3),
+    playable_bounds=(5.2, 1.0, 16.8, MAP_ROWS - 1.0),
     tile_styles={
         TILE_YOSHI_BUILDING: TileStyle("flat", ((36, 26, 32), (28, 20, 24)), pattern="parity", edge=(18, 12, 16), surface="wood"),
         TILE_YOSHI_COBBLE: TileStyle("flat", ((60, 56, 66), (50, 46, 54)), pattern="parity", edge=(34, 30, 38), surface="stone"),
@@ -1173,9 +1182,9 @@ YOSHIWARA_SPEC = ArenaSpec(
         EllipseLayer(TILE_YOSHI_PUDDLE, cx=10.5, cy=14.5, radius=2.4, sx=1.0, sy=0.8),
     ),
     props=(
-        tuple(PropSpec("machiya", 0.8, by, {"width": 4.2, "depth": 3.6, "is_transparent": False, "seed": 300 + i * 29, "burning": False, "style": "yoshiwara"})
+        tuple(PropSpec("machiya", 0.8, by, {"width": 4.2, "depth": 4.2, "is_transparent": False, "seed": 300 + i * 29, "burning": False, "style": "yoshiwara"})
               for i, by in enumerate(_YOSHI_MACHIAS))
-        + tuple(PropSpec("machiya", 17.0, by, {"width": 4.2, "depth": 3.6, "is_transparent": True, "seed": 400 + i * 31, "burning": False, "style": "yoshiwara"})
+        + tuple(PropSpec("machiya", 17.0, by, {"width": 4.2, "depth": 4.2, "is_transparent": True, "seed": 400 + i * 31, "burning": False, "style": "yoshiwara"})
                 for i, by in enumerate(_YOSHI_MACHIAS))
         + tuple(PropSpec("paper_lantern", x, y) for x, y in _YOSHI_LANTERNS)
         + tuple(PropSpec("curtain", x, y) for x, y in _YOSHI_CURTAINS)
@@ -1186,6 +1195,7 @@ YOSHIWARA_SPEC = ArenaSpec(
     ),
     spawns=SpawnRule(x_range=(7.0, 14.0), margin=3.0, min_distance=5.0, fallback=((8.0, 10.5), (13.0, 10.5))),
     stage=StageSpec(10.5, 10.5),
+    reflections=((9, 6), (10, 6), (11, 6), (10, 7), (11, 7), (9, 14), (10, 14), (11, 14), (10, 15), (11, 15)),
     drift_count=52,
     drift_petals=0.85,
     lighting=LightingEnvironment(
@@ -2017,11 +2027,15 @@ DEJIMA_WAREHOUSE_SPEC = ArenaSpec(
         PropSpec("crate", 11.5, 5.5),
         PropSpec("crate", 8.2, 15.5),
         PropSpec("crate", 15.2, 14.8),
+        # Guindastes portuários holandeses da VOC na borda da doca
+        PropSpec("dutch_crane", 15.6, 4.2),
+        PropSpec("dutch_crane", 15.6, 11.0),
     ),
     hazards=(HazardSpec("dejima_hazard", {}),),
     playable_bounds=(1.5, 2.5, 16.5, 19.5),
     spawns=SpawnRule(x_range=(4.5, 12.5), margin=3.0, min_distance=5.5, fallback=((4.5, 10.5), (11.5, 7.5))),
     stage=StageSpec(10.5, 7.5),
+    reflections=((11, 12), (12, 12), (11, 13), (12, 13), (11, 16), (12, 16), (11, 17), (12, 17), (17, 6), (17, 10), (17, 15)),
     drift_count=55,
     drift_petals=0.0,
     lighting=LightingEnvironment(

@@ -56,8 +56,8 @@ Consulte o documento mestre [`docs/EXPANSION_ROADMAP_AND_DESIGN.md`](EXPANSION_R
    - ⚗️ `2.24`: Hendrika (Alquimista de Dejima — Estilete Cirúrgico & Frascos de Ácido) **[CONCLUÍDO ✅]**
 3. **Fase 3: Revamp Visual e Atmosférico das Arenas (24 Palcos)**
    - 📦 `A-3.1`: Santuários & Jardins Zen (6 Arenas: `bamboo`, `mountain_shrine`, `mist_temple`, `shaolin_temple`, `higanbana_garden`, `heian_shrine`) **[CONCLUÍDO ✅]**
-   - 📦 `A-3.2`: Cenários Urbanos & Históricos (6 Arenas: `kyoto`, `yoshiwara_alley`, `kabuki_stage`, `baroque_court`, `dejima_warehouse`, `sacred_dohyo`) **[PRÓXIMO NA FILA 🎯]**
-   - 📦 `A-3.3`: Campos de Batalha & Vilarejos Rurais (6 Arenas)
+   - 📦 `A-3.2`: Cenários Urbanos & Históricos (6 Arenas: `kyoto`, `yoshiwara_alley`, `kabuki_stage`, `baroque_court`, `dejima_warehouse`, `sacred_dohyo`) **[CONCLUÍDO ✅]**
+   - 📦 `A-3.3`: Campos de Batalha & Vilarejos Rurais (6 Arenas: `nagashino_field`, `forest_camp`, `sacred_pines`, `ezo_tundra`, `rice_paddies`, `rain_mill`) **[PRÓXIMO NA FILA 🎯]**
    - 📦 `A-3.4`: Locais Extremos & Noturnos (6 Arenas)
 
 ---

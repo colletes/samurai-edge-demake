@@ -120,10 +120,10 @@ def run_kenshi_overhaul_tests():
     kenshi_ryuu.update(0.065, game_map, particles)
     assert kenshi_ryuu.ryuu_phase == "DESCEND"
 
-    # Durante a descida (wz <= 1.8), ativa hitbox de raio 1.45m
+    # Durante a descida (wz <= 2.1), ativa hitbox de raio 1.75m
     kenshi_ryuu.update(0.09, game_map, particles)
     assert kenshi_ryuu.hitbox_active is True
-    assert abs(kenshi_ryuu.hitbox_radius - 1.45) < 1e-4
+    assert abs(kenshi_ryuu.hitbox_radius - 1.75) < 1e-4
 
     # Testar Parry Aéreo durante o Ryuu Tsui Sen: Mortal para trás no ar (somersault 360°)
     kenshi_ryuu.on_parried(opp_parry, game_map, banners, particles)

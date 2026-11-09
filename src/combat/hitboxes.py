@@ -108,7 +108,7 @@ def build_fighter_melee_hitbox(fighter):
         )
 
     # 2. Golpes Radiais 360° -> RadialHitbox
-    if state in ("EARTH_STOMP", "KIAI", "WHIRLWIND"):
+    if state in ("EARTH_STOMP", "KIAI", "WHIRLWIND", "RYUU_TSUI_SEN"):
         return RadialHitbox(cx=hx, cy=hy, radius=hr)
 
     # 3. Golpes de Corte em Arco -> ArcSectorHitbox

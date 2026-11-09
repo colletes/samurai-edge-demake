@@ -267,60 +267,117 @@ class KoiFish:
         self.flee_timer = 0.0
         self.flee_vx = 0.0
         self.flee_vy = 0.0
+        self.flee_ox = 0.0
+        self.flee_oy = 0.0
+        self.swim_angle = phase
+        self.wag_phase = phase
+        self._last_time_val: float | None = None
+        self._arena_ref = None
         self.cur_x = wx
         self.cur_y = wy
 
+    def _is_point_in_water(self, arena, x: float, y: float) -> bool:
+        if arena is None:
+            return True
+        # Checa o centro e uma margem de 0.32m ao redor (cabeça/cauda da carpa) para não invadir a grama
+        for ox, oy in ((0.0, 0.0), (0.30, 0.0), (-0.30, 0.0), (0.0, 0.30), (0.0, -0.30)):
+            tx, ty = int(math.floor(x + ox)), int(math.floor(y + oy))
+            if not (0 <= tx < arena.cols and 0 <= ty < arena.rows):
+                return False
+            style = arena.style_at(tx, ty)
+            if not getattr(style, "water_like", False):
+                return False
+        return True
+
     def tick(self, arena, dt: float, fighters: list, camera, particles: list, banners: list):
+        self._arena_ref = arena
         # Reatividade: se algum guerreiro estiver próximo (< 1.75m), a carpa se assusta e foge
         for f in fighters:
             if not getattr(f, "is_alive", True):
                 continue
             dist = math.hypot(self.cur_x - f.wx, self.cur_y - f.wy)
             if dist < 1.75:
-                self.flee_timer = 1.3
+                self.flee_timer = 1.1
                 dx = self.cur_x - f.wx
                 dy = self.cur_y - f.wy
                 norm = math.hypot(dx, dy) or 1.0
-                self.flee_vx = (dx / norm) * 1.9
-                self.flee_vy = (dy / norm) * 1.9
+                self.flee_vx = (dx / norm) * 1.35
+                self.flee_vy = (dy / norm) * 1.35
                 if particles is not None and random.random() < 0.20:
                     from src.effects.particles import WaterRippleParticle
                     particles.append(WaterRippleParticle(self.cur_x, self.cur_y, wz=-0.12, radius_max=0.55))
 
-        if self.flee_timer > 0.0:
+        is_fleeing = self.flee_timer > 0.0
+        speed_mult = 2.0 if is_fleeing else 1.0
+        wag_freq = 12.5 if is_fleeing else 6.2
+        self.swim_angle += dt * self.base_speed * speed_mult
+        self.wag_phase += dt * wag_freq
+
+        if is_fleeing:
             self.flee_timer = max(0.0, self.flee_timer - dt)
+            next_ox = self.flee_ox + self.flee_vx * dt * 0.45
+            next_oy = self.flee_oy + self.flee_vy * dt * 0.45
+            mag = math.hypot(next_ox, next_oy)
+            if mag > 0.28:
+                next_ox = (next_ox / mag) * 0.28
+                next_oy = (next_oy / mag) * 0.28
+            cand_x = self.wx + math.cos(self.swim_angle) * self.radius + next_ox
+            cand_y = self.wy + math.sin(self.swim_angle * 1.3) * self.radius * 0.85 + next_oy
+            if self._is_point_in_water(arena, cand_x, cand_y):
+                self.flee_ox, self.flee_oy = next_ox, next_oy
+            else:
+                self.flee_ox *= math.exp(-4.0 * dt)
+                self.flee_oy *= math.exp(-4.0 * dt)
+        else:
+            decay = math.exp(-3.2 * dt)
+            self.flee_ox *= decay
+            self.flee_oy *= decay
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         from src.isometric.voxel_renderer import draw_oriented_voxel_box
 
-        is_fleeing = self.flee_timer > 0.0
-        speed_mult = 2.4 if is_fleeing else 1.0
-        wag_freq = 14.0 if is_fleeing else 6.2
+        # Caso render seja chamado sem tick prévio (ex.: preview estático ou testes)
+        if self._last_time_val is None:
+            self._last_time_val = time_val
+        else:
+            dt_fallback = time_val - self._last_time_val
+            self._last_time_val = time_val
+            if self._arena_ref is None and 0.0 < dt_fallback < 0.2:
+                is_fleeing = self.flee_timer > 0.0
+                self.swim_angle += dt_fallback * self.base_speed * (2.0 if is_fleeing else 1.0)
+                self.wag_phase += dt_fallback * (12.5 if is_fleeing else 6.2)
 
-        a = time_val * self.base_speed * speed_mult + self.phase
-        x = self.wx + math.cos(a) * self.radius
-        y = self.wy + math.sin(a * 1.3) * self.radius * 0.85
+        a = self.swim_angle
+        x = self.wx + math.cos(a) * self.radius + self.flee_ox
+        y = self.wy + math.sin(a * 1.3) * self.radius * 0.85 + self.flee_oy
 
-        if is_fleeing:
-            x += self.flee_vx * 0.4 * self.flee_timer
-            y += self.flee_vy * 0.4 * self.flee_timer
+        # Garante suavemente que a carpa jamais saia dos tiles de água para a grama
+        if self._arena_ref is not None and not self._is_point_in_water(self._arena_ref, x, y):
+            for step in range(1, 21):
+                shrink = 1.0 - step * 0.05
+                cand_x = self.wx + (x - self.wx) * shrink
+                cand_y = self.wy + (y - self.wy) * shrink
+                if self._is_point_in_water(self._arena_ref, cand_x, cand_y):
+                    x, y = cand_x, cand_y
+                    break
 
         self.cur_x = x
         self.cur_y = y
 
         # Vetor de direção do nado
-        hx = -math.sin(a)
-        hy = math.cos(a * 1.3) * 1.3
+        sign = -1.0 if self.base_speed < 0 else 1.0
+        hx = -math.sin(a) * sign
+        hy = math.cos(a * 1.3) * 1.3 * sign
         n = math.hypot(hx, hy) or 1.0
         hx, hy = hx / n, hy / n
         px, py = -hy, hx
 
         wz = -0.11  # Submersa na água
 
-        # Ondulação orgânica da coluna vertebral (fase defasada)
-        wag_head = math.sin(time_val * wag_freq + self.phase) * 0.04
-        wag_body = math.sin(time_val * wag_freq + self.phase - 0.5) * 0.09
-        wag_tail = math.sin(time_val * wag_freq + self.phase - 1.2) * 0.18
+        # Ondulação orgânica da coluna vertebral (fase acumulada contínua sem saltos)
+        wag_head = math.sin(self.wag_phase) * 0.04
+        wag_body = math.sin(self.wag_phase - 0.5) * 0.09
+        wag_tail = math.sin(self.wag_phase - 1.2) * 0.18
 
         # 1. Cabeça chanfrada com focinho e olhos de azeviche
         head_x = x + px * wag_head
@@ -338,7 +395,7 @@ class KoiFish:
         draw_oriented_voxel_box(surface, camera, body_x, body_y, wz, hx, hy, 0.0, 0.20, 0.15, 0.11, self.c_hi, outline=False)
 
         # Nadadeiras peitorais laterais com batimento
-        fin_flutter = math.sin(time_val * wag_freq * 0.8) * 0.06
+        fin_flutter = math.sin(self.wag_phase * 0.8) * 0.06
         for side in (-1.0, 1.0):
             fin_x = body_x + px * side * 0.09
             fin_y = body_y + py * side * 0.09
@@ -364,7 +421,7 @@ class KoiFish:
 class MistBank:
     """Banco de névoa baixa que deriva devagar sobre o chão (elipse translúcida)."""
 
-    _cache: dict[tuple[int, int], pygame.Surface] = {}
+    _cache: dict[tuple, pygame.Surface] = {}
 
     def __init__(self, wx: float, wy: float, radius: float = 3.0, alpha: int = 46, tint: tuple[int, int, int] = (190, 205, 225)):
         self.wx, self.wy, self.radius, self.alpha, self.tint = wx, wy, radius, alpha, tint
@@ -374,11 +431,16 @@ class MistBank:
         y = self.wy + 0.4 * math.cos(time_val * 0.21 + self.wx)
         cx, cy = camera.apply(x, y, 0.3)
         rx = abs(camera.apply(x + self.radius, y, 0.3)[0] - cx) + abs(camera.apply(x, y + self.radius, 0.3)[0] - cx)
-        w, h = max(8, int(rx * 1.2)), max(4, int(rx * 0.6))
+        # Quantiza dimensões em degraus de 16x8px para evitar recriar superfícies durante zoom dinâmico
+        w = max(16, (int(rx * 1.2) // 16) * 16)
+        h = max(8, (int(rx * 0.6) // 8) * 8)
         key = (w, h, self.alpha, self.tint)
         surf = MistBank._cache.get(key)
         if surf is None:
+            if len(MistBank._cache) > 64:
+                MistBank._cache.clear()
             surf = pygame.Surface((w, h), pygame.SRCALPHA)
+            surf.fill((0, 0, 0, 0))
             for i in range(5):
                 f = 1.0 - i / 5.0
                 pygame.draw.ellipse(surf, (*self.tint, int(self.alpha * (1.0 - f) * 0.9) + 6), (int(w * (1 - f) / 2), int(h * (1 - f) / 2), int(w * f), int(h * f)))
@@ -404,20 +466,68 @@ class ForestTree(AncientTree):
 
 
 class SupplyCrate(Rock):
-    """Caixote de suprimentos de madeira: bloqueia o movimento e para projéteis (cobertura)."""
+    """Caixote de suprimentos de madeira: bloqueia o movimento e para projéteis (cobertura); destrutível por ataques."""
 
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, radius=0.55, height=0.95)
+        self.is_broken = False
+        self.splinters = []
+
+    def check_collision(self, px: float, py: float, p_radius: float = 0.3) -> tuple[bool, float, float]:
+        if self.is_broken:
+            return False, 0.0, 0.0
+        return super().check_collision(px, py, p_radius)
+
+    def break_panel(self, slash_dir: tuple[float, float] = (1.0, 0.0), particles: list = None):
+        """Estilhaça o caixote de madeira quando atingido por ataques ou projéteis."""
+        if self.is_broken:
+            return
+        self.is_broken = True
+        self.radius = 0.0
+        self.height = 0.14
+        dx, dy = slash_dir
+        for _ in range(9):
+            ox = random.uniform(-0.42, 0.42) + dx * 0.14
+            oy = random.uniform(-0.42, 0.42) + dy * 0.14
+            col = random.choice([(176, 130, 80), (120, 86, 52), (72, 52, 36), (52, 56, 64)])
+            self.splinters.append((ox, oy, col))
+        if particles is not None:
+            from src.effects.particles import SparkParticle
+            for _ in range(12):
+                particles.append(SparkParticle(self.wx, self.wy, 0.40, color=(205, 160, 100)))
+        try:
+            from src.audio.sound_manager import get_sound_manager
+            from src.audio.sound_events import SoundEvent
+            sm = get_sound_manager()
+            if sm:
+                sm.play(SoundEvent.OBSTACLE_HIT)
+        except Exception:
+            pass
 
     def render(self, surface: pygame.Surface, camera):
         x, y = self.wx, self.wy
         gx, gy = camera.apply(x, y, 0.0)
-        pygame.draw.ellipse(surface, (58, 90, 48), (gx - 24, gy - 11, 48, 22))
+        if self.is_broken:
+            pygame.draw.ellipse(surface, (42, 32, 24), (gx - 26, gy - 12, 52, 24))
+            draw_voxel_box(surface, camera, x - 0.38, y - 0.12, 0.01, 0.76, 0.24, 0.05, (112, 78, 46), outline=False)
+            draw_voxel_box(surface, camera, x - 0.14, y - 0.36, 0.02, 0.28, 0.72, 0.05, (142, 102, 62), outline=False)
+            for ox, oy, col in self.splinters:
+                draw_voxel_box(surface, camera, x + ox - 0.09, y + oy - 0.06, 0.02, 0.18, 0.12, 0.04, col, outline=False)
+            return
+
+        pygame.draw.ellipse(surface, (46, 40, 34), (gx - 24, gy - 11, 48, 22))
         draw_voxel_box(surface, camera, x - 0.46, y - 0.46, 0.0, 0.92, 0.92, 0.82, (176, 130, 80), outline=True, texture="planks")
-        for z in (0.12, 0.62):
-            draw_voxel_box(surface, camera, x - 0.49, y - 0.49, z, 0.98, 0.98, 0.09, (112, 78, 46), outline=False)
+        for z in (0.10, 0.64):
+            draw_voxel_box(surface, camera, x - 0.49, y - 0.49, z, 0.98, 0.98, 0.08, (112, 78, 46), outline=False)
+        # Cantoneiras de ferro forjado nos cantos
+        for cx_off in (-0.48, 0.36):
+            for cy_off in (-0.48, 0.36):
+                draw_voxel_box(surface, camera, x + cx_off, y + cy_off, 0.0, 0.12, 0.12, 0.84, (54, 58, 66), outline=False)
         draw_voxel_box(surface, camera, x - 0.50, y - 0.07, 0.0, 1.0, 0.14, 0.82, (120, 86, 52), outline=False)
-        draw_voxel_box(surface, camera, x - 0.30, y - 0.30, 0.82, 0.6, 0.6, 0.12, (150, 108, 64), outline=True)
+        draw_voxel_box(surface, camera, x - 0.07, y - 0.50, 0.0, 0.14, 1.0, 0.82, (120, 86, 52), outline=False)
+        draw_voxel_box(surface, camera, x - 0.30, y - 0.30, 0.82, 0.60, 0.60, 0.12, (150, 108, 64), outline=True)
+        # Selo mercantil de tinta escura no topo
+        draw_voxel_box(surface, camera, x - 0.14, y - 0.14, 0.93, 0.28, 0.28, 0.02, (42, 34, 28), outline=False)
 
 
 class FireHazardMixin:
@@ -625,15 +735,15 @@ class ScreenPanel(Rock):
 
         # Gerar estilhaços visuais no chão
         dx, dy = slash_dir
-        for _ in range(8):
-            ox = random.uniform(-0.35, 0.35) + dx * 0.15
-            oy = random.uniform(-0.35, 0.35) + dy * 0.15
-            self.splinters.append((ox, oy, random.choice([(214, 176, 72), (44, 30, 26), (230, 220, 195)])))
+        for _ in range(10):
+            ox = random.uniform(-0.38, 0.38) + dx * 0.16
+            oy = random.uniform(-0.38, 0.38) + dy * 0.16
+            self.splinters.append((ox, oy, random.choice([(218, 180, 76), (44, 30, 26), (235, 224, 198), (190, 40, 36)])))
 
         if particles is not None:
             from src.effects.particles import SparkParticle
-            for _ in range(12):
-                particles.append(SparkParticle(self.wx, self.wy, 0.35, color=(240, 205, 120)))
+            for _ in range(14):
+                particles.append(SparkParticle(self.wx, self.wy, 0.38, color=(245, 210, 125)))
 
         try:
             from src.audio.sound_manager import get_sound_manager
@@ -667,17 +777,25 @@ class ScreenPanel(Rock):
             bx, by, bw, bd = x - w / 2, y - t / 2 + off, w, t
         else:
             bx, by, bw, bd = x - t / 2 + off, y - w / 2, t, w
+        # Moldura inferior e superior de laca preta com ferragens douradas
         draw_voxel_box(surface, camera, bx - 0.02, by - 0.02, 0.0, bw + 0.04, bd + 0.04, 0.12, (44, 30, 26), outline=True)
-        draw_voxel_box(surface, camera, bx, by, 0.12, bw, bd, 1.5, (214, 176, 72), outline=True)
+        draw_voxel_box(surface, camera, bx, by, 0.12, bw, bd, 1.5, (218, 180, 76), outline=True)
         draw_voxel_box(surface, camera, bx - 0.01, by - 0.01, 1.62, bw + 0.02, bd + 0.02, 0.08, (44, 30, 26), outline=False)
+        # Pintura Kanō-ha em folha de ouro: sol carmim, nuvens douradas e ramos de pinheiro/ameixeira em relevo 3D
         if self.axis == "x":
-            draw_voxel_box(surface, camera, x - 0.14, by - 0.015, 0.7, 0.28, bd + 0.03, 0.4, (190, 40, 36), outline=False)
+            draw_voxel_box(surface, camera, x - 0.14, by - 0.015, 0.72, 0.28, bd + 0.03, 0.38, (190, 40, 36), outline=False)
+            draw_voxel_box(surface, camera, x - 0.34, by - 0.018, 1.18, 0.42, bd + 0.036, 0.14, (242, 214, 122), outline=False)
+            draw_voxel_box(surface, camera, x + 0.04, by - 0.018, 0.34, 0.32, bd + 0.036, 0.12, (58, 42, 32), outline=False)
+            draw_voxel_box(surface, camera, x + 0.10, by - 0.020, 0.44, 0.24, bd + 0.040, 0.16, (44, 96, 56), outline=False)
         else:
-            draw_voxel_box(surface, camera, bx - 0.015, y - 0.14, 0.7, bw + 0.03, 0.28, 0.4, (190, 40, 36), outline=False)
+            draw_voxel_box(surface, camera, bx - 0.015, y - 0.14, 0.72, bw + 0.03, 0.28, 0.38, (190, 40, 36), outline=False)
+            draw_voxel_box(surface, camera, bx - 0.018, y - 0.34, 1.18, bw + 0.036, 0.42, 0.14, (242, 214, 122), outline=False)
+            draw_voxel_box(surface, camera, bx - 0.018, y + 0.04, 0.34, bw + 0.036, 0.32, 0.12, (58, 42, 32), outline=False)
+            draw_voxel_box(surface, camera, bx - 0.020, y + 0.10, 0.44, bw + 0.040, 0.24, 0.16, (44, 96, 56), outline=False)
 
 
 class StripedCurtain:
-    """Cortina do teatro kabuki / noren de Yoshiwara: faixas verticais translúcidas penduradas."""
+    """Cortina do teatro kabuki (Jōshiki-maku) / noren de Yoshiwara: faixas verticais translúcidas reativas a golpes."""
 
     PALETTE = ((28, 26, 30), (230, 104, 42), (44, 124, 74))
 
@@ -686,6 +804,45 @@ class StripedCurtain:
         self.alpha = alpha
         self.cx = wx + (length / 2 if axis == "x" else 0.0)
         self.cy = wy + (length / 2 if axis == "y" else 0.0)
+        self.torn_strips: set[int] = set()
+        self.sway_boost: float = 0.0
+
+    def tear_curtain(self, hx: float, hy: float, radius: float = 1.2, particles: list = None) -> bool:
+        """Rasga faixas da cortina atingidas por golpes ou dashes próximos e agita o tecido."""
+        n = max(3, int(self.length / 0.8))
+        hit_any = False
+        for i in range(n):
+            a_mid = self.length * (i + 0.5) / n
+            sx = self.wx + (a_mid if self.axis == "x" else 0.0)
+            sy = self.wy + (a_mid if self.axis == "y" else 0.0)
+            if math.hypot(hx - sx, hy - sy) <= radius:
+                self.sway_boost = max(self.sway_boost, 0.22)
+                if i not in self.torn_strips:
+                    self.torn_strips.add(i)
+                    hit_any = True
+                    if particles is not None:
+                        from src.effects.particles import SparkParticle
+                        col = self.PALETTE[i % 3]
+                        for _ in range(4):
+                            particles.append(SparkParticle(sx, sy, self.height - self.drop * 0.5, color=col))
+        return hit_any
+
+    def tick(self, arena, dt: float, fighters: list, camera, particles: list, banners: list):
+        if self.sway_boost > 0.0:
+            self.sway_boost = max(0.0, self.sway_boost - dt * 0.35)
+        for f in fighters:
+            if f is None or not getattr(f, "is_alive", True):
+                continue
+            if getattr(f, "hitbox_active", False):
+                hx, hy = getattr(f, "hitbox_center", (f.wx, f.wy))
+                hr = getattr(f, "hitbox_radius", 0.8)
+                self.tear_curtain(hx, hy, hr + 0.55, particles)
+            elif getattr(f, "state", "") == "ROLL" or math.hypot(getattr(f, "vx", 0.0), getattr(f, "vy", 0.0)) > 2.2:
+                # Passagem rápida agita a cortina
+                if self.axis == "x" and abs(f.wy - self.wy) < 1.3 and (self.wx - 0.5 <= f.wx <= self.wx + self.length + 0.5):
+                    self.sway_boost = max(self.sway_boost, 0.16)
+                elif self.axis == "y" and abs(f.wx - self.wx) < 1.3 and (self.wy - 0.5 <= f.wy <= self.wy + self.length + 0.5):
+                    self.sway_boost = max(self.sway_boost, 0.16)
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         n = max(3, int(self.length / 0.8))
@@ -698,10 +855,23 @@ class StripedCurtain:
         quads = []
         min_x, max_x = surface.get_width(), 0
         min_y, max_y = surface.get_height(), 0
+        amp = 0.05 + self.sway_boost
+        freq = 1.4 + (4.5 if self.sway_boost > 0.02 else 0.0)
         for i in range(n):
             a0, a1 = self.length * i / n, self.length * (i + 1) / n
-            sway = 0.05 * math.sin(time_val * 1.4 + i * 0.7)
-            q = [draw(a0, top), draw(a1, top), draw(a1, bottom + sway), draw(a0, bottom + sway)]
+            sway = amp * math.sin(time_val * freq + i * 0.7)
+            strip_bottom = bottom + (self.drop * 0.42 if i in self.torn_strips else 0.0)
+            if i in self.torn_strips:
+                a_mid = (a0 + a1) * 0.5
+                q = [
+                    draw(a0, top),
+                    draw(a1, top),
+                    draw(a1, strip_bottom + sway),
+                    draw(a_mid, strip_bottom + 0.24 + sway * 0.8),
+                    draw(a0, strip_bottom - 0.12 + sway * 1.1),
+                ]
+            else:
+                q = [draw(a0, top), draw(a1, top), draw(a1, strip_bottom + sway), draw(a0, strip_bottom + sway)]
             quads.append((q, self.PALETTE[i % 3]))
             for pt in q:
                 min_x = min(min_x, pt[0])
@@ -757,7 +927,7 @@ class HedgeBlock(Rock):
 
 
 class MarbleStatue(Rock):
-    """Estátua de mármore sobre pedestal: cobertura decorativa do pátio."""
+    """Estátua barroca de mármore de Carrara sobre pedestal canelado com rapieira/alabarda dourada."""
 
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, radius=0.5, height=1.9)
@@ -765,42 +935,87 @@ class MarbleStatue(Rock):
     def render(self, surface: pygame.Surface, camera):
         x, y = self.wx, self.wy
         gx, gy = camera.apply(x, y, 0.0)
-        pygame.draw.ellipse(surface, (120, 118, 112), (gx - 24, gy - 10, 48, 20))
-        draw_voxel_box(surface, camera, x - 0.38, y - 0.38, 0.0, 0.76, 0.76, 0.18, (196, 192, 184), outline=True, texture="marble")
-        draw_voxel_box(surface, camera, x - 0.30, y - 0.30, 0.18, 0.60, 0.60, 0.62, (222, 218, 208), outline=True, texture="marble")
-        draw_voxel_box(surface, camera, x - 0.22, y - 0.22, 0.80, 0.44, 0.44, 0.56, (238, 234, 226), outline=True)  # corpo
-        draw_voxel_box(surface, camera, x - 0.16, y - 0.16, 1.36, 0.32, 0.32, 0.28, (244, 240, 232), outline=True)  # cabeça
-        draw_voxel_box(surface, camera, x + 0.18, y - 0.06, 1.0, 0.1, 0.12, 0.52, (230, 226, 216), outline=False)  # braço erguido
+        pygame.draw.ellipse(surface, (112, 110, 104), (gx - 24, gy - 10, 48, 20))
+        # 1. Base e pedestal canelado com cornija de mármore e friso dourado
+        draw_voxel_box(surface, camera, x - 0.38, y - 0.38, 0.0, 0.76, 0.76, 0.16, (196, 192, 184), outline=True, texture="marble")
+        draw_voxel_box(surface, camera, x - 0.28, y - 0.28, 0.16, 0.56, 0.56, 0.54, (222, 218, 208), outline=True, texture="marble")
+        draw_voxel_box(surface, camera, x - 0.34, y - 0.34, 0.70, 0.68, 0.68, 0.10, (232, 228, 218), outline=True, texture="marble")
+        draw_voxel_box(surface, camera, x - 0.30, y - 0.30, 0.64, 0.60, 0.60, 0.04, (214, 184, 96), outline=False)
+        # 2. Pernas em postura contrapposto e manto drapeado
+        draw_voxel_box(surface, camera, x - 0.16, y - 0.10, 0.80, 0.14, 0.16, 0.34, (234, 230, 222), outline=True)
+        draw_voxel_box(surface, camera, x + 0.02, y - 0.06, 0.80, 0.14, 0.16, 0.34, (226, 222, 214), outline=True)
+        # 3. Couraça barroca e manto sobre o ombro
+        draw_voxel_box(surface, camera, x - 0.20, y - 0.16, 1.14, 0.40, 0.32, 0.38, (240, 236, 228), outline=True)
+        draw_voxel_box(surface, camera, x - 0.24, y - 0.18, 1.02, 0.16, 0.36, 0.46, (218, 214, 204), outline=False)
+        # 4. Cabeça esculpida e elmo com crista
+        draw_voxel_box(surface, camera, x - 0.12, y - 0.12, 1.52, 0.24, 0.24, 0.24, (246, 242, 234), outline=True)
+        draw_voxel_box(surface, camera, x - 0.05, y - 0.14, 1.76, 0.10, 0.28, 0.12, (214, 184, 96), outline=False)
+        # 5. Braço erguido empunhando rapieira/lança cerimonial dourada
+        draw_voxel_box(surface, camera, x + 0.18, y - 0.06, 1.24, 0.10, 0.12, 0.36, (234, 230, 220), outline=False)
+        draw_voxel_box(surface, camera, x + 0.21, y - 0.03, 1.58, 0.05, 0.05, 0.48, (232, 202, 108), outline=False)
 
 
 class Fountain(Rock):
-    """Fonte barroca no centro do pátio: bacia, pedestal em dois níveis e jatos de água animados."""
+    """Fonte barroca monumental no centro do pátio: bacia em dois níveis, carrancas de bronze e jatos d'água 3D."""
 
     animated = True  # main passa o tempo ao desenhar
 
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, radius=0.95, height=2.0)
+        super().__init__(wx, wy, radius=0.95, height=2.1)
+        self._ripple_timer = 0.0
+
+    def tick(self, arena, dt: float, fighters: list, camera, particles: list, banners: list):
+        self._ripple_timer += dt
+        if self._ripple_timer >= 0.24:
+            self._ripple_timer = 0.0
+            from src.effects.particles import WaterRippleParticle, WaterSplashParticle
+            ang = random.uniform(0.0, math.tau)
+            dist = random.uniform(0.85, 1.45)
+            rx = self.wx + math.cos(ang) * dist
+            ry = self.wy + math.sin(ang) * dist
+            arena.water_ripples.append(WaterRippleParticle(rx, ry, wz=-0.08))
+            if random.random() < 0.65:
+                arena.water_splashes.append(WaterSplashParticle(rx, ry, wz=-0.05))
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         x, y = self.wx, self.wy
-        draw_voxel_box(surface, camera, x - 0.9, y - 0.9, 0.0, 1.8, 1.8, 0.35, (206, 202, 192), outline=True, texture="marble")
-        draw_voxel_box(surface, camera, x - 0.75, y - 0.75, 0.35, 1.5, 1.5, 0.12, (60, 120, 156), outline=False)
-        draw_voxel_box(surface, camera, x - 0.2, y - 0.2, 0.35, 0.4, 0.4, 0.9, (226, 222, 212), outline=True)
-        draw_voxel_box(surface, camera, x - 0.55, y - 0.55, 1.2, 1.1, 1.1, 0.14, (214, 210, 200), outline=True)
-        draw_voxel_box(surface, camera, x - 0.12, y - 0.12, 1.34, 0.24, 0.24, 0.5, (232, 228, 218), outline=True)
-        top = camera.apply(x, y, 1.9)
+        # 1. Bacia inferior de mármore esculpido com borda chanfrada e espelho d'água interno
+        draw_voxel_box(surface, camera, x - 0.92, y - 0.92, 0.0, 1.84, 1.84, 0.34, (206, 202, 192), outline=True, texture="marble")
+        draw_voxel_box(surface, camera, x - 0.76, y - 0.76, 0.34, 1.52, 1.52, 0.10, (64, 128, 166), outline=False)
+        # 2. Quatro carrancas/leões de bronze dourado nos pontos cardeais da coluna
+        for dx, dy in ((0.24, 0.0), (-0.24, 0.0), (0.0, 0.24), (0.0, -0.24)):
+            draw_voxel_box(surface, camera, x + dx - 0.08, y + dy - 0.08, 0.56, 0.16, 0.16, 0.18, (176, 144, 76), outline=False)
+        # 3. Coluna central, bacia superior e pináculo barroco
+        draw_voxel_box(surface, camera, x - 0.22, y - 0.22, 0.34, 0.44, 0.44, 0.86, (226, 222, 212), outline=True, texture="marble")
+        draw_voxel_box(surface, camera, x - 0.56, y - 0.56, 1.20, 1.12, 1.12, 0.15, (214, 210, 200), outline=True, texture="marble")
+        draw_voxel_box(surface, camera, x - 0.44, y - 0.44, 1.35, 0.88, 0.88, 0.05, (74, 146, 186), outline=False)
+        draw_voxel_box(surface, camera, x - 0.14, y - 0.14, 1.35, 0.28, 0.28, 0.52, (236, 232, 222), outline=True)
+        draw_voxel_box(surface, camera, x - 0.08, y - 0.08, 1.87, 0.16, 0.16, 0.16, (212, 180, 94), outline=False)
+        # 4. Coroa de espuma d'água 3D no topo do pináculo
+        crown_h = 0.14 + 0.05 * math.sin(time_val * 7.5)
+        draw_voxel_box(surface, camera, x - 0.10, y - 0.10, 2.03, 0.20, 0.20, crown_h, (220, 244, 255), outline=False)
+        # 5. Arcos parabólicos de água e cubos de espuma 3D na bacia (zero círculos 2D)
         for k in range(6):
             a = k * math.pi / 3.0
             pts = []
             for s in range(0, 9):
                 f = s / 8.0
-                pts.append(camera.apply(x + math.cos(a) * f * 0.9, y + math.sin(a) * f * 0.9, 1.9 + 0.55 * math.sin(f * math.pi) - 1.6 * f * f))
-            pygame.draw.lines(surface, (170, 214, 240), False, pts, 2)
-        for k in range(6):
-            a = k * math.pi / 3.0 + time_val * 1.5
-            fx, fy = camera.apply(x + math.cos(a) * 0.45, y + math.sin(a) * 0.45, 0.4)
-            pygame.draw.circle(surface, (214, 236, 250), (fx, fy), 3)
-        pygame.draw.circle(surface, (210, 236, 250), top, 5)
+                pts.append(camera.apply(
+                    x + math.cos(a) * f * 0.92,
+                    y + math.sin(a) * f * 0.92,
+                    2.02 + 0.52 * math.sin(f * math.pi) - 1.58 * f * f,
+                ))
+            pygame.draw.lines(surface, (176, 220, 246), False, pts, 2)
+            # Gotículas 3D viajando ao longo do jato
+            f_drop = ((time_val * 1.8 + k * 0.17) % 1.0)
+            jx = x + math.cos(a) * f_drop * 0.92
+            jy = y + math.sin(a) * f_drop * 0.92
+            jz = 2.02 + 0.52 * math.sin(f_drop * math.pi) - 1.58 * f_drop * f_drop
+            draw_voxel_box(surface, camera, jx - 0.04, jy - 0.04, jz, 0.08, 0.08, 0.08, (230, 248, 255), outline=False)
+            # Espuma 3D onde o jato toca a bacia
+            sx = x + math.cos(a + time_val * 0.6) * 0.52
+            sy = y + math.sin(a + time_val * 0.6) * 0.52
+            draw_voxel_box(surface, camera, sx - 0.06, sy - 0.06, 0.44, 0.12, 0.12, 0.06, (220, 242, 252), outline=False)
 
 
 class HangingChain:
@@ -2037,36 +2252,72 @@ class DohyoCornerPost(Rock):
         self.paper_shide = (248, 248, 252)  # Papel ritual zig-zag Shide
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
-        # 1. Base cúbica de madeira escura
+        # 1. Base cúbica de madeira escura e anel de bronze
         draw_voxel_box(surface, camera, self.wx - 0.22, self.wy - 0.22, 0.0, 0.44, 0.44, 0.28, self.post_base, outline=True)
-        # 2. Coluna de laca vermelha
+        draw_voxel_box(surface, camera, self.wx - 0.24, self.wy - 0.24, 0.24, 0.48, 0.48, 0.05, (195, 162, 72), outline=False)
+        # 2. Coluna de laca vermelha e capitel do teto suspenso (Tsuriyane)
         draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.12, 0.28, 0.24, 0.24, 1.95, self.post_wood, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.26, self.wy - 0.26, 2.20, 0.52, 0.52, 0.16, self.post_base, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.32, self.wy - 0.32, 2.34, 0.64, 0.64, 0.12, (48, 42, 38), outline=True)
         # 3. Anel de corda Shimenawa trançada próximo ao topo
         draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 1.85, 0.36, 0.36, 0.14, self.rope_col, outline=False)
         # 4. Papéis rituais brancos Shide pendentes
         draw_voxel_box(surface, camera, self.wx - 0.14, self.wy + 0.16, 1.55, 0.28, 0.04, 0.32, self.paper_shide, outline=False)
-        # 5. Borla cerimonial esférica e franjas (Fusa)
-        sway = math.sin(time_val * 2.8 + self.wx) * 0.03
-        draw_voxel_box(surface, camera, self.wx - 0.16 + sway, self.wy - 0.16, 1.65, 0.32, 0.32, 0.25, self.fusa_col, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.12 + sway * 1.5, self.wy - 0.12, 1.15, 0.24, 0.24, 0.52, self.fusa_col, outline=False)
+        # 5. Borla cerimonial esférica e franjas em camadas (Fusa) com anel dourado
+        sway = math.sin(time_val * 2.8 + self.wx) * 0.035
+        draw_voxel_box(surface, camera, self.wx - 0.17 + sway, self.wy - 0.17, 1.65, 0.34, 0.34, 0.24, self.fusa_col, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.14 + sway * 1.2, self.wy - 0.14, 1.59, 0.28, 0.28, 0.06, (224, 190, 86), outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.13 + sway * 1.5, self.wy - 0.13, 1.12, 0.26, 0.26, 0.48, self.fusa_col, outline=False)
 
 
 class SacredSaltMound(Rock):
-    """Monte sagrado de sal purificador (Kiyome-no-shio) sobre bandeja cerimonial Sanbō."""
+    """Monte sagrado de sal purificador (Kiyome-no-shio) sobre bandeja cerimonial Sanbō; espalhável por golpes."""
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, radius=0.32, height=0.45)
         self.wood_tray = (218, 192, 148)
         self.wood_dark = (142, 108, 72)
         self.salt_white = (252, 252, 255)
         self.salt_shadow = (212, 222, 235)
+        self.is_broken = False
+        self.splinters = []
+
+    def check_collision(self, px: float, py: float, p_radius: float = 0.3) -> tuple[bool, float, float]:
+        if self.is_broken:
+            return False, 0.0, 0.0
+        return super().check_collision(px, py, p_radius)
+
+    def break_panel(self, slash_dir: tuple[float, float] = (1.0, 0.0), particles: list = None):
+        """Derruba a bandeja Sanbō e espalha um tapete cintilante de sal sagrado purificador no barro."""
+        if self.is_broken:
+            return
+        self.is_broken = True
+        self.radius = 0.0
+        self.height = 0.06
+        dx, dy = slash_dir
+        for _ in range(12):
+            ox = random.uniform(-0.45, 0.45) + dx * 0.18
+            oy = random.uniform(-0.45, 0.45) + dy * 0.18
+            col = random.choice([self.salt_white, self.salt_shadow, self.wood_tray])
+            self.splinters.append((ox, oy, col))
+        if particles is not None:
+            from src.effects.particles import SparkParticle
+            for _ in range(14):
+                particles.append(SparkParticle(self.wx, self.wy, 0.25, color=(250, 252, 255)))
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
-        # 1. Bandeja cúbica de Hinoki (Sanbō)
+        if self.is_broken:
+            # Bandeja Sanbō tombada e cristais de sal espalhados pelo chão
+            draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.14, 0.01, 0.36, 0.28, 0.05, self.wood_tray, outline=False)
+            for ox, oy, col in self.splinters:
+                draw_voxel_box(surface, camera, self.wx + ox - 0.06, self.wy + oy - 0.06, 0.01, 0.12, 0.12, 0.03, col, outline=False)
+            return
+        # 1. Bandeja cúbica de Hinoki (Sanbō) com aberturas rituais laterais
         draw_voxel_box(surface, camera, self.wx - 0.24, self.wy - 0.24, 0.0, 0.48, 0.48, 0.10, self.wood_tray, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.16, self.wy - 0.16, 0.08, 0.32, 0.32, 0.05, self.wood_dark, outline=False)
-        # 2. Pirâmide de sal sagrado purificador
-        draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 0.13, 0.36, 0.36, 0.15, self.salt_shadow, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.10, self.wy - 0.10, 0.28, 0.20, 0.20, 0.16, self.salt_white, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.16, self.wy - 0.16, 0.08, 0.32, 0.32, 0.06, self.wood_dark, outline=False)
+        # 2. Pirâmide de sal sagrado purificador em 3 níveis
+        draw_voxel_box(surface, camera, self.wx - 0.19, self.wy - 0.19, 0.13, 0.38, 0.38, 0.12, self.salt_shadow, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.13, self.wy - 0.13, 0.25, 0.26, 0.26, 0.11, self.salt_white, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.07, self.wy - 0.07, 0.36, 0.14, 0.14, 0.09, (255, 255, 255), outline=False)
 
 
 class DohyoBrazier(Rock, FireHazardMixin):
@@ -2356,6 +2607,22 @@ class WharfPiling(Rock):
         draw_voxel_box(surface, camera, self.wx - 0.14, self.wy - 0.14, 0.65, 0.28, 0.28, 0.06, self.wood_top, outline=False)
 
 
+class _LocalClusterCamera:
+    """Câmera virtual leve para assar touceiras Higanbana em sprites pré-renderizados."""
+    def __init__(self, ref_wx: float, ref_wy: float, ax: int, ay: int, zoom: float):
+        self.wx = ref_wx
+        self.wy = ref_wy
+        self.ax = ax
+        self.ay = ay
+        self.zoom = zoom
+        self.azimuth = 0.0
+
+    def apply(self, wx: float, wy: float, wz: float = 0.0) -> tuple[int, int]:
+        from src.isometric.iso_math import world_to_iso
+        ix, iy = world_to_iso(wx - self.wx, wy - self.wy, wz, 0.0)
+        return int(ix * self.zoom + self.ax), int(iy * self.zoom + self.ay)
+
+
 class HiganbanaCluster:
     """
     Touceira de Lírios da Aranha Vermelha (Higanbana / Lycoris radiata) em arte voxel 3D.
@@ -2363,6 +2630,7 @@ class HiganbanaCluster:
     Oscilam ao vento e liberam partículas de pólen escarlate ao serem perturbados por combatentes.
     """
     animated = True
+    _sprite_cache: dict[tuple, tuple[pygame.Surface, int, int]] = {}
 
     def __init__(self, wx: float, wy: float, flower_count: int = 4, scale: float = 1.0):
         self.wx, self.wy = wx, wy
@@ -2377,9 +2645,10 @@ class HiganbanaCluster:
 
         self.bend_x = 0.0
         self.bend_y = 0.0
+        self._seed_key = int((wx * 37 + wy * 91) * 100) % 8
 
         # Offsets fixos para cada flor da touceira
-        rng = random.Random(int((wx * 37 + wy * 91) * 100))
+        rng = random.Random(self._seed_key)
         self.offsets = [
             (rng.uniform(-0.22, 0.22), rng.uniform(-0.22, 0.22), rng.uniform(0.30, 0.44))
             for _ in range(flower_count)
@@ -2408,16 +2677,14 @@ class HiganbanaCluster:
                         wz=0.35, color=(245, 35, 55), lifetime=1.2
                     ))
 
-    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+    def _draw_geometry(self, surface: pygame.Surface, camera, bx: float, by: float):
         from src.isometric.voxel_renderer import draw_voxel_box, draw_oriented_voxel_box
 
-        wind_sway = math.sin(time_val * 2.2 + self.wind_offset) * 0.035
-        bx = wind_sway + self.bend_x
-        by = wind_sway + self.bend_y
-
-        # Sombra suave na terra sob o tufo
         sx, sy = camera.apply(self.wx, self.wy, 0.0)
-        pygame.draw.ellipse(surface, (18, 10, 22), (sx - 16, sy - 8, 32, 16))
+        zoom = getattr(camera, "zoom", 1.0)
+        sw = max(12, int(32 * zoom))
+        sh = max(6, int(16 * zoom))
+        pygame.draw.ellipse(surface, (18, 10, 22), (sx - sw // 2, sy - sh // 2, sw, sh))
 
         for ox, oy, h in self.offsets:
             fx = self.wx + ox
@@ -2432,7 +2699,7 @@ class HiganbanaCluster:
             crown_z = h
 
             for i in range(6):
-                ang = i * (math.pi / 3.0) + self.wind_offset
+                ang = i * (math.pi / 3.0) + self._seed_key * 0.4
                 px = math.cos(ang)
                 py = math.sin(ang)
 
@@ -2454,6 +2721,36 @@ class HiganbanaCluster:
                     0.16, 0.015, 0.015,
                     self.c_stamen, outline=False
                 )
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # Quando um lutador pisa na touceira ou a câmera gira, desenha ao vivo; caso contrário, usa template cacheado
+        if abs(self.bend_x) > 0.01 or abs(self.bend_y) > 0.01 or abs(getattr(camera, "azimuth", 0.0)) > 1e-4:
+            wind_sway = math.sin(time_val * 2.2 + self.wind_offset) * 0.035
+            self._draw_geometry(surface, camera, wind_sway + self.bend_x, wind_sway + self.bend_y)
+            return
+
+        zoom_b = round(getattr(camera, "zoom", 1.0) * 10.0) / 10.0
+        sway_step = int(round(math.sin(time_val * 2.2 + self.wind_offset) * 2.0))
+        key = (self.flower_count, self._seed_key, zoom_b, sway_step)
+        tpl = HiganbanaCluster._sprite_cache.get(key)
+        if tpl is None:
+            if len(HiganbanaCluster._sprite_cache) > 320:
+                HiganbanaCluster._sprite_cache.clear()
+            w = max(48, int(92 * zoom_b))
+            h = max(48, int(80 * zoom_b))
+            ax = w // 2
+            ay = h - int(22 * zoom_b)
+            surf = pygame.Surface((w, h), pygame.SRCALPHA)
+            surf.fill((0, 0, 0, 0))
+            local_cam = _LocalClusterCamera(self.wx, self.wy, ax, ay, zoom_b)
+            sway_val = (sway_step / 2.0) * 0.035
+            self._draw_geometry(surf, local_cam, sway_val, sway_val)
+            tpl = (surf, ax, ay)
+            HiganbanaCluster._sprite_cache[key] = tpl
+
+        surf, ax, ay = tpl
+        sx, sy = camera.apply(self.wx, self.wy, 0.0)
+        surface.blit(surf, (sx - ax, sy - ay))
 
 
 class AstralBrazier(Rock):
@@ -2512,6 +2809,71 @@ class AstralBrazier(Rock):
         draw_voxel_box(surface, camera, x - 0.11 - flicker1, y - 0.11 - flicker2, 0.97, 0.22, 0.22, 0.44, self.c_flame_core, outline=False)
         # Ponta de chama luminosa
         draw_voxel_box(surface, camera, x - 0.05 + flicker2, y - 0.05 + flicker1, 1.41, 0.10, 0.10, 0.20, (255, 255, 255), outline=False)
+
+
+class KabukiFootlight:
+    """Ribalta tradicional de palco Kabuki (Tsura-akari): caixa de laca preta com refletor dourado e vela bruxuleante."""
+
+    animated = True
+
+    def __init__(self, wx: float, wy: float):
+        self.wx = wx
+        self.wy = wy
+        self.lacquer = (28, 22, 24)
+        self.gold_ref = (224, 184, 78)
+        self.wax_col = (242, 236, 218)
+        self.flame_core = (255, 224, 96)
+        self.flame_tip = (255, 118, 36)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        x, y = self.wx, self.wy
+        # Base e anteparo traseiro de laca preta com folha de ouro refletora
+        draw_voxel_box(surface, camera, x - 0.18, y - 0.14, 0.0, 0.36, 0.28, 0.07, self.lacquer, outline=True)
+        draw_voxel_box(surface, camera, x - 0.16, y - 0.14, 0.07, 0.32, 0.07, 0.24, self.lacquer, outline=True)
+        draw_voxel_box(surface, camera, x - 0.14, y - 0.07, 0.09, 0.28, 0.02, 0.18, self.gold_ref, outline=False)
+        # Vela tradicional japonesa (Wa-rōsoku) e chama animada
+        draw_voxel_box(surface, camera, x - 0.04, y - 0.02, 0.07, 0.08, 0.08, 0.12, self.wax_col, outline=False)
+        flicker = math.sin(time_val * 14.0 + x * 2.3 + y * 1.7) * 0.025
+        fh = 0.11 + 0.03 * math.cos(time_val * 18.0 + x)
+        draw_voxel_box(surface, camera, x - 0.05 + flicker, y - 0.03, 0.19, 0.10, 0.10, fh, self.flame_core, outline=False)
+        draw_voxel_box(surface, camera, x - 0.03 - flicker, y - 0.01, 0.19 + fh * 0.65, 0.06, 0.06, 0.07, self.flame_tip, outline=False)
+
+
+class DutchCargoCrane(Rock):
+    """Guindaste portuário holandês (VOC) de madeira de carvalho e ferro com roldana e carga suspensa oscilando."""
+
+    animated = True
+
+    def __init__(self, wx: float, wy: float):
+        super().__init__(wx, wy, radius=0.48, height=3.1)
+        self.oak_dark = (64, 42, 28)
+        self.oak_mid = (92, 62, 40)
+        self.iron_col = (40, 44, 52)
+        self.rope_col = (182, 154, 102)
+        self.crate_col = (156, 112, 66)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        x, y = self.wx, self.wy
+        # 1. Sapata octogonal de ferro e mastro vertical de carvalho
+        draw_voxel_box(surface, camera, x - 0.36, y - 0.36, 0.0, 0.72, 0.72, 0.24, self.iron_col, outline=True)
+        draw_voxel_box(surface, camera, x - 0.20, y - 0.20, 0.24, 0.40, 0.40, 2.45, self.oak_dark, outline=True)
+        draw_voxel_box(surface, camera, x - 0.24, y - 0.24, 1.35, 0.48, 0.48, 0.14, self.iron_col, outline=False)
+        # 2. Lança horizontal/inclinada projetada sobre o canal (direção +x)
+        draw_voxel_box(surface, camera, x - 0.16, y - 0.16, 2.52, 1.55, 0.32, 0.24, self.oak_mid, outline=True)
+        draw_voxel_box(surface, camera, x + 0.15, y - 0.10, 1.95, 0.65, 0.20, 0.58, self.oak_dark, outline=False)
+        # 3. Roldana de ferro na ponta da lança e cabo de cânhamo oscilando ao vento marítimo
+        draw_voxel_box(surface, camera, x + 1.18, y - 0.18, 2.46, 0.24, 0.36, 0.32, self.iron_col, outline=True)
+        sway = math.sin(time_val * 2.2 + y) * 0.10
+        p_top = camera.apply(x + 1.30, y, 2.46)
+        p_hook = camera.apply(x + 1.30 + sway, y + sway * 0.5, 1.18)
+        pygame.draw.line(surface, self.rope_col, p_top, p_hook, 2)
+        # 4. Fardo mercantil VOC suspenso na rede de cordas
+        cx = x + 1.30 + sway
+        cy = y + sway * 0.5
+        draw_voxel_box(surface, camera, cx - 0.26, cy - 0.26, 0.72, 0.52, 0.52, 0.46, self.crate_col, outline=True)
+        draw_voxel_box(surface, camera, cx - 0.28, cy - 0.06, 0.72, 0.56, 0.12, 0.48, self.rope_col, outline=False)
+        draw_voxel_box(surface, camera, cx - 0.06, cy - 0.28, 0.72, 0.12, 0.56, 0.48, self.rope_col, outline=False)
+
 
 
 

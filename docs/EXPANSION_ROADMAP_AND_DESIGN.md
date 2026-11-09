@@ -906,10 +906,10 @@ Foco: Elevar os 24 cenários do jogo ao ápice visual da estética voxel HD-2D, 
 - **Recursos:** Carpas Nishikigoi 3D multifacetadas com fuga reativa e nado submerso, ondas concêntricas (`WaterRippleParticle`) e respingos nos passos, caustics harmônicos com reflexos especulares isométricos na água, touceiras 3D de lírios da aranha vermelha (`HiganbanaCluster`) com dispersão de pólen, estátuas Jizo com babadores têxteis escarlates e oferendas, sino Bonshō com martelo Shumoku, braseiros astrais Kitsunebi com fogo-fátuo azul/violeta e fonte Tsukubai com gotejamento animado.
 - **Validação:** `tests/test_fase3_zen_arenas.py`, `tests/test_game.py` e auditoria de 60 FPS com cache ativo.
 
-#### 📦 Entregável A-3.2: Cenários Urbanos & Históricos (6 Arenas)
+#### 📦 Entregável A-3.2: Cenários Urbanos & Históricos (6 Arenas) **[CONCLUÍDO ✅]**
 - **Arenas:** `kyoto` (Murasaki), `yoshiwara_alley` (O-Rin), `kabuki_stage` (Okuni), `baroque_court` (Julie), `dejima_warehouse` (Hendrika), `sacred_dohyo` (Raiden).
-- **Recursos:** Telhados machiya de dois andares com chamas e fagulhas, cortinas noren e shoji rasgáveis, piso de mármore xadrez com reflexos, caixotes mercantis destrutíveis e barro batido sagrado com fardos de palha.
-- **Validação:** Testes de física de colisão com props destrutíveis.
+- **Recursos:** Telhados machiya de dois andares com ornamentos *Onigawara*, cortinas *Noren* oscilantes na entrada, chamas e fagulhas ascendentes (Kyoto) ou guarda-corpo *Kōran* laqueado, lanternas *Chōchin* e silhueta de cortesã tocando shamisen no 2º andar (Yoshiwara); cortinas *Jōshiki-maku* reativas que rasgam ao receber golpes (`StripedCurtain`), biombos *Byōbu* em folha de ouro Kanō-ha (`ScreenPanel`) e ribaltas *Tsura-akari* (`KabukiFootlight`); piso de mármore xadrez com reflexo especular chanfrado e veios de Carrara, estátuas barrocas 3D com rapieira dourada (`MarbleStatue`) e fonte monumental 3D com carrancas de bronze emitindo ondas e respingos (`Fountain`); caixotes mercantis destrutíveis (`SupplyCrate`) e guindastes portuários holandeses da VOC com fardo suspenso oscilante (`DutchCargoCrane`); e dohyo sagrado com fardos 3D *Shōbu-tawara* / *Toku-dawara*, linhas *Shikiri-sen*, pilares *Shihobashira* com capitel *Tsuriyane* e bandejas *Sanbō* de sal purificador destrutíveis (`SacredSaltMound`).
+- **Validação:** `tests/test_fase3_urban_arenas.py`, `tests/test_cycle6_arenas.py` e `tests/test_game.py`.
 
 #### 📦 Entregável A-3.3: Campos de Batalha & Vilarejos Rurais (6 Arenas)
 - **Arenas:** `nagashino_field` (Teppo), `forest_camp` (Musashi), `pine_forest` (Daiki), `ezo_taiga` (Aoi), `rice_paddies` (Goro), `rain_mill` (Ichi).

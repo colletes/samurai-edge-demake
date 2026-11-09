@@ -511,6 +511,15 @@ class RotatingStage(TelegraphedHazard):
         self.angle += w * dt
         da = w * dt
         cos_a, sin_a = math.cos(da), math.sin(da)
+        if particles is not None and random.random() < 0.35:
+            from src.effects.particles import SparkParticle
+            ang = random.uniform(0.0, math.tau)
+            particles.append(SparkParticle(
+                self.cx + math.cos(ang) * self.radius,
+                self.cy + math.sin(ang) * self.radius,
+                wz=0.05,
+                color=random.choice([(255, 210, 95), (235, 95, 115)]),
+            ))
         for f in fighters:
             if f is None or not getattr(f, "is_alive", False) or getattr(f, "wz", 0.0) > 0.3:
                 continue
@@ -519,18 +528,30 @@ class RotatingStage(TelegraphedHazard):
                 f.apply_forced_displacement(rx * cos_a - ry * sin_a - rx, rx * sin_a + ry * cos_a - ry, arena)
 
     def render_ground(self, arena, surface, camera, time_val: float):
-        """Disco com raios que giram e, no aviso, anel e setas piscando no sentido do giro."""
+        """Disco Mawari-butai com juntas de tábuas giratórias, aro de bronze/laca e setas de sentido no aviso."""
+        from src.isometric.voxel_renderer import draw_voxel_box
         cx, cy, r = self.cx, self.cy, self.radius
         base = self.angle
         active = self.phase in (PHASE_WARN, PHASE_ACTIVE)
         on = int(time_val * 8.0) % 2 == 0
         color = (255, 196, 90) if (active and on) else (170, 120, 60)
+        # Juntas paralelas de tábuas que giram com o disco
+        tx, ty = math.cos(base), math.sin(base)
+        nx, ny = -ty, tx
+        for s_off in (-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0):
+            chord = math.sqrt(max(0.0, r * r - s_off * s_off))
+            if chord > 0.4:
+                p0 = camera.apply(cx + nx * s_off - tx * chord, cy + ny * s_off - ty * chord, 0.02)
+                p1 = camera.apply(cx + nx * s_off + tx * chord, cy + ny * s_off + ty * chord, 0.02)
+                pygame.draw.line(surface, (112, 24, 32), p0, p1, 1)
         for k in range(8):
             a = base + k * math.pi / 4.0
-            pygame.draw.line(surface, color, camera.apply(cx + math.cos(a) * 0.4, cy + math.sin(a) * 0.4, 0.03),
+            pygame.draw.line(surface, color, camera.apply(cx + math.cos(a) * 0.4, cy + math.sin(a) * r * 0.09, 0.03),
                              camera.apply(cx + math.cos(a) * r, cy + math.sin(a) * r, 0.03), 3 if active else 2)
         ring = [camera.apply(cx + math.cos(a) * r, cy + math.sin(a) * r, 0.03) for a in (2.0 * math.pi * i / 36 for i in range(36))]
         pygame.draw.polygon(surface, color, ring, 4 if active else 2)
+        # Eixo central de bronze dourado cravado no palco
+        draw_voxel_box(surface, camera, cx - 0.22, cy - 0.22, 0.0, 0.44, 0.44, 0.05, (196, 158, 72), outline=True)
         if self.phase == PHASE_WARN:
             for k in range(4):  # setas tangenciais no sentido do giro
                 a = k * math.pi / 2.0 + time_val * 0.6 * self.direction
@@ -1885,11 +1906,35 @@ class DohyoHazard:
                 m["x"] = 10.5 + math.cos(ang) * r
                 m["y"] = 10.5 + math.sin(ang) * r
 
+        # Dispersão de sal purificador e poeira de barro quando lutadores pisam no anel Shōbu-tawara ou atacam
+        if particles is not None:
+            from src.effects.particles import SparkParticle
+            for f in fighters:
+                if f is None or not getattr(f, "is_alive", True):
+                    continue
+                dist = math.hypot(f.wx - 10.5, f.wy - 10.5)
+                speed = math.hypot(getattr(f, "vx", 0.0), getattr(f, "vy", 0.0))
+                state = getattr(f, "state", "")
+                if (4.45 <= dist <= 5.25 and speed > 0.4) or (dist <= 5.25 and state in ("ATTACK", "SPECIAL", "ROLL")):
+                    cd = getattr(f, "_dohyo_salt_cd", 0.0) - dt
+                    if cd <= 0.0:
+                        setattr(f, "_dohyo_salt_cd", 0.18)
+                        for _ in range(3):
+                            particles.append(SparkParticle(
+                                f.wx + random.uniform(-0.2, 0.2),
+                                f.wy + random.uniform(-0.2, 0.2),
+                                wz=0.06,
+                                color=random.choice([(250, 250, 255), (224, 198, 152)]),
+                            ))
+                    else:
+                        setattr(f, "_dohyo_salt_cd", cd)
+
     def get_render_items(self, camera):
         return []
 
     def render_ground(self, arena, surface: pygame.Surface, camera, time_val: float):
-        # Desenha a linha de fardos de palha (Shōbu-tawara) do ringue central (raio 4.8)
+        from src.isometric.voxel_renderer import draw_voxel_box
+        # Desenha a linha de fardos de palha (Shōbu-tawara) do ringue central (raio 4.85)
         cx, cy = 10.5, 10.5
         ring_pts = [
             camera.apply(cx + math.cos(i / 32 * math.tau) * 4.85,
@@ -1897,21 +1942,33 @@ class DohyoHazard:
             for i in range(32)
         ]
         if len(ring_pts) >= 3:
-            # Anel de palha entrelaçada
             pygame.draw.polygon(surface, (186, 154, 102), ring_pts, 3)
-            # Linha interna de cal sagrada
             ring_inner = [
-                camera.apply(cx + math.cos(i / 32 * math.tau) * 4.75,
-                             cy + math.sin(i / 32 * math.tau) * 4.75, 0.02)
+                camera.apply(cx + math.cos(i / 32 * math.tau) * 4.72,
+                             cy + math.sin(i / 32 * math.tau) * 4.72, 0.02)
                 for i in range(32)
             ]
-            pygame.draw.polygon(surface, (235, 235, 245), ring_inner, 1)
+            pygame.draw.polygon(surface, (238, 238, 248), ring_inner, 1)
+
+        # Fardos 3D Shōbu-tawara e os 4 fardos cardeais recuados (Toku-dawara)
+        for i in range(24):
+            ang = i / 24.0 * math.tau
+            is_toku = (i % 6 == 0)
+            r_bale = 5.05 if is_toku else 4.85
+            bx = cx + math.cos(ang) * r_bale
+            by = cy + math.sin(ang) * r_bale
+            col = (204, 172, 116) if i % 2 == 0 else (182, 150, 96)
+            draw_voxel_box(surface, camera, bx - 0.14, by - 0.14, 0.0, 0.28, 0.28, 0.09, col, outline=False)
+
+        # Duas linhas brancas centrais de início de luta (Shikiri-sen) esmaltadas no barro
+        draw_voxel_box(surface, camera, cx - 0.78, cy - 0.60, 0.0, 0.12, 1.20, 0.02, (245, 245, 250), outline=False)
+        draw_voxel_box(surface, camera, cx + 0.66, cy - 0.60, 0.0, 0.12, 1.20, 0.02, (245, 245, 250), outline=False)
 
     def render_overhead(self, arena, surface: pygame.Surface, camera, time_val: float):
-        # Motes sutis de sal purificador cintilando sobre o dohyo
+        from src.isometric.voxel_renderer import draw_voxel_box
+        # Cristais 3D de sal purificador cintilando sobre o dohyo (zero círculos 2D)
         for m in self.salt_motes:
-            pt = camera.apply(m["x"], m["y"], m["z"])
-            pygame.draw.circle(surface, (250, 248, 240), pt, 1)
+            draw_voxel_box(surface, camera, m["x"] - 0.03, m["y"] - 0.03, m["z"], 0.06, 0.06, 0.06, (250, 248, 242), outline=False)
 
 
 class DejimaHazard:
@@ -1957,14 +2014,19 @@ class DejimaHazard:
         return []
 
     def render_ground(self, arena, surface: pygame.Surface, camera, time_val: float):
-        # Salpicos de chuva no piso molhado da doca (x > 7.5)
+        # Anéis isométricos de impacto de chuva no piso molhado da doca (x > 7.5)
         splash_time = time_val * 6.0
         for i in range(10):
             sx = 8.5 + (i * 1.15) % 9.5
-            sy = 2.5 + (i * 1.9) % 15.0
-            rad = 2 + int(math.sin(splash_time + i) * 1.5 + 1.5)
-            s_pt = camera.apply(sx, sy, 0.02)
-            pygame.draw.circle(surface, (150, 185, 215), s_pt, rad, 1)
+            sy = 3.8 + (i * 1.6) % 14.5
+            r_w = 0.08 + 0.14 * (0.5 + 0.5 * math.sin(splash_time + i * 1.3))
+            pts = [
+                camera.apply(sx + r_w, sy, 0.22),
+                camera.apply(sx, sy + r_w, 0.22),
+                camera.apply(sx - r_w, sy, 0.22),
+                camera.apply(sx, sy - r_w, 0.22),
+            ]
+            pygame.draw.polygon(surface, (156, 192, 224), pts, 1)
 
     def render_overhead(self, arena, surface: pygame.Surface, camera, time_val: float):
         # Riscos de chuva na doca externa
@@ -1972,8 +2034,6 @@ class DejimaHazard:
         for drop in self.rain_drops:
             if drop["x"] >= 7.2:  # Só renderiza chuva do lado de fora do armazém
                 p0 = camera.apply(drop["x"], drop["y"], drop["z"])
-                p1 = camera.apply(drop["x"] + 0.12, drop["y"] + 0.18, drop["z"] - 0.28)
-                pygame.draw.line(surface, rain_col, p0, p1, 1)
                 p1 = camera.apply(drop["x"] + 0.12, drop["y"] + 0.18, drop["z"] - 0.28)
                 pygame.draw.line(surface, rain_col, p0, p1, 1)
 

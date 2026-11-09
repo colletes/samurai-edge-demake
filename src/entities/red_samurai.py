@@ -41,9 +41,14 @@ class RedSamurai(Samurai):
         self.ryuu_ascend_duration = 0.08
         self.ryuu_apex_duration = 0.06
         self.ryuu_descend_duration = 0.14
+        self.ryuu_landing_duration = 0.055
         self.ryuu_phase_timer = 0.0
         self.ryuu_start_wz = 0.35
         self.ryuu_apex_wz = 2.60
+        self.ryuu_shockwave_pending = False
+        self.ryuu_shockwave_visual_timer = 0.0
+        self.ryuu_shockwave_pos = (wx, wy)
+        self.ryuu_shockwave_radius = 2.65
 
         # Efeito visual de rastro de lâmina
         self.slash_trail_points: list[tuple[float, float]] = []
@@ -184,10 +189,11 @@ class RedSamurai(Samurai):
         self.state = "RYUU_TSUI_SEN"
         self.ryuu_phase = "ASCEND"
         self.ryuu_phase_timer = self.ryuu_ascend_duration
-        self.state_timer = self.ryuu_ascend_duration + self.ryuu_apex_duration + self.ryuu_descend_duration
+        self.state_timer = self.ryuu_ascend_duration + self.ryuu_apex_duration + self.ryuu_descend_duration + self.ryuu_landing_duration
         self.wz = self.ryuu_start_wz  # Impulso inicial imediato do salto Shukuchi (wz > 0 no frame 0)
         self.is_invulnerable_dodge = True
         self.hitbox_active = False
+        self.ryuu_shockwave_pending = False
         self.slash_trail_points.clear()
         self.zanzou_spawn_timer = 0.0
 
@@ -495,7 +501,7 @@ class RedSamurai(Samurai):
                 self.dash_recovery_timer = self.roll_recovery_duration
 
         elif self.state == "RYUU_TSUI_SEN":
-            # Entregável 2.1.2: Salto Parabólico em 3 fases (ASCEND -> APEX -> DESCEND) com sombras Shukuchi
+            # Entregável 2.1.2: Salto Parabólico em 3 fases (ASCEND -> APEX -> DESCEND -> LANDING) com sombras Shukuchi
             self.state_timer -= dt
             self.ryuu_phase_timer -= dt
 
@@ -507,13 +513,16 @@ class RedSamurai(Samurai):
                 self.is_invulnerable_dodge = True
                 self.hitbox_active = False
 
-                # Leve avanço parabólico em direção ao alvo durante o salto
+                # Avanço parabólico em direção ao alvo durante o salto
+                adv = 8.5 * dt
                 if game_map is not None:
-                    adv = 4.5 * dt
                     nx, ny = slide_movement_against_obstacles(self.wx, self.wy, self.facing_x * adv, self.facing_y * adv, self.radius, game_map)
                     min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
                     self.wx = max(min_x, min(max_x, nx))
                     self.wy = max(min_y, min(max_y, ny))
+                else:
+                    self.wx += self.facing_x * adv
+                    self.wy += self.facing_y * adv
 
                 # Gerar sombras Zanzou estilo Shukuchi na subida aérea!
                 self.zanzou_spawn_timer += dt
@@ -539,35 +548,66 @@ class RedSamurai(Samurai):
                     self.ryuu_phase = "DESCEND"
                     self.ryuu_phase_timer = self.ryuu_descend_duration
 
-            else:
-                # DESCEND: Queda meteórica vertical com corte de cima para baixo
+            elif self.ryuu_phase == "DESCEND":
+                # DESCEND: Queda meteórica diagonal/vertical com corte de cima para baixo
                 prog = max(0.0, min(1.0, 1.0 - (self.ryuu_phase_timer / max(0.001, self.ryuu_descend_duration))))
                 ease_in = prog * prog
                 self.wz = max(0.0, self.ryuu_apex_wz * (1.0 - ease_in))
 
-                if self.wz > 1.8:
+                adv = 4.5 * dt
+                if game_map is not None:
+                    nx, ny = slide_movement_against_obstacles(self.wx, self.wy, self.facing_x * adv, self.facing_y * adv, self.radius, game_map)
+                    min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
+                    self.wx = max(min_x, min(max_x, nx))
+                    self.wy = max(min_y, min(max_y, ny))
+                else:
+                    self.wx += self.facing_x * adv
+                    self.wy += self.facing_y * adv
+
+                if self.wz > 2.1:
                     self.is_invulnerable_dodge = True
                     self.hitbox_active = False
                 else:
                     self.is_invulnerable_dodge = (self.wz > 1.2)
                     self.hitbox_active = True
-                    self.hitbox_radius = 1.45
+                    self.hitbox_radius = 1.75
                     self.slash_dir = (self.facing_x, self.facing_y)
-                    self.hitbox_center = (self.wx + self.facing_x * 0.80, self.wy + self.facing_y * 0.80)
+                    self.hitbox_center = (self.wx + self.facing_x * 0.85, self.wy + self.facing_y * 0.85)
                     self.slash_trail_points.append((self.wx, self.wy))
 
-                if self.wz <= 0.0 or self.ryuu_phase_timer <= 0.0 or self.state_timer <= 0.0:
+                if self.wz <= 0.0 or self.ryuu_phase_timer <= 0.0:
                     self.wz = 0.0
-                    self.state = STATE_RECOVERY
-                    self.state_timer = 0.28
-                    self.hitbox_active = False
+                    self.ryuu_phase = "LANDING"
+                    self.ryuu_phase_timer = self.ryuu_landing_duration
                     self.is_invulnerable_dodge = False
+                    self.hitbox_active = True
+                    self.hitbox_radius = 1.75
+                    self.slash_dir = (self.facing_x, self.facing_y)
+                    self.hitbox_center = (self.wx + self.facing_x * 0.85, self.wy + self.facing_y * 0.85)
+                    # Dispara a Shockwave sísmica de impacto no solo!
+                    self.ryuu_shockwave_pending = True
+                    self.ryuu_shockwave_visual_timer = 0.34
+                    self.ryuu_shockwave_pos = (self.wx + self.facing_x * 0.70, self.wy + self.facing_y * 0.70)
                     if particles is not None:
                         from src.effects.particles import SparkParticle, SmokeParticle
-                        for _ in range(16):
-                            particles.append(SparkParticle(self.wx + self.facing_x * 0.6, self.wy + self.facing_y * 0.6, 0.2))
-                        for _ in range(8):
-                            particles.append(SmokeParticle(self.wx, self.wy, 0.1, color=(240, 240, 250), size=6))
+                        for _ in range(18):
+                            particles.append(SparkParticle(self.wx + self.facing_x * 0.7, self.wy + self.facing_y * 0.7, 0.25, color=(255, 215, 95)))
+                        for _ in range(10):
+                            particles.append(SmokeParticle(self.wx + self.facing_x * 0.5, self.wy + self.facing_y * 0.5, 0.12, color=(240, 235, 225), size=7))
+
+            else:
+                # LANDING: Janela ativa de cratera/corte no solo (garante registro em process_combat)
+                self.wz = 0.0
+                self.is_invulnerable_dodge = False
+                self.hitbox_active = True
+                self.hitbox_radius = 1.75
+                self.slash_dir = (self.facing_x, self.facing_y)
+                self.hitbox_center = (self.wx + self.facing_x * 0.85, self.wy + self.facing_y * 0.85)
+                if self.ryuu_phase_timer <= 0.0 or self.state_timer <= 0.0:
+                    self.state = STATE_RECOVERY
+                    self.state_timer = 0.24
+                    self.hitbox_active = False
+                    self.is_invulnerable_dodge = False
 
         elif self.state == "TSUKA_ATE":
             self.state_timer -= dt
@@ -647,8 +687,30 @@ class RedSamurai(Samurai):
                 self.state = STATE_IDLE
                 self.wz = 0.0
 
+        if getattr(self, "ryuu_shockwave_visual_timer", 0.0) > 0.0:
+            self.ryuu_shockwave_visual_timer = max(0.0, self.ryuu_shockwave_visual_timer - dt)
+
     def render(self, surface: pygame.Surface, camera):
         """Renderiza o Samurai Vermelho e suas pós-imagens Shukuchi no estilo Voxel 3D com SSAA 2x e Pose LERP."""
+        # Onda de choque sísmica (Shockwave) do Ryuu Tsui Sen ao atingir o solo
+        sw_t = getattr(self, "ryuu_shockwave_visual_timer", 0.0)
+        if sw_t > 0.0:
+            prog = 1.0 - (sw_t / 0.34)
+            sw_x, sw_y = getattr(self, "ryuu_shockwave_pos", (self.wx, self.wy))
+            rad = 0.45 + prog * getattr(self, "ryuu_shockwave_radius", 2.65)
+            ring_pts = []
+            for i in range(20):
+                ang = i * (math.tau / 20.0)
+                ring_pts.append(camera.apply(sw_x + math.cos(ang) * rad, sw_y + math.sin(ang) * rad, 0.03))
+            if len(ring_pts) >= 3:
+                pygame.draw.polygon(surface, (255, 195, 70), ring_pts, max(1, int(4 * (1.0 - prog * 0.6))))
+                inner_pts = [
+                    camera.apply(sw_x + math.cos(i * (math.tau / 16.0)) * (rad * 0.68),
+                                 sw_y + math.sin(i * (math.tau / 16.0)) * (rad * 0.68), 0.04)
+                    for i in range(16)
+                ]
+                pygame.draw.polygon(surface, (255, 90, 65), inner_pts, max(1, int(2 * (1.0 - prog * 0.5))))
+
         # Renderizar rastro brilhante do corte do Iai no chão apenas durante o golpe e se estiver viva
         if self.is_alive and self.state in (STATE_ATTACK, "RYUU_TSUI_SEN") and len(self.slash_trail_points) >= 2:
             pts = [camera.apply(px, py, 0.05) for px, py in self.slash_trail_points]

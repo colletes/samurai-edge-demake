@@ -63,26 +63,29 @@ def fog_base(variant: int, color) -> pygame.Surface:
     return surf
 
 
-LEVELS = 8
+LEVELS = 5
 
 
 def fog_sprite(variant: int, color, w: int, h: int, level: float = 1.0) -> pygame.Surface:
     """Sprite já com a opacidade assada (set_alpha em superfície com alfa por pixel deixa o blit ~6x mais lento)."""
-    wq, hq = max(24, int(round(w / 24.0)) * 24), max(12, int(round(h / 12.0)) * 12)
+    wq, hq = max(48, int(round(w / 48.0)) * 48), max(24, int(round(h / 24.0)) * 24)
     lv = max(1, min(LEVELS, int(round(level * LEVELS))))
     key = ("scaled", variant, tuple(color), wq, hq, lv)
     sprite = _cache.get(key)
     if sprite is None:
-        if len(_cache) > 700:
+        if len(_cache) > 400:
             _cache.clear()
         base = _cache.get(("full", variant, tuple(color), wq, hq))
         if base is None:
             base = _cache[("full", variant, tuple(color), wq, hq)] = pygame.transform.smoothscale(fog_base(variant, color), (wq, hq))
         sprite = base.copy()
-        alpha = pygame.surfarray.pixels_alpha(sprite)
-        alpha[:] = (alpha * (lv / LEVELS)).astype(np.uint8)
-        del alpha
-        sprite = _cache[key] = sprite.convert_alpha()
+        if lv < LEVELS:
+            fade_mask = pygame.Surface((wq, hq), pygame.SRCALPHA)
+            fade_mask.fill((255, 255, 255, max(1, min(255, int(255 * lv / LEVELS)))))
+            sprite.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        if pygame.display.get_surface() is not None:
+            sprite = sprite.convert_alpha()
+        _cache[key] = sprite
     return sprite
 
 
@@ -133,10 +136,10 @@ class FogVolume:
         ambient = self.arena.lighting.ambient_color
         color = tuple(int(c * 0.35 + 255 * 0.65) for c in ambient)
         rng = self.rng
-        for z, count, radius, strength in ((0.15, 12, (3.4, 5.2), 0.8), (0.8, 10, (2.8, 4.2), 0.65), (1.7, 6, (2.4, 3.4), 0.4)):
+        for z, count, radii, strength in ((0.15, 8, (3.6, 4.4), 0.8), (0.8, 6, (3.0, 3.8), 0.65), (1.7, 4, (2.6, 3.2), 0.4)):
             for _ in range(int(round(count * max(0.3, density)))):
                 self.bank.append(FogPuff(self, "bank", rng.uniform(-1, self.arena.cols + 1), rng.uniform(2, self.arena.rows - 2),
-                                         z, rng.uniform(*radius), strength, phase=rng.uniform(0, 6.28),
+                                         z, rng.choice(radii), strength, phase=rng.uniform(0, 6.28),
                                          variant=rng.randrange(VARIANTS), color=color))
 
     @staticmethod

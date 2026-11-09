@@ -192,28 +192,52 @@ class MachiyaFacade:
         draw_voxel_box(surface, camera, self.wx + 0.25, self.wy + 0.25, p2_z, self.width - 0.5, self.depth - 0.75, p2_h, wall_col, outline=False, alpha=alpha, texture="plaster")
         draw_voxel_box(surface, camera, self.wx + 0.35, self.wy + self.depth - 0.60, p2_z + 0.15, self.width - 0.70, 0.10, p2_h - 0.30, COLOR_LATTICE, outline=True, alpha=alpha)
 
-        # 6. Telhado Superior Imponente (Telhas Kawara)
+        # 6. Telhado Superior Imponente (Telhas Kawara + Ornamentos Onigawara nas pontas da cumeeira)
         roof_z = p2_z + p2_h
         roof_d = self.depth - 0.25
         draw_voxel_box(surface, camera, self.wx - 0.25, self.wy - 0.15, roof_z, self.width + 0.50, roof_d, 0.28, COLOR_KYOTO_ROOF_TILE, outline=True, alpha=roof_alpha, texture="roof_tile")
         draw_voxel_box(surface, camera, self.wx - 0.10, self.wy + roof_d * 0.32, roof_z + 0.26, self.width + 0.20, 0.30, 0.20, (52, 54, 58), outline=True, alpha=roof_alpha)
+        # Onigawara (telhas de cumeeira esculpidas nas duas extremidades)
+        for ox in (self.wx - 0.16, self.wx + self.width + 0.02):
+            draw_voxel_box(surface, camera, ox, self.wy + roof_d * 0.30, roof_z + 0.28, 0.14, 0.34, 0.28, (76, 80, 88), outline=True, alpha=roof_alpha)
+
+        # Cortina Noren de 3 panos no 1º andar balançando ao vento
+        noren_base_y = self.wy + self.depth - engawa_d + 0.05
+        noren_w = (self.width * 0.36) / 3.0
+        noren_start_x = self.wx + self.width * 0.32
+        noren_col = (42, 54, 82) if self.burning else (195, 36, 48)
+        noren_trim = (210, 195, 165) if self.burning else (238, 195, 78)
+        for ni in range(3):
+            sway_y = 0.035 * math.sin(time_val * 3.2 + self.seed + ni * 1.1)
+            nx_p = noren_start_x + ni * (noren_w + 0.03)
+            draw_voxel_box(surface, camera, nx_p, noren_base_y + sway_y, p1_z + 0.58, noren_w, 0.04, 0.52, noren_col, outline=True, alpha=alpha)
+            draw_voxel_box(surface, camera, nx_p + 0.03, noren_base_y + sway_y + 0.01, p1_z + 0.72, noren_w - 0.06, 0.03, 0.14, noren_trim, outline=False, alpha=alpha)
 
         if self.burning:
-            # 7. Chamas Dinâmicas nos Telhados (Nascem, crescem, diminuem e somem)
+            # 7. Chamas Dinâmicas nos Telhados (Nascem, crescem, diminuem e somem) + Brasas e Fissuras
             flame_alpha = 185 if self.is_transparent else 255
+            ember_pulse = 0.65 + 0.35 * math.sin(time_val * 9.0 + self.seed)
+            ember_col = (int(245 * ember_pulse), int(95 * ember_pulse), 24)
+            draw_voxel_box(surface, camera, self.wx + 0.30, self.wy + roof_d * 0.28, roof_z + 0.27, self.width - 0.60, 0.08, 0.06, ember_col, outline=False, alpha=flame_alpha)
+
             for spot in self.flame_spots:
                 fh = spot.get_height(time_val)
                 if fh > 0.04:
                     fx = self.wx + spot.rel_x
                     fy = self.wy + spot.rel_y
+                    sway_f = 0.05 * math.sin(time_val * 12.0 + spot.phase_shift)
 
+                    # Leito de brasa incandescente na telha
+                    draw_voxel_box(surface, camera, fx - 0.24, fy - 0.24, roof_z + 0.28, 0.48, 0.48, 0.08, (220, 65, 18), outline=False, alpha=flame_alpha)
                     # Núcleo amarelo brilhante
-                    draw_voxel_box(surface, camera, fx - 0.20, fy - 0.20, roof_z + 0.32, 0.40, 0.40, fh * 0.55, COLOR_KYOTO_FIRE_CORE, outline=False, alpha=flame_alpha)
+                    draw_voxel_box(surface, camera, fx - 0.20 + sway_f * 0.3, fy - 0.20, roof_z + 0.32, 0.40, 0.40, fh * 0.55, COLOR_KYOTO_FIRE_CORE, outline=False, alpha=flame_alpha)
                     # Corpo laranja
-                    draw_voxel_box(surface, camera, fx - 0.15, fy - 0.15, roof_z + 0.32 + fh * 0.45, 0.30, 0.30, fh * 0.45, COLOR_KYOTO_FIRE_MID, outline=False, alpha=flame_alpha)
-                    # Ponta avermelhada
+                    draw_voxel_box(surface, camera, fx - 0.15 + sway_f * 0.7, fy - 0.15, roof_z + 0.32 + fh * 0.45, 0.30, 0.30, fh * 0.45, COLOR_KYOTO_FIRE_MID, outline=False, alpha=flame_alpha)
+                    # Ponta avermelhada e fagulha ascendente
                     if fh > 0.35:
-                        draw_voxel_box(surface, camera, fx - 0.10, fy - 0.10, roof_z + 0.32 + fh * 0.85, 0.20, 0.20, fh * 0.25, COLOR_KYOTO_FIRE_EDGE, outline=False, alpha=flame_alpha)
+                        draw_voxel_box(surface, camera, fx - 0.10 + sway_f, fy - 0.10, roof_z + 0.32 + fh * 0.85, 0.20, 0.20, fh * 0.25, COLOR_KYOTO_FIRE_EDGE, outline=False, alpha=flame_alpha)
+                        spark_z = roof_z + 0.45 + fh + ((time_val * 1.8 + spot.phase_shift) % 0.65)
+                        draw_voxel_box(surface, camera, fx + sway_f * 1.4, fy, spark_z, 0.06, 0.06, 0.06, (255, 220, 90), outline=False, alpha=flame_alpha)
 
                     # Fumaça ascendente quando o fogo está alto
                     if fh > 0.5:
@@ -222,28 +246,31 @@ class MachiyaFacade:
                         sm_alpha = max(0, int(130 * (1.0 - (sm_z - roof_z - 1.2) / 2.0)))
                         draw_voxel_box(surface, camera, fx, fy, sm_z, 0.35, 0.35, 0.22, (60, 55, 55), outline=False, alpha=sm_alpha)
         else:
-            # Vida Noturna de Yoshiwara: Shoji iluminados com silhuetas de cortesãs e samurais
+            # Vida Noturna de Yoshiwara: Shoji iluminados com silhuetas animadas, guarda-corpo carmim e lanternas de beiral
             flicker = 0.88 + 0.12 * math.sin(time_val * 4.0 + self.seed)
             shoji_col = (int(255 * flicker), int(215 * flicker), int(120 * flicker))
+            # Guarda-corpo lacado vermelho (Kōran) na sacada do 2º andar
+            draw_voxel_box(surface, camera, self.wx + 0.20, self.wy + self.depth - 0.52, p2_z + 0.28, self.width - 0.40, 0.06, 0.06, (186, 36, 42), outline=False, alpha=alpha)
+            # Lanternas vermelhas Chōchin suspensas sob o beiral do 1º andar
+            for lx_off in (0.45, self.width - 0.65):
+                l_sway = 0.02 * math.sin(time_val * 3.0 + lx_off)
+                draw_voxel_box(surface, camera, self.wx + lx_off + l_sway, self.wy + self.depth - 0.18, eave_z - 0.34, 0.20, 0.20, 0.28, (220, 42, 48), outline=True, alpha=alpha)
             # Janelas iluminadas do 2º andar
             win_w = (self.width - 0.9) / 2.0
             for wi in range(2):
                 wx_pos = self.wx + 0.4 + wi * (win_w + 0.1)
                 draw_voxel_box(surface, camera, wx_pos, self.wy + self.depth - 0.62, p2_z + 0.20, win_w, 0.08, p2_h - 0.40, shoji_col, outline=True, alpha=alpha)
-                # Silhueta teatral negra sobre o papel iluminado (cortesã tocando shamisen ou bebendo sakê)
+                # Silhueta teatral negra sobre o papel iluminado (cortesã tocando shamisen com leve oscilação)
+                head_bob = 0.02 * math.sin(time_val * 2.6 + self.seed + wi)
                 sil_x = wx_pos + win_w * 0.5
                 sil_z = p2_z + 0.28
                 # Silhueta de figura sentada
                 draw_voxel_box(surface, camera, sil_x - 0.10, self.wy + self.depth - 0.60, sil_z, 0.20, 0.04, 0.32, (32, 22, 20), outline=False, alpha=int(220 * flicker))
-                # Cabeça com coque/penteado tradicional
-                draw_voxel_box(surface, camera, sil_x - 0.06, self.wy + self.depth - 0.60, sil_z + 0.32, 0.12, 0.04, 0.14, (32, 22, 20), outline=False, alpha=int(220 * flicker))
+                # Cabeça com coque/penteado tradicional e grampos Kanzashi
+                draw_voxel_box(surface, camera, sil_x - 0.06 + head_bob, self.wy + self.depth - 0.60, sil_z + 0.32, 0.12, 0.04, 0.14, (32, 22, 20), outline=False, alpha=int(220 * flicker))
                 if wi == 0:
                     # Shamisen inclinado na mão da cortesã
-                    draw_voxel_box(surface, camera, sil_x + 0.05, self.wy + self.depth - 0.59, sil_z + 0.12, 0.04, 0.03, 0.28, (32, 22, 20), outline=False, alpha=int(220 * flicker))
-
-            # Noren carmim no 1º andar
-            noren_col = (195, 36, 48)
-            draw_voxel_box(surface, camera, self.wx + self.width * 0.35, self.wy + self.depth - engawa_d + 0.05, p1_z + 0.55, self.width * 0.30, 0.04, 0.55, noren_col, outline=False, alpha=alpha)
+                    draw_voxel_box(surface, camera, sil_x + 0.05, self.wy + self.depth - 0.59, sil_z + 0.12 + head_bob * 0.5, 0.04, 0.03, 0.28, (32, 22, 20), outline=False, alpha=int(220 * flicker))
 
 
 class RunawayCarriage:

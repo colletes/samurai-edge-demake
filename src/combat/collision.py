@@ -203,6 +203,8 @@ def _is_vertical_hit(attacker, defender) -> bool:
         return bool(is_aerial_atk or att_wz >= 0.40)
     if att_wz < 0.30 and not is_aerial_atk:
         return def_wz < 0.40
+    if is_aerial_atk:
+        return abs(att_wz - def_wz) <= 1.85
     return abs(att_wz - def_wz) < 0.65
 
 class CombatSystem:
@@ -1663,6 +1665,59 @@ class CombatSystem:
                             particles.append(BloodParticle(p1.wx, p1.wy, 0.6))
                         self._play_sound("sword_slash", weapon=getattr(p2, "char_type", None))
                         self._apply_hit_knockback(p2, p1, game_map)
+
+        # -------------------------------------------------------------
+        # 6.5 ONDA DE CHOQUE SÍSMICA (RYUU TSUI SEN SHOCKWAVE)
+        # -------------------------------------------------------------
+        for attacker, defender in ((p1, p2), (p2, p1)):
+            if getattr(attacker, "ryuu_shockwave_pending", False):
+                attacker.ryuu_shockwave_pending = False
+                if not getattr(attacker, "is_alive", True):
+                    continue
+                sw_x, sw_y = getattr(
+                    attacker,
+                    "ryuu_shockwave_pos",
+                    (attacker.wx + attacker.facing_x * 0.70, attacker.wy + attacker.facing_y * 0.70),
+                )
+                sw_rad = float(getattr(attacker, "ryuu_shockwave_radius", 2.65))
+                if game_map is not None and hasattr(game_map, "add_wind_impulse"):
+                    game_map.add_wind_impulse(sw_x, sw_y, strength=1.5, radius=3.8, duration=0.65)
+                camera.add_shake(6.5)
+
+                if (
+                    winner is None
+                    and getattr(defender, "is_alive", True)
+                    and getattr(defender, "state", "") != "DEAD"
+                    and not is_fighter_evading(defender)
+                    and getattr(defender, "wz", 0.0) < 0.65
+                ):
+                    dist = math.hypot(defender.wx - sw_x, defender.wy - sw_y)
+                    if dist <= (sw_rad + getattr(defender, "radius", 0.4)):
+                        dx = defender.wx - sw_x
+                        dy = defender.wy - sw_y
+                        norm = math.hypot(dx, dy)
+                        if norm < 1e-4:
+                            px, py = attacker.facing_x, attacker.facing_y
+                        else:
+                            px, py = dx / norm, dy / norm
+                        push_dist = 1.65 * max(0.35, 1.0 - (dist / (sw_rad + 0.8)) * 0.5)
+                        if hasattr(defender, "apply_forced_displacement"):
+                            defender.apply_forced_displacement(px * push_dist, py * push_dist, game_map)
+                        else:
+                            defender.wx += px * push_dist
+                            defender.wy += py * push_dist
+
+                        if hasattr(defender, "stun"):
+                            defender.stun(0.55)
+                        else:
+                            defender.state = STATE_STUNNED
+                            defender.state_timer = max(getattr(defender, "state_timer", 0.0), 0.55)
+                            defender.hitbox_active = False
+                        if banners is not None:
+                            banners.append(FloatingBanner("SHOCKWAVE!", defender.wx, defender.wy, wz=1.35, color=(255, 215, 90)))
+                        if particles is not None:
+                            for _ in range(12):
+                                particles.append(SparkParticle(defender.wx, defender.wy, 0.35, color=(255, 210, 90)))
 
 
         # -------------------------------------------------------------

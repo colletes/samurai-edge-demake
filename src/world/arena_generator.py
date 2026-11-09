@@ -1153,11 +1153,28 @@ class ArenaMap:
                 fx, fy = xa + (xb - xa) * t, ya + (yb - ya) * t
                 bob = 0.5 + 0.5 * math.sin(time_val * 2.0 + i * 1.7 + fx)
                 r = 3 + int(2 * bob)
-                pygame.draw.circle(interior, lerp(water, foam, 0.55 + 0.3 * bob), local(camera.apply(fx, fy, z + 0.03)), r)
+                rh = max(2, r // 2)
+                cx_p, cy_p = local(camera.apply(fx, fy, z + 0.03))
+                pygame.draw.polygon(
+                    interior,
+                    lerp(water, foam, 0.55 + 0.3 * bob),
+                    [(cx_p, cy_p - rh), (cx_p + r, cy_p), (cx_p, cy_p + rh), (cx_p - r, cy_p)],
+                )
 
     @staticmethod
     def _draw_flat(surface, camera, style: TileStyle, x: int, y: int, quad: list):
-        pygame.draw.polygon(surface, style.color_at(x, y), quad)
+        base_col = style.color_at(x, y)
+        pygame.draw.polygon(surface, base_col, quad)
+        if style.surface == "marble":
+            # Brilho especular chanfrado e veio mineral sutil em piso de mármore polido
+            p_top, p_right, _, p_left = quad
+            sheen_col = tuple(min(255, c + 18) for c in base_col)
+            vein_col = tuple(max(0, c - 14) for c in base_col)
+            m_tr = ((p_top[0] + p_right[0]) // 2, (p_top[1] + p_right[1]) // 2)
+            m_tl = ((p_top[0] + p_left[0]) // 2, (p_top[1] + p_left[1]) // 2)
+            pygame.draw.polygon(surface, sheen_col, [p_top, m_tr, m_tl])
+            if (x * 7 + y * 13) % 3 == 0:
+                pygame.draw.line(surface, vein_col, m_tl, p_right, 1)
         if style.edge:
             pygame.draw.polygon(surface, style.edge, quad, 1)
         decor = style.decor
@@ -1176,28 +1193,44 @@ class ArenaMap:
     def _draw_water(self, surface, camera, style: TileStyle, x: int, y: int, quad: list, time_val: float, reflect: bool):
         p_top, p_right, p_bottom, p_left = quad
         z = -style.depth
-        w_top = camera.apply(x, y, z)
-        w_right = camera.apply(x + 1, y, z)
-        w_bottom = camera.apply(x + 1, y + 1, z)
-        w_left = camera.apply(x, y + 1, z)
-
-        # A parede do barranco fica entre a terra firme vizinha e a água; só as voltadas para a câmera aparecem
-        banks = {(0, -1): (p_top, p_right, w_right, w_top), (-1, 0): (p_left, p_top, w_top, w_left),
-                 (1, 0): (p_right, p_bottom, w_bottom, w_right), (0, 1): (p_bottom, p_left, w_left, w_bottom)}
-        for (ndx, ndy), bank in banks.items():
-            nx, ny = x + ndx, y + ndy
-            if not (0 <= nx < self.cols and 0 <= ny < self.rows):
-                continue
-            if self.style_at(nx, ny).water_like:
-                continue
-            colors = style.bank_ew if ndx != 0 else style.bank_ns
-            if colors is None:
-                continue
-            face_x, face_y = rotate_xy(-ndx, -ndy, camera.azimuth)
-            if face_x + face_y <= 1e-6:
-                continue
-            pygame.draw.polygon(surface, colors[0], list(bank))
-            pygame.draw.polygon(surface, colors[1], list(bank), 1)
+        az = getattr(camera, "azimuth", 0.0)
+        if abs(az) < 1e-6 and getattr(camera, "height_fn", None) is None:
+            dz_px = int(style.depth * 32.0 * getattr(camera, "zoom", 1.0))
+            w_top = (p_top[0], p_top[1] + dz_px)
+            w_right = (p_right[0], p_right[1] + dz_px)
+            w_bottom = (p_bottom[0], p_bottom[1] + dz_px)
+            w_left = (p_left[0], p_left[1] + dz_px)
+            # Com azimute 0, apenas os barrancos Norte (0, -1) e Oeste (-1, 0) ficam voltados para a câmera
+            if y > 0 and style.bank_ns is not None and not self.style_at(x, y - 1).water_like:
+                bank_n = [p_top, p_right, w_right, w_top]
+                pygame.draw.polygon(surface, style.bank_ns[0], bank_n)
+                pygame.draw.polygon(surface, style.bank_ns[1], bank_n, 1)
+            if x > 0 and style.bank_ew is not None and not self.style_at(x - 1, y).water_like:
+                bank_w = [p_left, p_top, w_top, w_left]
+                pygame.draw.polygon(surface, style.bank_ew[0], bank_w)
+                pygame.draw.polygon(surface, style.bank_ew[1], bank_w, 1)
+        else:
+            w_top = camera.apply(x, y, z)
+            w_right = camera.apply(x + 1, y, z)
+            w_bottom = camera.apply(x + 1, y + 1, z)
+            w_left = camera.apply(x, y + 1, z)
+            # A parede do barranco fica entre a terra firme vizinha e a água; só as voltadas para a câmera aparecem
+            banks = {(0, -1): (p_top, p_right, w_right, w_top), (-1, 0): (p_left, p_top, w_top, w_left),
+                     (1, 0): (p_right, p_bottom, w_bottom, w_right), (0, 1): (p_bottom, p_left, w_left, w_bottom)}
+            for (ndx, ndy), bank in banks.items():
+                nx, ny = x + ndx, y + ndy
+                if not (0 <= nx < self.cols and 0 <= ny < self.rows):
+                    continue
+                if self.style_at(nx, ny).water_like:
+                    continue
+                colors = style.bank_ew if ndx != 0 else style.bank_ns
+                if colors is None:
+                    continue
+                face_x, face_y = rotate_xy(-ndx, -ndy, az)
+                if face_x + face_y <= 1e-6:
+                    continue
+                pygame.draw.polygon(surface, colors[0], list(bank))
+                pygame.draw.polygon(surface, colors[1], list(bank), 1)
 
         # Harmonicos de onda senoidais para ondulação orgânica HD-2D
         w1 = math.sin(time_val * 2.5 + x * 1.1 + y * 0.8)

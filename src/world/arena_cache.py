@@ -126,20 +126,11 @@ class PropSurfaceCache:
             return False
 
         zoom_now = camera.zoom
-        zooming = abs(getattr(camera, "target_zoom", zoom_now) - zoom_now) > 1e-6
-        if zooming:
-            zoom_q = round(zoom_now / self.ZOOM_BUCKET_MOVING) * self.ZOOM_BUCKET_MOVING
-            scale = zoom_now / zoom_q if zoom_q > 0 else 1.0
-            # Sem balanço de vento durante o zoom: um único estado por bucket mantém o cache pequeno
-            state_key = ("cut", round(getattr(obj, "stump_height", 0.5), 2)) if (
-                item_type == "bamboo" and getattr(obj, "is_cut", False)) else (
-                ("stand", 0) if item_type == "bamboo" else self._prop_state_key(item_type, obj, time_val))
-        else:
-            zoom_q = round(zoom_now * 40.0) / 40.0
-            scale = 1.0
-            state_key = self._prop_state_key(item_type, obj, time_val)
+        zoom_q = round(zoom_now / self.ZOOM_BUCKET_MOVING) * self.ZOOM_BUCKET_MOVING
+        zoom_q = max(0.5, round(zoom_q, 2))
+        state_key = self._prop_state_key(item_type, obj, time_val)
         qual = quality.get_effects_quality()
-        key = (id(obj), round(zoom_q, 4), qual, state_key)
+        key = (id(obj), zoom_q, qual, state_key)
 
         entry = self._cache.get(key)
         if entry is not None:
@@ -147,12 +138,7 @@ class PropSurfaceCache:
             self.hits += 1
             baked_surf, off_x, off_y = entry
             bx, by = camera.apply(obj.wx, obj.wy, 0.0)
-            if zooming and abs(scale - 1.0) > 1e-3:
-                sw = max(1, int(baked_surf.get_width() * scale))
-                sh = max(1, int(baked_surf.get_height() * scale))
-                surface.blit(pygame.transform.scale(baked_surf, (sw, sh)), (bx + int(off_x * scale), by + int(off_y * scale)))
-            else:
-                surface.blit(baked_surf, (bx + off_x, by + off_y))
+            surface.blit(baked_surf, (bx + off_x, by + off_y))
             return True
 
         self.misses += 1
@@ -191,12 +177,7 @@ class PropSurfaceCache:
         self._cache[key] = (baked_surf, off_x, off_y)
 
         bx, by = camera.apply(obj.wx, obj.wy, 0.0)
-        if zooming and abs(scale - 1.0) > 1e-3:
-            sw = max(1, int(baked_surf.get_width() * scale))
-            sh = max(1, int(baked_surf.get_height() * scale))
-            surface.blit(pygame.transform.scale(baked_surf, (sw, sh)), (bx + int(off_x * scale), by + int(off_y * scale)))
-        else:
-            surface.blit(baked_surf, (bx + off_x, by + off_y))
+        surface.blit(baked_surf, (bx + off_x, by + off_y))
         return True
 
 
@@ -227,17 +208,17 @@ class TerrainSurfaceCache:
         if abs(getattr(camera, "azimuth", 0.0)) > 1e-6 or getattr(camera, "height_fn", None) is not None:
             return False, set()
 
-        zoom_exact = round(camera.zoom, 3)
+        zb = round(camera.zoom / self.ZOOM_BUCKET_MOVING) * self.ZOOM_BUCKET_MOVING
+        zb = round(max(zb, self.ZOOM_BUCKET_MOVING), 3)
         qual = quality.get_effects_quality()
-        zooming = abs(getattr(camera, "target_zoom", camera.zoom) - camera.zoom) > 1e-6
-        if zooming and (arena_map.arena_id, id(arena_map), zoom_exact, qual) not in self._cache:
+        if abs(camera.zoom - zb) > 0.004:
             return self._render_zooming(arena_map, surface, camera, qual)
-        key = (arena_map.arena_id, id(arena_map), zoom_exact, qual)
+        key = (arena_map.arena_id, id(arena_map), zb, qual)
 
         entry = self._cache.get(key)
         if entry is None:
             self.misses += 1
-            entry = self._bake_terrain(arena_map, zoom_exact)
+            entry = self._bake_terrain(arena_map, zb)
             if len(self._cache) >= self.MAX_ZOOM_BUCKETS:
                 self._cache.popitem(last=False)
             self._cache[key] = entry

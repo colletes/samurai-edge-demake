@@ -277,41 +277,55 @@ def render_voxel_humanoid(
         extra_props = {**(extra_props or {}), **frame.extra, "p": orig_timer, "intro_victory_state": orig_state}
         alpha = int(alpha * frame.alpha)
 
+    alpha = max(0, min(255, int(alpha)))
+    if alpha <= 0:
+        return
+
     # Entregável 2.1.7: Supersampling 2x Offscreen (SSAA) & Anti-Aliasing Bilinear
-    if extra_props and extra_props.get("ssaa_2x", False) and is_alive and state not in ("CORPSE_SLICED", "DEAD", "PINNED_DOWN"):
+    # Também usado em 1x quando alpha < 255 (névoa volumétrica ou pós-imagens Zanzou) para evitar ~150 blits por face
+    use_ssaa = bool(extra_props and extra_props.get("ssaa_2x", False))
+    if (use_ssaa or alpha < 255) and is_alive and state not in ("CORPSE_SLICED", "DEAD", "PINNED_DOWN"):
         from src.effects import quality
-        if quality.is_high():
-            zoom = max(0.5, min(3.5, getattr(camera, "zoom", 1.0)))
-            pad_x = int(95 * zoom) + 8
-            pad_top = int(125 * zoom) + 8
-            pad_bot = int(78 * zoom) + 8
-            box_w = pad_x * 2
-            box_h = pad_top + pad_bot
-            cx, cy = camera.apply(wx, wy, wz)
-            ox = cx - pad_x
-            oy = cy - pad_top
-            sw, sh = surface.get_size()
-            if ox + box_w > 0 and oy + box_h > 0 and ox < sw and oy < sh:
-                ss_w, ss_h = box_w * 2, box_h * 2
-                key = (ss_w, ss_h)
-                hi_surf = _SSAA_CANVAS_POOL.get(key)
-                if hi_surf is None:
-                    if len(_SSAA_CANVAS_POOL) > 8:
-                        _SSAA_CANVAS_POOL.clear()
-                    hi_surf = pygame.Surface((ss_w, ss_h), pygame.SRCALPHA)
-                    _SSAA_CANVAS_POOL[key] = hi_surf
-                hi_surf.fill((0, 0, 0, 0))
-                sub_cam = _SSAASubCamera(camera, ox, oy, scale=2)
-                inner_props = dict(extra_props)
-                inner_props["ssaa_2x"] = False
-                _render_voxel_humanoid(
-                    hi_surf, sub_cam, wx, wy, wz, facing_x, facing_y,
-                    state, state_timer, is_alive, char_type,
-                    walk_timer, alpha, is_moving, inner_props
-                )
-                lo_surf = pygame.transform.smoothscale(hi_surf, (box_w, box_h))
-                surface.blit(lo_surf, (ox, oy))
-                return
+        scale = 2 if (use_ssaa and quality.is_high() and alpha >= 220) else 1
+        zoom = max(0.5, min(3.5, getattr(camera, "zoom", 1.0)))
+        pad_x = int(95 * zoom) + 8
+        pad_top = int(125 * zoom) + 8
+        pad_bot = int(78 * zoom) + 8
+        box_w = pad_x * 2
+        box_h = pad_top + pad_bot
+        cx, cy = camera.apply(wx, wy, wz)
+        ox = cx - pad_x
+        oy = cy - pad_top
+        sw, sh = surface.get_size()
+        if ox + box_w > 0 and oy + box_h > 0 and ox < sw and oy < sh:
+            ss_w, ss_h = box_w * scale, box_h * scale
+            key = (ss_w, ss_h)
+            hi_surf = _SSAA_CANVAS_POOL.get(key)
+            if hi_surf is None:
+                if len(_SSAA_CANVAS_POOL) > 12:
+                    _SSAA_CANVAS_POOL.clear()
+                hi_surf = pygame.Surface((ss_w, ss_h), pygame.SRCALPHA)
+                _SSAA_CANVAS_POOL[key] = hi_surf
+            hi_surf.fill((0, 0, 0, 0))
+            sub_cam = _SSAASubCamera(camera, ox, oy, scale=scale)
+            inner_props = dict(extra_props) if extra_props else {}
+            inner_props["ssaa_2x"] = False
+            _render_voxel_humanoid(
+                hi_surf, sub_cam, wx, wy, wz, facing_x, facing_y,
+                state, state_timer, is_alive, char_type,
+                walk_timer, 255, is_moving, inner_props
+            )
+            lo_surf = pygame.transform.smoothscale(hi_surf, (box_w, box_h)) if scale > 1 else hi_surf
+            if alpha < 255:
+                fade_key = ("fade", box_w, box_h)
+                fade_mask = _SSAA_CANVAS_POOL.get(fade_key)
+                if fade_mask is None:
+                    fade_mask = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+                    _SSAA_CANVAS_POOL[fade_key] = fade_mask
+                fade_mask.fill((255, 255, 255, alpha))
+                lo_surf.blit(fade_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+            surface.blit(lo_surf, (ox, oy))
+            return
 
     _render_voxel_humanoid(surface, camera, wx, wy, wz, facing_x, facing_y, state, state_timer, is_alive, char_type,
                            walk_timer, alpha, is_moving, extra_props)
