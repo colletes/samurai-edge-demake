@@ -30,6 +30,9 @@ from src.world.decor import (
     DohyoCornerPost, SacredSaltMound, DohyoBrazier, AlchemyWorkbench, ReagentBarrel, WharfMooringBollard, WarehouseDoorwayArch,
     SacredBushBarrier, WarehouseGlassWall, LargeSacredCenser, WharfPiling,
     HiganbanaCluster, AstralBrazier, KabukiFootlight, DutchCargoCrane,
+    ArtilleryCrater, FallenLog, RiceStalkCluster,
+    StalactiteCluster, CaveStalagmite, RoofChimney, OnigawaraTile, ShurikenEmbedded,
+    CannonballPyramid, ShipRigging, ShoreDriftwood, OpenGrave, GraveyardGargoyle,
 )
 from src.world.hazards import (
     ChainPendulum, FireworkMortars, RotatingStage, ShipRoll, TideSurge,
@@ -132,6 +135,19 @@ register_prop("higanbana", lambda x, y, **p: HiganbanaCluster(x, y, **p), "lante
 register_prop("astral_brazier", lambda x, y, **p: AstralBrazier(x, y, **p), "rocks")
 register_prop("kabuki_footlight", lambda x, y, **p: KabukiFootlight(x, y), "lanterns")
 register_prop("dutch_crane", lambda x, y, **p: DutchCargoCrane(x, y), "buildings")
+register_prop("artillery_crater", lambda x, y, **p: ArtilleryCrater(x, y, **p), "lanterns")
+register_prop("fallen_log", lambda x, y, **p: FallenLog(x, y, **p), "rocks")
+register_prop("rice_stalks", lambda x, y, **p: RiceStalkCluster(x, y, **p), "lanterns")
+register_prop("stalactite", lambda x, y, **p: StalactiteCluster(x, y, **p), "lanterns")
+register_prop("cave_stalagmite", lambda x, y, **p: CaveStalagmite(x, y, **p), "rocks")
+register_prop("roof_chimney", lambda x, y, **p: RoofChimney(x, y, **p), "rocks")
+register_prop("onigawara", lambda x, y, **p: OnigawaraTile(x, y, **p), "rocks")
+register_prop("shuriken_tile", lambda x, y, **p: ShurikenEmbedded(x, y, **p), "lanterns")
+register_prop("cannonball_pyramid", lambda x, y, **p: CannonballPyramid(x, y, **p), "rocks")
+register_prop("ship_rigging", lambda x, y, **p: ShipRigging(x, y, **p), "lanterns")
+register_prop("shore_driftwood", lambda x, y, **p: ShoreDriftwood(x, y, **p), "rocks")
+register_prop("open_grave", lambda x, y, **p: OpenGrave(x, y, **p), "rocks")
+register_prop("cemetery_gargoyle", lambda x, y, **p: GraveyardGargoyle(x, y, **p), "rocks")
 register_structure("arched_bridge", ArchedBridge)
 register_structure("roof_beam", RoofBeam)
 register_structure("plank_bridge", PlankBridge)
@@ -338,6 +354,10 @@ GANRYU_SPEC = ArenaSpec(
         PropSpec("rock", 12.5, 4.5, {"radius": 0.7, "height": 0.9}),
         PropSpec("rock", 16.5, 18.5, {"radius": 0.75, "height": 1.0}),
         PropSpec("rock", 3.8, 6.5, {"radius": 0.6, "height": 0.8}),
+        # Troncos de cedro náufrago desgastados pelo mar na areia
+        PropSpec("shore_driftwood", 5.5, 9.2, {"length": 1.5, "angle_deg": 25.0}),
+        PropSpec("shore_driftwood", 14.8, 16.5, {"length": 1.8, "angle_deg": -40.0}),
+        PropSpec("shore_driftwood", 2.2, 14.8, {"length": 1.3, "angle_deg": 65.0}),
     ) + tuple(PropSpec("stone_lantern", x, y) for x, y in _GANRYU_LANTERNS)
       + tuple(PropSpec("dune_grass", x, y, {"seed": 30 + i}) for i, (x, y) in enumerate(
           ((5.2, 4.2), (15.2, 5.5), (4.5, 16.8), (17.5, 16.2), (8.5, 7.5), (13.5, 16.5), (7.0, 18.2), (15.8, 8.8))
@@ -422,6 +442,21 @@ IGA_SPEC = ArenaSpec(
         PropSpec("solid_block", 12.0, 17.0, {"width": 0.9, "depth": 0.9, "height": 1.1, "color": (84, 72, 64)}),
         PropSpec("rock", 9.4, 3.0, {"radius": 0.45, "height": 0.5}),
         PropSpec("rock", 20.6, 20.4, {"radius": 0.5, "height": 0.55}),
+        # Chaminés de forja com fumaça escura
+        PropSpec("roof_chimney", 1.4, 4.5),
+        PropSpec("roof_chimney", 12.2, 18.5),
+        PropSpec("roof_chimney", 20.2, 7.5),
+        # Onigawara nas extremidades das cumeeiras
+        PropSpec("onigawara", 3.0, 0.6),
+        PropSpec("onigawara", 3.0, 20.4),
+        PropSpec("onigawara", 10.0, 0.6),
+        PropSpec("onigawara", 10.0, 20.4),
+        PropSpec("onigawara", 19.0, 0.6),
+        PropSpec("onigawara", 19.0, 20.4),
+        # Shurikens cravados nas vigas e tábuas
+        PropSpec("shuriken_tile", 6.8, 14.5, {"wz": 0.20}),
+        PropSpec("shuriken_tile", 15.2, 6.5, {"wz": 0.20}),
+        PropSpec("shuriken_tile", 10.0, 10.5, {"wz": 0.16}),
     ) + tuple(PropSpec("kyoto_lantern", x, y) for x, y in _IGA_LANTERNS),
     # Vigas sobre os becos: a rota sem salto entre os telhados
     structures=(
@@ -506,6 +541,14 @@ PIRATE_SPEC = ArenaSpec(
         PropSpec("solid_block", 1.2, 16.6, {"width": 0.9, "depth": 0.9, "height": 0.7, "color": (118, 92, 62)}),
         PropSpec("paper_lantern", 7.6, 10.2, {"color": (245, 165, 65)}),
         PropSpec("paper_lantern", 14.4, 10.2, {"color": (245, 165, 65)}),
+        # Pirâmides de balas de canhão de ferro fundido
+        PropSpec("cannonball_pyramid", 1.8, 10.8),
+        PropSpec("cannonball_pyramid", 18.6, 9.6),
+        # Enxárcias e cabos esticados dos mastros à amurada
+        PropSpec("ship_rigging", 7.6, 4.3, {"top_x": 7.6, "top_y": 10.7, "top_z": 2.8}),
+        PropSpec("ship_rigging", 7.6, 17.5, {"top_x": 7.6, "top_y": 10.7, "top_z": 2.8}),
+        PropSpec("ship_rigging", 14.4, 4.3, {"top_x": 14.4, "top_y": 10.7, "top_z": 2.8}),
+        PropSpec("ship_rigging", 14.4, 17.5, {"top_x": 14.4, "top_y": 10.7, "top_z": 2.8}),
     ),
     hazards=(HazardSpec("ship_roll", {"push_speed": 3.4, "warn_time": 2.2, "active_time": 1.3, "interval": (7.0, 10.0),
                                       "initial_delay": 5.0, "x_range": (0.0, float(MAP_COLS)), "y_center": 11.0}),),
@@ -542,6 +585,8 @@ _CAVE_JIZO = ((15.49, 12.57), (12.57, 15.49), (8.43, 15.49), (5.51, 12.57), (5.5
 _CAVE_LANTERNS = ((8.6, 5.0), (13.4, 5.0), (8.6, 17.0), (13.4, 17.0))
 _CAVE_CHAINS = ((3.0, 9.0), (3.0, 13.0), (19.0, 9.0), (19.0, 13.0), (9.0, 3.0), (13.0, 3.0), (9.0, 19.0), (13.0, 19.0))
 _CAVE_PILLARS = ((3.6, 3.6), (17.5, 3.6), (3.6, 17.5), (17.5, 17.5))
+_CAVE_STALACTITES = ((4.2, 4.2), (16.8, 4.2), (4.2, 16.8), (16.8, 16.8), (10.5, 2.2), (10.5, 18.8), (2.2, 10.5), (18.8, 10.5))
+_CAVE_STALAGMITES = ((3.2, 6.5), (17.8, 6.5), (3.2, 14.5), (17.8, 14.5), (6.5, 3.2), (14.5, 3.2), (6.5, 17.8), (14.5, 17.8))
 
 SHADOW_CAVE_SPEC = ArenaSpec(
     id=ARENA_SHADOW_CAVE,
@@ -569,6 +614,8 @@ SHADOW_CAVE_SPEC = ArenaSpec(
         + tuple(PropSpec("pillar", x, y, {"width": 0.9, "depth": 0.9, "height": 2.8, "color": (66, 54, 82)}) for x, y in _CAVE_PILLARS)
         + tuple(PropSpec("stone_lantern", x, y) for x, y in _CAVE_LANTERNS)
         + tuple(PropSpec("hanging_chain", x, y, {"length": 2.4 + 0.5 * (i % 3)}) for i, (x, y) in enumerate(_CAVE_CHAINS))
+        + tuple(PropSpec("stalactite", x, y, {"seed": 40 + i, "length": 1.6 + 0.4 * (i % 3)}) for i, (x, y) in enumerate(_CAVE_STALACTITES))
+        + tuple(PropSpec("cave_stalagmite", x, y, {"seed": 50 + i, "height": 0.9 + 0.3 * (i % 3)}) for i, (x, y) in enumerate(_CAVE_STALAGMITES))
     ),
     hazards=(HazardSpec("chain_pendulum", {}),),
     playable_bounds=(2.0, 2.0, 20.0, 20.0),
@@ -682,6 +729,8 @@ FOREST_CAMP_SPEC = ArenaSpec(
         PropSpec("tent", 15.4, 3.6, {"width": 2.6, "depth": 2.2, "height": 1.6, "color": (214, 196, 156)}),
         PropSpec("tent", 16.6, 17.0, {"width": 2.6, "depth": 2.2, "height": 1.6, "color": (198, 176, 140)}),
         PropSpec("campfire", 11.0, 11.0),
+        PropSpec("fallen_log", 5.2, 5.2, {"axis": "y", "seed": 1}),
+        PropSpec("fallen_log", 14.2, 17.5, {"axis": "x", "seed": 2}),
     ) + tuple(PropSpec("crate", x, y) for x, y in _FOREST_CRATES)
       + tuple(PropSpec("snare", x, y) for x, y in _FOREST_SNARES)
       + tuple(PropSpec("forest_tree", x, y) for x, y in _FOREST_TREES),
@@ -741,6 +790,9 @@ NAGASHINO_SPEC = ArenaSpec(
             PropSpec("nobori", 16.9, 6.2, {"text": "鉄", "cloth": (36, 64, 128), "pole_height": 3.0}),
             PropSpec("nobori", 5.2, 15.8, {"text": "武", "cloth": (156, 30, 34), "pole_height": 3.0}),
             PropSpec("nobori", 19.8, 15.8, {"text": "武", "cloth": (156, 30, 34), "pole_height": 3.0}),
+            PropSpec("artillery_crater", 6.2, 10.8, {"seed": 1}),
+            PropSpec("artillery_crater", 15.8, 12.2, {"seed": 2}),
+            PropSpec("artillery_crater", 10.8, 16.5, {"seed": 3}),
         )
     ),
     spawns=SpawnRule(x_range=(3.0, 19.0), margin=3.5, min_distance=7.0, fallback=((5.0, 4.8), (17.0, 18.5))),
@@ -1079,7 +1131,7 @@ TILE_GOJO_CENTER = 72
 _GOJO_LANTERNS = ((4.5, 7.2), (10.5, 7.2), (16.5, 7.2), (4.5, 13.8), (10.5, 13.8), (16.5, 13.8))
 _GOJO_JIZO = ((2.0, 9.5), (2.0, 11.5), (19.5, 9.5), (19.5, 11.5))
 _GOJO_KAGARIBI = ((2.2, 7.0), (2.2, 14.0), (10.5, 6.8), (10.5, 14.2), (18.8, 7.0), (18.8, 14.0))
-_GOJO_BLADES = ((1.5, 8.5), (1.5, 12.5), (19.5, 8.5), (19.5, 12.5), (2.8, 10.5), (18.2, 10.5))
+_GOJO_BLADES = ((1.5, 8.5), (1.5, 12.5), (19.5, 8.5), (19.5, 12.5), (2.8, 10.5), (18.2, 10.5), (0.8, 10.5), (20.2, 10.5), (7.5, 7.2), (13.5, 7.2), (7.5, 13.8), (13.5, 13.8))
 _GOJO_SUPPORTS = ((5.5, 6.7), (10.5, 6.7), (15.5, 6.7), (5.5, 14.3), (10.5, 14.3), (15.5, 14.3))
 
 GOJO_BRIDGE_SPEC = ArenaSpec(
@@ -1289,6 +1341,14 @@ RICE_PADDIES_SPEC = ArenaSpec(
             PropSpec("tree", 19.2, 1.8),
             PropSpec("crate", 10.5, 3.5),
             PropSpec("crate", 10.5, 18.2),
+            PropSpec("rice_stalks", 4.5, 3.0, {"wz": 0.28, "seed": 1}),
+            PropSpec("rice_stalks", 15.5, 3.0, {"wz": 0.28, "seed": 2}),
+            PropSpec("rice_stalks", 5.5, 10.2, {"wz": 0.10, "seed": 3}),
+            PropSpec("rice_stalks", 7.2, 10.8, {"wz": 0.10, "seed": 4}),
+            PropSpec("rice_stalks", 14.2, 10.2, {"wz": 0.10, "seed": 5}),
+            PropSpec("rice_stalks", 16.0, 10.8, {"wz": 0.10, "seed": 6}),
+            PropSpec("rice_stalks", 5.0, 17.0, {"wz": 0.00, "seed": 7}),
+            PropSpec("rice_stalks", 16.0, 17.0, {"wz": 0.00, "seed": 8}),
         )
     ),
     spawns=SpawnRule(x_range=(6.0, 15.0), margin=4.0, min_distance=6.5, fallback=((8.0, 10.5), (13.0, 10.5))),
@@ -1466,6 +1526,12 @@ GOTHIC_CEMETERY_SPEC = ArenaSpec(
         + _CEMETERY_TREES
         + _CEMETERY_HEADSTONES
         + _CEMETERY_FENCES
+        + (
+            PropSpec("open_grave", 5.2, 5.2),
+            PropSpec("open_grave", 15.2, 15.2),
+            PropSpec("cemetery_gargoyle", 7.2, 2.0),
+            PropSpec("cemetery_gargoyle", 13.8, 2.0),
+        )
     ),
     hazards=(HazardSpec("gothic_cemetery_hazard", {}),),
     playable_bounds=(2.0, 3.0, 19.0, 19.0),
@@ -1640,6 +1706,8 @@ SACRED_PINES_SPEC = ArenaSpec(
             PropSpec("jizo", 14.8, 16.5),
             PropSpec("timber_logs", 4.6, 7.2),
             PropSpec("timber_logs", 16.4, 14.2),
+            PropSpec("fallen_log", 4.2, 10.5, {"axis": "y", "seed": 3}),
+            PropSpec("fallen_log", 16.8, 10.5, {"axis": "y", "seed": 4}),
             PropSpec("rock", 4.4, 14.2, {"radius": 0.75, "height": 1.1}),
             PropSpec("rock", 16.6, 6.8, {"radius": 0.80, "height": 1.2}),
         )
@@ -1700,7 +1768,7 @@ EZO_TUNDRA_SPEC = ArenaSpec(
     music="bgm_ezo_taiga",
     wind=WindSpec(1.0, 0.65, 1.45, 0.85),
     tile_styles={
-        TILE_EZO_SNOW: TileStyle("flat", ((226, 236, 248), (212, 224, 240)), pattern="parity", edge=(170, 188, 212), surface="sand"),
+        TILE_EZO_SNOW: TileStyle("flat", ((226, 236, 248), (212, 224, 240)), pattern="parity", edge=(170, 188, 212), surface="snow"),
         TILE_EZO_ICE: TileStyle("flat", ((152, 198, 236), (138, 184, 226)), pattern="rows", edge=(102, 148, 194), speed_mult=1.18, surface="marble"),
         TILE_EZO_FROZEN_EARTH: TileStyle("flat", ((96, 88, 86), (84, 76, 74)), pattern="parity", edge=(62, 56, 56), surface="earth"),
     },

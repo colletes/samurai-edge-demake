@@ -635,20 +635,34 @@ class Campfire(FireHazardMixin):
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         x, y = self.wx, self.wy
+        # 1. Leito de cinzas e braseiro central
+        draw_voxel_box(surface, camera, x - 0.44, y - 0.44, 0.0, 0.88, 0.88, 0.05, (42, 34, 30), outline=False)
+        draw_voxel_box(surface, camera, x - 0.28, y - 0.28, 0.04, 0.56, 0.56, 0.06, (196, 68, 24), outline=False)
+        # 2. Anel de 8 pedras de rio ao redor da fogueira
         for k in range(8):
             a = k * math.pi / 4.0
-            draw_voxel_box(surface, camera, x + math.cos(a) * 0.5 - 0.1, y + math.sin(a) * 0.5 - 0.1, 0.0, 0.2, 0.2, 0.14, (110, 106, 100), outline=True)
-        draw_voxel_box(surface, camera, x - 0.35, y - 0.07, 0.04, 0.7, 0.14, 0.12, (86, 56, 34), outline=True)
-        draw_voxel_box(surface, camera, x - 0.07, y - 0.35, 0.04, 0.14, 0.7, 0.12, (96, 62, 38), outline=True)
-        h = 0.45 + 0.12 * math.sin(time_val * 11.0 + x) + 0.06 * math.sin(time_val * 17.0)
-        draw_voxel_box(surface, camera, x - 0.2, y - 0.2, 0.12, 0.4, 0.4, h, (255, 140, 40), outline=False)
-        draw_voxel_box(surface, camera, x - 0.1, y - 0.1, 0.12, 0.2, 0.2, h + 0.2, (255, 220, 110), outline=False)
+            st_col = (114, 110, 104) if k % 2 == 0 else (92, 88, 84)
+            draw_voxel_box(surface, camera, x + math.cos(a) * 0.48 - 0.11, y + math.sin(a) * 0.48 - 0.11, 0.0, 0.22, 0.22, 0.15, st_col, outline=True)
+        # 3. Toras cruzadas de lenha com pontas carbonizadas e suporte rústico de acampamento
+        draw_voxel_box(surface, camera, x - 0.36, y - 0.08, 0.05, 0.72, 0.16, 0.12, (86, 56, 34), outline=True)
+        draw_voxel_box(surface, camera, x - 0.08, y - 0.36, 0.06, 0.16, 0.72, 0.12, (96, 62, 38), outline=True)
+        # Forquilhas laterais e chaleira de ferro (Tetsubin) suspensa sobre o fogo
+        draw_voxel_box(surface, camera, x - 0.46, y - 0.04, 0.0, 0.08, 0.08, 0.78, (76, 50, 32), outline=True)
+        draw_voxel_box(surface, camera, x + 0.38, y - 0.04, 0.0, 0.08, 0.08, 0.78, (76, 50, 32), outline=True)
+        draw_voxel_box(surface, camera, x - 0.50, y - 0.03, 0.74, 1.00, 0.06, 0.06, (64, 42, 28), outline=True)
+        draw_voxel_box(surface, camera, x - 0.12, y - 0.12, 0.48, 0.24, 0.24, 0.18, (44, 46, 52), outline=True)
+        # 4. Chamas 3D dançantes em 3 camadas
+        h = 0.44 + 0.12 * math.sin(time_val * 11.0 + x) + 0.06 * math.sin(time_val * 17.0)
+        flick = math.sin(time_val * 14.0 + y) * 0.04
+        draw_voxel_box(surface, camera, x - 0.22 + flick, y - 0.22, 0.10, 0.44, 0.44, h * 0.75, (235, 95, 25), outline=False)
+        draw_voxel_box(surface, camera, x - 0.15 - flick, y - 0.15, 0.12, 0.30, 0.30, h, (255, 160, 45), outline=False)
+        draw_voxel_box(surface, camera, x - 0.08, y - 0.08, 0.14, 0.16, 0.16, h + 0.18, (255, 232, 125), outline=False)
 
 
 class SnareTrap:
     """
     Armadilha de laço escondida sob terra remexida: atordoa (sem ferir) quem pisa nela e rearma depois.
-    O monte de terra e os gravetos são o sinal; ao disparar, o laço sobe e mostra a corda.
+    O monte de terra, o gatilho de bambu envergado e os gravetos são o sinal; ao disparar, o laço sobe e mostra a corda.
     """
 
     RADIUS = 0.6
@@ -693,18 +707,30 @@ class SnareTrap:
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         x, y = self.wx, self.wy
         if self.armed:
-            draw_voxel_box(surface, camera, x - 0.5, y - 0.45, 0.0, 1.0, 0.9, 0.05, (92, 64, 40), outline=False)
-            for dx, dy, s in ((-0.3, -0.2, 0.22), (0.15, 0.1, 0.26), (-0.05, 0.3, 0.18), (0.32, -0.28, 0.16)):
-                draw_voxel_box(surface, camera, x + dx - s / 2, y + dy - s / 2, 0.05, s, s, 0.09, (118, 84, 54), outline=False)
-            for a, b in (((-0.45, -0.05), (0.2, 0.4)), ((-0.1, -0.5), (0.35, -0.1))):
-                pygame.draw.line(surface, (60, 44, 28), camera.apply(x + a[0], y + a[1], 0.12), camera.apply(x + b[0], y + b[1], 0.12), 2)
+            # Terra remexida, folhas secas de camuflagem e arco de bambu tensionado
+            draw_voxel_box(surface, camera, x - 0.50, y - 0.45, 0.0, 1.00, 0.90, 0.05, (92, 64, 40), outline=False)
+            for dx, dy, s, col in (
+                (-0.30, -0.20, 0.22, (118, 84, 54)),
+                (0.15, 0.10, 0.26, (108, 76, 48)),
+                (-0.05, 0.30, 0.18, (88, 106, 52)),
+                (0.32, -0.28, 0.16, (124, 90, 56)),
+            ):
+                draw_voxel_box(surface, camera, x + dx - s / 2, y + dy - s / 2, 0.05, s, s, 0.08, col, outline=False)
+            # Estaca de gatilho e haste envergada na lateral
+            draw_voxel_box(surface, camera, x - 0.52, y - 0.42, 0.0, 0.10, 0.10, 0.32, (84, 58, 36), outline=True)
+            draw_voxel_box(surface, camera, x - 0.46, y - 0.38, 0.28, 0.34, 0.08, 0.08, (104, 126, 62), outline=False)
+            for a, b in (((-0.45, -0.05), (0.20, 0.40)), ((-0.10, -0.45), (0.35, -0.10))):
+                pygame.draw.line(surface, (60, 44, 28), camera.apply(x + a[0], y + a[1], 0.11), camera.apply(x + b[0], y + b[1], 0.11), 2)
         else:
-            draw_voxel_box(surface, camera, x - 0.5, y - 0.45, 0.0, 1.0, 0.9, 0.04, (70, 50, 32), outline=False)
-            top = camera.apply(x, y, 1.1)
+            # Armadilha disparada: haste chicoteada para o alto e laço de cânhamo 3D erguido (zero círculos 2D)
+            draw_voxel_box(surface, camera, x - 0.50, y - 0.45, 0.0, 1.00, 0.90, 0.04, (70, 50, 32), outline=False)
+            draw_voxel_box(surface, camera, x - 0.52, y - 0.42, 0.0, 0.10, 0.10, 1.18, (104, 126, 62), outline=True)
+            draw_voxel_box(surface, camera, x - 0.46, y - 0.38, 1.12, 0.48, 0.08, 0.08, (104, 126, 62), outline=False)
+            top = camera.apply(x, y, 1.10)
             for k in range(3):
                 ang = k * 2.1 + 0.4
-                pygame.draw.line(surface, (216, 190, 130), camera.apply(x + math.cos(ang) * 0.35, y + math.sin(ang) * 0.35, 0.0), top, 3)
-            pygame.draw.circle(surface, (216, 190, 130), top, 9, 3)
+                pygame.draw.line(surface, (216, 190, 130), camera.apply(x + math.cos(ang) * 0.35, y + math.sin(ang) * 0.35, 0.0), top, 2)
+            draw_voxel_box(surface, camera, x - 0.16, y - 0.16, 0.96, 0.32, 0.32, 0.14, (216, 190, 130), outline=True)
 
 
 class ScreenPanel(Rock):
@@ -1019,25 +1045,45 @@ class Fountain(Rock):
 
 
 class HangingChain:
-    """Corrente que pende do teto da gruta (decoração sem colisão); balança de leve."""
+    """Corrente de ferro forjado que pende da abóbada da gruta; balança suavemente com o vento subterrâneo."""
 
     def __init__(self, wx: float, wy: float, length: float = 3.2, top: float = 6.0):
         self.wx = wx
         self.wy = wy
         self.length = length
         self.top = top
+        self.iron_dark = (52, 48, 62)
+        self.iron_link = (88, 84, 106)
+        self.iron_highlight = (130, 124, 150)
+        self.hook_iron = (112, 100, 135)
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
-        sway = 0.12 * math.sin(time_val * 1.1 + self.wx * 0.7 + self.wy)
-        links = int(self.length / 0.28)
-        prev = camera.apply(self.wx, self.wy, self.top)
+        sway_x = 0.12 * math.sin(time_val * 1.1 + self.wx * 0.7 + self.wy)
+        sway_y = 0.08 * math.cos(time_val * 0.9 + self.wx * 0.5)
+        links = max(3, int(self.length / 0.26))
+
+        # Elo de ancoragem no teto
+        draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.08, self.top - 0.06, 0.16, 0.16, 0.08, self.iron_dark, outline=False)
+
         for i in range(1, links + 1):
             f = i / links
-            pos = camera.apply(self.wx + sway * f, self.wy + sway * 0.6 * f, self.top - self.length * f)
-            pygame.draw.line(surface, (62, 58, 76), prev, pos, 3)
-            pygame.draw.circle(surface, (130, 124, 150) if i % 2 else (88, 84, 106), pos, 3, 1)
-            prev = pos
-        pygame.draw.circle(surface, (150, 120, 190), prev, 4)
+            lx = self.wx + sway_x * (f ** 1.3)
+            ly = self.wy + sway_y * (f ** 1.3)
+            lz = self.top - self.length * f
+
+            # Elos alternados (orientação 90° para simular elos entrelaçados)
+            col = self.iron_highlight if i % 2 == 0 else self.iron_link
+            if i % 2 == 0:
+                draw_voxel_box(surface, camera, lx - 0.04, ly - 0.02, lz, 0.08, 0.04, 0.18, col, outline=False)
+            else:
+                draw_voxel_box(surface, camera, lx - 0.02, ly - 0.04, lz, 0.04, 0.08, 0.18, col, outline=False)
+
+        # Gancho / argola pesada na extremidade inferior
+        end_x = self.wx + sway_x
+        end_y = self.wy + sway_y
+        end_z = self.top - self.length
+        draw_voxel_box(surface, camera, end_x - 0.06, end_y - 0.06, end_z - 0.12, 0.12, 0.12, 0.12, self.hook_iron, outline=True)
+        draw_voxel_box(surface, camera, end_x - 0.03, end_y - 0.03, end_z - 0.20, 0.06, 0.06, 0.08, self.iron_dark, outline=False)
 
 
 class IncenseBurner:
@@ -1172,28 +1218,34 @@ class Scarecrow:
         x, y = self.wx, self.wy
         wind_sway = math.sin(time_val * 2.0 + self.seed) * 0.04
 
-        # Mastro vertical
-        draw_voxel_box(surface, camera, x - 0.04, y - 0.04, 0.0, 0.08, 0.08, 1.8, self.wood_col, outline=True)
-        # Travessa horizontal dos braços
-        draw_voxel_box(surface, camera, x - 0.65, y - 0.04 + wind_sway, 1.25, 1.30, 0.08, 0.08, self.wood_col, outline=True)
-        # Corpo / Túnica de palha e pano
+        # 1. Base de lama/palha e mastro vertical de bambu com nós
+        draw_voxel_box(surface, camera, x - 0.16, y - 0.16, 0.0, 0.32, 0.32, 0.08, (82, 64, 44), outline=False)
+        draw_voxel_box(surface, camera, x - 0.04, y - 0.04, 0.0, 0.08, 0.08, 1.82, self.wood_col, outline=True)
+        # 2. Travessa horizontal dos braços e chocalho agrícola Naruko pendurado
+        draw_voxel_box(surface, camera, x - 0.68, y - 0.04 + wind_sway, 1.25, 1.36, 0.08, 0.08, self.wood_col, outline=True)
+        draw_voxel_box(surface, camera, x - 0.48, y - 0.03 + wind_sway * 1.4, 0.96, 0.12, 0.06, 0.18, (186, 54, 38), outline=True)
+        # 3. Corpo / Túnica de palha mino com faixa obi de corda
+        draw_voxel_box(surface, camera, x - 0.20, y - 0.10 + wind_sway * 0.6, 0.48, 0.40, 0.20, 0.16, self.straw_col, outline=False)
         draw_voxel_box(surface, camera, x - 0.22, y - 0.12 + wind_sway, 0.60, 0.44, 0.24, 0.70, self.tunic_col, outline=True)
-        # Manga esquerda e direita
+        draw_voxel_box(surface, camera, x - 0.24, y - 0.13 + wind_sway, 0.86, 0.48, 0.26, 0.08, (176, 148, 92), outline=False)
+        # 4. Mangas esquerda e direita e tufos de palha nas pontas
         draw_voxel_box(surface, camera, x - 0.60, y - 0.08 + wind_sway * 1.5, 1.15, 0.38, 0.16, 0.20, self.tunic_col, outline=False)
         draw_voxel_box(surface, camera, x + 0.22, y - 0.08 - wind_sway * 1.5, 1.15, 0.38, 0.16, 0.20, self.tunic_col, outline=False)
-        # Tufos de palha saindo das pontas dos braços
-        draw_voxel_box(surface, camera, x - 0.72, y - 0.06 + wind_sway * 1.8, 1.18, 0.14, 0.12, 0.14, self.straw_col, outline=False)
-        draw_voxel_box(surface, camera, x + 0.58, y - 0.06 - wind_sway * 1.8, 1.18, 0.14, 0.12, 0.14, self.straw_col, outline=False)
-        # Cabeça redonda de palha
+        draw_voxel_box(surface, camera, x - 0.74, y - 0.06 + wind_sway * 1.8, 1.18, 0.16, 0.12, 0.14, self.straw_col, outline=False)
+        draw_voxel_box(surface, camera, x + 0.58, y - 0.06 - wind_sway * 1.8, 1.18, 0.16, 0.12, 0.14, self.straw_col, outline=False)
+        # 5. Cabeça de saco de juta com traços pintados (Henohenomoheji)
         draw_voxel_box(surface, camera, x - 0.14, y - 0.14 + wind_sway * 0.5, 1.35, 0.28, 0.28, 0.30, self.straw_col, outline=True)
-        # Chapéu cônico de palha (Kasa)
-        draw_voxel_box(surface, camera, x - 0.30, y - 0.30 + wind_sway * 0.5, 1.62, 0.60, 0.60, 0.08, self.hat_col, outline=True)
-        draw_voxel_box(surface, camera, x - 0.18, y - 0.18 + wind_sway * 0.5, 1.70, 0.36, 0.36, 0.10, self.hat_col, outline=False)
+        draw_voxel_box(surface, camera, x - 0.09, y + 0.13 + wind_sway * 0.5, 1.48, 0.06, 0.03, 0.04, (36, 30, 26), outline=False)
+        draw_voxel_box(surface, camera, x + 0.03, y + 0.13 + wind_sway * 0.5, 1.48, 0.06, 0.03, 0.04, (36, 30, 26), outline=False)
+        draw_voxel_box(surface, camera, x - 0.05, y + 0.13 + wind_sway * 0.5, 1.40, 0.10, 0.03, 0.03, (36, 30, 26), outline=False)
+        # 6. Chapéu cônico de palha (Sugegasa) em 3 patamares
+        draw_voxel_box(surface, camera, x - 0.34, y - 0.34 + wind_sway * 0.5, 1.62, 0.68, 0.68, 0.08, self.hat_col, outline=True)
+        draw_voxel_box(surface, camera, x - 0.20, y - 0.20 + wind_sway * 0.5, 1.70, 0.40, 0.40, 0.10, self.hat_col, outline=True)
         draw_voxel_box(surface, camera, x - 0.08, y - 0.08 + wind_sway * 0.5, 1.80, 0.16, 0.16, 0.08, self.hat_col, outline=False)
 
 
 class HayBale:
-    """Fardo rústico de feno/palha de arroz seco colhido."""
+    """Fardo rústico de feno/palha de arroz seco colhido (Tawara) com amarrações triplas."""
 
     def __init__(self, wx: float, wy: float, seed: int = 1):
         self.wx = wx
@@ -1201,17 +1253,21 @@ class HayBale:
         self.radius = 0.45
         self.straw_main = (205, 175, 105) if seed % 2 == 0 else (190, 160, 95)
         self.straw_shade = (165, 135, 75)
+        self.straw_light = (228, 202, 132)
         self.rope_col = (90, 65, 40)
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         x, y = self.wx, self.wy
-        # Bloco de palha
-        draw_voxel_box(surface, camera, x - 0.40, y - 0.30, 0.0, 0.80, 0.60, 0.55, self.straw_main, outline=True)
-        # Camada superior texturizada
-        draw_voxel_box(surface, camera, x - 0.36, y - 0.26, 0.55, 0.72, 0.52, 0.08, self.straw_shade, outline=False)
-        # Cordas de amarração
-        draw_voxel_box(surface, camera, x - 0.18, y - 0.32, 0.0, 0.05, 0.64, 0.58, self.rope_col, outline=False)
-        draw_voxel_box(surface, camera, x + 0.13, y - 0.32, 0.0, 0.05, 0.64, 0.58, self.rope_col, outline=False)
+        # 1. Base de palha solta e corpo principal do fardo Tawara
+        draw_voxel_box(surface, camera, x - 0.46, y - 0.34, 0.0, 0.92, 0.68, 0.06, self.straw_shade, outline=False)
+        draw_voxel_box(surface, camera, x - 0.40, y - 0.30, 0.04, 0.80, 0.60, 0.50, self.straw_main, outline=True, texture="thatch")
+        # 2. Topo abaulado e tampas laterais trançadas (Sanbyo)
+        draw_voxel_box(surface, camera, x - 0.36, y - 0.24, 0.54, 0.72, 0.48, 0.10, self.straw_light, outline=True)
+        draw_voxel_box(surface, camera, x - 0.44, y - 0.22, 0.10, 0.05, 0.44, 0.38, self.straw_shade, outline=True)
+        draw_voxel_box(surface, camera, x + 0.39, y - 0.22, 0.10, 0.05, 0.44, 0.38, self.straw_shade, outline=True)
+        # 3. Três cintas de corda de cânhamo
+        for rx in (-0.24, 0.0, 0.24):
+            draw_voxel_box(surface, camera, x + rx - 0.03, y - 0.32, 0.04, 0.06, 0.64, 0.54, self.rope_col, outline=False)
 
     def check_collision(self, px: float, py: float, p_radius: float = 0.3) -> tuple[bool, float, float]:
         dist = math.hypot(px - self.wx, py - self.wy)
@@ -1228,8 +1284,8 @@ class HayBale:
 
 
 class WaterMillWheel:
-    """Roda d'água monumental de madeira do moinho abandonado na chuva.
-    Gira continuamente impulsionada pelo fluxo do riacho, com respingos e pás de madeira."""
+    """Roda d'água monumental de madeira do moinho abandonado na chuva com calha elevada (aqueduto).
+    Gira continuamente impulsionada pelo fluxo da calha e do riacho, com respingos e pás de caçamba 3D."""
 
     def __init__(self, wx: float, wy: float, radius: float = 1.6, speed: float = 1.2):
         self.wx = wx
@@ -1237,16 +1293,32 @@ class WaterMillWheel:
         self.wheel_radius = radius
         self.width = 1.0
         self.depth = 1.4
-        self.height = radius * 2.0
+        self.height = radius * 2.1
         self.speed = speed
         self.wood_rim = (85, 60, 42)
         self.wood_spoke = (115, 85, 55)
+        self.wood_dark = (58, 40, 28)
+        self.stone_pier = (92, 96, 102)
+        self.moss_col = (54, 96, 52)
         self.iron_hub = (45, 45, 50)
-        self.water_splash = (180, 220, 255)
+        self.water_stream = (110, 178, 232)
+        self.water_splash = (205, 236, 255)
+        self._splash_timer = 0.0
+
+    def tick(self, arena, dt: float, fighters: list, camera, particles: list, banners: list):
+        self._splash_timer += dt
+        if self._splash_timer >= 0.22:
+            self._splash_timer = 0.0
+            from src.effects.particles import WaterRippleParticle, WaterSplashParticle
+            sx = self.wx + random.uniform(-0.6, 0.6)
+            sy = self.wy + random.uniform(-0.4, 0.4)
+            arena.water_ripples.append(WaterRippleParticle(sx, sy, wz=-0.05))
+            if random.random() < 0.7:
+                arena.water_splashes.append(WaterSplashParticle(sx, sy, wz=0.05))
 
     def check_collision(self, px: float, py: float, p_radius: float = 0.3) -> tuple[bool, float, float]:
-        half_w = 0.4
-        half_d = 0.7
+        half_w = 0.45
+        half_d = 0.72
         min_x, max_x = self.wx - half_w, self.wx + half_w
         min_y, max_y = self.wy - half_d, self.wy + half_d
         closest_x = max(min_x, min(px, max_x))
@@ -1263,40 +1335,58 @@ class WaterMillWheel:
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         cx, cy = self.wx, self.wy
-        hub_z = self.wheel_radius * 0.85
+        hub_z = self.wheel_radius * 0.90
         rot_angle = time_val * self.speed
 
-        # Eixo central de ferro/carvalho apoiado no solo
-        draw_voxel_box(surface, camera, cx - 0.15, cy - 0.45, hub_z - 0.15, 0.30, 0.90, 0.30, self.iron_hub, outline=True)
+        # 1. Píer de fundação de pedra musgosa e mancais de madeira maciça na margem
+        draw_voxel_box(surface, camera, cx - 0.42, cy - 0.56, 0.0, 0.84, 0.28, 0.42, self.stone_pier, outline=True, texture="stone")
+        draw_voxel_box(surface, camera, cx - 0.38, cy - 0.54, 0.38, 0.76, 0.24, 0.07, self.moss_col, outline=False)
+        draw_voxel_box(surface, camera, cx - 0.14, cy - 0.44, 0.0, 0.28, 0.18, hub_z + 0.10, self.wood_rim, outline=True)
+        draw_voxel_box(surface, camera, cx - 0.14, cy + 0.26, 0.0, 0.28, 0.18, hub_z + 0.10, self.wood_rim, outline=True)
 
-        # Suportes angulares de madeira cravados na margem
-        draw_voxel_box(surface, camera, cx - 0.12, cy - 0.40, 0.0, 0.24, 0.18, hub_z, self.wood_rim, outline=True)
-        draw_voxel_box(surface, camera, cx - 0.12, cy + 0.22, 0.0, 0.24, 0.18, hub_z, self.wood_rim, outline=True)
+        # 2. Eixo central de ferro forjado com mancais de bronze
+        draw_voxel_box(surface, camera, cx - 0.16, cy - 0.50, hub_z - 0.16, 0.32, 1.00, 0.32, self.iron_hub, outline=True)
 
-        # 8 Raios e Pás de madeira giratórias
+        # 3. 8 Raios cruzados e Pás de Caçamba 3D (Hako-bane) giratórias
         for i in range(8):
             ang = rot_angle + i * (math.pi / 4.0)
-            dx = math.cos(ang) * (self.wheel_radius * 0.85)
-            dz = math.sin(ang) * (self.wheel_radius * 0.85)
+            dx = math.cos(ang) * (self.wheel_radius * 0.86)
+            dz = math.sin(ang) * (self.wheel_radius * 0.86)
+            spoke_x = cx + dx * 0.52
+            spoke_z = hub_z + dz * 0.52
+            if spoke_z >= 0.05:
+                draw_voxel_box(surface, camera, spoke_x - 0.07, cy - 0.30, spoke_z - 0.07, 0.14, 0.60, 0.14, self.wood_dark, outline=False)
 
-            # Pá de madeira
             blade_x = cx + dx
             blade_z = hub_z + dz
             if blade_z >= 0.0:
-                draw_voxel_box(surface, camera, blade_x - 0.12, cy - 0.35, blade_z - 0.06, 0.24, 0.70, 0.12, self.wood_spoke, outline=False)
+                draw_voxel_box(surface, camera, blade_x - 0.14, cy - 0.36, blade_z - 0.07, 0.28, 0.72, 0.14, self.wood_spoke, outline=True)
+                # Água acumulada na caçamba descendente e respingos na correnteza inferior
+                if dx > 0.15 and blade_z > 0.35:
+                    draw_voxel_box(surface, camera, blade_x - 0.10, cy - 0.30, blade_z + 0.04, 0.20, 0.60, 0.06, self.water_stream, outline=False)
+                if blade_z < 0.42 and math.sin(time_val * 15.0 + i) > -0.2:
+                    splash_h = 0.10 + 0.05 * abs(math.sin(time_val * 18.0 + i))
+                    draw_voxel_box(surface, camera, blade_x - 0.10, cy - 0.28, 0.04, 0.20, 0.56, splash_h, self.water_splash, outline=False)
 
-                # Respingos de água na parte inferior da roda ao tocar a correnteza
-                if blade_z < 0.35 and math.sin(time_val * 15.0 + i) > 0.0:
-                    splash_size = 0.08
-                    draw_voxel_box(surface, camera, blade_x - 0.06, cy - 0.25, 0.05, splash_size, 0.50, splash_size, self.water_splash, outline=False)
-
-        # Aro exterior circular da roda (segmentos)
+        # 4. Duplo aro exterior circular da roda (12 segmentos)
         for i in range(12):
             ang = rot_angle + i * (math.pi / 6.0)
             rx = cx + math.cos(ang) * self.wheel_radius
             rz = hub_z + math.sin(ang) * self.wheel_radius
             if rz >= 0.0:
-                draw_voxel_box(surface, camera, rx - 0.08, cy - 0.32, rz - 0.08, 0.16, 0.64, 0.16, self.wood_rim, outline=False)
+                draw_voxel_box(surface, camera, rx - 0.09, cy - 0.36, rz - 0.09, 0.18, 0.12, 0.18, self.wood_rim, outline=False)
+                draw_voxel_box(surface, camera, rx - 0.09, cy + 0.24, rz - 0.09, 0.18, 0.12, 0.18, self.wood_rim, outline=False)
+
+        # 5. Calha de madeira elevada (Aqueduto do Moinho / Toi) despejando água no topo da roda
+        flume_z = hub_z + self.wheel_radius + 0.14
+        draw_voxel_box(surface, camera, cx - 1.38, cy - 0.26, 0.0, 0.14, 0.14, flume_z, self.wood_dark, outline=True)
+        draw_voxel_box(surface, camera, cx - 1.38, cy + 0.12, 0.0, 0.14, 0.14, flume_z, self.wood_dark, outline=True)
+        draw_voxel_box(surface, camera, cx - 1.45, cy - 0.28, flume_z, 1.55, 0.56, 0.16, self.wood_rim, outline=True)
+        draw_voxel_box(surface, camera, cx - 1.42, cy - 0.20, flume_z + 0.12, 1.52, 0.40, 0.07, self.water_stream, outline=False)
+        # Queda d'água jorrando da boca da calha sobre as pás superiores
+        fall_jitter = math.sin(time_val * 20.0) * 0.03
+        draw_voxel_box(surface, camera, cx + 0.04 + fall_jitter, cy - 0.18, hub_z + self.wheel_radius * 0.72, 0.18, 0.36, 0.48, self.water_stream, outline=False)
+        draw_voxel_box(surface, camera, cx + 0.02, cy - 0.22, hub_z + self.wheel_radius * 0.68, 0.24, 0.44, 0.10, self.water_splash, outline=False)
 
 
 class DuneGrass:
@@ -1428,6 +1518,7 @@ class BladeCluster(Rock):
         self.tsuka_cord = (42, 28, 24) if seed % 2 == 0 else (120, 24, 24)
         self.tsuba_brass = (165, 135, 60)
         self.spear_wood = (88, 62, 42)
+        self.tassel_red = (185, 36, 36)
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         # Base de pedras onde as lâminas estão cravadas
@@ -1438,18 +1529,26 @@ class BladeCluster(Rock):
         draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.12, 0.82, 0.16, 0.14, 0.04, self.tsuba_brass, outline=False)
         draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.09, 0.86, 0.10, 0.08, 0.26, self.tsuka_cord, outline=False)
 
-        # Lança Yari / Naginata: mais alta com haste de madeira
+        # Lança Yari / Naginata: mais alta com haste de madeira e borla vermelha de crina
         draw_voxel_box(surface, camera, self.wx + 0.08, self.wy + 0.04, 0.12, 0.08, 0.08, 1.15, self.spear_wood, outline=False)
         draw_voxel_box(surface, camera, self.wx + 0.06, self.wy + 0.02, 1.27, 0.12, 0.06, 0.38, self.blade_edge, outline=False)
+        # Borla escarlate da lança
+        draw_voxel_box(surface, camera, self.wx + 0.05, self.wy + 0.01, 1.20, 0.14, 0.10, 0.08, self.tassel_red, outline=False)
 
-        # Katana 2: lâmina mais curta ou quebrada
+        # Katana 2 / Lâmina curta: dependendo do seed, tachi ou katana quebrada
         draw_voxel_box(surface, camera, self.wx - 0.14, self.wy + 0.08, 0.12, 0.07, 0.07, 0.48, self.blade_steel, outline=False)
         draw_voxel_box(surface, camera, self.wx - 0.18, self.wy + 0.04, 0.60, 0.14, 0.14, 0.04, self.tsuba_brass, outline=False)
         draw_voxel_box(surface, camera, self.wx - 0.15, self.wy + 0.06, 0.64, 0.08, 0.08, 0.22, (28, 36, 48), outline=False)
 
+        # Terceira lâmina (adicional de troféu: wakizashi ou ponta cravada)
+        if self.seed % 3 == 0:
+            draw_voxel_box(surface, camera, self.wx + 0.02, self.wy - 0.16, 0.12, 0.06, 0.06, 0.35, self.blade_steel, outline=False)
+            draw_voxel_box(surface, camera, self.wx - 0.01, self.wy - 0.19, 0.47, 0.12, 0.12, 0.03, self.tsuba_brass, outline=False)
+            draw_voxel_box(surface, camera, self.wx + 0.01, self.wy - 0.17, 0.50, 0.08, 0.08, 0.18, (72, 36, 28), outline=False)
+
 
 class BridgeSupport:
-    """Pilares maciços de sustentação da ponte descendo até o leito do rio."""
+    """Pilares maciços de sustentação da ponte descendo até o leito do rio com espuma animada."""
 
     def __init__(self, wx: float, wy: float, depth: float = 0.8):
         self.wx = wx
@@ -1457,16 +1556,24 @@ class BridgeSupport:
         self.depth = depth
         self.wood_color = (48, 36, 26)
         self.wood_shadow = (32, 24, 18)
+        self.stone_footing = (68, 64, 60)
+        self.river_foam = (210, 230, 250)
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
-        # Pilar descendo de z=0 até o fundo do rio
+        # 1. Base de fundação em cantaria submersa
+        draw_voxel_box(surface, camera, self.wx - 0.28, self.wy - 0.28, -self.depth - 0.15, 0.56, 0.56, 0.20, self.stone_footing, outline=True)
+        # 2. Pilar de madeira de lei subindo até o convés da ponte
         draw_voxel_box(surface, camera, self.wx - 0.22, self.wy - 0.22, -self.depth, 0.44, 0.44, self.depth, self.wood_color, outline=True)
-        # Travessão transversal
-        draw_voxel_box(surface, camera, self.wx - 0.30, self.wy - 0.30, -0.20, 0.60, 0.60, 0.15, self.wood_shadow, outline=False)
+        # 3. Travessão estrutural horizontal
+        draw_voxel_box(surface, camera, self.wx - 0.32, self.wy - 0.32, -0.22, 0.64, 0.64, 0.16, self.wood_shadow, outline=False)
+        # 4. Turbulência e espuma das corredeiras do Rio Kamo batendo contra o pilar
+        foam_w = 0.65 + 0.12 * math.sin(time_val * 7.0 + self.wx * 3.0)
+        foam_d = 0.55 + 0.08 * math.cos(time_val * 6.5 + self.wy * 2.0)
+        draw_voxel_box(surface, camera, self.wx - foam_w * 0.5, self.wy - foam_d * 0.5, -0.05, foam_w, foam_d, 0.04, self.river_foam, outline=False)
 
 
 class WaterChute:
-    """Vertedouro e calha de bambu com fluxo d'água animado entre os patamares dos arrozais."""
+    """Vertedouro e calha de bambu (Kakehi) com estacas cruzadas e fluxo d'água animado entre os patamares dos arrozais."""
 
     def __init__(self, wx: float, wy: float, z_top: float = 0.28, z_bottom: float = 0.14, length: float = 1.0):
         self.wx = wx
@@ -1475,21 +1582,27 @@ class WaterChute:
         self.z_bottom = z_bottom
         self.length = length
         self.bamboo_col = (72, 115, 54)
+        self.bamboo_node = (52, 88, 38)
+        self.stake_col = (94, 66, 42)
         self.water_col = (130, 180, 225)
         self.water_foam = (215, 235, 255)
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
-        # Calha de bambu cortada
         h_diff = self.z_top - self.z_bottom
-        draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.10, self.z_bottom, 0.36, 0.20, h_diff + 0.05, self.bamboo_col, outline=True)
-
-        # Lâmina d'água fluindo com oscilação procedural
+        # 1. Estacas de sustentação de madeira e amarração de cânhamo
+        draw_voxel_box(surface, camera, self.wx - 0.24, self.wy - 0.04, self.z_bottom, 0.06, 0.06, h_diff + 0.12, self.stake_col, outline=True)
+        draw_voxel_box(surface, camera, self.wx + 0.18, self.wy - 0.04, self.z_bottom, 0.06, 0.06, h_diff + 0.12, self.stake_col, outline=True)
+        # 2. Calha de bambu cortada (Kakehi) com anéis de nó
+        draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.14, self.z_bottom + 0.02, 0.36, 0.26, h_diff + 0.05, self.bamboo_col, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.20, self.wy - 0.02, self.z_bottom + 0.02, 0.40, 0.05, h_diff + 0.06, self.bamboo_node, outline=False)
+        # 3. Lâmina d'água fluindo com oscilação procedural e jato de queda
         flow = math.sin(time_val * 16.0 + self.wx * 5.0) * 0.02
-        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.08, self.z_bottom + flow, 0.24, 0.16, h_diff, self.water_col, outline=False)
-
-        # Espuma no ponto de queda inferior
-        foam_size = 0.22 + math.sin(time_val * 22.0) * 0.04
-        draw_voxel_box(surface, camera, self.wx - foam_size * 0.5, self.wy + 0.10, self.z_bottom, foam_size, 0.15, 0.04, self.water_foam, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.10, self.z_bottom + 0.03 + flow, 0.24, 0.24, h_diff, self.water_col, outline=False)
+        # 4. Espuma 3D e gotículas saltando no ponto de queda inferior
+        foam_size = 0.24 + math.sin(time_val * 22.0) * 0.04
+        draw_voxel_box(surface, camera, self.wx - foam_size * 0.5, self.wy + 0.10, self.z_bottom, foam_size, 0.16, 0.05, self.water_foam, outline=False)
+        drop_z = self.z_bottom + 0.04 + abs(math.sin(time_val * 18.0 + self.wx)) * 0.08
+        draw_voxel_box(surface, camera, self.wx - 0.04, self.wy + 0.14, drop_z, 0.08, 0.08, 0.06, self.water_foam, outline=False)
 
 
 # =============================================================================
@@ -2048,101 +2161,143 @@ class SpectralToro(Rock):
 class AkamatsuPine(Rock):
     """
     Pinheiro-vermelho japonês monumental (Akamatsu) da Floresta dos Pinheiros:
-    - Tronco avermelhado retorcido com raízes musgosas.
-    - Copas em patamares de agulhas verde-esmeralda que oscilam com o vento da montanha.
+    - Tronco avermelhado retorcido com raízes musgosas e placas de casca.
+    - Copas em patamares de agulhas verde-esmeralda que oscilam com o vento da montanha (cacheadas para 60 FPS).
     """
     animated = True
+    _sprite_cache: dict[tuple, tuple[pygame.Surface, int, int]] = {}
 
     def __init__(self, wx: float, wy: float, scale: float = 1.0):
         super().__init__(wx, wy, radius=0.55 * scale, height=3.2 * scale)
         self.scale = scale
-        self.bark_red = (118, 56, 38)
+        self.bark_red = (128, 58, 38)
         self.bark_dark = (78, 36, 24)
         self.moss_col = (64, 112, 52)
-        self.needle_dark = (28, 76, 44)
+        self.needle_dark = (26, 74, 42)
         self.needle_mid = (44, 108, 60)
-        self.needle_light = (68, 138, 76)
+        self.needle_light = (72, 144, 78)
+
+    def _draw_geometry(self, surface: pygame.Surface, camera, sway: float):
+        s = self.scale
+        # 1. Raízes musgosas espraiadas e base do tronco
+        draw_voxel_box(surface, camera, self.wx - 0.40 * s, self.wy - 0.40 * s, 0.0, 0.80 * s, 0.80 * s, 0.22 * s, self.bark_dark, outline=True, texture="bark")
+        draw_voxel_box(surface, camera, self.wx - 0.34 * s, self.wy - 0.34 * s, 0.18 * s, 0.68 * s, 0.68 * s, 0.10 * s, self.moss_col, outline=False)
+
+        # 2. Tronco avermelhado Akamatsu em segmentos sinuosos com galhos retorcidos
+        draw_voxel_box(surface, camera, self.wx - 0.22 * s, self.wy - 0.22 * s, 0.22 * s, 0.44 * s, 0.44 * s, 0.95 * s, self.bark_red, outline=True, texture="bark")
+        draw_voxel_box(surface, camera, self.wx - 0.18 * s + sway * 0.3, self.wy - 0.18 * s, 1.15 * s, 0.36 * s, 0.36 * s, 0.95 * s, self.bark_red, outline=True, texture="bark")
+        draw_voxel_box(surface, camera, self.wx - 0.72 * s + sway * 0.5, self.wy - 0.11 * s, 1.50 * s, 1.44 * s, 0.22 * s, 0.15 * s, self.bark_dark, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.11 * s + sway * 0.5, self.wy - 0.64 * s, 1.62 * s, 0.22 * s, 1.28 * s, 0.14 * s, self.bark_dark, outline=True)
+
+        # 3. Patamares de copa de pinheiro (nuvens largas de agulhas 3D em leque)
+        draw_voxel_box(surface, camera, self.wx - 0.98 * s + sway * 0.6, self.wy - 0.88 * s, 1.65 * s, 1.96 * s, 1.76 * s, 0.36 * s, self.needle_dark, outline=True, texture="foliage")
+        draw_voxel_box(surface, camera, self.wx - 0.84 * s + sway * 0.8, self.wy - 0.74 * s, 1.98 * s, 1.68 * s, 1.48 * s, 0.34 * s, self.needle_mid, outline=True, texture="foliage")
+        draw_voxel_box(surface, camera, self.wx - 0.58 * s + sway, self.wy - 0.54 * s, 2.30 * s, 1.16 * s, 1.08 * s, 0.30 * s, self.needle_light, outline=True, texture="foliage")
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         s = self.scale
-        sway = math.sin(time_val * 2.2 + self.wx * 0.7 + self.wy * 0.5) * 0.06 * s
+        if abs(getattr(camera, "azimuth", 0.0)) > 1e-4:
+            sway = math.sin(time_val * 2.2 + self.wx * 0.7 + self.wy * 0.5) * 0.06 * s
+            self._draw_geometry(surface, camera, sway)
+            return
 
-        # 1. Raízes musgosas e base do tronco
-        draw_voxel_box(surface, camera, self.wx - 0.36 * s, self.wy - 0.36 * s, 0.0, 0.72 * s, 0.72 * s, 0.22 * s, self.bark_dark, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.32 * s, self.wy - 0.32 * s, 0.18 * s, 0.64 * s, 0.64 * s, 0.10 * s, self.moss_col, outline=False)
+        zoom_b = round(getattr(camera, "zoom", 1.0) * 10.0) / 10.0
+        sway_step = int(round(math.sin(time_val * 2.2 + self.wx * 0.7 + self.wy * 0.5) * 2.0))
+        key = (round(s, 2), zoom_b, sway_step)
+        tpl = AkamatsuPine._sprite_cache.get(key)
+        if tpl is None:
+            if len(AkamatsuPine._sprite_cache) > 96:
+                AkamatsuPine._sprite_cache.clear()
+            w = max(96, int(240 * s * zoom_b))
+            h = max(120, int(290 * s * zoom_b))
+            ax = w // 2
+            ay = h - int(48 * s * zoom_b)
+            surf = pygame.Surface((w, h), pygame.SRCALPHA)
+            surf.fill((0, 0, 0, 0))
+            local_cam = _LocalClusterCamera(self.wx, self.wy, ax, ay, zoom_b)
+            sway_val = (sway_step / 2.0) * 0.06 * s
+            self._draw_geometry(surf, local_cam, sway_val)
+            tpl = (surf, ax, ay)
+            AkamatsuPine._sprite_cache[key] = tpl
 
-        # 2. Tronco avermelhado Akamatsu em segmentos levemente sinuosos
-        draw_voxel_box(surface, camera, self.wx - 0.22 * s, self.wy - 0.22 * s, 0.22 * s, 0.44 * s, 0.44 * s, 0.95 * s, self.bark_red, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.18 * s + sway * 0.3, self.wy - 0.18 * s, 1.15 * s, 0.36 * s, 0.36 * s, 0.95 * s, self.bark_red, outline=True)
-
-        # Galhos horizontais estruturais
-        draw_voxel_box(surface, camera, self.wx - 0.65 * s + sway * 0.5, self.wy - 0.10 * s, 1.55 * s, 1.30 * s, 0.20 * s, 0.14 * s, self.bark_dark, outline=True)
-
-        # 3. Patamares de copa de pinheiro (3 nuvens largas de agulhas 3D)
-        draw_voxel_box(surface, camera, self.wx - 0.95 * s + sway * 0.6, self.wy - 0.85 * s, 1.65 * s, 1.90 * s, 1.70 * s, 0.36 * s, self.needle_dark, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.82 * s + sway * 0.8, self.wy - 0.72 * s, 1.98 * s, 1.64 * s, 1.44 * s, 0.34 * s, self.needle_mid, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.56 * s + sway, self.wy - 0.52 * s, 2.30 * s, 1.12 * s, 1.04 * s, 0.30 * s, self.needle_light, outline=True)
+        surf, ax, ay = tpl
+        sx, sy = camera.apply(self.wx, self.wy, 0.0)
+        surface.blit(surf, (sx - ax, sy - ay))
 
 
 class MountainHokora(Rock):
     """
     Pequeno santuário de trilha montanhesa (Hokora) sobre pedestal de pedra musgosa,
-    com corda sagrada shimenawa e vela acesa no interior.
+    com degraus frontais, corda sagrada shimenawa, fitas shide de papel branco e vela acesa no interior.
     """
     animated = True
 
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, radius=0.48, height=1.45)
         self.stone_base = (104, 108, 102)
+        self.stone_dark = (78, 82, 76)
         self.moss = (66, 114, 58)
         self.wood_col = (128, 82, 48)
         self.roof_col = (54, 48, 44)
         self.rope_col = (218, 192, 132)
+        self.shide_col = (242, 240, 234)
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
-        # Pedestal de pedra e musgo
-        draw_voxel_box(surface, camera, self.wx - 0.42, self.wy - 0.42, 0.0, 0.84, 0.84, 0.28, self.stone_base, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.36, self.wy - 0.36, 0.28, 0.72, 0.72, 0.24, self.stone_base, outline=True)
+        # 1. Pedestal de pedra em 2 patamares, degrau frontal e manto de musgo
+        draw_voxel_box(surface, camera, self.wx - 0.44, self.wy - 0.44, 0.0, 0.88, 0.88, 0.28, self.stone_dark, outline=True, texture="stone")
+        draw_voxel_box(surface, camera, self.wx - 0.22, self.wy + 0.40, 0.0, 0.44, 0.16, 0.16, self.stone_base, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.36, self.wy - 0.36, 0.28, 0.72, 0.72, 0.24, self.stone_base, outline=True, texture="stone")
         draw_voxel_box(surface, camera, self.wx - 0.38, self.wy - 0.38, 0.48, 0.76, 0.76, 0.06, self.moss, outline=False)
 
-        # Câmara de madeira do Hokora e chama votiva
+        # 2. Câmara de madeira do Hokora e chama votiva bruxuleante
         draw_voxel_box(surface, camera, self.wx - 0.28, self.wy - 0.28, 0.52, 0.56, 0.56, 0.48, self.wood_col, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.14, self.wy + 0.18, 0.56, 0.28, 0.12, 0.34, (36, 26, 20), outline=False)
         flick = math.sin(time_val * 8.0 + self.wx) * 0.02
-        draw_voxel_box(surface, camera, self.wx - 0.08 + flick, self.wy + 0.16, 0.62, 0.16, 0.14, 0.20, (255, 195, 75), outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.06 + flick, self.wy + 0.16, 0.62, 0.12, 0.12, 0.20, (255, 205, 85), outline=False)
 
-        # Corda Shimenawa frontal e telhado curvado
+        # 3. Corda Shimenawa frontal com 3 fitas Shide brancas em zigue-zague e telhado Chidori-hafu
         draw_voxel_box(surface, camera, self.wx - 0.32, self.wy + 0.24, 0.92, 0.64, 0.08, 0.07, self.rope_col, outline=False)
-        draw_voxel_box(surface, camera, self.wx - 0.44, self.wy - 0.44, 0.98, 0.88, 0.88, 0.22, self.roof_col, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.28, self.wy - 0.28, 1.20, 0.56, 0.56, 0.16, self.roof_col, outline=True)
+        for sx in (-0.20, 0.0, 0.20):
+            draw_voxel_box(surface, camera, self.wx + sx - 0.03, self.wy + 0.26, 0.78, 0.06, 0.04, 0.14, self.shide_col, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.46, self.wy - 0.46, 0.98, 0.92, 0.92, 0.20, self.roof_col, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.30, self.wy - 0.30, 1.18, 0.60, 0.60, 0.16, self.roof_col, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.36, self.wy - 0.06, 1.34, 0.72, 0.12, 0.10, (168, 142, 78), outline=False)
 
 
 class TimberLogPile(Rock):
-    """Pilha de toras de pinheiro cortadas e amarradas com corda na borda da clareira."""
+    """Pilha de toras de pinheiro cortadas e amarradas com corda na borda da clareira, com machado de lenhador cravado."""
     def __init__(self, wx: float, wy: float):
-        super().__init__(wx, wy, radius=0.58, height=0.72)
+        super().__init__(wx, wy, radius=0.58, height=0.82)
         self.bark = (108, 62, 38)
-        self.wood_end = (208, 168, 114)
+        self.wood_end = (214, 174, 118)
+        self.wood_ring = (168, 126, 78)
         self.rope = (186, 158, 104)
 
     def render(self, surface: pygame.Surface, camera):
-        # 3 toras na base
+        # 1. Calços de madeira laterais e 3 toras na base
         for ox in (-0.28, 0.0, 0.28):
-            draw_voxel_box(surface, camera, self.wx + ox - 0.13, self.wy - 0.48, 0.0, 0.26, 0.96, 0.26, self.bark, outline=True)
+            draw_voxel_box(surface, camera, self.wx + ox - 0.13, self.wy - 0.48, 0.0, 0.26, 0.96, 0.26, self.bark, outline=True, texture="bark")
             draw_voxel_box(surface, camera, self.wx + ox - 0.10, self.wy + 0.46, 0.03, 0.20, 0.04, 0.20, self.wood_end, outline=False)
-        # 2 toras no segundo nível
+            draw_voxel_box(surface, camera, self.wx + ox - 0.05, self.wy + 0.47, 0.08, 0.10, 0.04, 0.10, self.wood_ring, outline=False)
+        # 2. 2 toras no segundo nível
         for ox in (-0.14, 0.14):
-            draw_voxel_box(surface, camera, self.wx + ox - 0.13, self.wy - 0.44, 0.25, 0.26, 0.88, 0.26, self.bark, outline=True)
+            draw_voxel_box(surface, camera, self.wx + ox - 0.13, self.wy - 0.44, 0.25, 0.26, 0.88, 0.26, self.bark, outline=True, texture="bark")
             draw_voxel_box(surface, camera, self.wx + ox - 0.10, self.wy + 0.42, 0.28, 0.20, 0.04, 0.20, self.wood_end, outline=False)
-        # 1 tora no topo e amarração de corda
-        draw_voxel_box(surface, camera, self.wx - 0.13, self.wy - 0.40, 0.48, 0.26, 0.80, 0.24, self.bark, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.44, self.wy - 0.06, 0.0, 0.88, 0.12, 0.56, self.rope, outline=False)
+        # 3. 1 tora no topo, amarração dupla de corda e machado de lenhador (Ono) cravado na madeira
+        draw_voxel_box(surface, camera, self.wx - 0.13, self.wy - 0.40, 0.48, 0.26, 0.80, 0.24, self.bark, outline=True, texture="bark")
+        draw_voxel_box(surface, camera, self.wx - 0.10, self.wy + 0.38, 0.51, 0.20, 0.04, 0.18, self.wood_end, outline=False)
+        for ry in (-0.22, 0.16):
+            draw_voxel_box(surface, camera, self.wx - 0.44, self.wy + ry, 0.0, 0.88, 0.10, 0.56, self.rope, outline=False)
+        # Machado Ono cravado no topo
+        draw_voxel_box(surface, camera, self.wx - 0.04, self.wy - 0.08, 0.68, 0.10, 0.16, 0.16, (72, 78, 88), outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.03, self.wy - 0.06, 0.78, 0.06, 0.36, 0.06, (148, 106, 64), outline=True)
 
 
 class AinuInauTotem(Rock):
     """
     Bastão ritual sagrado Ainu (Inau / Chisei-Inau) cravado na neve de Ezo:
     - Haste de madeira clara entalhada com cachos de aparas de madeira (kikepar) que balançam ao vento.
-    - Topo esculpido em honra aos espíritos Kamuy da floresta boreal.
+    - Faixa cerimonial com padrão geométrico Moreu e topo esculpido em honra aos espíritos Kamuy.
     """
     animated = True
 
@@ -2152,47 +2307,60 @@ class AinuInauTotem(Rock):
         self.wood_shaving = (246, 234, 198)
         self.wood_dark = (146, 108, 68)
         self.red_cord = (196, 44, 48)
+        self.indigo_band = (38, 54, 92)
         self.snow_col = (236, 244, 255)
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
         sway = math.sin(time_val * 3.8 + self.wx * 1.3) * 0.04
-        # Monte de neve na base
-        draw_voxel_box(surface, camera, self.wx - 0.28, self.wy - 0.28, 0.0, 0.56, 0.56, 0.14, self.snow_col, outline=True)
-        # Haste central de madeira sagrada
-        draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.08, 0.12, 0.16, 0.16, 1.32, self.wood_dark, outline=True)
-        # Cachos de aparas de madeira (kikepar) em duas coroas volumosas
-        for z_h in (0.58, 0.98):
+        # 1. Monte de neve na base e pedras de oferenda
+        draw_voxel_box(surface, camera, self.wx - 0.30, self.wy - 0.30, 0.0, 0.60, 0.60, 0.14, self.snow_col, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.18, self.wy + 0.14, 0.10, 0.14, 0.14, 0.10, (98, 96, 104), outline=True)
+        # 2. Haste central de madeira sagrada com entalhes rituais
+        draw_voxel_box(surface, camera, self.wx - 0.08, self.wy - 0.08, 0.12, 0.16, 0.16, 1.34, self.wood_dark, outline=True)
+        # 3. Cachos de aparas de madeira (kikepar) em duas coroas volumosas com franjas pendentes
+        for z_h in (0.56, 0.98):
             draw_voxel_box(surface, camera, self.wx - 0.24 + sway, self.wy - 0.24, z_h, 0.48, 0.48, 0.22, self.wood_light, outline=True)
-            draw_voxel_box(surface, camera, self.wx - 0.28 - sway, self.wy - 0.18, z_h - 0.08, 0.56, 0.36, 0.14, self.wood_shaving, outline=False)
-        # Fita vermelha Ainu e topo entalhado
-        draw_voxel_box(surface, camera, self.wx - 0.11, self.wy - 0.11, 1.24, 0.22, 0.22, 0.08, self.red_cord, outline=False)
-        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.12, 1.32, 0.24, 0.24, 0.20, self.wood_light, outline=True)
+            draw_voxel_box(surface, camera, self.wx - 0.28 - sway, self.wy - 0.18, z_h - 0.10, 0.56, 0.36, 0.14, self.wood_shaving, outline=False)
+            draw_voxel_box(surface, camera, self.wx - 0.18 + sway * 1.2, self.wy - 0.28, z_h - 0.14, 0.36, 0.56, 0.10, self.wood_shaving, outline=False)
+        # 4. Faixa índigo/carmim Ainu (Matanpushi) e topo entalhado
+        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.12, 1.22, 0.24, 0.24, 0.06, self.indigo_band, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.11, self.wy - 0.11, 1.28, 0.22, 0.22, 0.06, self.red_cord, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.12, 1.34, 0.24, 0.24, 0.20, self.wood_light, outline=True)
 
 
 class HideDryingRack(Rock):
-    """Varal de madeira Ainu para curtir peles de inverno, coberto de neve no topo."""
+    """Varal de madeira Ainu para curtir peles de inverno, com contraventamento, neve e pingentes de gelo (tsurara)."""
     def __init__(self, wx: float, wy: float):
         super().__init__(wx, wy, radius=0.55, height=1.50)
         self.pole_col = (98, 66, 42)
+        self.rope_col = (182, 152, 98)
         self.pelt_fur = (218, 222, 230)
         self.pelt_inner = (164, 132, 102)
         self.snow_col = (240, 246, 255)
+        self.ice_col = (176, 224, 252)
 
     def render(self, surface: pygame.Surface, camera):
-        # 2 postes laterais de madeira
+        # 1. Montes de neve nas bases e 2 postes laterais de madeira com travessa inferior
+        draw_voxel_box(surface, camera, self.wx - 0.62, self.wy - 0.20, 0.0, 1.24, 0.40, 0.10, self.snow_col, outline=False)
         draw_voxel_box(surface, camera, self.wx - 0.52, self.wy - 0.10, 0.0, 0.16, 0.20, 1.42, self.pole_col, outline=True)
         draw_voxel_box(surface, camera, self.wx + 0.36, self.wy - 0.10, 0.0, 0.16, 0.20, 1.42, self.pole_col, outline=True)
-        # Trave superior com camada de neve
-        draw_voxel_box(surface, camera, self.wx - 0.60, self.wy - 0.12, 1.32, 1.20, 0.24, 0.14, self.pole_col, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.58, self.wy - 0.10, 1.44, 1.16, 0.20, 0.08, self.snow_col, outline=False)
-        # Pele de lobo/cervo esticada no centro
-        draw_voxel_box(surface, camera, self.wx - 0.32, self.wy - 0.05, 0.28, 0.64, 0.10, 0.98, self.pelt_fur, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.22, self.wy + 0.04, 0.38, 0.44, 0.04, 0.78, self.pelt_inner, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.54, self.wy - 0.06, 0.20, 1.08, 0.12, 0.08, self.pole_col, outline=True)
+        # 2. Trave superior com camada de neve e pingentes de gelo (Tsurara)
+        draw_voxel_box(surface, camera, self.wx - 0.62, self.wy - 0.12, 1.32, 1.24, 0.24, 0.14, self.pole_col, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.60, self.wy - 0.10, 1.44, 1.20, 0.20, 0.08, self.snow_col, outline=False)
+        for ix in (-0.44, -0.18, 0.18, 0.44):
+            draw_voxel_box(surface, camera, self.wx + ix - 0.02, self.wy + 0.08, 1.20, 0.04, 0.04, 0.14, self.ice_col, outline=False)
+        # 3. Pele de lobo/cervo esticada no centro com amarrações de tendão
+        draw_voxel_box(surface, camera, self.wx - 0.34, self.wy - 0.05, 0.28, 0.68, 0.10, 0.98, self.pelt_fur, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.24, self.wy + 0.04, 0.38, 0.48, 0.04, 0.78, self.pelt_inner, outline=False)
+        for lx in (-0.28, 0.22):
+            draw_voxel_box(surface, camera, self.wx + lx, self.wy - 0.06, 1.22, 0.06, 0.12, 0.12, self.rope_col, outline=False)
 
 
 class SnowSpruceTree(Rock):
-    """Abeto boreal de Hokkaido (Ezo-matsu) carregado de neve alva em camadas cônicas 3D."""
+    """Abeto boreal de Hokkaido (Ezo-matsu) carregado de neve alva em camadas cônicas 3D com pingentes de gelo (cacheado para 60 FPS)."""
     animated = True
+    _sprite_cache: dict[tuple, tuple[pygame.Surface, int, int]] = {}
 
     def __init__(self, wx: float, wy: float, scale: float = 1.0):
         super().__init__(wx, wy, radius=0.52 * scale, height=3.0 * scale)
@@ -2202,24 +2370,57 @@ class SnowSpruceTree(Rock):
         self.pine_mid = (36, 78, 64)
         self.snow_bright = (238, 246, 255)
         self.snow_shade = (195, 214, 236)
+        self.ice_col = (172, 220, 250)
 
-    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+    def _draw_geometry(self, surface: pygame.Surface, camera, sway: float):
         s = self.scale
-        sway = math.sin(time_val * 2.0 + self.wx * 0.9) * 0.04 * s
-        # Tronco e base nevada
-        draw_voxel_box(surface, camera, self.wx - 0.38 * s, self.wy - 0.38 * s, 0.0, 0.76 * s, 0.76 * s, 0.18 * s, self.snow_shade, outline=True)
-        draw_voxel_box(surface, camera, self.wx - 0.18 * s, self.wy - 0.18 * s, 0.14 * s, 0.36 * s, 0.36 * s, 0.75 * s, self.trunk_col, outline=True)
+        # 1. Tronco e base nevada
+        draw_voxel_box(surface, camera, self.wx - 0.40 * s, self.wy - 0.40 * s, 0.0, 0.80 * s, 0.80 * s, 0.18 * s, self.snow_shade, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.18 * s, self.wy - 0.18 * s, 0.14 * s, 0.36 * s, 0.36 * s, 0.75 * s, self.trunk_col, outline=True, texture="bark")
 
-        # 3 camadas cônicas de abeto cobertas de neve espessa
+        # 2. 3 camadas cônicas de abeto cobertas de neve espessa e pingentes de gelo nos beirais
         tiers = (
-            (0.75 * s, 1.56 * s, 0.52 * s, 0.3),
-            (1.38 * s, 1.18 * s, 0.50 * s, 0.6),
-            (1.96 * s, 0.78 * s, 0.52 * s, 1.0),
+            (0.75 * s, 1.58 * s, 0.52 * s, 0.3),
+            (1.38 * s, 1.20 * s, 0.50 * s, 0.6),
+            (1.96 * s, 0.80 * s, 0.52 * s, 1.0),
         )
         for z0, w, h, sw_mult in tiers:
             ox = sway * sw_mult
-            draw_voxel_box(surface, camera, self.wx - w * 0.5 + ox, self.wy - w * 0.5, z0, w, w, h * 0.65, self.pine_dark, outline=True)
+            draw_voxel_box(surface, camera, self.wx - w * 0.5 + ox, self.wy - w * 0.5, z0, w, w, h * 0.65, self.pine_dark, outline=True, texture="foliage")
             draw_voxel_box(surface, camera, self.wx - w * 0.46 + ox, self.wy - w * 0.46, z0 + h * 0.55, w * 0.92, w * 0.92, h * 0.45, self.snow_bright, outline=True)
+            # Pingentes de gelo sob a copa
+            for side in (-0.38, 0.32):
+                draw_voxel_box(surface, camera, self.wx + w * side + ox, self.wy + w * 0.44, z0 - 0.10 * s, 0.05 * s, 0.05 * s, 0.12 * s, self.ice_col, outline=False)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        s = self.scale
+        if abs(getattr(camera, "azimuth", 0.0)) > 1e-4:
+            sway = math.sin(time_val * 2.0 + self.wx * 0.9) * 0.04 * s
+            self._draw_geometry(surface, camera, sway)
+            return
+
+        zoom_b = round(getattr(camera, "zoom", 1.0) * 10.0) / 10.0
+        sway_step = int(round(math.sin(time_val * 2.0 + self.wx * 0.9) * 2.0))
+        key = (round(s, 2), zoom_b, sway_step)
+        tpl = SnowSpruceTree._sprite_cache.get(key)
+        if tpl is None:
+            if len(SnowSpruceTree._sprite_cache) > 96:
+                SnowSpruceTree._sprite_cache.clear()
+            w = max(88, int(210 * s * zoom_b))
+            h = max(112, int(270 * s * zoom_b))
+            ax = w // 2
+            ay = h - int(44 * s * zoom_b)
+            surf = pygame.Surface((w, h), pygame.SRCALPHA)
+            surf.fill((0, 0, 0, 0))
+            local_cam = _LocalClusterCamera(self.wx, self.wy, ax, ay, zoom_b)
+            sway_val = (sway_step / 2.0) * 0.04 * s
+            self._draw_geometry(surf, local_cam, sway_val)
+            tpl = (surf, ax, ay)
+            SnowSpruceTree._sprite_cache[key] = tpl
+
+        surf, ax, ay = tpl
+        sx, sy = camera.apply(self.wx, self.wy, 0.0)
+        surface.blit(surf, (sx - ax, sy - ay))
 
 
 # ===========================================================================
@@ -2875,10 +3076,460 @@ class DutchCargoCrane(Rock):
         draw_voxel_box(surface, camera, cx - 0.06, cy - 0.28, 0.72, 0.12, 0.56, 0.48, self.rope_col, outline=False)
 
 
+class ArtilleryCrater:
+    """Cratera de impacto de artilharia/arcabuzes no lamaçal de Nagashino:
+    borda de terra carbonizada, poça de água turva, estaca quebrada e fumaça de pólvora persistente."""
+
+    animated = True
+
+    def __init__(self, wx: float, wy: float, seed: int = 1):
+        self.wx = wx
+        self.wy = wy
+        self.seed = seed
+        self.mud_rim = (74, 52, 36)
+        self.char_col = (38, 32, 30)
+        self.puddle_col = (54, 72, 82)
+        self.ember_col = (224, 92, 32)
+        self._smoke_timer = random.uniform(0.0, 0.6)
+
+    def tick(self, arena, dt: float, fighters: list, camera, particles: list, banners: list):
+        if particles is None:
+            return
+        self._smoke_timer += dt
+        if self._smoke_timer >= 0.65:
+            self._smoke_timer = 0.0
+            from src.effects.particles import SmokeParticle
+            particles.append(SmokeParticle(
+                self.wx + random.uniform(-0.18, 0.18),
+                self.wy + random.uniform(-0.18, 0.18),
+                wz=0.12, color=(148, 144, 152), radius=0.26, lifetime=random.uniform(1.4, 2.1),
+            ))
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        x, y = self.wx, self.wy
+        # 1. Anel externo de lama revirada e cinza de pólvora
+        draw_voxel_box(surface, camera, x - 0.56, y - 0.52, 0.0, 1.12, 1.04, 0.07, self.mud_rim, outline=True)
+        draw_voxel_box(surface, camera, x - 0.42, y - 0.38, 0.04, 0.84, 0.76, 0.05, self.char_col, outline=False)
+        # 2. Poça central de água lamacenta e brasa fumegante
+        draw_voxel_box(surface, camera, x - 0.26, y - 0.22, 0.06, 0.52, 0.44, 0.03, self.puddle_col, outline=False)
+        glow = 0.65 + 0.35 * math.sin(time_val * 6.0 + self.seed)
+        draw_voxel_box(surface, camera, x + 0.14, y - 0.12, 0.08, 0.12, 0.12, 0.05, (int(235 * glow), int(95 * glow), 28), outline=False)
+        # 3. Estaca de paliçada estilhaçada e arcabuz Tanegashima semienterrado na borda
+        draw_voxel_box(surface, camera, x - 0.48, y + 0.18, 0.06, 0.36, 0.12, 0.12, (98, 68, 42), outline=True)
+        draw_voxel_box(surface, camera, x + 0.08, y + 0.24, 0.07, 0.44, 0.07, 0.07, (52, 56, 64), outline=True)
 
 
+class FallenLog(Rock):
+    """Tronco de cedro/pinheiro caído coberto de musgo, cogumelos orelha-de-pau e samambaias (cobertura baixa)."""
+
+    def __init__(self, wx: float, wy: float, axis: str = "x", seed: int = 1):
+        super().__init__(wx, wy, radius=0.52, height=0.62)
+        self.axis = axis
+        self.seed = seed
+        self.bark_col = (94, 58, 36)
+        self.bark_dark = (66, 40, 24)
+        self.heartwood = (196, 154, 102)
+        self.moss_col = (58, 112, 48)
+        self.fungus_col = (218, 176, 112)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        x, y = self.wx, self.wy
+        if self.axis == "x":
+            # Tronco alongado no eixo X
+            draw_voxel_box(surface, camera, x - 0.68, y - 0.24, 0.0, 1.36, 0.48, 0.44, self.bark_col, outline=True, texture="bark")
+            draw_voxel_box(surface, camera, x - 0.69, y - 0.18, 0.05, 0.04, 0.36, 0.34, self.heartwood, outline=False)
+            draw_voxel_box(surface, camera, x + 0.65, y - 0.18, 0.05, 0.04, 0.36, 0.34, self.heartwood, outline=False)
+            draw_voxel_box(surface, camera, x - 0.52, y - 0.20, 0.42, 1.04, 0.40, 0.08, self.moss_col, outline=False)
+            # Cogumelos orelha-de-pau na casca lateral
+            draw_voxel_box(surface, camera, x - 0.18, y + 0.22, 0.18, 0.16, 0.08, 0.06, self.fungus_col, outline=False)
+            draw_voxel_box(surface, camera, x + 0.12, y + 0.22, 0.26, 0.14, 0.08, 0.06, self.fungus_col, outline=False)
+        else:
+            # Tronco alongado no eixo Y
+            draw_voxel_box(surface, camera, x - 0.24, y - 0.68, 0.0, 0.48, 1.36, 0.44, self.bark_col, outline=True, texture="bark")
+            draw_voxel_box(surface, camera, x - 0.18, y - 0.69, 0.05, 0.36, 0.04, 0.34, self.heartwood, outline=False)
+            draw_voxel_box(surface, camera, x - 0.18, y + 0.65, 0.05, 0.36, 0.04, 0.34, self.heartwood, outline=False)
+            draw_voxel_box(surface, camera, x - 0.20, y - 0.52, 0.42, 0.40, 1.04, 0.08, self.moss_col, outline=False)
+            draw_voxel_box(surface, camera, x + 0.22, y - 0.18, 0.18, 0.08, 0.16, 0.06, self.fungus_col, outline=False)
 
 
+class RiceStalkCluster:
+    """Touceira 3D de brotos de arroz (Ine) plantados nos terraços alagados dos Arrozais de Goro.
+    Oscila ao vento e verga quando os combatentes caminham ou esquivam sobre a água rasa."""
+
+    animated = True
+    _sprite_cache: dict[tuple, tuple[pygame.Surface, int, int]] = {}
+
+    def __init__(self, wx: float, wy: float, wz: float = 0.0, seed: int = 1):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.seed = seed % 6
+        self.wind_offset = (wx * 0.9 + wy * 1.3)
+        self.bend_x = 0.0
+        self.bend_y = 0.0
+        self.stalk_green = (76, 148, 54)
+        self.stalk_light = (112, 178, 68)
+        self.grain_gold = (218, 188, 84)
+        self.ripple_col = (145, 195, 225)
+        rng = random.Random(self.seed + 17)
+        self.tufts = [
+            (rng.uniform(-0.26, 0.26), rng.uniform(-0.22, 0.22), rng.uniform(0.28, 0.40))
+            for _ in range(4)
+        ]
+
+    def tick(self, arena, dt: float, fighters: list, camera, particles: list, banners: list):
+        self.bend_x *= max(0.0, 1.0 - 5.0 * dt)
+        self.bend_y *= max(0.0, 1.0 - 5.0 * dt)
+        for f in fighters:
+            if f is None or not getattr(f, "is_alive", True):
+                continue
+            if math.hypot(self.wx - f.wx, self.wy - f.wy) < 0.65:
+                self.bend_x += getattr(f, "vx", 0.0) * 0.04
+                self.bend_y += getattr(f, "vy", 0.0) * 0.04
+
+    def _draw_geometry(self, surface: pygame.Surface, camera, z_base: float, bx: float, by: float):
+        for ox, oy, h in self.tufts:
+            tx = self.wx + ox
+            ty = self.wy + oy
+            # Marola de água na base do broto
+            draw_voxel_box(surface, camera, tx - 0.08, ty - 0.08, z_base, 0.16, 0.16, 0.02, self.ripple_col, outline=False)
+            # Feixe inferior e médio de folhas de arroz
+            draw_voxel_box(surface, camera, tx - 0.04, ty - 0.04, z_base + 0.02, 0.08, 0.08, h * 0.55, self.stalk_green, outline=False)
+            draw_voxel_box(surface, camera, tx - 0.05 + bx * 0.6, ty - 0.05 + by * 0.6, z_base + h * 0.52, 0.10, 0.10, h * 0.36, self.stalk_light, outline=False)
+            # Espiga dourada inclinada no topo (Inaho)
+            draw_voxel_box(surface, camera, tx - 0.04 + bx * 1.1, ty - 0.04 + by * 1.1, z_base + h * 0.84, 0.11, 0.08, 0.08, self.grain_gold, outline=False)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        if abs(self.bend_x) > 0.01 or abs(self.bend_y) > 0.01 or abs(getattr(camera, "azimuth", 0.0)) > 1e-4:
+            sway = math.sin(time_val * 2.6 + self.wind_offset) * 0.04
+            self._draw_geometry(surface, camera, self.wz, sway + self.bend_x, sway + self.bend_y)
+            return
+
+        zoom_b = round(getattr(camera, "zoom", 1.0) * 10.0) / 10.0
+        sway_step = int(round(math.sin(time_val * 2.6 + self.wind_offset) * 2.0))
+        key = (self.seed, zoom_b, sway_step)
+        tpl = RiceStalkCluster._sprite_cache.get(key)
+        if tpl is None:
+            if len(RiceStalkCluster._sprite_cache) > 160:
+                RiceStalkCluster._sprite_cache.clear()
+            w = max(48, int(88 * zoom_b))
+            h = max(48, int(76 * zoom_b))
+            ax = w // 2
+            ay = h - int(22 * zoom_b)
+            surf = pygame.Surface((w, h), pygame.SRCALPHA)
+            surf.fill((0, 0, 0, 0))
+            local_cam = _LocalClusterCamera(self.wx, self.wy, ax, ay, zoom_b)
+            sway_val = (sway_step / 2.0) * 0.04
+            self._draw_geometry(surf, local_cam, 0.0, sway_val, sway_val)
+            tpl = (surf, ax, ay)
+            RiceStalkCluster._sprite_cache[key] = tpl
+
+        surf, ax, ay = tpl
+        sx, sy = camera.apply(self.wx, self.wy, self.wz)
+        surface.blit(surf, (sx - ax, sy - ay))
 
 
+# =============================================================================
+# PROPS DO CICLO 6 - ENTREGÁVEL A-3.4: LOCAIS EXTREMOS & NOTURNOS
+# =============================================================================
+
+class StalactiteCluster:
+    """Grupo de estalactites pontiagudas pendendo do teto da gruta com gotas d'água caindo proceduralmente."""
+
+    def __init__(self, wx: float, wy: float, top: float = 5.6, length: float = 1.8, seed: int = 1):
+        self.wx = wx
+        self.wy = wy
+        self.top = top
+        self.length = length
+        self.seed = seed
+        self.rock_base = (46, 38, 58)
+        self.rock_mid = (64, 54, 78)
+        self.rock_tip = (82, 72, 102)
+        self.wet_highlight = (120, 140, 185)
+        self.drop_interval = 1.8 + (seed % 7) * 0.25
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # 1. Base rochosa cravada no teto
+        draw_voxel_box(surface, camera, self.wx - 0.28, self.wy - 0.28, self.top - 0.18, 0.56, 0.56, 0.20, self.rock_base, outline=False)
+
+        # 2. Estalactite principal: pirâmide invertida facetada
+        h1 = self.length * 0.35
+        h2 = self.length * 0.35
+        h3 = self.length * 0.30
+        draw_voxel_box(surface, camera, self.wx - 0.20, self.wy - 0.20, self.top - 0.18 - h1, 0.40, 0.40, h1, self.rock_base, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.12, self.top - 0.18 - h1 - h2, 0.24, 0.24, h2, self.rock_mid, outline=False)
+        tip_z = self.top - 0.18 - h1 - h2 - h3
+        draw_voxel_box(surface, camera, self.wx - 0.06, self.wy - 0.06, tip_z, 0.12, 0.12, h3, self.rock_tip, outline=False)
+        # Brilho de umidade na ponta
+        draw_voxel_box(surface, camera, self.wx - 0.03, self.wy - 0.03, tip_z, 0.06, 0.06, 0.08, self.wet_highlight, outline=False)
+
+        # 3. Estalactite satélite menor ao lado
+        sat_x = self.wx + 0.22
+        sat_y = self.wy - 0.15
+        sat_len = self.length * 0.55
+        draw_voxel_box(surface, camera, sat_x - 0.10, sat_y - 0.10, self.top - 0.14 - sat_len * 0.5, 0.20, 0.20, sat_len * 0.5, self.rock_mid, outline=False)
+        draw_voxel_box(surface, camera, sat_x - 0.05, sat_y - 0.05, self.top - 0.14 - sat_len, 0.10, 0.10, sat_len * 0.5, self.rock_tip, outline=False)
+
+        # 4. Gota d'água caindo da ponta até o piso z=0.02
+        cycle = (time_val + self.seed * 1.3) % self.drop_interval
+        fall_dur = 0.85
+        if cycle < fall_dur:
+            progress = cycle / fall_dur
+            # Queda acelerada por gravidade
+            drop_z = tip_z - (tip_z - 0.02) * (progress ** 2)
+            if drop_z > 0.02:
+                draw_voxel_box(surface, camera, self.wx - 0.02, self.wy - 0.02, drop_z, 0.04, 0.04, 0.06, (140, 195, 255), outline=False)
+            else:
+                # Pequena ondulação / splash no piso ao atingir o chão
+                ripple_prog = (cycle - fall_dur * 0.9) / (fall_dur * 0.1 + 0.25)
+                if ripple_prog > 0:
+                    r_sz = 0.08 + 0.22 * min(1.0, ripple_prog)
+                    draw_voxel_box(surface, camera, self.wx - r_sz * 0.5, self.wy - r_sz * 0.5, 0.02, r_sz, r_sz, 0.02, (110, 160, 220), outline=False)
+
+
+class CaveStalagmite(Rock):
+    """Estalagmite de calcário e ardósia que se ergue do solo da caverna com camadas facetadas e umidade brilhante."""
+
+    def __init__(self, wx: float, wy: float, height: float = 1.1, seed: int = 1):
+        super().__init__(wx, wy, radius=0.32, height=height)
+        self.seed = seed
+        self.rock_dark = (42, 34, 52)
+        self.rock_mid = (62, 52, 74)
+        self.rock_tip = (84, 72, 98)
+        self.moist_sheen = (118, 138, 180)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        h = self.height
+        # 1. Base larga de rocha sedimentar
+        draw_voxel_box(surface, camera, self.wx - 0.26, self.wy - 0.26, 0.0, 0.52, 0.52, h * 0.32, self.rock_dark, outline=True)
+        # 2. Seção intermediária cônica
+        draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, h * 0.32, 0.36, 0.36, h * 0.38, self.rock_mid, outline=True)
+        # 3. Ponta cônica afinada
+        draw_voxel_box(surface, camera, self.wx - 0.09, self.wy - 0.09, h * 0.70, 0.18, 0.18, h * 0.30, self.rock_tip, outline=True)
+        # 4. Veio de calcita / reflexo de água escorrendo
+        shimmer = 0.8 + 0.2 * math.sin(time_val * 2.5 + self.wx * 3.0)
+        sheen_col = (int(self.moist_sheen[0] * shimmer), int(self.moist_sheen[1] * shimmer), int(self.moist_sheen[2] * shimmer))
+        draw_voxel_box(surface, camera, self.wx - 0.04, self.wy - 0.04, h * 0.85, 0.08, 0.08, h * 0.15, sheen_col, outline=False)
+
+
+class RoofChimney(Rock):
+    """Chaminé tradicional de pedra e tijolo de barro dos forjas de Iga; solta fumaça noturna escura."""
+
+    RATE = 4.0  # partículas por segundo
+
+    def __init__(self, wx: float, wy: float, height: float = 0.95):
+        super().__init__(wx, wy, radius=0.35, height=height)
+        self.brick_color = (68, 62, 58)
+        self.cap_color = (92, 84, 78)
+        self.soot_color = (32, 28, 28)
+        self._carry = random.random()
+
+    def tick(self, arena, dt: float, fighters: list, camera, particles: list, banners: list):
+        if particles is None:
+            return
+        self._carry += dt * self.RATE
+        while self._carry >= 1.0:
+            self._carry -= 1.0
+            from src.effects.particles import SmokeParticle
+            particles.append(SmokeParticle(self.wx, self.wy, wz=self.height + 0.10, color=(64, 60, 72), radius=0.36, lifetime=random.uniform(1.8, 2.8)))
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        h = self.height
+        # Base de assentamento na inclinação das telhas
+        draw_voxel_box(surface, camera, self.wx - 0.28, self.wy - 0.28, 0.0, 0.56, 0.56, 0.14, (48, 44, 42), outline=True)
+        # Fuste quadrado da chaminé
+        draw_voxel_box(surface, camera, self.wx - 0.22, self.wy - 0.22, 0.14, 0.44, 0.44, h - 0.24, self.brick_color, outline=True)
+        # Faixa decorativa de tijolos
+        draw_voxel_box(surface, camera, self.wx - 0.24, self.wy - 0.24, h - 0.20, 0.48, 0.48, 0.06, (82, 74, 68), outline=False)
+        # Boca/abertura escurecida de fuligem
+        draw_voxel_box(surface, camera, self.wx - 0.14, self.wy - 0.14, h - 0.10, 0.28, 0.28, 0.06, self.soot_color, outline=False)
+        # Laje de cobertura (chapéu de proteção contra chuva) apoiada em 4 pilaretes
+        for dx, dy in ((-0.18, -0.18), (0.12, -0.18), (-0.18, 0.12), (0.12, 0.12)):
+            draw_voxel_box(surface, camera, self.wx + dx, self.wy + dy, h - 0.10, 0.06, 0.06, 0.12, self.brick_color, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.25, self.wy - 0.25, h + 0.02, 0.50, 0.50, 0.06, self.cap_color, outline=True)
+
+
+class OnigawaraTile(Rock):
+    """Telha ornamental Onigawara (rosto de ogro guardião) esculpida nas pontas das cumeeiras dos telhados de Iga."""
+
+    def __init__(self, wx: float, wy: float, heading: float = 0.0):
+        super().__init__(wx, wy, radius=0.28, height=0.65)
+        self.heading = heading
+        self.tile_slate = (78, 86, 108)
+        self.tile_dark = (52, 58, 76)
+        self.eye_gold = (215, 175, 60)
+        self.horn_bone = (145, 148, 160)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # Base de assentamento na cumeeira
+        draw_voxel_box(surface, camera, self.wx - 0.20, self.wy - 0.20, 0.0, 0.40, 0.40, 0.12, self.tile_dark, outline=True)
+        # Rosto do Oni estilizado em relevo facetado
+        draw_voxel_box(surface, camera, self.wx - 0.16, self.wy - 0.16, 0.12, 0.32, 0.32, 0.36, self.tile_slate, outline=True)
+        # Sobrancelhas franzidas e testa
+        draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 0.38, 0.36, 0.10, 0.08, self.tile_dark, outline=False)
+        # Olhos dourados faiscantes
+        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.17, 0.30, 0.07, 0.04, 0.06, self.eye_gold, outline=False)
+        draw_voxel_box(surface, camera, self.wx + 0.05, self.wy - 0.17, 0.30, 0.07, 0.04, 0.06, self.eye_gold, outline=False)
+        # Presas e mandíbula
+        draw_voxel_box(surface, camera, self.wx - 0.10, self.wy - 0.17, 0.18, 0.20, 0.05, 0.08, (190, 195, 205), outline=False)
+        # Chifres curvos de Oni
+        draw_voxel_box(surface, camera, self.wx - 0.15, self.wy - 0.12, 0.48, 0.08, 0.08, 0.16, self.horn_bone, outline=False)
+        draw_voxel_box(surface, camera, self.wx + 0.07, self.wy - 0.12, 0.48, 0.08, 0.08, 0.16, self.horn_bone, outline=False)
+
+
+class ShurikenEmbedded:
+    """Shuriken metálico de 4 pontas cravado na madeira dos telhados ou vigas com brilho especular afiado."""
+
+    def __init__(self, wx: float, wy: float, wz: float = 0.0, angle_deg: float = 25.0):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.angle_deg = angle_deg
+        self.steel = (185, 198, 218)
+        self.steel_bright = (235, 242, 255)
+        self.center_dark = (48, 54, 68)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        z = self.wz
+        # Lâminas cruzadas em 4 pontas
+        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.03, z, 0.24, 0.06, 0.03, self.steel, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.03, self.wy - 0.12, z, 0.06, 0.24, 0.03, self.steel, outline=False)
+        # Pontas afiadas reluzentes
+        for dx, dy in ((-0.14, -0.02), (0.11, -0.02), (-0.02, -0.14), (-0.02, 0.11)):
+            draw_voxel_box(surface, camera, self.wx + dx, self.wy + dy, z, 0.03, 0.03, 0.04, self.steel_bright, outline=False)
+        # Furo central quadrado (como os shurikens Hira históricos)
+        draw_voxel_box(surface, camera, self.wx - 0.02, self.wy - 0.02, z, 0.04, 0.04, 0.04, self.center_dark, outline=False)
+
+
+class CannonballPyramid(Rock):
+    """Pilha piramidal de balas de canhão de ferro fundido em suporte de carvalho naval (Convés de Anne)."""
+
+    def __init__(self, wx: float, wy: float):
+        super().__init__(wx, wy, radius=0.30, height=0.45)
+        self.iron_ball = (48, 52, 60)
+        self.iron_highlight = (82, 90, 104)
+        self.wood_rack = (88, 62, 42)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # Suporte / rack de carvalho naval
+        draw_voxel_box(surface, camera, self.wx - 0.25, self.wy - 0.25, 0.0, 0.50, 0.50, 0.06, self.wood_rack, outline=True)
+        # Camada base 2x2 balas
+        ball_r = 0.10
+        for dx in (-0.11, 0.09):
+            for dy in (-0.11, 0.09):
+                draw_voxel_box(surface, camera, self.wx + dx - ball_r, self.wy + dy - ball_r, 0.06, ball_r * 2, ball_r * 2, 0.16, self.iron_ball, outline=False)
+                draw_voxel_box(surface, camera, self.wx + dx - 0.04, self.wy + dy - 0.04, 0.20, 0.08, 0.08, 0.04, self.iron_highlight, outline=False)
+        # Bala do topo (pirâmide)
+        draw_voxel_box(surface, camera, self.wx - ball_r, self.wy - ball_r, 0.22, ball_r * 2, ball_r * 2, 0.16, self.iron_ball, outline=False)
+        draw_voxel_box(surface, camera, self.wx - 0.04, self.wy - 0.04, 0.36, 0.08, 0.08, 0.04, self.iron_highlight, outline=False)
+
+
+class ShipRigging:
+    """Enxárcias e cabos navais esticados entre a borda do convés e a mastreação alta."""
+
+    def __init__(self, wx: float, wy: float, top_x: float, top_y: float, top_z: float = 3.2):
+        self.wx = wx
+        self.wy = wy
+        self.top_x = top_x
+        self.top_y = top_y
+        self.top_z = top_z
+        self.rope_col = (132, 108, 76)
+        self.wood_deadeye = (64, 46, 32)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # Patescas / vigotas de madeira na borda do convés
+        draw_voxel_box(surface, camera, self.wx - 0.10, self.wy - 0.06, 0.40, 0.20, 0.12, 0.18, self.wood_deadeye, outline=True)
+        # Cabos esticados subindo até o mastro
+        p_base1 = camera.apply(self.wx - 0.08, self.wy, 0.55)
+        p_base2 = camera.apply(self.wx + 0.08, self.wy, 0.55)
+        p_top = camera.apply(self.top_x, self.top_y, self.top_z)
+        pygame.draw.line(surface, self.rope_col, p_base1, p_top, 2)
+        pygame.draw.line(surface, self.rope_col, p_base2, p_top, 2)
+        # Degraus de corda (enxárcias horizontais para escalada)
+        steps = 5
+        for s in range(1, steps):
+            f = s / steps
+            sz = 0.55 + (self.top_z - 0.55) * f
+            sx1 = self.wx - 0.08 + (self.top_x - (self.wx - 0.08)) * f
+            sy1 = self.wy + (self.top_y - self.wy) * f
+            sx2 = self.wx + 0.08 + (self.top_x - (self.wx + 0.08)) * f
+            sy2 = self.wy + (self.top_y - self.wy) * f
+            p1 = camera.apply(sx1, sy1, sz)
+            p2 = camera.apply(sx2, sy2, sz)
+            pygame.draw.line(surface, self.rope_col, p1, p2, 1)
+
+
+class ShoreDriftwood(Rock):
+    """Tronco de cedro desgastado pelas ondas e sal marinho encalhado na areia de Ganryū."""
+
+    def __init__(self, wx: float, wy: float, length: float = 1.6, angle_deg: float = 35.0):
+        super().__init__(wx, wy, radius=0.38, height=0.45)
+        self.length = length
+        self.angle_deg = angle_deg
+        self.drift_wood = (142, 134, 122)
+        self.wood_crack = (96, 90, 82)
+        self.seaweed_moss = (54, 76, 52)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        rad = math.radians(self.angle_deg)
+        dx = math.cos(rad) * self.length * 0.5
+        dy = math.sin(rad) * self.length * 0.5
+        # Tronco principal deitado na areia
+        draw_voxel_box(surface, camera, self.wx - dx, self.wy - dy, 0.0, self.length * 0.6, 0.22, 0.24, self.drift_wood, outline=True)
+        # Galho bifurcado quebrado
+        draw_voxel_box(surface, camera, self.wx, self.wy, 0.08, 0.35, 0.16, 0.28, self.drift_wood, outline=True)
+        # Crosta de algas marinhas na base lavada pela água
+        draw_voxel_box(surface, camera, self.wx - dx + 0.10, self.wy - dy + 0.04, 0.0, 0.30, 0.18, 0.08, self.seaweed_moss, outline=False)
+
+
+class OpenGrave(Rock):
+    """Sepultura recentemente escavada no cemitério gótico: fosso profundo, tábuas de escoramento e névoa fúnebre."""
+
+    def __init__(self, wx: float, wy: float):
+        super().__init__(wx, wy, radius=0.45, height=0.30)
+        self.earth_dark = (28, 24, 30)
+        self.mound_col = (48, 42, 44)
+        self.wood_board = (72, 58, 46)
+        self.mist_wisp = (150, 180, 210)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        # 1. Fosso aberto escavado (efeito de profundidade negra no solo)
+        draw_voxel_box(surface, camera, self.wx - 0.40, self.wy - 0.70, -0.35, 0.80, 1.40, 0.35, self.earth_dark, outline=True)
+        # 2. Tábuas de contenção de madeira nas bordas da cova
+        draw_voxel_box(surface, camera, self.wx - 0.44, self.wy - 0.65, 0.0, 0.08, 1.30, 0.12, self.wood_board, outline=True)
+        draw_voxel_box(surface, camera, self.wx + 0.36, self.wy - 0.65, 0.0, 0.08, 1.30, 0.12, self.wood_board, outline=True)
+        # 3. Montículo de terra fresca amontoada ao lado
+        draw_voxel_box(surface, camera, self.wx + 0.48, self.wy - 0.60, 0.0, 0.40, 1.20, 0.24, self.mound_col, outline=True)
+        draw_voxel_box(surface, camera, self.wx + 0.54, self.wy - 0.45, 0.22, 0.26, 0.90, 0.14, (62, 54, 56), outline=False)
+        # 4. Névoa espectral sutil saindo da cova
+        wisp_z = 0.02 + 0.04 * math.sin(time_val * 2.2 + self.wx)
+        wisp_w = 0.45 + 0.10 * math.sin(time_val * 1.8)
+        draw_voxel_box(surface, camera, self.wx - wisp_w * 0.5, self.wy - 0.30, wisp_z, wisp_w, 0.60, 0.06, self.mist_wisp, outline=False)
+
+
+class GraveyardGargoyle(Rock):
+    """Gárgula de granito esculpida em postura agachada com asas de pedra dobradas e chifres góticos."""
+
+    def __init__(self, wx: float, wy: float, height: float = 1.05):
+        super().__init__(wx, wy, radius=0.35, height=height)
+        self.granite_dark = (52, 54, 62)
+        self.granite_mid = (76, 80, 92)
+        self.granite_lit = (102, 108, 124)
+        self.eye_amber = (210, 140, 45)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        h = self.height
+        # Plinto / pedestal de granito entalhado
+        draw_voxel_box(surface, camera, self.wx - 0.26, self.wy - 0.26, 0.0, 0.52, 0.52, 0.45, self.granite_dark, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.28, self.wy - 0.28, 0.42, 0.56, 0.56, 0.06, self.granite_mid, outline=True)
+        # Corpo agachado da gárgula
+        draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 0.48, 0.36, 0.36, 0.32, self.granite_mid, outline=True)
+        # Cabeça com focinho proeminente e orelhas pontiagudas
+        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.22, 0.80, 0.24, 0.24, 0.20, self.granite_lit, outline=True)
+        # Olhos ambarinos sob o luar
+        draw_voxel_box(surface, camera, self.wx - 0.09, self.wy - 0.23, 0.88, 0.05, 0.04, 0.05, self.eye_amber, outline=False)
+        draw_voxel_box(surface, camera, self.wx + 0.04, self.wy - 0.23, 0.88, 0.05, 0.04, 0.05, self.eye_amber, outline=False)
+        # Asas de morcego de pedra recolhidas nas costas
+        draw_voxel_box(surface, camera, self.wx - 0.24, self.wy + 0.08, 0.52, 0.10, 0.22, 0.42, self.granite_dark, outline=True)
+        draw_voxel_box(surface, camera, self.wx + 0.14, self.wy + 0.08, 0.52, 0.10, 0.22, 0.42, self.granite_dark, outline=True)
 

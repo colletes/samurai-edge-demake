@@ -78,15 +78,41 @@ class SolidProp:
         draw_voxel_box(surface, camera, self.wx, self.wy, 0.0, self.width, self.depth, self.height, self.color, outline=True, texture="planks")
 
     def _render_mast(self, surface: pygame.Surface, camera):
-        """Mastro grosso com base reforçada e duas vergas cruzadas no alto."""
+        """Mastro de navio pirata com cesto de gávea, enxárcias, sino de bordo e vela enfunada."""
         x0, y0, w, d, h = self.wx, self.wy, self.width, self.depth, self.height
         dark = tuple(int(c * 0.7) for c in self.color)
-        draw_voxel_box(surface, camera, x0 - 0.12, y0 - 0.12, 0.0, w + 0.24, d + 0.24, 0.30, dark, outline=True, texture="stone")
+        bronze = (195, 160, 65)
+        hemp = (182, 154, 112)
+        # 1. Base reforçada e rack de cabilhas de amarração
+        draw_voxel_box(surface, camera, x0 - 0.18, y0 - 0.18, 0.0, w + 0.36, d + 0.36, 0.32, dark, outline=True, texture="stone")
+        draw_voxel_box(surface, camera, x0 - 0.22, y0 - 0.22, 0.28, w + 0.44, d + 0.44, 0.08, (94, 66, 44), outline=True)
+        # Sino naval de bronze montado na braçadeira do mastro
+        draw_voxel_box(surface, camera, x0 + w * 0.5 - 0.06, y0 - 0.20, 0.45, 0.12, 0.12, 0.15, bronze, outline=False)
+        # 2. Mastro principal
         draw_voxel_box(surface, camera, x0, y0, 0.0, w, d, h, self.color, outline=True, texture="planks")
-        for z, span in ((h * 0.62, 2.4), (h * 0.88, 1.7)):
-            draw_voxel_box(surface, camera, x0 + w / 2 - 0.05, y0 + d / 2 - span / 2, z, 0.10, span, 0.10, dark, outline=True)
-        # Vela enrolada na verga baixa
-        draw_voxel_box(surface, camera, x0 + w / 2 - 0.14, y0 + d / 2 - 0.95, h * 0.62 - 0.22, 0.28, 1.9, 0.22, (214, 204, 178), outline=True)
+        # Anéis de ferro forjado de reforço
+        for bz in (0.8, 1.6, 2.4):
+            if bz < h - 0.4:
+                draw_voxel_box(surface, camera, x0 - 0.03, y0 - 0.03, bz, w + 0.06, d + 0.06, 0.06, (52, 48, 56), outline=False)
+        # 3. Verga principal baixa com vela enrolada e amarrações
+        yard1_z = h * 0.62
+        span1 = 2.6
+        draw_voxel_box(surface, camera, x0 + w / 2 - 0.06, y0 + d / 2 - span1 / 2, yard1_z, 0.12, span1, 0.12, dark, outline=True)
+        draw_voxel_box(surface, camera, x0 + w / 2 - 0.15, y0 + d / 2 - 1.05, yard1_z - 0.24, 0.30, 2.1, 0.24, (218, 208, 184), outline=True)
+        # Amarras de corda da vela
+        for ry in (-0.7, -0.2, 0.3, 0.8):
+            draw_voxel_box(surface, camera, x0 + w / 2 - 0.16, y0 + d / 2 + ry - 0.03, yard1_z - 0.25, 0.32, 0.06, 0.26, hemp, outline=False)
+        # 4. Cesto de gávea (Crow's nest)
+        nest_z = h * 0.72
+        nest_w, nest_d = 1.1, 1.1
+        draw_voxel_box(surface, camera, x0 + w / 2 - nest_w / 2, y0 + d / 2 - nest_d / 2, nest_z, nest_w, nest_d, 0.10, (86, 62, 42), outline=True)
+        # Amurada do cesto de gávea
+        draw_voxel_box(surface, camera, x0 + w / 2 - nest_w / 2, y0 + d / 2 - nest_d / 2, nest_z + 0.10, nest_w, 0.08, 0.30, (74, 52, 36), outline=False)
+        draw_voxel_box(surface, camera, x0 + w / 2 - nest_w / 2, y0 + d / 2 + nest_d / 2 - 0.08, nest_z + 0.10, nest_w, 0.08, 0.30, (74, 52, 36), outline=False)
+        # 5. Verga superior
+        yard2_z = h * 0.88
+        span2 = 1.8
+        draw_voxel_box(surface, camera, x0 + w / 2 - 0.05, y0 + d / 2 - span2 / 2, yard2_z, 0.10, span2, 0.10, dark, outline=True)
 
     @staticmethod
     def _hip_roof(surface, camera, x0, y0, w, d, z, color, layers=3, overhang=0.45, step=0.55, thick=0.17, texture=None):
@@ -143,53 +169,104 @@ class SolidProp:
         self._hip_roof(surface, camera, x0, y0, w, d, h, (56, 60, 74), layers=2, overhang=0.3, step=0.5, texture="roof_tile")
 
     def _render_cabin(self, surface: pygame.Surface, camera):
-        """Cabana de aldeia: paredes de madeira, porta escura e telhado de palha."""
+        """Cabana rústica de aldeia / posto florestal: fundação de pedra, cantoneiras de toras, janelas e telhado de palha."""
         x0, y0, w, d, h = self.wx, self.wy, self.width, self.depth, self.height
         gx, gy = camera.apply(x0 + w / 2, y0 + d / 2, 0.0)
-        pygame.draw.ellipse(surface, (60, 96, 50), (gx - int(w * 18), gy - int(d * 8), int(w * 36), int(d * 16)))
-        draw_voxel_box(surface, camera, x0, y0, 0.0, w, d, 0.2, (112, 108, 100), outline=True, texture="stone")
-        draw_voxel_box(surface, camera, x0 + 0.1, y0 + 0.1, 0.2, w - 0.2, d - 0.2, h - 0.2, self.color, outline=True, texture="planks")
-        draw_voxel_box(surface, camera, x0 + w * 0.5 - 0.25, y0 + d - 0.12, 0.2, 0.5, 0.05, h * 0.55, (54, 38, 28), outline=False)
-        draw_voxel_box(surface, camera, x0 + w - 0.12, y0 + d * 0.5 - 0.25, 0.2, 0.05, 0.5, h * 0.55, (54, 38, 28), outline=False)
-        self._hip_roof(surface, camera, x0, y0, w, d, h, (176, 144, 72), layers=3, overhang=0.35, step=0.45, thick=0.2, texture="thatch")
+        pygame.draw.ellipse(surface, (48, 76, 42), (gx - int(w * 18), gy - int(d * 8), int(w * 36), int(d * 16)))
+        dark_log = (68, 46, 30)
+        # 1. Fundação de pedra bruta e degrau de entrada
+        draw_voxel_box(surface, camera, x0, y0, 0.0, w, d, 0.22, (112, 108, 100), outline=True, texture="stone")
+        draw_voxel_box(surface, camera, x0 + w * 0.5 - 0.34, y0 + d - 0.02, 0.0, 0.68, 0.18, 0.14, (96, 92, 86), outline=True)
+        # 2. Paredes de pranchas/toras rústicas
+        draw_voxel_box(surface, camera, x0 + 0.10, y0 + 0.10, 0.22, w - 0.20, d - 0.20, h - 0.22, self.color, outline=True, texture="planks")
+        # 3. Pilares de canto de toras encaixadas (Azekura)
+        for cx in (x0 + 0.06, x0 + w - 0.20):
+            for cy in (y0 + 0.06, y0 + d - 0.20):
+                draw_voxel_box(surface, camera, cx, cy, 0.22, 0.14, 0.14, h - 0.20, dark_log, outline=True)
+        # 4. Porta emoldurada com umbral e janela lateral com veneziana de madeira
+        draw_voxel_box(surface, camera, x0 + w * 0.5 - 0.30, y0 + d - 0.14, 0.22, 0.60, 0.08, h * 0.62, dark_log, outline=False)
+        draw_voxel_box(surface, camera, x0 + w * 0.5 - 0.24, y0 + d - 0.12, 0.22, 0.48, 0.06, h * 0.56, (44, 30, 22), outline=False)
+        draw_voxel_box(surface, camera, x0 + w - 0.13, y0 + d * 0.5 - 0.30, 0.48, 0.06, 0.60, h * 0.36, dark_log, outline=True)
+        draw_voxel_box(surface, camera, x0 + w - 0.11, y0 + d * 0.5 - 0.24, 0.52, 0.05, 0.48, h * 0.28, (186, 168, 134), outline=False)
+        # 5. Telhado espesso de colmo (Kayabuki) com cumeeira de bambu amarrado (Munagi)
+        self._hip_roof(surface, camera, x0, y0, w, d, h, (176, 144, 72), layers=3, overhang=0.36, step=0.44, thick=0.21, texture="thatch")
+        ridge_z = h + 3 * 0.21
+        draw_voxel_box(surface, camera, x0 + w * 0.25, y0 + d * 0.5 - 0.12, ridge_z, w * 0.50, 0.24, 0.12, (118, 92, 48), outline=True)
 
     def _render_tent(self, surface: pygame.Surface, camera):
-        """Barraca de lona em degraus que se estreitam até a cumeeira, com a entrada escura."""
+        """Barraca de campanha militar/shinobi em A-frame com cumeeira de madeira, abas enroladas e cordas de estai."""
         x0, y0, w, d, h = self.wx, self.wy, self.width, self.depth, self.height
         gx, gy = camera.apply(x0 + w / 2, y0 + d / 2, 0.0)
-        pygame.draw.ellipse(surface, (60, 96, 50), (gx - int(w * 18), gy - int(d * 8), int(w * 36), int(d * 16)))
+        pygame.draw.ellipse(surface, (48, 76, 42), (gx - int(w * 18), gy - int(d * 8), int(w * 36), int(d * 16)))
+        wood_pole = (92, 64, 40)
+        peg_col = (128, 94, 58)
+        rope_col = (182, 156, 108)
+        # 1. Esteira de palha na base e estacas de amarração nos 4 cantos com cabos de tensão
+        draw_voxel_box(surface, camera, x0 + 0.08, y0 + 0.06, 0.0, w - 0.16, d - 0.12, 0.05, (154, 132, 84), outline=False)
+        for sx, px in ((x0 - 0.16, x0 + 0.14), (x0 + w + 0.08, x0 + w - 0.14)):
+            for sy, py in ((y0 + 0.12, y0 + 0.18), (y0 + d - 0.20, y0 + d - 0.18)):
+                draw_voxel_box(surface, camera, sx, sy, 0.0, 0.08, 0.08, 0.18, peg_col, outline=True)
+                p_stake = camera.apply(sx + 0.04, sy + 0.04, 0.14)
+                p_eave = camera.apply(px, py, h * 0.35)
+                pygame.draw.line(surface, rope_col, p_stake, p_eave, 1)
+        # 2. Lona esticada em 5 patamares até a cumeeira
         steps = 5
         for i in range(steps):
-            inset = w * 0.5 * i / steps
-            col = tuple(min(255, int(c * (0.9 + 0.05 * i))) for c in self.color)
+            inset = w * 0.46 * i / steps
+            col = tuple(min(255, int(c * (0.88 + 0.06 * i))) for c in self.color)
             draw_voxel_box(surface, camera, x0 + inset, y0, h * i / steps, w - 2 * inset, d, h / steps + 0.02, col, outline=True, texture="cloth")
-        draw_voxel_box(surface, camera, x0 + w * 0.5 - 0.3, y0 + d - 0.03, 0.0, 0.6, 0.04, h * 0.55, (50, 40, 34), outline=False)
-        draw_voxel_box(surface, camera, x0 + w * 0.5 - 0.04, y0 - 0.04, h, 0.08, d + 0.08, 0.08, (98, 70, 44), outline=False)
+        # 3. Entrada escura com abas de lona amarradas nas laterais e mastro central
+        draw_voxel_box(surface, camera, x0 + w * 0.5 - 0.32, y0 + d - 0.04, 0.0, 0.64, 0.05, h * 0.62, (38, 30, 26), outline=False)
+        flap_col = tuple(max(0, int(c * 0.78)) for c in self.color)
+        draw_voxel_box(surface, camera, x0 + w * 0.5 - 0.44, y0 + d - 0.06, 0.05, 0.14, 0.08, h * 0.56, flap_col, outline=True)
+        draw_voxel_box(surface, camera, x0 + w * 0.5 + 0.30, y0 + d - 0.06, 0.05, 0.14, 0.08, h * 0.56, flap_col, outline=True)
+        draw_voxel_box(surface, camera, x0 + w * 0.5 - 0.05, y0 - 0.08, h - 0.02, 0.10, d + 0.16, 0.10, wood_pole, outline=True)
 
     def _render_palisade(self, surface: pygame.Surface, camera):
-        """Paliçada (mabori) de estacas pontudas lado a lado ao longo do maior lado, com travessas de corda."""
+        """Paliçada anti-cavalaria Sengoku (Umagiri / Shigarami): estacas pontiagudas, lanças diagonais e travessas amarradas."""
         x0, y0, w, d, h = self.wx, self.wy, self.width, self.depth, self.height
         along_x = w >= d
         length = w if along_x else d
-        count = max(2, int(length / 0.42))
+        count = max(3, int(length / 0.38))
         step = length / count
+        tip_col = (206, 174, 122)
+        rope = (184, 152, 102)
+        beam_col = tuple(max(0, int(c * 0.78)) for c in self.color)
+
         for i in range(count):
             a = i * step
-            lean = 0.04 * ((i * 7) % 3 - 1)
-            ph = h + 0.18 * (((i * 5) % 4) / 3.0)
-            col = tuple(int(c * (0.9 + 0.1 * ((i * 3) % 3) / 2.0)) for c in self.color)
+            lean = 0.05 * ((i * 7) % 3 - 1)
+            ph = h + 0.20 * (((i * 5) % 4) / 3.0)
+            col = tuple(int(c * (0.88 + 0.12 * ((i * 3) % 3) / 2.0)) for c in self.color)
             if along_x:
-                draw_voxel_box(surface, camera, x0 + a, y0, 0.0, step * 0.92, d, ph, col, outline=True, texture="bark")
-                draw_voxel_box(surface, camera, x0 + a + step * 0.2 + lean, y0 + d * 0.2, ph, step * 0.5, d * 0.6, 0.16, col, outline=False)
+                draw_voxel_box(surface, camera, x0 + a, y0 + d * 0.12, 0.0, step * 0.88, d * 0.76, ph, col, outline=True, texture="bark")
+                draw_voxel_box(surface, camera, x0 + a + step * 0.18 + lean, y0 + d * 0.22, ph, step * 0.52, d * 0.56, 0.18, tip_col, outline=False)
+                # Estaca diagonal anti-cavalaria (Umagiri) projetada para a frente a cada 2 estacas
+                if i % 2 == 0:
+                    side_dir = 1.0 if (i // 2) % 2 == 0 else -1.0
+                    sy = y0 + (d * 0.75 if side_dir > 0 else -d * 0.25)
+                    draw_voxel_box(surface, camera, x0 + a + step * 0.15, sy, h * 0.35, step * 0.55, d * 0.50, 0.16, beam_col, outline=True)
+                    draw_voxel_box(surface, camera, x0 + a + step * 0.22, sy + side_dir * d * 0.35, h * 0.52, step * 0.40, d * 0.32, 0.16, tip_col, outline=False)
             else:
-                draw_voxel_box(surface, camera, x0, y0 + a, 0.0, w, step * 0.92, ph, col, outline=True, texture="bark")
-                draw_voxel_box(surface, camera, x0 + w * 0.2, y0 + a + step * 0.2 + lean, ph, w * 0.6, step * 0.5, 0.16, col, outline=False)
-        z = h * 0.45
-        rope = (176, 146, 98)
-        if along_x:
-            draw_voxel_box(surface, camera, x0, y0 - 0.03, z, w, d + 0.06, 0.07, rope, outline=False)
-        else:
-            draw_voxel_box(surface, camera, x0 - 0.03, y0, z, w + 0.06, d, 0.07, rope, outline=False)
+                draw_voxel_box(surface, camera, x0 + w * 0.12, y0 + a, 0.0, w * 0.76, step * 0.88, ph, col, outline=True, texture="bark")
+                draw_voxel_box(surface, camera, x0 + w * 0.22, y0 + a + step * 0.18 + lean, ph, w * 0.56, step * 0.52, 0.18, tip_col, outline=False)
+                if i % 2 == 0:
+                    side_dir = 1.0 if (i // 2) % 2 == 0 else -1.0
+                    sx = x0 + (w * 0.75 if side_dir > 0 else -w * 0.25)
+                    draw_voxel_box(surface, camera, sx, y0 + a + step * 0.15, h * 0.35, w * 0.50, step * 0.55, 0.16, beam_col, outline=True)
+                    draw_voxel_box(surface, camera, sx + side_dir * w * 0.35, y0 + a + step * 0.22, h * 0.52, w * 0.32, step * 0.40, 0.16, tip_col, outline=False)
+
+        # Duas travessas horizontais (Nuki) e nós de corda (Nawame)
+        for z_frac in (0.36, 0.74):
+            z = h * z_frac
+            if along_x:
+                draw_voxel_box(surface, camera, x0 - 0.02, y0 - 0.04, z, w + 0.04, d + 0.08, 0.08, beam_col, outline=True)
+                for i in range(0, count, 2):
+                    draw_voxel_box(surface, camera, x0 + i * step + step * 0.15, y0 - 0.06, z - 0.02, step * 0.55, d + 0.12, 0.12, rope, outline=False)
+            else:
+                draw_voxel_box(surface, camera, x0 - 0.04, y0 - 0.02, z, w + 0.08, d + 0.04, 0.08, beam_col, outline=True)
+                for i in range(0, count, 2):
+                    draw_voxel_box(surface, camera, x0 - 0.06, y0 + i * step + step * 0.15, z - 0.02, w + 0.12, step * 0.55, 0.12, rope, outline=False)
 
     def _render_pillar(self, surface: pygame.Surface, camera):
         """Coluna de pedra: pedestal largo, fuste e capitel, com um friso na cor do material."""
@@ -211,19 +288,32 @@ class SolidProp:
             draw_voxel_box(surface, camera, x0 - 0.03, y0 - 0.03, z, w + 0.06, d + 0.06, 0.06, hoop, outline=False)
 
     def _render_boat(self, surface: pygame.Surface, camera):
-        """Casco comprido ao longo do eixo X: quilha escura, bordas, proa elevada, banco e remo apoiado."""
+        """Casco comprido encalhado na areia: quilha escura com cracas/algas, cavername quebrado e remo de Musashi."""
         x0, y0, w, d = self.wx, self.wy, self.width, self.depth
-        keel = (52, 38, 28)
+        keel = (48, 36, 26)
+        seaweed = (42, 60, 46)
         plank = self.color
+        # 1. Quilha profunda enterrada na areia
         draw_voxel_box(surface, camera, x0 + 0.15, y0 + 0.10, 0.0, w - 0.30, d - 0.20, 0.18, keel, outline=True)
+        # Crosta de algas e cracas na linha d'água
+        draw_voxel_box(surface, camera, x0 + 0.12, y0 + 0.08, 0.04, w - 0.24, 0.08, 0.12, seaweed, outline=False)
+        draw_voxel_box(surface, camera, x0 + 0.12, y0 + d - 0.16, 0.04, w - 0.24, 0.08, 0.12, seaweed, outline=False)
+        # 2. Amuradas e bordas de carvalho desgastadas
         draw_voxel_box(surface, camera, x0, y0, 0.12, w, 0.14, 0.34, plank, outline=True, texture="planks")
         draw_voxel_box(surface, camera, x0, y0 + d - 0.14, 0.12, w, 0.14, 0.34, plank, outline=True, texture="planks")
+        # Popa e proa curvadas
         draw_voxel_box(surface, camera, x0 + w - 0.16, y0 + 0.10, 0.12, 0.16, d - 0.20, 0.34, plank, outline=True, texture="planks")
         draw_voxel_box(surface, camera, x0, y0 + 0.14, 0.12, 0.16, d - 0.28, 0.58, plank, outline=True)
+        # 3. Cavername quebrado / costelas de madeira expostas na popa danificada
+        draw_voxel_box(surface, camera, x0 + w - 0.28, y0 + 0.14, 0.30, 0.08, d - 0.28, 0.22, (62, 46, 34), outline=True)
+        draw_voxel_box(surface, camera, x0 + w - 0.44, y0 + 0.14, 0.30, 0.08, d - 0.28, 0.18, (62, 46, 34), outline=True)
+        # 4. Banco central de travamento (thwart)
         draw_voxel_box(surface, camera, x0 + w * 0.45, y0 + 0.14, 0.30, 0.18, d - 0.28, 0.07, (74, 54, 38), outline=True)
-        # Remo longo apoiado na amurada (a "espada" de madeira de Musashi)
-        draw_voxel_box(surface, camera, x0 + w * 0.2, y0 + d + 0.05, 0.0, w * 0.55, 0.07, 0.07, (150, 112, 72), outline=True)
-        draw_voxel_box(surface, camera, x0 + w * 0.2 + w * 0.55, y0 + d + 0.02, 0.0, 0.30, 0.14, 0.07, (170, 128, 84), outline=True)
+        # Água empoçada dentro do porão
+        draw_voxel_box(surface, camera, x0 + 0.30, y0 + 0.18, 0.06, w * 0.40, d - 0.36, 0.04, (64, 92, 110), outline=False)
+        # 5. O remo de madeira de Musashi (esculpido como bokken) apoiado na amurada
+        draw_voxel_box(surface, camera, x0 + w * 0.18, y0 + d + 0.04, 0.0, w * 0.58, 0.08, 0.07, (155, 118, 76), outline=True)
+        draw_voxel_box(surface, camera, x0 + w * 0.18 + w * 0.58, y0 + d + 0.02, 0.0, 0.35, 0.15, 0.08, (175, 134, 88), outline=True)
 
 
 class RailPost:
