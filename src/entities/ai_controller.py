@@ -23,6 +23,11 @@ class SamuraiAI:
         self.pending_defense_threat = None  # "ATTACK" ou "PROJECTILE"
         self.pending_defense_ready = False
 
+        # Defesa contra investidas lineares (Gatotsu): um "episódio" por investida
+        self._charge_prev_active = False
+        self._charge_episode = None
+        self._jump_throw_checked = False
+
         # Navegação não-linear e flanqueamento
         self.flank_sign = 1.0 if random.random() < 0.5 else -1.0
         self.flank_switch_timer = random.uniform(1.2, 2.5)
@@ -117,8 +122,76 @@ class SamuraiAI:
             ai_fighter.wy + math.sin(final_angle) * dist
         )
 
+    KUNAI_CHASE_MIN_DIST = 4.5  # abaixo disso o Hanzo luta em vez de ir buscar a kunai no chão
+
+    LINEAR_CHARGE_STATES = ("GATOTSU_CHARGE",)
+
+    def _charge_dodge_chance(self) -> float:
+        """Probabilidade de reagir a tempo a uma investida linear (separada da chance de parry)."""
+        return {DIFFICULTY_EASY: 0.50, DIFFICULTY_HARD: 0.97}.get(self.difficulty, 0.85)
+
+    def _dodge_linear_charge(self, ai_fighter, opponent, dt: float, game_map) -> bool:
+        """Sidestep perpendicular contra investida em linha (Gatotsu).
+
+        A investida quase não esterça e acelera até 14,5 m/s: rolar para trás só adia o contato para depois dos
+        i-frames, e a ameaça só era vista a <= 3,5 m. Aqui a IA enxerga a investida em qualquer distância dentro do
+        corredor dela, reage após o delay humano (com chance por dificuldade) e sai da linha de lado.
+        """
+        active = getattr(opponent, "is_alive", True) and opponent.state in self.LINEAR_CHARGE_STATES
+        if not active:
+            self._charge_prev_active = False
+            self._charge_episode = None
+            return False
+        if not self._charge_prev_active:  # início de uma nova investida
+            self._charge_prev_active = True
+            self._charge_episode = {
+                "will_dodge": random.random() < self._charge_dodge_chance(),
+                "delay": self._get_reaction_delay(),
+                "elapsed": 0.0,
+                "done": False,
+            }
+        ep = self._charge_episode
+        if ep is None or ep["done"] or not ep["will_dodge"]:
+            return False
+        ep["elapsed"] += dt
+
+        cdx = getattr(opponent, "charge_dir_x", opponent.facing_x)
+        cdy = getattr(opponent, "charge_dir_y", opponent.facing_y)
+        rx, ry = ai_fighter.wx - opponent.wx, ai_fighter.wy - opponent.wy
+        along = rx * cdx + ry * cdy
+        lateral = abs(rx * cdy - ry * cdx)
+        if along < 0.0 or along > 9.0 or lateral > 1.5:
+            return False  # fora do corredor da investida
+        speed = max(4.0, getattr(opponent, "charge_speed", 8.0))
+        time_to_contact = max(0.0, along - 1.2) / speed
+        if ep["elapsed"] < ep["delay"] or time_to_contact > 0.32:
+            return False
+        if not ai_fighter.can_act():
+            return False
+
+        p1 = (-cdy, cdx)
+        p2 = (cdy, -cdx)
+        side = rx * p1[0] + ry * p1[1]
+        cands = [p1, p2] if side >= 0 else [p2, p1]
+        if hasattr(ai_fighter, "trigger_dash"):
+            reach = getattr(ai_fighter, "dash_speed", 22.0) * getattr(ai_fighter, "dash_duration", 0.16)
+            act = ai_fighter.trigger_dash
+        elif hasattr(ai_fighter, "trigger_roll"):
+            reach = self._roll_reach(ai_fighter)
+            act = ai_fighter.trigger_roll
+        else:
+            return False
+        for cx, cy in cands:
+            if self._landing_ok(ai_fighter, game_map, cx, cy, reach):
+                act(cx, cy)
+                ep["done"] = True
+                return True
+        return False
+
     @staticmethod
     def _roll_reach(fighter) -> float:
+        if hasattr(fighter, "jump_speed") and hasattr(fighter, "jump_duration"):  # Hanzo: a esquiva é o Salto Ninja
+            return fighter.jump_speed * fighter.jump_duration
         return getattr(fighter, "roll_speed", 8.5) * getattr(fighter, "roll_duration", 0.20)
 
     @staticmethod
@@ -458,7 +531,20 @@ class SamuraiAI:
 
         self._map = game_map
         self.decision_timer -= dt
-        dist = world_distance(ai_fighter.wx, ai_fighter.wy, opponent.wx, opponent.wy)        # -------------------------------------------------------------
+        dist = world_distance(ai_fighter.wx, ai_fighter.wy, opponent.wx, opponent.wy)
+
+        # Hanzo: arremesso de kunai durante a esquiva (Salto Ninja), decidido uma vez por salto
+        if hasattr(ai_fighter, "has_kunai") and hasattr(ai_fighter, "jump_duration"):
+            if ai_fighter.state == "JUMP":
+                if not self._jump_throw_checked:
+                    self._jump_throw_checked = True
+                    if ai_fighter.has_kunai and projectiles is not None and 1.8 <= dist <= 6.8 and random.random() < 0.80:
+                        aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
+                        ai_fighter.trigger_kunai_snipe(aim_x, aim_y, projectiles)
+            else:
+                self._jump_throw_checked = False
+
+        # -------------------------------------------------------------
         # 0. DETECÇÃO E EVASÃO DE PERIGOS DE KYOTO (Carruagens e Escombros)
         # -------------------------------------------------------------
         if game_map and hasattr(game_map, "carriages"):
@@ -515,7 +601,7 @@ class SamuraiAI:
         # -------------------------------------------------------------
         # 1. Se for Ninja e estiver DESARMADO: correr até a kunai no chão
         # -------------------------------------------------------------
-        if hasattr(ai_fighter, "has_kunai") and not ai_fighter.has_kunai and projectiles:
+        if hasattr(ai_fighter, "has_kunai") and not ai_fighter.has_kunai and projectiles and dist > self.KUNAI_CHASE_MIN_DIST:
             ground_kunai = None
             for p in projectiles:
                 if getattr(p, "owner", None) == ai_fighter and getattr(p, "state", "") == "ON_GROUND":
@@ -571,7 +657,7 @@ class SamuraiAI:
 
         if projectiles:
             for p in projectiles:
-                if not getattr(p, "is_active", True) or getattr(p, "owner", None) != opponent:
+                if not getattr(p, "is_active", True) or getattr(p, "owner", None) != opponent or getattr(p, "is_obstacle", False):
                     continue
                 p_wx, p_wy = p.wx, p.wy
                 dist_p = world_distance(ai_fighter.wx, ai_fighter.wy, p_wx, p_wy)
@@ -843,6 +929,10 @@ class SamuraiAI:
 
             return False
 
+        # DEFESA CONTRA INVESTIDA LINEAR (Gatotsu): sidestep perpendicular, sem a porta de chance do parry
+        if self._dodge_linear_charge(ai_fighter, opponent, dt, game_map):
+            return
+
         # DEFESA CORPO A CORPO (Humanizada com Reaction Delay)
         if is_melee_threat:
             if self.pending_defense_threat != "ATTACK":
@@ -1099,7 +1189,7 @@ class SamuraiAI:
             if hasattr(ai_fighter, "trigger_fleche_thrust"):
                 if projectiles and getattr(ai_fighter, "cape_timer", 0.0) <= 0:
                     for p in projectiles:
-                        if getattr(p, "is_active", True) and getattr(p, "owner", None) != ai_fighter:
+                        if getattr(p, "is_active", True) and getattr(p, "owner", None) != ai_fighter and not getattr(p, "is_obstacle", False):
                             p_dist = world_distance(ai_fighter.wx, ai_fighter.wy, p.wx, p.wy)
                             if p_dist < 2.8:
                                 ai_fighter.trigger_cape_flourish(opponent.wx, opponent.wy, opponent=opponent, projectiles=projectiles)
@@ -1137,15 +1227,17 @@ class SamuraiAI:
                     ai_fighter.trigger_nodachi_mai(opponent.wx, opponent.wy, opponent=opponent)
                     return
 
-            # Benkei (Sōhei Warrior Monk): Colossal Thrust / Naginata Throw / Tackle Charge
-            if hasattr(ai_fighter, "trigger_naginata_thrust") and not melee_unsafe:
+            # Benkei (Sōhei Warrior Monk): Colossal Thrust / Naginata Throw + Recall (2º toque no secundário)
+            if hasattr(ai_fighter, "trigger_naginata_thrust"):
                 if getattr(ai_fighter, "is_unarmed", False):
-                    # Se desarmado, prioriza Tackle Charge no rival ou buscar arma
-                    if getattr(ai_fighter, "tackle_timer", 0.0) <= 0 and dist <= 3.8 and random.random() < 0.75 \
-                            and self._lunge_safe(ai_fighter, opponent.wx, opponent.wy, game_map, projectiles, 3.8):
-                        ai_fighter.trigger_tackle_charge(opponent.wx, opponent.wy)
-                        return
-                else:
+                    # Naginata fora: chama de volta se cravada/sem alvo no caminho, ou se o oponente se aproximou
+                    proj = getattr(ai_fighter, "active_naginata_projectile", None)
+                    if proj is not None and not getattr(proj, "returning", False):
+                        on_ground = getattr(proj, "state", "") == "ON_GROUND"
+                        if (on_ground and random.random() < 0.35) or (not on_ground and random.random() < 0.05) or dist <= 2.5:
+                            ai_fighter.trigger_naginata_recall()
+                            return
+                elif not melee_unsafe:
                     # Se armado e a longa distância (> 4.2m), arremessa a Naginata
                     if getattr(ai_fighter, "throw_timer", 0.0) <= 0 and dist >= 4.2 and random.random() < 0.60:
                         aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
@@ -1234,9 +1326,9 @@ class SamuraiAI:
                     aim_x, aim_y = self._get_aim_target(ai_fighter, opponent, opponent.wx, opponent.wy)
                     ai_fighter.trigger_bear_trap(aim_x, aim_y, projectiles=projectiles, game_map=game_map)
                     return
-            if hasattr(ai_fighter, "trigger_spear_thrust") and not melee_unsafe:
+            if hasattr(ai_fighter, "trigger_attack") and not melee_unsafe:
                 if dist <= 1.90 and random.random() < 0.75:
-                    ai_fighter.trigger_spear_thrust(opponent.wx, opponent.wy)
+                    ai_fighter.trigger_attack(opponent.wx, opponent.wy)
                     return
 
             # Raiden (Yokozuna Invicto): Tachiai Tackle (investida de ombro) e Tsuppari Rush (rajada de palmas)
@@ -1278,16 +1370,6 @@ class SamuraiAI:
                     if dist > 0.001:
                         self.move_dir_x = -dy / dist
                         self.move_dir_y = dx / dist
-            elif getattr(ai_fighter, "is_unarmed", False) and getattr(ai_fighter, "active_naginata_projectile", None):
-                # Benkei desarmado: corre em direção à Naginata cravada
-                proj = ai_fighter.active_naginata_projectile
-                if getattr(proj, "is_active", False):
-                    pdx = proj.wx - ai_fighter.wx
-                    pdy = proj.wy - ai_fighter.wy
-                    plen = math.hypot(pdx, pdy)
-                    if plen > 0.1:
-                        self.move_dir_x = pdx / plen
-                        self.move_dir_y = pdy / plen
             elif hasattr(ai_fighter, "trigger_shoot") and not getattr(ai_fighter, "has_ammo", False):
                 dx = ai_fighter.wx - opponent.wx
                 dy = ai_fighter.wy - opponent.wy
@@ -1481,10 +1563,7 @@ class SamuraiAI:
         elif hasattr(fighter, "trigger_scissor_slash"):
             fighter.trigger_scissor_slash(target.wx, target.wy)
         elif hasattr(fighter, "trigger_naginata_thrust"):
-            if getattr(fighter, "is_unarmed", False):
-                if hasattr(fighter, "trigger_tackle_charge") and getattr(fighter, "tackle_timer", 0.0) <= 0:
-                    fighter.trigger_tackle_charge(target.wx, target.wy)
-            else:
+            if not getattr(fighter, "is_unarmed", False):
                 fighter.trigger_naginata_thrust(target.wx, target.wy)
         elif hasattr(fighter, "trigger_kamaitachi_pluck"):
             if projectiles is not None:
@@ -1502,8 +1581,8 @@ class SamuraiAI:
                 fighter.trigger_ofuda_toss(aim_x, aim_y, projectiles)
         elif hasattr(fighter, "trigger_bo_strike"):
             fighter.trigger_bo_strike(target.wx, target.wy)
-        elif hasattr(fighter, "trigger_spear_thrust"):
-            fighter.trigger_spear_thrust(target.wx, target.wy)
+        elif hasattr(fighter, "trigger_attack") and hasattr(fighter, "trigger_spear_thrust"):
+            fighter.trigger_attack(target.wx, target.wy)
         elif hasattr(fighter, "trigger_tsuppari_rush"):
             fighter.trigger_tsuppari_rush(target.wx, target.wy)
         elif hasattr(fighter, "trigger_stiletto_thrust"):

@@ -435,9 +435,10 @@ def test_complete_roster():
     assert teppo_melee.state == "ATTACK"
     teppo_melee.render(screen, camera)
 
-    # C. Hanzo Kunai Snipe contra Kasumi confere P1_WINS
+    # C. Hanzo Kunai Snipe contra Kasumi confere P1_WINS (Kunai balanceada para 1 HP de dano)
     hanzo_p1 = YellowNinja(wx=5.0, wy=5.0)
     kasumi_p2 = GrayNinja(wx=8.0, wy=5.0)
+    kasumi_p2.hp = 1
     kunai_projs = []
     hanzo_p1.trigger_throw_attack(8.0, 5.0, kunai_projs)
     k_winner = None

@@ -34,7 +34,7 @@ def convex_hull(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
 
 
 def render_falling_fighter(surface: pygame.Surface, fighter, camera):
-    """Desenha o lutador em queda (state FALL). Antes do impacto o corpo é visível acima do buraco; depois some."""
+    """Desenha o lutador em queda abissal (state FALL): tomba, despenca verticalmente no vazio com aceleração gravitacional e fade out sombrio."""
     pit = fighter.fall_pit
     if pit is None:
         return
@@ -44,13 +44,17 @@ def render_falling_fighter(surface: pygame.Surface, fighter, camera):
     body.fill((0, 0, 0, 0))
     fighter.render(body, camera)
 
-    cx, cy = camera.apply(fighter.wx, fighter.wy, 0.6)
+    # Queda vertical real no abismo: wz acelera para o fundo do abismo
+    wz_fall = max(-4.0, getattr(fighter, "wz", -0.5 * 24.0 * fighter.fall_timer * fighter.fall_timer))
+    cx, cy = camera.apply(fighter.wx, fighter.wy, wz_fall + 0.4)
     half_w, up, down = 130, 190, 130
     crop = pygame.Rect(int(cx) - half_w, int(cy) - up, half_w * 2, up + down).clip(body.get_rect())
     spun.fill((0, 0, 0, 0))
     if crop.width > 0 and crop.height > 0:
         piece = body.subsurface(crop).copy()
-        piece = pygame.transform.rotozoom(piece, progress * 200.0, 1.0 - 0.55 * progress)
+        # Rotação dramática de desespero e encolhimento de profundidade
+        zoom_factor = max(0.15, 1.0 - 0.75 * progress)
+        piece = pygame.transform.rotozoom(piece, progress * 320.0, zoom_factor)
         pivot = (crop.centerx, crop.centery)
         spun.blit(piece, piece.get_rect(center=pivot))
 
@@ -61,7 +65,8 @@ def render_falling_fighter(surface: pygame.Surface, fighter, camera):
     pygame.draw.polygon(mask, (255, 255, 255, 255), convex_hull(outline))
     spun.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
 
-    shade = int(255 * (1.0 - 0.65 * progress))
-    fade = int(255 * (1.0 - 0.9 * progress * progress))
+    # Escurecimento sombrio do abismo com fade suave até o sumiço
+    shade = int(255 * max(0.0, (1.0 - 0.90 * progress)))
+    fade = int(255 * max(0.0, (1.0 - progress * progress)))
     spun.fill((shade, shade, shade, fade), special_flags=pygame.BLEND_RGBA_MULT)
     surface.blit(spun, (0, 0))

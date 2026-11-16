@@ -467,18 +467,22 @@ class ChiyoKunoichi(Samurai):
         elif self.state == "ACROBAT_LUNGE":
             active_pose = "acrobat_lunge"
 
+        base_extra = getattr(self, "extra_props", {}) or {}
+        extra = {
+            **base_extra,
+            "combo_step": getattr(self, "combo_step", 1),
+            "mai_spin_angle": getattr(self, "mai_spin_angle", 0.0),
+            "mai_exhausted": getattr(self, "mai_exhausted", False),
+            "pose": base_extra.get("pose", active_pose),
+            "sheathed": False,
+        }
+
         render_voxel_humanoid(
             surface, camera, self.wx, self.wy, self.wz,
             vis_fx, vis_fy, self.state, self.state_timer,
             self.is_alive, char_type="chiyo", walk_timer=self.walk_cycle,
             alpha=self.alpha, is_moving=self.is_moving,
-            extra_props={
-                "combo_step": getattr(self, "combo_step", 1),
-                "mai_spin_angle": getattr(self, "mai_spin_angle", 0.0),
-                "mai_exhausted": getattr(self, "mai_exhausted", False),
-                "pose": active_pose,
-                "sheathed": False,
-            }
+            extra_props=extra
         )
 
     render_voxel = render

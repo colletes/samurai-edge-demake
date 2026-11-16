@@ -126,6 +126,8 @@ class BloodParticle:
         self.wz += self.vz * dt
         self.vz -= 14.0 * dt
         if self.wz < 0:
+            if getattr(self, "in_pit", False) or self.wz < -1.2:
+                return self.age < self.lifetime and self.wz > -4.0
             self.wz = 0
             self.vx *= 0.5
             self.vy *= 0.5

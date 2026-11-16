@@ -275,7 +275,7 @@ def _hands(c):
 
     # 7. Intro Fase 3: Postura Serena de Combate com Respiração Viva (0.70 -> 1.00)
     if pose == "serene_ready_stance":
-        breathe = math.sin(u * math.pi * 4.0) * 0.010
+        breathe = math.sin(u * math.pi * 4.0 + getattr(c, "walk_timer", 0.0) * 2.5) * 0.010
         right = (
             bx + fx * 0.16 + px * 0.08,
             by + fy * 0.16 + py * 0.08,
@@ -303,24 +303,21 @@ def _hands(c):
         )
         return left, right
 
-    # 9. Vitória Fase 2: Embainhar com Clique Audível (0.38 -> 0.72)
+    # 9. Vitória Fase 2: Embainhar com Clique Audível (0.38 -> 0.72 com Continuidade C0)
     if pose == "sheath_click_lock":
         slide = min(1.0, u * 1.2)
-        left = (
-            bx + fx * 0.14 + px * 0.06,
-            by + fy * 0.14 + py * 0.06,
-            tz + 0.04
-        )
-        right = (
-            bx + fx * 0.15 + px * (0.08 - slide * 0.01),
-            by + fy * 0.15 + py * (0.08 - slide * 0.01),
-            tz + 0.22 - slide * 0.06
-        )
+        start_l = (bx + fx * 0.12 - px * 0.10, by + fy * 0.12 - py * 0.10, tz + 0.12)
+        start_r = (bx + fx * 0.14 - px * 0.06, by + fy * 0.14 - py * 0.06, tz + 0.14)
+        target_l = (bx + fx * 0.14 + px * 0.06, by + fy * 0.14 + py * 0.06, tz + 0.04)
+        target_r = (bx + fx * 0.15 + px * (0.08 - slide * 0.01), by + fy * 0.15 + py * (0.08 - slide * 0.01), tz + 0.22 - slide * 0.06)
+        from src.entities import model_kit as mk
+        left = mk.lerp(start_l, target_l, u)
+        right = mk.lerp(start_r, target_r, u)
         return left, right
 
-    # 10. Vitória Fase 3: Repouso Sereno da Bengala (0.72 -> 1.00)
+    # 10. Vitória Fase 3: Repouso Sereno da Bengala (0.72 -> 1.00 com Respiração Contínua)
     if pose == "serene_cane_rest":
-        breathe = math.sin(u * math.pi * 4.0) * 0.010
+        breathe = math.sin(u * math.pi * 4.0 + getattr(c, "walk_timer", 0.0) * 2.5) * 0.010
         right = (
             bx + fx * 0.16 + px * 0.08,
             by + fy * 0.16 + py * 0.08,
@@ -441,7 +438,7 @@ def draw_legs(c):
             (hem[0] + c.px * 0.055, hem[1] + c.py * 0.055, hem[2]),
             (hem[0] + c.px * 0.052, hem[1] + c.py * 0.052, hem[2] - 0.02),
             (hem[0] - c.px * 0.052, hem[1] - c.py * 0.052, hem[2] - 0.02),
-        ], P["kimono_trim"])
+        ], P["kimono_trim"] + (255,))
 
         # Tornozelo com meia Tabi branca
         draw_tapered_frustum_3d(

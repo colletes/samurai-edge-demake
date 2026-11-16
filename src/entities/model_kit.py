@@ -25,7 +25,8 @@ def band(c, points, rgba):
         return
     layer = pygame.Surface((w, h), pygame.SRCALPHA)
     layer.fill((0, 0, 0, 0))
-    pygame.draw.polygon(layer, (rgba[0], rgba[1], rgba[2], int(rgba[3] * c.alpha / 255)), [(p[0] - x0, p[1] - y0) for p in scr])
+    alpha_base = rgba[3] if len(rgba) > 3 else 255
+    pygame.draw.polygon(layer, (rgba[0], rgba[1], rgba[2], int(alpha_base * c.alpha / 255)), [(p[0] - x0, p[1] - y0) for p in scr])
     c.surface.blit(layer, (x0, y0))
 
 

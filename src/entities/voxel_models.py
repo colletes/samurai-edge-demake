@@ -370,15 +370,17 @@ def _render_voxel_humanoid(
     col_belt = _get_char_belt_color(char_type)
     is_female = is_female_character(char_type)
 
+    # Rival pregado ao solo de costas pela Flecha de Tomoe (PINNED_TO_EARTH / HAMAYA_HOLY_PIERCE)
+    if extra_props and extra_props.get("is_pinned_to_earth", False):
+        from src.entities.voxel_corpse import render_pinned_to_earth_model
+        render_pinned_to_earth_model(
+            surface, camera, wx, wy, wz, -facing_x, -facing_y, char_type, alpha=alpha,
+            is_holy=extra_props.get("is_holy_pierced", False), extra_props=extra_props
+        )
+        return
+
     # Estado de Morte no solo ou imobilizado no chão
     if (not is_alive and state not in ("DYING_FREEZE", "DYING_HEADLESS")) or state in ("DEAD", "PINNED_DOWN"):
-        if extra_props and extra_props.get("is_pinned_to_earth", False):
-            from src.entities.voxel_corpse import render_pinned_to_earth_model
-            render_pinned_to_earth_model(
-                surface, camera, wx, wy, wz, -facing_x, -facing_y, char_type, alpha=alpha,
-                is_holy=extra_props.get("is_holy_pierced", False), extra_props=extra_props
-            )
-            return
 
         sx, sy = camera.apply(wx, wy, 0.0)
         # Poça de sangue dramática no solo

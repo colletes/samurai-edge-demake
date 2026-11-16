@@ -259,6 +259,8 @@ class CinematicDirector:
             # Ciclo 4 Fatalities
             "SOUL_REAP": ("首刈骸生", "KUBIKARI GAISEI — CEIFADA CADAVÉRICA E TRANSFORMAÇÃO EM ESQUELETO"),
             "DRAGGED_TO_GRAVE": ("黄泉引摺", "YOMI HIKIZURI — ARRASTADO PARA A COVA"),
+            "SKELETON_SWORD_EXECUTION": ("骸兵斬首", "GAIHEI ZANSHU — EXECUÇÃO DA ESPADA ESQUELÉTICA"),
+            "WIGHT_CORRUPTION_ROT": ("冥火腐蝕", "MEIKA FUSHOKU — CORRUPÇÃO DAS CHAMAS FÚNEBRES"),
             "SEAL_STASIS_COLLAPSE": ("青炎灰燼", "SEIEN KAIJIN — CONSUMIDO EM CHAMAS VERDES ÀS CINZAS"),
             "OFUDA_PURIFICATION_PILLAR": ("青炎灰燼", "SEIEN KAIJIN — CONSUMIDO EM CHAMAS VERDES ÀS CINZAS"),
             "SEIMEI_FATAL_FIRE": ("青炎灰燼", "SEIEN KAIJIN — CONSUMIDO EM CHAMAS VERDES ÀS CINZAS"),
@@ -280,7 +282,7 @@ class CinematicDirector:
             "TRAP_AND_EXECUTE": ("獣罠処刑", "JUUWANA SHOKEI — ARMADILHA DE CAÇA E EXECUÇÃO"),
             "TSUPPARI_SONIC_DECAP": ("雷電掌断", "RAIDEN SHODAN — DECAPITAÇÃO SÔNICA TSUPPARI"),
             "TACHIAI_SHATTER_SLAM": ("立合粉砕", "TACHIAI FUNSAI — ESMAGAMENTO DE SUMÔ"),
-            "STILETTO_CAROTID_VITRIOL": ("硫酸頸割", "RYUUSAN KEIKATSU — ESTILETE DISSOLVENTE"),
+            "STILETTO_CAROTID_VITRIOL": ("硫酸解剖", "RYUUSAN KAIBOU — DISSECAÇÃO CIRÚRGICA ÁCIDA"),
             "ALCHEMIC_ACID_DISSOLVE": ("強酸溶解", "KYOU SAN YOUKAI — DISSOLUÇÃO ÁCIDA ALQUÍMICA"),
             "ALCHEMIC_FIRE_ASH": ("焦熱灰燼", "SHOU NETSU KAIJIN — FOGO GREGO EM CINZAS"),
             "ALCHEMIC_ETHER_SUFFOCATION": ("幽冥窒息", "YUUMEI CHISSOKU — ÉTER SOPORÍFERO"),
@@ -338,6 +340,8 @@ class CinematicDirector:
             # Cycle 4 Fatalities
             "SOUL_REAP": ("首刈骸生", "KUBIKARI GAISEI — SKELETON REANIMATION"),
             "DRAGGED_TO_GRAVE": ("黄泉引摺", "YOMI HIKIZURI — DRAGGED TO THE GRAVE"),
+            "SKELETON_SWORD_EXECUTION": ("骸兵斬首", "GAIHEI ZANSHU — SKELETON EXECUTION"),
+            "WIGHT_CORRUPTION_ROT": ("冥火腐蝕", "MEIKA FUSHOKU — PYRE ROT CORRUPTION"),
             "SEAL_STASIS_COLLAPSE": ("青炎灰燼", "SEIEN KAIJIN — ASHES OF AZURE FLAME"),
             "OFUDA_PURIFICATION_PILLAR": ("青炎灰燼", "SEIEN KAIJIN — ASHES OF AZURE FLAME"),
             "SEIMEI_FATAL_FIRE": ("青炎灰燼", "SEIEN KAIJIN — ASHES OF AZURE FLAME"),
@@ -359,7 +363,7 @@ class CinematicDirector:
             "TRAP_AND_EXECUTE": ("獣罠処刑", "JUUWANA SHOKEI — HUNT TRAP & EXECUTION"),
             "TSUPPARI_SONIC_DECAP": ("雷電掌断", "RAIDEN SHODAN — TSUPPARI SONIC DECAPITATION"),
             "TACHIAI_SHATTER_SLAM": ("立合粉砕", "TACHIAI FUNSAI — TACHIAI SUMO SLAM"),
-            "STILETTO_CAROTID_VITRIOL": ("硫酸頸割", "RYUUSAN KEIKATSU — DISSOLVING STILETTO"),
+            "STILETTO_CAROTID_VITRIOL": ("硫酸解剖", "RYUUSAN KAIBOU — SURGICAL ACID DISSECTION"),
             "ALCHEMIC_ACID_DISSOLVE": ("強酸溶解", "KYOU SAN YOUKAI — ALCHEMICAL ACID DISSOLUTION"),
             "ALCHEMIC_FIRE_ASH": ("焦熱灰燼", "SHOU NETSU KAIJIN — GREEK FIRE TO ASHES"),
             "ALCHEMIC_ETHER_SUFFOCATION": ("幽冥窒息", "YUUMEI CHISSOKU — SOPORIFIC ETHER"),
@@ -432,6 +436,16 @@ class CinematicDirector:
         from src.audio.sound_manager import get_sound_manager
         from src.audio.sound_events import SoundEvent
         from src.i18n import t
+
+        # Sanitizar slash_dir para garantir vetor não-nulo
+        if slash_dir is None or math.hypot(slash_dir[0], slash_dir[1]) < 1e-4:
+            if attacker is not None and victim is not None:
+                dx = victim.wx - attacker.wx
+                dy = victim.wy - attacker.wy
+                mag = math.hypot(dx, dy)
+                slash_dir = (dx / mag, dy / mag) if mag > 1e-4 else (getattr(attacker, "facing_x", 1.0), getattr(attacker, "facing_y", 0.0))
+            else:
+                slash_dir = (1.0, 0.0)
 
         if getattr(victim, "is_boss", False):
             self.is_active = True
@@ -731,14 +745,10 @@ class CinematicDirector:
                 attacker.set_facing(victim.wx, victim.wy)
                 attacker.state = "ATTACK"
                 attacker.state_timer = 0.35
-                scythe_tip_x = attacker.wx + attacker.facing_x * 0.75 - attacker.facing_y * 0.30
-                scythe_tip_y = attacker.wy + attacker.facing_y * 0.75 + attacker.facing_x * 0.30
-                scythe_tip_z = 0.82
-            else:
-                scythe_tip_x, scythe_tip_y, scythe_tip_z = victim.wx, victim.wy, 0.82
-            self.valerius_head_x = scythe_tip_x
-            self.valerius_head_y = scythe_tip_y
-            self.valerius_head_z = scythe_tip_z
+            # Cabeça permanece inicialmente no pescoço da vítima até a lâmina decepar
+            self.valerius_head_x = victim.wx
+            self.valerius_head_y = victim.wy
+            self.valerius_head_z = getattr(victim, "wz", 0.0) + 0.88
             self.freeze_timer = 1.60
             self.bw_flash_duration = 2.05
             self.bw_flash_timer = 2.05
@@ -918,6 +928,11 @@ class CinematicDirector:
         self.finisher_strike_timer = self.finisher_strike_duration
         self.finisher_impact_played = False
         self.tomoe_pinned_played = False
+        if not hasattr(attacker, "extra_props") or attacker.extra_props is None:
+            attacker.extra_props = {}
+        attacker.extra_props["finisher_style"] = self.finisher_style
+        attacker.extra_props["p"] = 0.0
+        attacker.extra_props["intro_victory_state"] = "FINISHER_1"
         self.tomoe_volley_played = False
         attacker.set_facing(victim.wx, victim.wy)
         if hasattr(victim, "set_facing"):
@@ -1516,14 +1531,23 @@ class CinematicDirector:
                 atk.state = "ATTACK"
                 dp = 1.0 - (self.valerius_decap_timer / 0.35)
                 atk.state_timer = max(0.01, (1.0 - dp) * 0.28)
-                # A ponta curva da foice decepa o pescoço e prende a cabeça diretamente na ponta
+                # A ponta curva da foice avança e decepa o pescoço
                 scythe_tip_x = atk.wx + atk.facing_x * (0.85 - 0.25 * dp) - atk.facing_y * (0.40 - 0.20 * dp)
                 scythe_tip_y = atk.wy + atk.facing_y * (0.85 - 0.25 * dp) + atk.facing_x * (0.40 - 0.20 * dp)
                 scythe_tip_z = 0.82
-                self.valerius_head_x = scythe_tip_x
-                self.valerius_head_y = scythe_tip_y
-                self.valerius_head_z = scythe_tip_z
-                vic.state = "DYING_HEADLESS"
+                if dp < 0.40:
+                    # Antes do impacto da foice, cabeça permanece no corpo da vítima
+                    self.valerius_head_x = vic.wx
+                    self.valerius_head_y = vic.wy
+                    self.valerius_head_z = getattr(vic, "wz", 0.0) + 0.88
+                    vic.state = "DYING_FREEZE"
+                else:
+                    # Impacto decepa a cabeça e ela adere à ponta da foice
+                    cut_u = (dp - 0.40) / 0.60
+                    self.valerius_head_x = vic.wx + (scythe_tip_x - vic.wx) * cut_u
+                    self.valerius_head_y = vic.wy + (scythe_tip_y - vic.wy) * cut_u
+                    self.valerius_head_z = (getattr(vic, "wz", 0.0) + 0.88) + (scythe_tip_z - (getattr(vic, "wz", 0.0) + 0.88)) * cut_u
+                    vic.state = "DYING_HEADLESS"
                 if self.valerius_decap_timer <= 0:
                     if not self.valerius_sound_played:
                         self.valerius_sound_played = True
@@ -2002,9 +2026,10 @@ class CinematicDirector:
                                 vic.alpha = 0.0
                                 vic.is_alive = False
 
-                    elif self.finisher_style in ("PINNED_TO_EARTH", "ARROW_PIN"):
-                        # Tomoe: Finisher A (Jifuu Kyoukyuu / Flecha Pregada à Terra)
+                    elif self.finisher_style in ("PINNED_TO_EARTH", "ARROW_PIN", "HAMAYA_HOLY_PIERCE"):
+                        # Tomoe: Finisher A & B (Jifuu Kyoukyuu / Flecha Yumi & Hamaya Sagrada Pregada à Terra)
                         anim_p = prog
+                        is_holy = (self.finisher_style == "HAMAYA_HOLY_PIERCE")
                         atk.extra_props["pose"] = "finisher_pinned"
                         try:
                             from src.audio.sound_manager import get_sound_manager
@@ -2026,8 +2051,9 @@ class CinematicDirector:
                                 sm.play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
                             if particles is not None:
                                 from src.effects.particles import SparkParticle, BloodParticle
-                                for _ in range(16):
-                                    particles.append(SparkParticle(vic.wx, vic.wy, 0.65, color=(255, 235, 180)))
+                                spark_col = (255, 235, 120) if is_holy else (255, 235, 180)
+                                for _ in range(24 if is_holy else 16):
+                                    particles.append(SparkParticle(vic.wx, vic.wy, 0.65, color=spark_col))
                                 for _ in range(24):
                                     particles.append(BloodParticle(vic.wx, vic.wy, 0.65))
 
@@ -2035,21 +2061,27 @@ class CinematicDirector:
                             # Fase 1: Vítima em choque/tensão esperando o disparo
                             vic.state = "DYING_FREEZE"
                             vic.extra_props["is_pinned_to_earth"] = False
+                            vic.extra_props["is_holy_pierced"] = is_holy
                             vic.extra_props["shiver"] = math.sin(prog * 28.0) * 0.012
                             vic.extra_props["kneel_prog"] = 0.0
                         elif prog < ground_prog:
-                            # Fase 2: O impacto da flecha atinge a garganta e arremessa a vítima de costas ao solo em queda contínua 3D
+                            # Fase 2: O impacto da flecha atinge a garganta/peito e tomba a vítima de costas ao solo em rotação 3D contínua
                             fall_u = (prog - hit_prog) / (ground_prog - hit_prog)
                             smooth_fall = fall_u * fall_u * (3.0 - 2.0 * fall_u)
                             vic.state = "DYING_FREEZE"
                             vic.extra_props["is_pinned_to_earth"] = False
-                            vic.extra_props["somersault_angle"] = 90.0 * smooth_fall
+                            vic.extra_props["is_holy_pierced"] = is_holy
+                            fall_deg = 90.0 * smooth_fall
+                            vic.somersault_angle = fall_deg
+                            vic.extra_props["somersault_angle"] = fall_deg
                             vic.extra_props["somersault_pivot_z"] = vic.wz + 0.06
                             vic.extra_props["shiver"] = (1.0 - smooth_fall) * 0.02
                         else:
                             # Fase 3: Vítima cravada ao solo na postura orgânica agônica com respiração e sangue arterial
                             vic.state = "PINNED_DOWN"
                             vic.extra_props["is_pinned_to_earth"] = True
+                            vic.extra_props["is_holy_pierced"] = is_holy
+                            vic.somersault_angle = 0.0
                             vic.extra_props["somersault_angle"] = 0.0
                             vic.extra_props["spasm_time"] = prog - ground_prog
                             vic.wz = 0.0
@@ -2070,6 +2102,189 @@ class CinematicDirector:
                                 bp.vx = random.uniform(-0.35, 0.35)
                                 bp.vy = random.uniform(-0.35, 0.35)
                                 particles.append(bp)
+
+                    elif self.finisher_style == "HEART_THROAT_STAB":
+                        # Hanzo Melee: Shukuchi flash pelas costas, degola carotídea com tanto invertido e leque arterial
+                        anim_p = prog
+                        if not hasattr(vic, "extra_props") or vic.extra_props is None:
+                            vic.extra_props = {}
+                        if prog < 0.28:
+                            # Fase 1: Shukuchi pelas costas da vítima
+                            target_x = vic.wx - vic.facing_x * 0.44
+                            target_y = vic.wy - vic.facing_y * 0.44
+                            atk.wx += (target_x - atk.wx) * min(1.0, effective_dt * 12.0)
+                            atk.wy += (target_y - atk.wy) * min(1.0, effective_dt * 12.0)
+                            atk.set_facing(vic.facing_x, vic.facing_y)
+                            atk.extra_props["pose"] = "finisher_throat_slit"
+                            vic.state = "DYING_FREEZE"
+                            vic.extra_props["shiver"] = math.sin(prog * 25.0) * 0.010
+                            vic.extra_props["kneel_prog"] = 0.0
+                        elif prog < 0.65:
+                            # Fase 2: O corte transversal na garganta com fonte arterial para a frente
+                            atk.extra_props["pose"] = "finisher_throat_slit"
+                            if prog >= 0.32 and not self.finisher_impact_played:
+                                self.finisher_impact_played = True
+                                try:
+                                    from src.audio.sound_manager import get_sound_manager
+                                    from src.audio.sound_events import SoundEvent
+                                    get_sound_manager().play(SoundEvent.SWORD_SLASH, volume_scale=1.1)
+                                    get_sound_manager().play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
+                                    get_sound_manager().play(SoundEvent.ARTERIAL_SPRAY, volume_scale=0.9)
+                                except Exception:
+                                    pass
+                                if particles is not None:
+                                    from src.effects.particles import BloodParticle, SparkParticle
+                                    for _ in range(28):
+                                        bp = BloodParticle(vic.wx + vic.facing_x * 0.15, vic.wy + vic.facing_y * 0.15, 0.72)
+                                        bp.vx = vic.facing_x * random.uniform(1.2, 3.2) + random.uniform(-0.4, 0.4)
+                                        bp.vy = vic.facing_y * random.uniform(1.2, 3.2) + random.uniform(-0.4, 0.4)
+                                        bp.vz = random.uniform(1.5, 3.8)
+                                        particles.append(bp)
+                            vic_u = (prog - 0.32) / 0.33
+                            vic.extra_props["kneel_prog"] = min(0.70, vic_u * 0.70)
+                            vic.extra_props["shiver"] = math.sin(prog * 45.0) * 0.015 * (1.0 - vic_u)
+                        else:
+                            # Fase 3: Queda limpa da vítima e chiburi seco de Hanzo
+                            u = (prog - 0.65) / 0.35
+                            vic.extra_props["kneel_prog"] = 0.70 + u * 0.30
+                            atk.extra_props["pose"] = "finisher_throat_slit"
+
+                    elif self.finisher_style == "EARTH_STOMP_CRUSH":
+                        # Goro Secundário: Pisotão Sísmico esmagando o crânio contra a terra rachada
+                        anim_p = prog
+                        if not hasattr(vic, "extra_props") or vic.extra_props is None:
+                            vic.extra_props = {}
+                        if prog < 0.35:
+                            # Goro ergue o pé colossal bem alto enquanto a vítima ajoelha atordoada
+                            atk.extra_props["pose"] = "earth_stomp"
+                            atk.extra_props["stomp_prog"] = prog / 0.35
+                            vic.state = "DYING_FREEZE"
+                            vic.extra_props["kneel_prog"] = 0.75
+                            vic.extra_props["shiver"] = math.sin(prog * 30.0) * 0.015
+                        else:
+                            # Pisotão desaba e esmaga o crânio contra a pedra
+                            atk.extra_props["pose"] = "earth_stomp"
+                            atk.extra_props["stomp_prog"] = 1.0
+                            if not self.finisher_impact_played:
+                                self.finisher_impact_played = True
+                                try:
+                                    from src.audio.sound_manager import get_sound_manager
+                                    from src.audio.sound_events import SoundEvent
+                                    get_sound_manager().play(SoundEvent.BONE_CRUSH, volume_scale=1.1)
+                                    get_sound_manager().play(SoundEvent.EARTH_CRACK, volume_scale=1.1)
+                                    get_sound_manager().play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
+                                except Exception:
+                                    pass
+                                if camera:
+                                    camera.add_shake(24.0)
+                                if particles is not None:
+                                    from src.effects.particles import BloodParticle, SparkParticle, SmokeParticle
+                                    for _ in range(32):
+                                        particles.append(BloodParticle(vic.wx, vic.wy, 0.25))
+                                    for _ in range(16):
+                                        particles.append(SparkParticle(vic.wx, vic.wy, 0.15, color=(220, 200, 170)))
+                                    for _ in range(6):
+                                        particles.append(SmokeParticle(vic.wx, vic.wy, wz=0.10, color=(80, 75, 70), radius=0.45))
+                            vic.state = "DYING_FREEZE"
+                            vic.extra_props["kneel_prog"] = 1.0
+                            vic.extra_props["is_crushed"] = True
+
+                    elif self.finisher_style == "STILETTO_CAROTID_VITRIOL":
+                        # Hendrika: Dissecação Cirúrgica Ácida — incisão abdominal profunda e banho de vitríolo cáustico
+                        anim_p = prog
+                        if not hasattr(vic, "extra_props") or vic.extra_props is None:
+                            vic.extra_props = {}
+                        atk.extra_props["pose"] = "finisher_carotid_vitriol"
+                        if prog < 0.35:
+                            vic.state = "DYING_FREEZE"
+                            vic.extra_props["kneel_prog"] = 0.0
+                            vic.extra_props["shiver"] = math.sin(prog * 25.0) * 0.012
+                        else:
+                            if not self.finisher_impact_played:
+                                self.finisher_impact_played = True
+                                try:
+                                    from src.audio.sound_manager import get_sound_manager
+                                    from src.audio.sound_events import SoundEvent
+                                    get_sound_manager().play(SoundEvent.SWORD_SLASH, volume_scale=1.0)
+                                    get_sound_manager().play(SoundEvent.FLESH_CLEAVE, volume_scale=1.1)
+                                    get_sound_manager().play(SoundEvent.BOMB_FUSE, volume_scale=1.0)
+                                    get_sound_manager().play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
+                                except Exception:
+                                    pass
+                            if particles is not None and random.random() < 0.85:
+                                from src.effects.particles import SparkParticle, BloodParticle, SmokeParticle
+                                particles.append(SparkParticle(vic.wx + random.uniform(-0.15, 0.15),
+                                                               vic.wy + random.uniform(-0.15, 0.15),
+                                                               0.65, color=random.choice([(60, 245, 120), (95, 255, 175), (40, 210, 90)])))
+                                particles.append(SmokeParticle(vic.wx + random.uniform(-0.12, 0.12),
+                                                               vic.wy + random.uniform(-0.12, 0.12),
+                                                               wz=0.55, color=(45, 180, 85), radius=0.22, lifetime=0.55))
+                                particles.append(BloodParticle(vic.wx, vic.wy, 0.60))
+                            vic_u = (prog - 0.35) / 0.65
+                            vic.extra_props["kneel_prog"] = vic_u * 0.95
+                            vic.extra_props["shiver"] = math.sin(prog * 50.0) * 0.020
+
+                    elif self.finisher_style == "ALCHEMIC_FROST_SHATTER":
+                        # Hendrika: Congelamento criogênico e estilhaço
+                        anim_p = prog
+                        if not hasattr(vic, "extra_props") or vic.extra_props is None:
+                            vic.extra_props = {}
+                        if prog < 0.40:
+                            vic.state = "DYING_FREEZE"
+                            vic.extra_props["kneel_prog"] = 0.15
+                            if particles is not None and random.random() < 0.40:
+                                from src.effects.particles import SparkParticle
+                                particles.append(SparkParticle(vic.wx + random.uniform(-0.15, 0.15),
+                                                               vic.wy + random.uniform(-0.15, 0.15),
+                                                               random.uniform(0.2, 0.8),
+                                                               color=(180, 235, 255)))
+                        else:
+                            if not self.finisher_impact_played:
+                                self.finisher_impact_played = True
+                                try:
+                                    from src.audio.sound_manager import get_sound_manager
+                                    from src.audio.sound_events import SoundEvent
+                                    get_sound_manager().play(SoundEvent.EARTH_CRACK, volume_scale=1.0)
+                                    get_sound_manager().play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
+                                except Exception:
+                                    pass
+                                if particles is not None:
+                                    from src.effects.particles import SparkParticle
+                                    for _ in range(35):
+                                        particles.append(SparkParticle(vic.wx, vic.wy, random.uniform(0.1, 0.8), color=(190, 240, 255)))
+                            vic.alpha = max(0.0, 1.0 - (prog - 0.40) / 0.40)
+                            if vic.alpha <= 0.05:
+                                vic.alpha = 0.0
+                                vic.is_alive = False
+
+                    elif self.finisher_style in ("SKELETON_SWORD_EXECUTION", "WIGHT_CORRUPTION_ROT"):
+                        # Servos mortos-vivos de Valerius desferem o golpe fatal
+                        anim_p = prog
+                        if not hasattr(vic, "extra_props") or vic.extra_props is None:
+                            vic.extra_props = {}
+                        if prog >= 0.35 and not self.finisher_impact_played:
+                            self.finisher_impact_played = True
+                            try:
+                                from src.audio.sound_manager import get_sound_manager
+                                from src.audio.sound_events import SoundEvent
+                                if self.finisher_style == "WIGHT_CORRUPTION_ROT":
+                                    get_sound_manager().play(SoundEvent.FIRE_BURST, volume_scale=1.0)
+                                    get_sound_manager().play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
+                                else:
+                                    get_sound_manager().play(SoundEvent.SWORD_SLASH, volume_scale=1.1)
+                                    get_sound_manager().play(SoundEvent.FATAL_STRIKE, volume_scale=1.0)
+                            except Exception:
+                                pass
+                            if particles is not None:
+                                from src.effects.particles import SparkParticle, BloodParticle
+                                for _ in range(25):
+                                    c_p = (60, 160, 255) if self.finisher_style == "WIGHT_CORRUPTION_ROT" else (240, 230, 210)
+                                    particles.append(SparkParticle(vic.wx, vic.wy, 0.65, color=c_p))
+                                for _ in range(20):
+                                    particles.append(BloodParticle(vic.wx, vic.wy, 0.65))
+                        vic_u = max(0.0, (prog - 0.35) / 0.65)
+                        vic.extra_props["kneel_prog"] = vic_u * 0.90
+                        vic.extra_props["shiver"] = math.sin(prog * 35.0) * 0.010 * (1.0 - vic_u)
 
                     elif self.finisher_style == "HAMAYA_HOLY_PIERCE":
                         # Tomoe: Finisher B (Hama Tenkan / Salva Purificadora Celeste)
@@ -2430,7 +2645,7 @@ class CinematicDirector:
             surface.blit(sh_surf, (gx - cx, gy - cy))
 
         # 2. Valerius: Cabeça decepada na foice / erguida na mão e esqueleto decapitado reanimado
-        if (self.valerius_decap_timer > 0 or self.valerius_hook_timer > 0 or self.valerius_reanimate_timer > 0) and self.valerius_victim is not None:
+        if (self.valerius_hook_timer > 0 or self.valerius_reanimate_timer > 0 or (self.valerius_decap_timer > 0 and (1.0 - self.valerius_decap_timer / 0.35) >= 0.40)) and self.valerius_victim is not None:
             vic = self.valerius_victim
             hx, hy, hz = self.valerius_head_x, self.valerius_head_y, self.valerius_head_z
             from src.entities.voxel_models import _get_char_hair_color, _skin_colors
@@ -2451,6 +2666,47 @@ class CinematicDirector:
                 # Ponta curvada de aço gótico cravada atravessando a cabeça
                 draw_voxel_box(surface, camera, hx - 0.02, hy - 0.02, hz - 0.04, 0.04, 0.04, 0.22, c_steel, outline=True)
                 draw_voxel_box(surface, camera, hx - 0.06, hy - 0.02, hz + 0.12, 0.10, 0.04, 0.04, c_dark_iron, outline=True)
+
+        # 2b. Tomoe: Flecha em voo / Flecha cravada no tórax (PINNED_TO_EARTH / HAMAYA_HOLY_PIERCE)
+        if self.finisher_style in ("PINNED_TO_EARTH", "ARROW_PIN", "HAMAYA_HOLY_PIERCE") and self.finisher_strike_timer > 0:
+            atk = self.finisher_attacker
+            vic = self.finisher_victim
+            if atk is not None and vic is not None:
+                prog = 1.0 - (self.finisher_strike_timer / max(0.01, self.finisher_strike_duration))
+                hit_prog = 0.35
+                ground_prog = 0.54
+                is_holy = (self.finisher_style == "HAMAYA_HOLY_PIERCE")
+                c_shaft = (245, 240, 210) if is_holy else (160, 130, 95)
+                c_feather = (255, 255, 255) if is_holy else (220, 220, 230)
+                c_tip = (255, 230, 110) if is_holy else (200, 205, 215)
+
+                from src.isometric.voxel_renderer import draw_oriented_voxel_box
+                if 0.18 <= prog < hit_prog:
+                    flight_u = (prog - 0.18) / (hit_prog - 0.18)
+                    ax = atk.wx + (vic.wx - atk.wx) * flight_u
+                    ay = atk.wy + (vic.wy - atk.wy) * flight_u
+                    az = 0.65
+                    dx = vic.wx - atk.wx
+                    dy = vic.wy - atk.wy
+                    d_len = math.hypot(dx, dy) or 1.0
+                    fx, fy = dx / d_len, dy / d_len
+                    draw_oriented_voxel_box(surface, camera, ax, ay, az, fx, fy, 0.0, 0.55, 0.025, 0.025, c_shaft, outline=False)
+                    draw_oriented_voxel_box(surface, camera, ax - fx * 0.22, ay - fy * 0.22, az, fx, fy, 0.0, 0.12, 0.06, 0.06, c_feather, outline=False)
+                    draw_oriented_voxel_box(surface, camera, ax + fx * 0.26, ay + fy * 0.26, az, fx, fy, 0.0, 0.08, 0.04, 0.04, c_tip, outline=False)
+                elif hit_prog <= prog < ground_prog:
+                    fall_u = (prog - hit_prog) / (ground_prog - hit_prog)
+                    smooth_fall = fall_u * fall_u * (3.0 - 2.0 * fall_u)
+                    fall_ang = smooth_fall * (math.pi / 2.0)
+                    throat_z = 0.65 * math.cos(fall_ang) + 0.10
+                    fx = getattr(atk, "facing_x", 1.0)
+                    fy = getattr(atk, "facing_y", 0.0)
+                    ax = vic.wx + fx * 0.12
+                    ay = vic.wy + fy * 0.12
+                    arrow_dir_z = -math.sin(fall_ang * 0.7)
+                    arrow_fx = fx * math.cos(fall_ang * 0.7)
+                    arrow_fy = fy * math.cos(fall_ang * 0.7)
+                    draw_oriented_voxel_box(surface, camera, ax, ay, throat_z, arrow_fx, arrow_fy, arrow_dir_z, 0.55, 0.025, 0.025, c_shaft, outline=False)
+                    draw_oriented_voxel_box(surface, camera, ax - arrow_fx * 0.22, ay - arrow_fy * 0.22, throat_z - arrow_dir_z * 0.22, arrow_fx, arrow_fy, arrow_dir_z, 0.12, 0.06, 0.06, c_feather, outline=False)
 
         if self.valerius_reanimate_timer > 0 and self.valerius_victim is not None:
             # Transformação do cadáver decapitado em esqueleto reanimado

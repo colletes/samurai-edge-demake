@@ -133,7 +133,7 @@ def idle_arms(c):
     pose = extra.get("pose", "")
     p = extra.get("p", 0.0)
 
-    # 1. Poses da Introdução (3 Fases Contínuas)
+    # 1. Poses da Introdução (3 Fases com Continuidade C0 e Respiração Contínua)
     if pose == "intro_inspect_vial":
         u = extra.get("seg_u", p / 0.38 if p <= 0.38 else 1.0)
         u = max(0.0, min(1.0, u))
@@ -145,20 +145,30 @@ def idle_arms(c):
     if pose == "intro_stiletto_test":
         u = extra.get("seg_u", (p - 0.38) / 0.34 if 0.38 <= p <= 0.72 else 1.0)
         u = max(0.0, min(1.0, u))
+        p0_l = (bx + fx * 0.16 + px * 0.06, by + fy * 0.16 + py * 0.06, tz + 0.22)
+        p0_r = (bx - fx * 0.04 - px * 0.12, by - fy * 0.04 - py * 0.12, tz + 0.08)
+        target_l = (bx + fx * 0.14 + px * 0.04, by + fy * 0.14 + py * 0.04, tz + 0.18)
+        target_r = (bx + fx * 0.12 - px * 0.02, by + fy * 0.12 - py * 0.02, tz + 0.16)
+        base_l = mk.lerp(p0_l, target_l, u)
+        base_r = mk.lerp(p0_r, target_r, u)
         sw = math.sin(u * math.pi * 2.0) * 0.02
-        left = (bx + fx * 0.14 + px * 0.04, by + fy * 0.14 + py * 0.04, tz + 0.18 + sw)
-        right = (bx + fx * 0.12 - px * 0.02, by + fy * 0.12 - py * 0.02, tz + 0.16 + sw)
+        left = (base_l[0], base_l[1], base_l[2] + sw)
+        right = (base_r[0], base_r[1], base_r[2] + sw)
         return left, right
 
     if pose == "intro_ready_stance":
         u = extra.get("seg_u", (p - 0.72) / 0.28 if p >= 0.72 else 1.0)
         u = max(0.0, min(1.0, u))
-        b = math.sin(u * 5.0) * 0.008
-        left = (bx + fx * 0.16 + px * 0.12, by + fy * 0.16 + py * 0.12, tz + 0.15 + b)
-        right = (bx + fx * 0.18 - px * 0.08, by + fy * 0.18 - py * 0.08, tz + 0.10 + b)
-        return left, right
+        start_l = (bx + fx * 0.14 + px * 0.04, by + fy * 0.14 + py * 0.04, tz + 0.18)
+        start_r = (bx + fx * 0.12 - px * 0.02, by + fy * 0.12 - py * 0.02, tz + 0.16)
+        target_l = (bx + fx * 0.16 + px * 0.12, by + fy * 0.16 + py * 0.12, tz + 0.15)
+        target_r = (bx + fx * 0.18 - px * 0.08, by + fy * 0.18 - py * 0.08, tz + 0.10)
+        base_l = mk.lerp(start_l, target_l, u)
+        base_r = mk.lerp(start_r, target_r, u)
+        b = math.sin(p * 12.0 + c.walk_timer * 2.8) * 0.008
+        return (base_l[0], base_l[1], base_l[2] + b), (base_r[0], base_r[1], base_r[2] + b)
 
-    # 2. Poses da Vitória (3 Fases Contínuas)
+    # 2. Poses da Vitória (3 Fases com Continuidade C0 e Respiração Contínua)
     if pose == "victory_field_notes":
         u = extra.get("seg_u", p / 0.40 if p <= 0.40 else 1.0)
         u = max(0.0, min(1.0, u))
@@ -170,18 +180,27 @@ def idle_arms(c):
     if pose == "victory_pocket_watch":
         u = extra.get("seg_u", (p - 0.40) / 0.35 if 0.40 <= p <= 0.75 else 1.0)
         u = max(0.0, min(1.0, u))
+        p0_l = (bx + fx * 0.12 + px * 0.06, by + fy * 0.12 + py * 0.06, tz + 0.14)
+        p0_r = (bx + fx * 0.10 - px * 0.02, by + fy * 0.10 - py * 0.02, tz + 0.15)
+        target_l = (bx - px * 0.14, by - py * 0.14, tz + 0.06)
+        target_r = (bx + fx * 0.14 - px * 0.04, by + fy * 0.14 - py * 0.04, tz + 0.18)
+        base_l = mk.lerp(p0_l, target_l, u)
+        base_r = mk.lerp(p0_r, target_r, u)
         b = math.sin(u * math.pi) * 0.02
-        left = (bx - px * 0.14, by - py * 0.14, tz + 0.06)
-        right = (bx + fx * 0.14 - px * 0.04, by + fy * 0.14 - py * 0.04, tz + 0.18 + b)
-        return left, right
+        return base_l, (base_r[0], base_r[1], base_r[2] + b)
 
     if pose == "victory_academic_bow":
         u = extra.get("seg_u", (p - 0.75) / 0.25 if p >= 0.75 else 1.0)
         u = max(0.0, min(1.0, u))
-        sw = math.sin(u * math.pi) * 0.04
-        left = (bx + px * 0.12 - fx * 0.02, by + py * 0.12 - fy * 0.02, tz + 0.06 - sw)
-        right = (bx - px * 0.12 - fx * 0.02, by - py * 0.12 - fy * 0.02, tz + 0.06 - sw)
-        return left, right
+        start_l = (bx - px * 0.14, by - py * 0.14, tz + 0.06)
+        start_r = (bx + fx * 0.14 - px * 0.04, by + fy * 0.14 - py * 0.04, tz + 0.18)
+        target_l = (bx + px * 0.12 - fx * 0.02, by + py * 0.12 - fy * 0.02, tz + 0.06)
+        target_r = (bx - px * 0.12 - fx * 0.02, by - py * 0.12 - fy * 0.02, tz + 0.06)
+        base_l = mk.lerp(start_l, target_l, u)
+        base_r = mk.lerp(start_r, target_r, u)
+        bow = math.sin(u * math.pi) * 0.04
+        breathe = math.sin(p * 10.0 + c.walk_timer * 2.5) * 0.008
+        return (base_l[0], base_l[1], base_l[2] - bow + breathe), (base_r[0], base_r[1], base_r[2] - bow + breathe)
 
     # 3. Finishers Bespoke
     if pose == "finisher_acid_dissolve":

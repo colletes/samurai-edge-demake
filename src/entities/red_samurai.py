@@ -743,15 +743,17 @@ class RedSamurai(Samurai):
         elif self.state == STATE_RECOVERY:
             active_pose = "noto_sheath"
 
+        base_extra = getattr(self, "extra_props", {}) or {}
         extra_props = {
+            **base_extra,
             "ssaa_2x": getattr(self, "ssaa_enabled", True),
             "pose_lerp_tracker": getattr(self, "_pose_lerp_tracker", None),
             "ryuu_phase": getattr(self, "ryuu_phase", "DESCEND"),
             "is_aerial_parry": getattr(self, "is_aerial_parry", False),
-            "somersault_angle": getattr(self, "somersault_angle", 0.0),
+            "somersault_angle": base_extra.get("somersault_angle", getattr(self, "somersault_angle", 0.0)),
         }
         if active_pose:
-            extra_props["pose"] = active_pose
+            extra_props.setdefault("pose", active_pose)
 
         render_voxel_humanoid(
             surface, camera,

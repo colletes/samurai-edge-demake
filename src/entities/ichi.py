@@ -15,7 +15,8 @@ from src.config import (
 )
 from src.entities.samurai import (
     Samurai, STATE_IDLE, STATE_WALK, STATE_ATTACK, STATE_RECOVERY,
-    STATE_STUNNED, STATE_DEAD, STATE_ROLL, STATE_PARRY, resolve_playable_bounds
+    STATE_STUNNED, STATE_DEAD, STATE_ROLL, STATE_PARRY, resolve_playable_bounds,
+    slide_movement_against_obstacles
 )
 from src.entities.voxel_models import render_voxel_humanoid
 from src.effects.particles import SparkParticle, FloatingBanner
@@ -34,8 +35,8 @@ class IchiBlade(Samurai):
         self.can_parry = True
 
         # Ataque Primário: Gyaku-Iai (Saque Relâmpago Invertido estilo Zatoichi puro)
-        self.attack_duration = 0.11   # 7 frames de startup ultrarrápido
-        self.attack_recovery = 0.20
+        self.attack_duration = 0.22   # Startup e golpe nítidos e cadenciados
+        self.attack_recovery = 0.26
         self.slash_reach = 1.80
         self.slash_radius = 1.05
 
@@ -45,14 +46,16 @@ class IchiBlade(Samurai):
         self.listen_duration = 0.40
         self.counter_active = False
 
-        # Terceira Ação: Desvio Evasivo da Bengala (Cane Tap Slip)
-        # Deslocamento padrão com 13 i-frames para evadir carruagens de Kyoto e perigos de arena
+        # Terceira Ação: Desvio Evasivo da Bengala (Cane Tap Slip) / Deslize Espectral Alucard
+        # Deslize rente ao solo de velocidade 10.8 com afterimages Sumi-e fantasmagóricas
         self.is_agile_dodge = True
-        self.roll_speed = 7.2
-        self.roll_duration = 0.28
-        self.roll_recovery_duration = 0.22
-        self.roll_cooldown_duration = 0.45
+        self.roll_speed = 10.8
+        self.roll_duration = 0.32
+        self.roll_recovery_duration = 0.12
+        self.roll_cooldown_duration = 0.28
         self.recovery_duration = self.attack_recovery
+        self.zanzou_ghosts = []
+        self.zanzou_timer = 0.0
 
         # Estilos de Fatalidade Bespoke
         self.finisher_style_primary = "BLIND_CAROTID_SLICE"
@@ -75,7 +78,7 @@ class IchiBlade(Samurai):
     def can_act(self) -> bool:
         return (
             self.is_alive
-            and self.state in (STATE_IDLE, STATE_WALK, STATE_RECOVERY)
+            and self.state in (STATE_IDLE, STATE_WALK)
             and self.roll_recovery_timer <= 0
             and self.dash_recovery_timer <= 0
         )
@@ -186,19 +189,76 @@ class IchiBlade(Samurai):
 
         self.facing_x = dir_x
         self.facing_y = dir_y
+        self.roll_dir_x = dir_x
+        self.roll_dir_y = dir_y
         self.state = STATE_ROLL
         self.state_timer = self.roll_duration
         self.is_invulnerable_dodge = True
         self.invincible = True
-        self.invincible_timer = 0.22  # 13 frames a 60 FPS
+        self.invincible_timer = 0.25
         self.hitbox_active = False
+        self.zanzou_timer = 0.0
+
+        # Primeiro rastro de afterimage fantasmagórica
+        self.zanzou_ghosts.append({
+            "wx": self.wx, "wy": self.wy,
+            "facing_x": self.facing_x, "facing_y": self.facing_y,
+            "alpha": 185.0, "p": 0.0
+        })
 
         if particles is not None:
             # Toque da ponta da bengala no chão levantando poeira e faíscas
             particles.append(SparkParticle(self.wx, self.wy, 0.12, color=(185, 175, 160)))
             particles.append(SparkParticle(self.wx + self.facing_x * 0.15, self.wy + self.facing_y * 0.15, 0.15, color=(220, 215, 200)))
 
+        try:
+            from src.audio.sound_manager import get_sound_manager
+            from src.audio.sound_events import SoundEvent
+            get_sound_manager().play(SoundEvent.DODGE_WHOOSH, volume_scale=0.9)
+        except Exception:
+            pass
+
         return True
+
+    def update_roll(self, dt: float, game_map = None, particles: list = None):
+        """Atualiza a física de deslize ultra-fluido Alucard com desaceleração contínua e rastros Sumi-e."""
+        self.state_timer -= dt
+        u = 1.0 - max(0.0, self.state_timer) / max(0.001, self.roll_duration)
+        cur_speed = self.roll_speed * max(0.20, 1.0 - (u ** 1.8) * 0.72)
+
+        dx = getattr(self, "roll_dir_x", self.facing_x) * cur_speed * dt
+        dy = getattr(self, "roll_dir_y", self.facing_y) * cur_speed * dt
+
+        if game_map is not None:
+            new_wx, new_wy = slide_movement_against_obstacles(self.wx, self.wy, dx, dy, self.radius, game_map)
+            self.wx, self.wy = new_wx, new_wy
+        else:
+            self.wx += dx
+            self.wy += dy
+
+        # Spawn periódico de afterimages (sombras zanzou Sumi-e)
+        self.zanzou_timer = getattr(self, "zanzou_timer", 0.0) + dt
+        if self.zanzou_timer >= 0.045:
+            self.zanzou_timer = 0.0
+            if len(self.zanzou_ghosts) < 6:
+                self.zanzou_ghosts.append({
+                    "wx": self.wx, "wy": self.wy,
+                    "facing_x": self.facing_x, "facing_y": self.facing_y,
+                    "alpha": 175.0, "p": u
+                })
+
+        if particles is not None and random.random() < 0.35:
+            particles.append(SparkParticle(
+                self.wx + random.uniform(-0.15, 0.15),
+                self.wy + random.uniform(-0.15, 0.15),
+                0.08,
+                color=(215, 220, 230)
+            ))
+
+        if self.state_timer <= 0:
+            self.state = STATE_IDLE
+            self.roll_recovery_timer = self.roll_recovery_duration
+            self.roll_cooldown_timer = self.roll_cooldown_duration
 
     def trigger_roll(self, dwx: float, dwy: float, particles: list = None, **kwargs) -> bool:
         """Alias para garantir compatibilidade com roll genérico."""
@@ -207,6 +267,12 @@ class IchiBlade(Samurai):
     def update(self, dt: float, game_map = None, particles: list = None, opponent = None, projectiles: list = None, banners: list = None, cinematic_director = None, **kwargs):
         # Atualizar timers de esquiva e recuperação de roll
         self.update_dodge_timers(dt)
+
+        # Atualizar esmaecimento das afterimages fantasmagóricas de Ichi (Alucard Dash)
+        if self.zanzou_ghosts:
+            for g in self.zanzou_ghosts:
+                g["alpha"] -= 480.0 * dt
+            self.zanzou_ghosts = [g for g in self.zanzou_ghosts if g["alpha"] > 0]
 
         # Atualizar recarga da Postura de Escuta
         if self.listen_timer > 0:
@@ -230,8 +296,8 @@ class IchiBlade(Samurai):
         # Atualizar ataque primário (Gyaku-Iai)
         if self.state == STATE_ATTACK:
             self.state_timer -= dt
-            # Lunge veloz do saque em pegada invertida
-            step_speed = 3.8
+            # Lunge cadenciado do saque em pegada invertida
+            step_speed = 2.4
             new_wx = self.wx + self.facing_x * step_speed * dt
             new_wy = self.wy + self.facing_y * step_speed * dt
             if game_map and hasattr(game_map, "cols"):
@@ -334,16 +400,43 @@ class IchiBlade(Samurai):
             return
 
     def render(self, surface: pygame.Surface, camera):
-        extra = {}
+        # Renderiza as afterimages fantasmagóricas de deslize Alucard (Sumi-e zanzou)
+        for g in getattr(self, "zanzou_ghosts", []):
+            ghost_extra = {
+                "pose": "cane_slip",
+                "is_roll": True,
+                "roll_prog": g["p"],
+                "p": g["p"]
+            }
+            render_voxel_humanoid(
+                surface=surface,
+                camera=camera,
+                wx=g["wx"],
+                wy=g["wy"],
+                wz=0.0,
+                facing_x=g["facing_x"],
+                facing_y=g["facing_y"],
+                state=STATE_ROLL,
+                state_timer=0.1,
+                is_alive=True,
+                char_type="ichi",
+                walk_timer=0.0,
+                alpha=max(0, min(255, int(g["alpha"]))),
+                is_moving=False,
+                extra_props=ghost_extra
+            )
+
+        base_extra = getattr(self, "extra_props", {}) or {}
+        extra = {**base_extra}
         if self.state == STATE_LISTEN:
-            extra = {"pose": "listen_stance", "is_listen": True}
+            extra.update({"pose": "listen_stance", "is_listen": True})
         elif self.state == STATE_COUNTER_THRUST:
-            extra = {"pose": "counter_thrust", "is_pierce": True}
+            extra.update({"pose": "counter_thrust", "is_pierce": True})
         elif self.state == STATE_ROLL:
             roll_p = 1.0 - (self.state_timer / max(0.001, self.roll_duration))
-            extra = {"pose": "cane_slip", "is_roll": True, "roll_prog": roll_p}
+            extra.update({"pose": "cane_slip", "is_roll": True, "roll_prog": roll_p})
         elif self.state == STATE_PARRY:
-            extra = {"pose": "sheath_parry", "is_parry": True}
+            extra.update({"pose": "sheath_parry", "is_parry": True})
 
         render_voxel_humanoid(
             surface=surface,

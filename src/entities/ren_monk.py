@@ -144,7 +144,7 @@ class RenMonk(Samurai):
     def trigger_primary_attack(self, target_wx: float, target_wy: float):
         self.trigger_punch_combo(target_wx, target_wy)
 
-    def trigger_kiai_shout(self, target_wx: float = None, target_wy: float = None, opponent=None, projectiles: list = None, particles: list = None, banners: list = None, game_map=None):
+    def trigger_kiai_shout(self, target_wx: float = None, target_wy: float = None, opponent=None, projectiles: list = None, particles: list = None, banners: list = None, game_map=None, **kwargs):
         """
         Ação Secundária: Grito de Kiai da Montanha.
         Gera uma aura esférica de energia que repele projéteis e aplica alto knockback no oponente.
@@ -192,7 +192,7 @@ class RenMonk(Samurai):
                         proj.vy = (dy / norm) * 16.0
                         proj.owner = self  # Agora pertence ao Ren!
 
-        # Se o oponente estiver dentro do raio, repelir com alto knockback
+        # Se o oponente estiver dentro do raio, repelir com alto knockback e causar 1 de dano
         if opponent is not None and getattr(opponent, "is_alive", True):
             dx = opponent.wx - self.wx
             dy = opponent.wy - self.wy
@@ -206,9 +206,16 @@ class RenMonk(Samurai):
                 else:
                     opponent.wx += nx * travel
                     opponent.wy += ny * travel
-                # Atordoamento leve (soft stun)
+                # Atordoamento tático de 0.40s
                 if hasattr(opponent, "stun"):
                     opponent.stun(0.40)
+                # Dano de 1 HP pelo impacto da onda de Kiai
+                if hasattr(opponent, "take_hit"):
+                    hit, dead = opponent.take_hit((nx, ny), damage=1)
+                    if banners is not None:
+                        banners.append(FloatingBanner("KIAI IMPACT! -1 HP", opponent.wx, opponent.wy, wz=1.7, color=(255, 215, 60)))
+                    if dead and kwargs.get("cinematic_director"):
+                        kwargs.get("cinematic_director").trigger_fatal_strike(self, opponent, "WALL_SMASH_FATAL", (nx, ny))
         return True
 
     def trigger_secondary_action(self, target_wx: float, target_wy: float, opponent=None, projectiles: list = None, particles: list = None, banners: list = None):

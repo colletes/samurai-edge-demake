@@ -317,7 +317,7 @@ class Samurai:
             if self.fall_timer >= FALL_DURATION:
                 self.state = STATE_DEAD
                 self.fell_into_pit = True
-                self.wz = 0.0
+                self.wz = -4.0
             return False
         if not self.is_alive:
             return False

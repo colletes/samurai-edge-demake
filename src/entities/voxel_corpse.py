@@ -859,16 +859,33 @@ class VoxelCorpse:
 
         elif style == "SOUL_REAP":
             # Valerius Primário: Foice decapita a cabeça do rival e reanima o cadáver decapitado em esqueleto!
+            # A cabeça é retida na mão de Valerius durante a vitória; o cadáver no solo é reanimado.
             self.reanimated_skeleton = True
             self.skeleton_time = 0.0
-            # Cabeça decepada voa e pousa no solo com feições normais preservadas
+            self.pieces = []
+            for _ in range(32):
+                self._add_blood_drop(spread=0.75)
+
+        elif style == "SKELETON_SWORD_EXECUTION":
+            # Servo Soldado de Valerius: Decapitação limpa com sabre esquelético
             self.severed_head = P(x, y, NECK_Z + 0.14, 0.16, 0.16, 0.16, self.col_hair,
                                   vx=dx * 2.2 - dy * 1.2, vy=dy * 2.2 + dx * 1.2, vz=3.4,
                                   rot_speed=360.0, piece_type="head", region=lambda c: c.band(None, NECK_Z),
                                   pivot="center", floor_z=0.08)
-            self.pieces.append(self.severed_head)
-            for _ in range(32):
-                self._add_blood_drop(spread=0.75)
+            self.cleaved_body = P(x, y, 0.0, 0.44, 0.32, NECK_Z, self.col_torso,
+                                  piece_type="headless_body", region=lambda c: c.band(NECK_Z, None),
+                                  rot_target=FALL_DEG, rot_speed=130.0, rot_delay=0.18)
+            self.pieces.extend([self.severed_head, self.cleaved_body])
+            for _ in range(36):
+                self._add_blood_drop(spread=0.85)
+
+        elif style == "WIGHT_CORRUPTION_ROT":
+            # Servo Wight de Valerius: Explosão em chamas fúnebres azuis; restam cinzas e ossos calcinados
+            self.is_ash_mound = True
+            self.ash_mound_time = 0.0
+            self.pieces = []
+            for _ in range(24):
+                self._add_blood_drop(spread=0.65)
 
         elif style == "DRAGGED_TO_GRAVE":
             # Valerius Secundário: A vítima foi arrastada inteiramente para o fundo do solo
@@ -1024,19 +1041,33 @@ class VoxelCorpse:
                 self._add_blood_drop(spread=0.82)
 
         elif style == "TRAP_AND_EXECUTE":
-            # Aoi Secundário: Armadilha de urso de ferro prende as pernas enquanto a faca Makiri/lança degola e executa
+            # Aoi Secundário: Armadilha de urso prende e decepa as pernas do rival.
+            # As pernas ficam presas no cepo da armadilha; a vítima tenta se arrastar desesperadamente
+            # pelo chão com os braços, deixando uma trilha de sangue espesso, antes de sucumbir.
             self.has_bear_trap_clamped = True
-            self.severed_head = P(x, y, NECK_Z + 0.12, 0.16, 0.16, 0.16, self.col_hair,
-                                  vx=dx * 2.0 + dy * 0.9, vy=dy * 2.0 - dx * 0.9, vz=3.4,
-                                  rot_speed=300.0, piece_type="head", region=lambda c: c.band(None, NECK_Z),
-                                  pivot="center", floor_z=0.15)
-            self.headless_body = P(x, y, 0.0, 0.30, 0.22, 0.82, self.col_torso,
-                                   vx=0.0, vy=0.0, vz=0.0,
-                                   piece_type="headless_body", region=lambda c: c.band(NECK_Z, None),
-                                   rot_target=72.0, rot_speed=110.0, rot_delay=0.22)
-            self.pieces.extend([self.severed_head, self.headless_body])
-            for _ in range(42):
-                self._add_blood_drop(spread=0.90)
+            self.is_bear_trap_crawl = True
+            self.trap_x = x
+            self.trap_y = y
+            self.crawl_time = 0.0
+            self.crawl_duration = 2.8
+            self.crawl_blood_timer = 0.0
+            self.crawl_trail = [(x, y, 0.22)]
+
+            # Pernas decepadas retidas no local da armadilha
+            self.severed_legs = P(x, y, 0.0, 0.32, 0.24, WAIST_Z, self.col_pants,
+                                  vx=0.0, vy=0.0, vz=0.0,
+                                  piece_type="severed_legs", region=lambda c: c.band(WAIST_Z, None),
+                                  rot_target=0.0, rot_speed=0.0)
+
+            # Tronco superior rastejante que se arrasta com os braços
+            self.crawling_upper = P(x, y, 0.04, 0.34, 0.26, 0.52, self.col_torso,
+                                    vx=0.0, vy=0.0, vz=0.0,
+                                    piece_type="crawling_torso", region=lambda c: c.band(None, WAIST_Z),
+                                    rot_target=22.0, rot_speed=80.0)
+
+            self.pieces.extend([self.severed_legs, self.crawling_upper])
+            for _ in range(35):
+                self._add_blood_drop(spread=0.65)
 
         # ---------------------------------------------------------------
         # Ciclo 6 Fatalities: Raiden & Hendrika
@@ -1070,20 +1101,35 @@ class VoxelCorpse:
                                      rot_speed=random.uniform(-280, 280), piece_type="earth_shard"))
 
         elif style == "STILETTO_CAROTID_VITRIOL":
-            # Hendrika Primário: Corte cirúrgico na carótida com ampola de vitríolo dissolvente
-            self.cleaved_body = P(x, y, 0.0, 0.44, 0.32, 0.76, self.col_torso,
-                                  vx=dx * 1.5, vy=dy * 1.5, vz=0.5,
-                                  piece_type="cleaved_body", region=lambda c: c.band(None, None),
-                                  rot_target=FALL_DEG, rot_speed=180.0)
-            self.pieces.append(self.cleaved_body)
-            for _ in range(32):
-                self._add_blood_drop(spread=0.75)
-            for _ in range(14):
+            # Hendrika Primário: Dissecação Cirúrgica Ácida (Surgical Acid Dissection)
+            # Hendrika estripa o peitoral/abdômen com corte transversal profundo e banha com vitríolo cáustico esmeralda,
+            # bisseccionando o tronco em duas metades com geiser cáustico esmeralda e sangue.
+            self.cleaved_bottom = P(x, y, 0.0, 0.44, 0.32, 0.44, self.col_pants,
+                                    vx=-dx * 0.4, vy=-dy * 0.4, vz=0.2,
+                                    piece_type="acid_dissolved_legs", region=lambda c: c.band(WAIST_Z, None),
+                                    rot_target=45.0, rot_speed=120.0, rot_delay=0.15)
+            self.cleaved_top = P(x, y, WAIST_Z + 0.05, 0.44, 0.32, 0.46, self.col_torso,
+                                 vx=dx * 2.2 + dy * 0.8, vy=dy * 2.2 - dx * 0.8, vz=1.8,
+                                 piece_type="acid_dissected_torso", region=lambda c: c.band(None, WAIST_Z),
+                                 rot_target=125.0, rot_speed=240.0)
+            self.cleaved_body = self.cleaved_top
+            self.pieces.extend([self.cleaved_bottom, self.cleaved_top])
+            for _ in range(36):
+                self._add_blood_drop(spread=0.85)
+            for _ in range(28):
                 angle = random.uniform(0, math.pi * 2)
-                sp = random.uniform(0.8, 2.2)
-                self.pieces.append(P(x, y, 0.70, 0.05, 0.05, 0.05, (65, 230, 140),
-                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(0.8, 2.0),
-                                     rot_speed=random.uniform(-150, 150), piece_type="acid_droplet"))
+                sp = random.uniform(1.2, 3.6)
+                c_acid = random.choice([(65, 235, 135), (45, 195, 95), (110, 255, 160), (30, 160, 70)])
+                self.pieces.append(P(x, y, WAIST_Z + random.uniform(-0.1, 0.2), 0.06, 0.06, 0.06, c_acid,
+                                     vx=math.cos(angle) * sp + dx * 0.5, vy=math.sin(angle) * sp + dy * 0.5, vz=random.uniform(1.0, 2.8),
+                                     rot_speed=random.uniform(-220, 220), piece_type="acid_droplet"))
+            for _ in range(6):
+                angle = random.uniform(0, math.pi * 2)
+                sp = random.uniform(0.6, 1.8)
+                c_bone = random.choice([(210, 200, 180), (140, 40, 40), (80, 180, 100)])
+                self.pieces.append(P(x, y, WAIST_Z, 0.05, 0.05, 0.05, c_bone,
+                                     vx=math.cos(angle) * sp, vy=math.sin(angle) * sp, vz=random.uniform(0.8, 1.6),
+                                     rot_speed=random.uniform(-180, 180), piece_type="bone_shard"))
 
         elif style == "ALCHEMIC_FROST_SHATTER":
             # Hendrika Frasco de Salitre: Congelamento criogênico e estilhaço total do corpo em cristais de gelo
@@ -1173,7 +1219,7 @@ class VoxelCorpse:
                         piece.color = colors[0]
 
     # ------------------------------------------------------------------ simulação
-    def update(self, dt: float, game_map, particles: list = None):
+    def update(self, dt: float, game_map = None, particles: list = None):
         # No estilo Fist of the North Star (HYAKURETSU_BODY_EXPLOSION), a explosão pós-pausa ocorre em câmera lenta!
         piece_dt = dt * 0.42 if (self.death_style == "HYAKURETSU_BODY_EXPLOSION" and self.timer < 1.8) else dt
         if self.timer == 0.0 and self.death_style == "HYAKURETSU_BODY_EXPLOSION" and particles is not None:
@@ -1268,6 +1314,38 @@ class VoxelCorpse:
                         bp.vy = -self.dy * jet_speed + random.uniform(-0.8, 0.8)
                         bp.vz = random.uniform(2.2, 5.8)
                     particles.append(bp)
+
+        # Rastejo desesperado com amputação na armadilha de urso (Aoi TRAP_AND_EXECUTE)
+        if getattr(self, "is_bear_trap_crawl", False) and self.crawl_time < self.crawl_duration:
+            self.crawl_time += dt
+            u = min(1.0, self.crawl_time / self.crawl_duration)
+            spd = 0.42 * max(0.0, 1.0 - (u ** 1.3))
+            self.wx += self.dx * spd * dt
+            self.wy += self.dy * spd * dt
+            if hasattr(self, "crawling_upper"):
+                self.crawling_upper.wx = self.wx
+                self.crawling_upper.wy = self.wy
+                # Rotação/elevação sutil simulando o braço puxando o chão
+                self.crawling_upper.rot_angle = 18.0 + math.sin(self.crawl_time * 8.0) * 8.0
+
+            # Poças e estrias de sangue espesso arrastadas no chão
+            self.crawl_blood_timer = getattr(self, "crawl_blood_timer", 0.0) + dt
+            if self.crawl_blood_timer >= 0.12:
+                self.crawl_blood_timer = 0.0
+                if not hasattr(self, "crawl_trail"):
+                    self.crawl_trail = []
+                self.crawl_trail.append((self.wx, self.wy, random.uniform(0.18, 0.28)))
+                self._add_blood_drop(spread=0.20)
+                if particles is not None:
+                    from src.effects.particles import BloodParticle
+                    for _ in range(3):
+                        particles.append(BloodParticle(self.wx, self.wy, 0.05))
+
+            if self.crawl_time >= self.crawl_duration:
+                # Colapso final no chão
+                if hasattr(self, "crawling_upper"):
+                    self.crawling_upper.rot_angle = 88.0
+                    self.crawling_upper.rot_target = 88.0
 
         # Atualizar física das peças individuais
         for p in self.pieces:
@@ -1513,6 +1591,8 @@ class VoxelCorpse:
         blit_rotated(surface, img, (px, py), pivot, angle)
 
     def render(self, surface: pygame.Surface, camera):
+        if getattr(self.victim, "fell_into_pit", False):
+            return
         self._refresh_sprite(camera)
 
         # 1. Poças e manchas de sangue no chão (piso 2D)
@@ -1530,11 +1610,26 @@ class VoxelCorpse:
             pygame.draw.ellipse(acid_surf, (120, 240, 140, 220), (rw // 2, rh // 2, rw, rh))
             surface.blit(acid_surf, (sx - rw, sy - rh))
 
-        # Armadilha de urso de ferro de Aoi fechada nas pernas do cadáver (TRAP_AND_EXECUTE)
+        # Armadilha de urso de ferro de Aoi fechada nas pernas e rastro de sangue arrastado (TRAP_AND_EXECUTE)
         if getattr(self, "has_bear_trap_clamped", False):
-            draw_voxel_box(surface, camera, self.wx - 0.18, self.wy - 0.18, 0.0, 0.36, 0.36, 0.035, (48, 52, 60), outline=True)
-            draw_voxel_box(surface, camera, self.wx - 0.07, self.wy - 0.15, 0.03, 0.06, 0.30, 0.18, (82, 88, 98), outline=True)
-            draw_voxel_box(surface, camera, self.wx + 0.01, self.wy - 0.15, 0.03, 0.06, 0.30, 0.18, (82, 88, 98), outline=True)
+            trap_x = getattr(self, "trap_x", self.wx)
+            trap_y = getattr(self, "trap_y", self.wy)
+
+            # Rastro de sangue espesso arrastado pelo solo
+            if hasattr(self, "crawl_trail"):
+                for tx, ty, tr in self.crawl_trail:
+                    sx, sy = camera.apply(tx, ty, 0.01)
+                    rw = max(3, int(tr * 42 * camera.zoom))
+                    rh = max(2, int(tr * 22 * camera.zoom))
+                    trail_surf = pygame.Surface((rw * 2, rh * 2), pygame.SRCALPHA)
+                    trail_surf.fill((0, 0, 0, 0))
+                    pygame.draw.ellipse(trail_surf, (110, 12, 18, 190), (0, 0, rw * 2, rh * 2))
+                    pygame.draw.ellipse(trail_surf, (150, 18, 25, 220), (rw // 3, rh // 3, int(rw * 1.3), int(rh * 1.3)))
+                    surface.blit(trail_surf, (sx - rw, sy - rh))
+
+            draw_voxel_box(surface, camera, trap_x - 0.18, trap_y - 0.18, 0.0, 0.36, 0.36, 0.035, (48, 52, 60), outline=True)
+            draw_voxel_box(surface, camera, trap_x - 0.07, trap_y - 0.15, 0.03, 0.06, 0.30, 0.18, (82, 88, 98), outline=True)
+            draw_voxel_box(surface, camera, trap_x + 0.01, trap_y - 0.15, 0.03, 0.06, 0.30, 0.18, (82, 88, 98), outline=True)
 
         # Marca de queimado sob os estilhaços da explosão
         if self.death_style in ("KASUMI_EXPLODE", "BAKUEN_FUNSAI"):
@@ -1992,8 +2087,11 @@ def render_pinned_to_earth_model(
     if col_belt is None:
         col_belt = _get_char_belt_color(canonical)
 
-    dir_len = math.hypot(dir_h_x, dir_h_y) or 1.0
-    fx, fy = dir_h_x / dir_len, dir_h_y / dir_len
+    dir_len = math.hypot(dir_h_x, dir_h_y)
+    if dir_len < 1e-4:
+        fx, fy = 1.0, 0.0
+    else:
+        fx, fy = dir_h_x / dir_len, dir_h_y / dir_len
     px, py = -fy, fx
 
     # Espasmo agônico sutil e heaving da respiração moribunda

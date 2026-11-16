@@ -184,7 +184,14 @@ class BambooTemplateCache:
                 tpl = self._bake_stump_template(stump_idx, zoom_b, az_b)
                 self._stump_templates[s_key] = tpl
             surf, ax, ay = tpl
-            surface.blit(surf, (base_sx - ax, base_sy - ay))
+            scale = camera.zoom / zoom_b
+            if abs(scale - 1.0) > 0.004:
+                sw = max(1, int(surf.get_width() * scale))
+                sh = max(1, int(surf.get_height() * scale))
+                scaled_surf = pygame.transform.scale(surf, (sw, sh))
+                surface.blit(scaled_surf, (base_sx - int(ax * scale), base_sy - int(ay * scale)))
+            else:
+                surface.blit(surf, (base_sx - ax, base_sy - ay))
             return
 
         h_idx = self.get_height_tier_idx(bamboo.total_height)
@@ -197,7 +204,14 @@ class BambooTemplateCache:
             tpl = self._bake_bamboo_template(h_idx, s_idx, zoom_b, az_b)
             self._templates[key] = tpl
         surf, ax, ay = tpl
-        surface.blit(surf, (base_sx - ax, base_sy - ay))
+        scale = camera.zoom / zoom_b
+        if abs(scale - 1.0) > 0.004:
+            sw = max(1, int(surf.get_width() * scale))
+            sh = max(1, int(surf.get_height() * scale))
+            scaled_surf = pygame.transform.scale(surf, (sw, sh))
+            surface.blit(scaled_surf, (base_sx - int(ax * scale), base_sy - int(ay * scale)))
+        else:
+            surface.blit(surf, (base_sx - ax, base_sy - ay))
 
 
 _BAMBOO_CACHE = BambooTemplateCache()

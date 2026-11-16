@@ -178,7 +178,9 @@ class TestGoroOverhaul(unittest.TestCase):
         success = goro.trigger_earth_stomp(1.0, 0.0, shockwaves=shockwaves, opponent=opp)
         self.assertTrue(success)
         self.assertEqual(goro.state, "EARTH_STOMP")
-        self.assertEqual(len(shockwaves), 1)
+        # 1 onda sísmica + 7 torrões de terra (barreira contra projéteis)
+        self.assertEqual(sum(1 for w in shockwaves if type(w).__name__ == "EarthStompShockwave"), 1)
+        self.assertEqual(sum(1 for w in shockwaves if type(w).__name__ == "EarthClod"), 7)
 
         # Oponente deve sofrer stun de 0.80s e knockback
         self.assertAlmostEqual(opp.stun_timer, 0.80, delta=0.05)

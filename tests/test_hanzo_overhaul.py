@@ -94,7 +94,7 @@ def test_hanzo_two_step_combo():
 
 
 def test_hanzo_kunai_snipe_ground_and_air():
-    """Testa o Kunai Snipe no solo (horizontal) e no ar (mergulho íngreme vz=-6.5)."""
+    """Testa o Kunai Snipe no solo e durante a esquiva (Salto Ninja): ambos horizontais, alcance cheio (6.8m)."""
     hanzo = YellowNinja(10.0, 10.0)
     projectiles = []
 
@@ -121,7 +121,8 @@ def test_hanzo_kunai_snipe_ground_and_air():
     assert success_air is True
     assert len(projectiles) == 2
     kunai_air = projectiles[1]
-    assert kunai_air.vz == -6.5
+    assert kunai_air.vz == 0.0
+    assert kunai_air.max_range == 6.8
 
 
 def test_hanzo_shinobi_jump_and_vertical_evasion():

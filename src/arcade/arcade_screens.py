@@ -2,6 +2,7 @@
 Entregável 8.1.2: telas do Arcade em estilo pergaminho Sumi-E: menu de dificuldade, chaves da jornada e resultado final.
 Nenhuma regra mora aqui; os dados vêm de `ArcadeRun` (src/arcade/arcade_mode.py).
 """
+import time
 import pygame
 
 from src.arcade.arcade_mode import DIFFICULTIES, FightKind
@@ -193,6 +194,9 @@ class ArcadeDifficultyScreen:
         _centered(surface, get_text_font(16), t("arcade_difficulty_nav"), pm.INK, cx, SCREEN_HEIGHT - 44)
 
 
+KONAMI_CODE = ("UP", "UP", "DOWN", "DOWN", "LEFT", "RIGHT", "LEFT", "RIGHT", "B", "A")
+
+
 class ArcadeBracketScreen:
     """As 11 lutas em linha, a luta atual e o resumo da jornada; serve também de cartão antes de cada luta."""
 
@@ -202,17 +206,129 @@ class ArcadeBracketScreen:
         self.gained = 0
         self.confirm_abandon = False
         self.time = 0.0
+        self._konami_step = 0
+        self._konami_last_time = 0.0
+        self.cheat_banner_timer = 0.0
 
     def open(self, run, banner: str | None = None, gained: int = 0):
         self.run, self.banner, self.gained = run, banner, gained
         self.confirm_abandon = False
         self.time = 0.0
+        self._konami_step = 0
+        self._konami_last_time = 0.0
+        self.cheat_banner_timer = 0.0
 
     def update(self, dt: float):
         self.time += dt
+        if self.cheat_banner_timer > 0:
+            self.cheat_banner_timer = max(0.0, self.cheat_banner_timer - dt)
+
+    def _activate_konami_cheat(self):
+        if self.run is not None:
+            self.run.warp_to_boss()
+            self.banner = None
+            self.confirm_abandon = False
+            self.cheat_banner_timer = 5.0
+            try:
+                from src.audio.sound_manager import SoundManager
+                from src.audio.sound_events import SoundEvent
+                SoundManager.get_instance().play(SoundEvent.FATAL_STRIKE)
+            except Exception:
+                pass
+
+    def _check_konami_code(self, event, ctrl_mgr=None) -> bool:
+        """
+        Processa eventos para a sequência Konami Code.
+        Retorna True se o evento foi consumido pelo Konami Code (impedindo cancel/confirm colateral).
+        """
+        from src.input.controller_manager import get_dpad_motion_from_event
+        now = time.monotonic()
+        if self._konami_step > 0 and (now - self._konami_last_time > 2.0):
+            self._konami_step = 0
+
+        token = None
+        if event.type == pygame.KEYDOWN:
+            if event.key in (pygame.K_UP, pygame.K_w):
+                token = "UP"
+            elif event.key in (pygame.K_DOWN, pygame.K_s):
+                token = "DOWN"
+            elif event.key in (pygame.K_RIGHT, pygame.K_d):
+                token = "RIGHT"
+            elif event.key == pygame.K_LEFT:
+                token = "LEFT"
+            elif event.key == pygame.K_b:
+                token = "B"
+            elif event.key == pygame.K_a:
+                if self._konami_step == 9:
+                    token = "A"
+                elif self._konami_step in (4, 6):
+                    token = "LEFT"
+                else:
+                    token = "INVALID"
+            else:
+                if self._konami_step > 0:
+                    self._konami_step = 0
+                return False
+
+        elif event.type in (pygame.JOYBUTTONDOWN, pygame.JOYHATMOTION):
+            dpad = get_dpad_motion_from_event(event)
+            if dpad is not None:
+                if dpad == (0, -1):
+                    token = "UP"
+                elif dpad == (0, 1):
+                    token = "DOWN"
+                elif dpad == (-1, 0):
+                    token = "LEFT"
+                elif dpad == (1, 0):
+                    token = "RIGHT"
+            elif event.type == pygame.JOYBUTTONDOWN:
+                is_cancel = (ctrl_mgr is not None and ctrl_mgr.is_event_menu_cancel(event)) or getattr(event, "button", None) == 1
+                is_confirm = (ctrl_mgr is not None and ctrl_mgr.is_event_menu_confirm(event)) or getattr(event, "button", None) in (0, 2)
+                if is_cancel and not is_confirm:
+                    token = "B"
+                elif is_confirm and not is_cancel:
+                    token = "A"
+                elif is_cancel and is_confirm:
+                    if self._konami_step == 8:
+                        token = "B"
+                    elif self._konami_step == 9:
+                        token = "A"
+                    else:
+                        token = "INVALID"
+                else:
+                    if self._konami_step > 0:
+                        self._konami_step = 0
+                    return False
+            else:
+                return False
+        else:
+            return False
+
+        if token is None:
+            return False
+
+        expected = KONAMI_CODE[self._konami_step]
+        if token == expected:
+            self._konami_step += 1
+            self._konami_last_time = now
+            if self._konami_step >= len(KONAMI_CODE):
+                self._konami_step = 0
+                self._activate_konami_cheat()
+            return True
+        else:
+            if token == "UP":
+                self._konami_step = 1
+                self._konami_last_time = now
+                return True
+            else:
+                self._konami_step = 0
+                return False
 
     def handle_event(self, event, ctrl_mgr=None):
         """Devolve "FIGHT" (iniciar ou continuar), "ABANDON" ou None."""
+        if self._check_konami_code(event, ctrl_mgr):
+            return None
+
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             return self._confirm()
         nav = navigation(event, ctrl_mgr)
@@ -281,7 +397,9 @@ class ArcadeBracketScreen:
         panel = pygame.Rect(cx - 470, 235, 940, 380)
         pm.draw_paper_card(surface, panel, seed=91)
         fight = run.current_fight()
-        if self.banner == "defeat":
+        if self.cheat_banner_timer > 0:
+            _centered(surface, get_title_font(24), t("arcade_secret_code_activated"), RED, cx, panel.y + 22, max_w=panel.w - 60)
+        elif self.banner == "defeat":
             _centered(surface, get_title_font(34), t("arcade_defeat"), RED, cx, panel.y + 22)
         elif self.banner == "cleared":
             _centered(surface, get_title_font(30), f"{t('arcade_fight_cleared')}  +{self.gained}", RED, cx, panel.y + 22)
@@ -339,21 +457,35 @@ class ArcadeResultScreen:
 
     def render(self, surface: pygame.Surface):
         run = self.run
+        is_cheat = getattr(run, "is_practice", False)
         _backdrop(surface)
         cx = SCREEN_WIDTH // 2
-        _centered(surface, get_title_font(40), t("arcade_final_victory"), (235, 228, 210), cx, 30)
+        title_txt = t("arcade_cheaters_never_prosper") if is_cheat else t("arcade_final_victory")
+        title_col = RED if is_cheat else (235, 228, 210)
+        _centered(surface, get_title_font(34 if is_cheat else 40), title_txt, title_col, cx, 30)
 
         left = pygame.Rect(60, 100, 560, 500)
         pm.draw_paper_card(surface, left, seed=92)
-        lines = [fighter_name(run.player_char), t("arcade_score", n=run.score), format_time(run.elapsed),
+        score_val = f"{run.score:,}".replace(",", ".") if run.score < 0 else str(run.score)
+        lines = [fighter_name(run.player_char), t("arcade_score", n=score_val), format_time(run.elapsed),
                  t("arcade_continues_used", n=run.continues), t("arcade_points_lost", n=run.points_lost_to_continues),
                  t("arcade_difficulty_start_end", a=t(DIFF_KEYS[run.difficulty_start]), b=t(DIFF_KEYS[run.difficulty_level]))]
         portrait = get_portrait(run.player_char, size=(110, 110), circular=True)
         if portrait:
             surface.blit(portrait, (left.centerx - 55, left.y + 24))
         for i, line in enumerate(lines):
-            _centered(surface, get_title_font(24) if i == 0 else get_text_font(21), line, pm.INK, left.centerx, left.y + 150 + i * 38, left.w - 40)
-        if self.rank:
+            line_col = RED if (is_cheat and i == 1) else pm.INK
+            _centered(surface, get_title_font(24) if i == 0 else get_text_font(21), line, line_col, left.centerx, left.y + 150 + i * 38, left.w - 40)
+        if is_cheat:
+            stamp_w, stamp_h = 440, 50
+            stamp_surf = pygame.Surface((stamp_w, stamp_h), pygame.SRCALPHA)
+            stamp_surf.fill((0, 0, 0, 0))
+            pygame.draw.rect(stamp_surf, (190, 25, 25, 225), (0, 0, stamp_w, stamp_h), border_radius=6)
+            pygame.draw.rect(stamp_surf, (255, 215, 60, 245), (0, 0, stamp_w, stamp_h), width=2, border_radius=6)
+            s_txt = pm.render_ink(get_title_font(19), t("arcade_cheaters_never_prosper"), (255, 240, 230))
+            stamp_surf.blit(s_txt, ((stamp_w - s_txt.get_width()) // 2, (stamp_h - s_txt.get_height()) // 2))
+            surface.blit(stamp_surf, (left.centerx - stamp_w // 2, left.bottom - 70))
+        elif self.rank:
             _centered(surface, get_title_font(22), t("arcade_new_record", n=self.rank), RED, left.centerx, left.bottom - 60, left.w - 40)
 
         right = pygame.Rect(660, 100, 560, 500)

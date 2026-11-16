@@ -93,7 +93,7 @@ class PropSurfaceCache:
             return False
         if getattr(obj, "animated", False):
             return False
-        if item_type in ("rock", "well", "tree", "torii"):
+        if item_type in ("rock", "well", "tree", "torii", "lantern"):
             return True
         if item_type == "bamboo":
             # Bambu gerencia seu próprio BambooTemplateCache ultra-rápido, sem thrashing no PropSurfaceCache
@@ -138,7 +138,14 @@ class PropSurfaceCache:
             self.hits += 1
             baked_surf, off_x, off_y = entry
             bx, by = camera.apply(obj.wx, obj.wy, 0.0)
-            surface.blit(baked_surf, (bx + off_x, by + off_y))
+            scale = zoom_now / zoom_q
+            if abs(scale - 1.0) > 0.004:
+                sw = max(1, int(baked_surf.get_width() * scale))
+                sh = max(1, int(baked_surf.get_height() * scale))
+                scaled = pygame.transform.scale(baked_surf, (sw, sh))
+                surface.blit(scaled, (bx + int(off_x * scale), by + int(off_y * scale)))
+            else:
+                surface.blit(baked_surf, (bx + off_x, by + off_y))
             return True
 
         self.misses += 1
@@ -177,7 +184,14 @@ class PropSurfaceCache:
         self._cache[key] = (baked_surf, off_x, off_y)
 
         bx, by = camera.apply(obj.wx, obj.wy, 0.0)
-        surface.blit(baked_surf, (bx + off_x, by + off_y))
+        scale = zoom_now / zoom_q
+        if abs(scale - 1.0) > 0.004:
+            sw = max(1, int(baked_surf.get_width() * scale))
+            sh = max(1, int(baked_surf.get_height() * scale))
+            scaled = pygame.transform.scale(baked_surf, (sw, sh))
+            surface.blit(scaled, (bx + int(off_x * scale), by + int(off_y * scale)))
+        else:
+            surface.blit(baked_surf, (bx + off_x, by + off_y))
         return True
 
 

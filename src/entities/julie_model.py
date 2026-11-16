@@ -165,8 +165,8 @@ def _hands(c):
         p3_left = (bx - px * 0.12 - fx * 0.06, by - py * 0.12 - fy * 0.06, tz + 0.14)
         p3_right = (bx + fx * 0.22 - px * 0.02, by + fy * 0.22 - py * 0.02, tz + 0.16)
         glo_p = float(extra.get("p", 0.70 + 0.30 * u))
-        breathe = math.sin(glo_p * 12.0) * 0.008
-        sway = math.cos(glo_p * 8.0) * 0.006
+        breathe = math.sin(glo_p * 12.0 + getattr(c, "walk_timer", 0.0) * 2.5) * 0.008
+        sway = math.cos(glo_p * 8.0 + getattr(c, "walk_timer", 0.0) * 1.8) * 0.006
         cur_l = mk.lerp(p2_left, p3_left, u)
         cur_r = mk.lerp(p2_right, p3_right, u)
         left = (cur_l[0], cur_l[1] + sway, cur_l[2] + breathe)
@@ -205,8 +205,8 @@ def _hands(c):
         v3_left = (bx + fx * 0.08 - px * 0.02, by + fy * 0.08 - py * 0.02, tz + 0.26)
         v3_right = (bx + px * 0.14 - fx * 0.02, by + py * 0.14 - fy * 0.02, tz + 0.06)
         glo_p = float(extra.get("p", 0.70 + 0.30 * u))
-        breathe = math.cos(glo_p * 12.0) * 0.008
-        sway = math.sin(glo_p * 8.0) * 0.006
+        breathe = math.cos(glo_p * 12.0 + getattr(c, "walk_timer", 0.0) * 2.5) * 0.008
+        sway = math.sin(glo_p * 8.0 + getattr(c, "walk_timer", 0.0) * 1.8) * 0.006
         cur_l = mk.lerp(v2_left, v3_left, u)
         cur_r = mk.lerp(v2_right, v3_right, u)
         left = (cur_l[0], cur_l[1] + sway, cur_l[2] + breathe)

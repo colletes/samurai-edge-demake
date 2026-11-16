@@ -19,7 +19,7 @@ from src.entities.samurai import (
     STATE_STUNNED, STATE_DEAD, STATE_ROLL, STATE_PARRY, resolve_playable_bounds
 )
 from src.entities.voxel_models import render_voxel_humanoid
-from src.entities.projectile import EarthStompShockwave
+from src.entities.projectile import EarthStompShockwave, EarthClod
 from src.effects.particles import SparkParticle, FloatingBanner
 
 STATE_EARTH_STOMP = "EARTH_STOMP"
@@ -51,6 +51,8 @@ class GoroFarmer(Samurai):
         self.stomp_cooldown = 2.2
         self.stomp_timer = 0.0
         self.stomp_duration = 0.20
+        self.stomp_wave_duration = 0.06   # propagação da onda de terra (antes 0,30 s)
+        self.stomp_clod_lifetime = 2.0    # duração dos torrões que bloqueiam projéteis
         self.active_shockwaves: list[EarthStompShockwave] = []
 
         # Terceira Ação: Rolamento de Lavrador (Peasant Mud Roll)
@@ -67,6 +69,9 @@ class GoroFarmer(Samurai):
         self.pocket_dirt_timer = 0.0
         self.pocket_dirt_duration = 0.22
 
+    CLOD_ARC_DEG = (-54, -36, -18, 0, 18, 36, 54)
+    CLOD_RADIUS = 1.7
+
     def trigger_parry(self) -> bool:
         """Guarda de Ferro: ergue a Kuwa e o cabo reforçado para aparar golpes e flechas."""
         if not self.can_act():
@@ -80,6 +85,13 @@ class GoroFarmer(Samurai):
         """Aplica dano ao Goro com Hyper Armor durante o cleave contra ataques leves."""
         if not self.is_alive:
             return False, False
+        # Armor do Pisotão Sísmico: -1 de dano por golpe e sem stagger (golpe de dano 2 deixa 1 HP; dano 1 é absorvido)
+        if self.state == STATE_EARTH_STOMP:
+            reduced = max(0, damage - 1)
+            if self.hp - reduced <= 0:
+                return super().take_hit(slash_dir, damage)  # sem vida mesmo com a armor: fluxo normal de morte
+            self.hp -= reduced
+            return True, False
         # Hyper Armor na execução do Cleave da Kuwa: golpes leves (dano 1) não cancelam o ataque se tiver HP > 1
         if self.state == STATE_ATTACK and damage < 2 and self.hp > 1:
             self.hp -= damage
@@ -138,10 +150,20 @@ class GoroFarmer(Samurai):
         self.action_name = "Pisotão Sísmico"
 
         # Criar onda de choque sísmica frontal em 120 graus (alcance 4.2m, rápida, com 1 de dano e anula projéteis)
-        wave = EarthStompShockwave(self.wx, self.wy, owner=self, facing=(self.facing_x, self.facing_y), max_radius=4.2, duration=0.30)
+        # A terra sobe NO INSTANTE do pisão: a onda varre os 4,2 m em ~0,06 s (antes 0,30 s de propagação)
+        wave = EarthStompShockwave(self.wx, self.wy, owner=self, facing=(self.facing_x, self.facing_y), max_radius=4.2, duration=self.stomp_wave_duration)
         if shockwaves is not None:
             shockwaves.append(wave)
         self.active_shockwaves.append(wave)
+
+        # Torrões de terra: barreira temporária no arco frontal que destrói projéteis inimigos em voo
+        if shockwaves is not None:
+            base_ang = math.atan2(self.facing_y, self.facing_x)
+            for deg in self.CLOD_ARC_DEG:
+                ang = base_ang + math.radians(deg)
+                shockwaves.append(EarthClod(self.wx + math.cos(ang) * self.CLOD_RADIUS,
+                                            self.wy + math.sin(ang) * self.CLOD_RADIUS,
+                                            owner=self, lifetime=self.stomp_clod_lifetime))
 
         # Repulsão e stun direto se o oponente estiver na área de impacto
         if opponent and getattr(opponent, "is_alive", True):
@@ -353,7 +375,8 @@ class GoroFarmer(Samurai):
             ]
 
     def get_extra_props(self) -> dict:
-        extra = {}
+        base_extra = getattr(self, "extra_props", {}) or {}
+        extra = {**base_extra}
         if self.state == STATE_EARTH_STOMP:
             extra.update({"is_stomp": True, "pose": "earth_stomp"})
         elif self.state == STATE_POCKET_DIRT:

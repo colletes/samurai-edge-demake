@@ -620,7 +620,9 @@ class RaidenSumo(Samurai):
             return
 
     def render(self, surface: pygame.Surface, camera):
+        base_extra = getattr(self, "extra_props", {}) or {}
         extra = {
+            **base_extra,
             "ssaa_2x": getattr(self, "ssaa_enabled", True),
             "pose_lerp_tracker": getattr(self, "_pose_lerp_tracker", None),
             "tachiai_phase": getattr(self, "tackle_phase", ""),

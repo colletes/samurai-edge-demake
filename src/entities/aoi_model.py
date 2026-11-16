@@ -124,7 +124,7 @@ def idle_arms(c):
     pose = extra.get("pose", "")
     p = extra.get("p", 0.0)
 
-    # 1. Poses da Introdução (3 Fases Contínuas)
+    # 1. Poses da Introdução (3 Fases com Continuidade C0 e Respiração Contínua)
     if pose == "intro_prayer":
         # Toca a ponta de osso da lança no peito em reverência sagrada Kamuy
         u = extra.get("seg_u", p / 0.38 if p <= 0.38 else 1.0)
@@ -138,21 +138,31 @@ def idle_arms(c):
         # Ajusta a gola e o capuz de pele de lobo com ambas as mãos
         u = extra.get("seg_u", (p - 0.38) / 0.34 if 0.38 <= p <= 0.72 else 1.0)
         u = max(0.0, min(1.0, u))
+        p0_left = (bx + fx * 0.12 + px * 0.06, by + fy * 0.12 + py * 0.06, tz + 0.16)
+        p0_right = (bx + fx * 0.10 - px * 0.05, by + fy * 0.10 - py * 0.05, tz + 0.18)
+        target_left = (bx + fx * 0.06 + px * 0.14, by + fy * 0.06 + py * 0.14, tz + 0.23)
+        target_right = (bx + fx * 0.06 - px * 0.14, by + fy * 0.06 - py * 0.14, tz + 0.23)
+        base_l = mk.lerp(p0_left, target_left, u)
+        base_r = mk.lerp(p0_right, target_right, u)
         sw = math.sin(u * math.pi * 2.0) * 0.02
-        left = (bx + fx * 0.06 + px * 0.14, by + fy * 0.06 + py * 0.14, tz + 0.23 + sw)
-        right = (bx + fx * 0.06 - px * 0.14, by + fy * 0.06 - py * 0.14, tz + 0.23 - sw)
+        left = (base_l[0], base_l[1], base_l[2] + sw)
+        right = (base_r[0], base_r[1], base_r[2] - sw)
         return left, right
 
     if pose == "intro_hunt_stance":
-        # Desce na postura baixa de caça com lança nivelada
+        # Desce na postura baixa de caça com lança nivelada (sem congelamento: respiração ativa)
         u = extra.get("seg_u", (p - 0.72) / 0.28 if p >= 0.72 else 1.0)
         u = max(0.0, min(1.0, u))
-        b = math.sin(u * 6.0) * 0.008
-        right = (bx - fx * 0.08 - px * 0.12, by - fy * 0.08 - py * 0.12, tz + 0.11 + b)
-        left = (bx + fx * 0.20 + px * 0.08, by + fy * 0.20 + py * 0.08, tz + 0.13 + b)
-        return left, right
+        start_left = (bx + fx * 0.06 + px * 0.14, by + fy * 0.06 + py * 0.14, tz + 0.23)
+        start_right = (bx + fx * 0.06 - px * 0.14, by + fy * 0.06 - py * 0.14, tz + 0.23)
+        hunt_left = (bx + fx * 0.20 + px * 0.08, by + fy * 0.20 + py * 0.08, tz + 0.13)
+        hunt_right = (bx - fx * 0.08 - px * 0.12, by - fy * 0.08 - py * 0.12, tz + 0.11)
+        base_l = mk.lerp(start_left, hunt_left, u)
+        base_r = mk.lerp(start_right, hunt_right, u)
+        b = math.sin(p * 12.0 + c.walk_timer * 2.8) * 0.010
+        return (base_l[0], base_l[1], base_l[2] + b), (base_r[0], base_r[1], base_r[2] + b)
 
-    # 2. Poses da Vitória (3 Fases Contínuas)
+    # 2. Poses da Vitória (3 Fases com Continuidade C0 e Respiração Contínua)
     if pose == "victory_spear_lift":
         # Ergue a lança com as duas mãos em direção ao céu do norte
         u = extra.get("seg_u", p / 0.38 if p <= 0.38 else 1.0)
@@ -166,19 +176,27 @@ def idle_arms(c):
         # Solta o brado solene das caçadoras Ezo, peito erguido
         u = extra.get("seg_u", (p - 0.38) / 0.34 if 0.38 <= p <= 0.72 else 1.0)
         u = max(0.0, min(1.0, u))
+        p0_right = (bx + fx * 0.08 - px * 0.10, by + fy * 0.08 - py * 0.10, tz + 0.38)
+        p0_left = (bx + fx * 0.14 + px * 0.08, by + fy * 0.14 + py * 0.08, tz + 0.40)
+        target_right = (bx + fx * 0.06 - px * 0.11, by + fy * 0.06 - py * 0.11, tz + 0.36)
+        target_left = (bx + fx * 0.12 + px * 0.09, by + fy * 0.12 + py * 0.09, tz + 0.38)
+        base_r = mk.lerp(p0_right, target_right, u)
+        base_l = mk.lerp(p0_left, target_left, u)
         b = math.sin(u * math.pi * 3.0) * 0.015
-        right = (bx + fx * 0.06 - px * 0.11, by + fy * 0.06 - py * 0.11, tz + 0.36 + b)
-        left = (bx + fx * 0.12 + px * 0.09, by + fy * 0.12 + py * 0.09, tz + 0.38 + b)
-        return left, right
+        return (base_l[0], base_l[1], base_l[2] + b), (base_r[0], base_r[1], base_r[2] + b)
 
     if pose == "victory_horizon_watch":
-        # Crava a lança verticalmente e contempla o horizonte nevado
+        # Crava a lança verticalmente e contempla o horizonte nevado (respiração contínua)
         u = extra.get("seg_u", (p - 0.72) / 0.28 if p >= 0.72 else 1.0)
         u = max(0.0, min(1.0, u))
-        b = math.sin(u * 4.0) * 0.008
-        right = (bx + px * 0.14, by + py * 0.14, tz + 0.16 + b)
-        left = (bx + fx * 0.08 - px * 0.06, by + fy * 0.08 - py * 0.06, tz + 0.26 + b)
-        return left, right
+        start_right = (bx + fx * 0.06 - px * 0.11, by + fy * 0.06 - py * 0.11, tz + 0.36)
+        start_left = (bx + fx * 0.12 + px * 0.09, by + fy * 0.12 + py * 0.09, tz + 0.38)
+        target_r2 = (bx + px * 0.14, by + py * 0.14, tz + 0.16)
+        target_l2 = (bx + fx * 0.08 - px * 0.06, by + fy * 0.08 - py * 0.06, tz + 0.26)
+        base_r = mk.lerp(start_right, target_r2, u)
+        base_l = mk.lerp(start_left, target_l2, u)
+        b = math.sin(p * 10.0 + c.walk_timer * 2.5) * 0.010
+        return (base_l[0], base_l[1], base_l[2] + b), (base_r[0], base_r[1], base_r[2] + b)
 
     # 3. Finishers Bespoke
     if pose == "finisher_trap_execute":
@@ -270,6 +288,23 @@ def attack_arms(c):
         right = (bx - fx * 0.06 - px * 0.12, by - fy * 0.06 - py * 0.12, tz + 0.16)
         return left, right
 
+    if extra.get("is_makiri", False) or extra.get("pose") == "makiri_slash":
+        # Varredura horizontal cortante com a faca Makiri
+        t = prog
+        slash_angle = -math.pi * 0.40 + t * math.pi * 0.85
+        reach = 0.38 + math.sin(t * math.pi) * 0.12
+        right = (bx + fx * math.cos(slash_angle) * reach - px * math.sin(slash_angle) * reach,
+                 by + fy * math.cos(slash_angle) * reach - py * math.sin(slash_angle) * reach,
+                 tz + 0.12 - t * 0.04)
+        left = (bx - fx * 0.10 + px * 0.14, by - fy * 0.10 + py * 0.14, tz + 0.18)
+        return left, right
+
+    if extra.get("is_charging", False) or extra.get("pose") == "harpoon_charge":
+        # Postura de arremesso de harponete: braço erguido atrás do ombro
+        right = (bx - fx * 0.18 - px * 0.16, by - fy * 0.18 - py * 0.16, tz + 0.32)
+        left = (bx + fx * 0.24 + px * 0.08, by + fy * 0.24 + py * 0.08, tz + 0.14)
+        return left, right
+
     if prog < 0.22:
         t = prog / 0.22
         right = (bx - fx * (0.08 + t * 0.12) - px * 0.13, by - fy * (0.08 + t * 0.12) - py * 0.13, tz + 0.14)
@@ -288,6 +323,9 @@ def attack_arms(c):
 
 
 def _current_hands(c):
+    extra = c.extra_props if c.extra_props else {}
+    if extra.get("is_charging", False) or extra.get("pose") == "harpoon_charge":
+        return attack_arms(c)
     if c.is_melee and c.atk_progress is not None:
         return attack_arms(c)
     if c.is_moving:
@@ -592,11 +630,27 @@ def draw_head(c):
 
 
 def draw_front(c, hand_l, hand_r):
-    """Renderiza a Lança de Caça Ainu (Op) à frente quando no plano frontal."""
+    """Renderiza a Lança de Caça Ainu (Op) e a faca Makiri à frente quando no plano frontal."""
+    extra = c.extra_props if c.extra_props else {}
+    if extra.get("is_makiri", False):
+        _render_makiri_knife(c, hand_r)
     d_torso = mk.depth(c, c.base_x, c.base_y)
     w_mid = ((hand_l[0] + hand_r[0]) * 0.5, (hand_l[1] + hand_r[1]) * 0.5)
     if mk.depth(c, w_mid[0], w_mid[1]) >= d_torso:
         _render_hunting_spear(c, hand_l, hand_r)
+
+
+def _render_makiri_knife(c, hand_r):
+    """Renderiza a faca ritual Ainu Makiri empunhada na mão direita."""
+    P = pal()
+    fx, fy, px, py = c.fx, c.fy, c.px, c.py
+    dx = fx * 0.65 - px * 0.70
+    dy = fy * 0.65 - py * 0.70
+    # Cabo esculpido em osso de veado
+    mk.obox(c, hand_r, (dx, dy, 0.1), 0.14, 0.038, 0.038, P["spear_bone"], outline=True)
+    # Lâmina curvada afiada Makiri
+    tip_start = (hand_r[0] + dx * 0.12, hand_r[1] + dy * 0.12, hand_r[2] + 0.02)
+    mk.obox(c, tip_start, (dx, dy, 0.05), 0.26, 0.046, 0.016, P["spear_bone_edge"], outline=True)
 
 
 # ---------------------------------------------------------------------------------------------------------------------

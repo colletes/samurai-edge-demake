@@ -19,7 +19,7 @@ from src.entities.samurai import (
     resolve_playable_bounds, slide_movement_against_obstacles
 )
 from src.entities.voxel_models import render_voxel_humanoid
-from src.entities.projectile import BearTrapProjectile
+from src.entities.projectile import BearTrapProjectile, AoiHarpoonProjectile
 from src.effects.particles import SparkParticle, SmokeParticle, FloatingBanner
 
 
@@ -38,11 +38,18 @@ class AoiHuntress(Samurai):
         self.spear_reach = 2.20      # Longo alcance linear
         self.spear_radius = 0.42     # Hitbox frontal estreita de alta precisão
 
-        # Ação Secundária: Armadilha de Urso Mecânica (Hunting Bear Trap)
+        # Combo Ainu: Lança Op (2 HP) -> Faca Makiri (1 HP, varredura horizontal de 140°)
+        self.combo_step = 0
+        self.combo_window = 0.0
+        self.attack_type = "spear"
+
+        # Ação Secundária Carregada: Harponete / Dardo Ainu (Hold) vs Bear Trap (Tap)
         self.trap_cooldown = 4.0     # Cooldown calibrado
         self.trap_timer = 0.0
         self.active_traps: list[BearTrapProjectile] = []
         self.is_planting_trap = False
+        self.is_charging_harpoon = False
+        self.harpoon_charge_timer = 0.0
 
         # Esquiva: Deslize da Taiga (Tundra Hunt Slide)
         self.is_agile_dodge = True
@@ -69,7 +76,7 @@ class AoiHuntress(Samurai):
         )
 
     def trigger_spear_thrust(self, aim_x: float = None, aim_y: float = None, particles: list = None) -> bool:
-        """Ataque Primário: Estocada linear de altíssimo alcance (2.20m) com ponta afiada de osso de urso."""
+        """Ataque Primário (Passo 1 do Combo): Estocada linear de altíssimo alcance (2.20m, 2 HP) com ponta afiada de osso de urso."""
         if not self.can_act():
             return False
 
@@ -77,9 +84,10 @@ class AoiHuntress(Samurai):
             self.set_facing(aim_x, aim_y)
 
         self.state = STATE_ATTACK
+        self.attack_type = "spear"
         self.state_timer = self.spear_duration
         self.hitbox_active = True
-        self.hitbox_damage = 1
+        self.hitbox_damage = 2
 
         self.hitbox_center = (
             self.wx + self.facing_x * 1.35,
@@ -88,6 +96,10 @@ class AoiHuntress(Samurai):
         self.hitbox_radius = self.spear_radius
         self.slash_dir = (self.facing_x, self.facing_y)
         self.is_planting_trap = False
+
+        # Abre janela para transição para o corte de Makiri
+        self.combo_step = 1
+        self.combo_window = 0.48
 
         if particles is not None:
             # Silvo cortante de ar gélido na ponta da lança
@@ -100,9 +112,130 @@ class AoiHuntress(Samurai):
                 ))
         return True
 
+    def trigger_makiri_slash(self, aim_x: float = None, aim_y: float = None, particles: list = None) -> bool:
+        """Ataque Primário (Passo 2 do Combo): Varredura curva ágil com a faca ritual Makiri (1.40m, 1 HP, arco 140°)."""
+        can_chain = (self.state == STATE_ATTACK and getattr(self, "attack_type", "spear") == "spear")
+        if not self.is_alive or (self.state not in (STATE_IDLE, STATE_WALK, STATE_RECOVERY) and not can_chain):
+            return False
+
+        if aim_x is not None and aim_y is not None:
+            self.set_facing(aim_x, aim_y)
+
+        self.state = STATE_ATTACK
+        self.attack_type = "makiri"
+        self.state_timer = 0.14
+        self.hitbox_active = True
+        self.hitbox_damage = 1
+
+        self.hitbox_center = (
+            self.wx + self.facing_x * 0.95,
+            self.wy + self.facing_y * 0.95
+        )
+        self.hitbox_radius = 0.72
+        self.slash_dir = (self.facing_x, self.facing_y)
+        self.is_planting_trap = False
+
+        self.combo_step = 0
+        self.combo_window = 0.0
+
+        if particles is not None:
+            for _ in range(6):
+                particles.append(SparkParticle(
+                    self.wx + self.facing_x * 0.9 + random.uniform(-0.2, 0.2),
+                    self.wy + self.facing_y * 0.9 + random.uniform(-0.2, 0.2),
+                    0.35,
+                    color=(240, 245, 255)
+                ))
+        try:
+            from src.audio.sound_manager import get_sound_manager
+            from src.audio.sound_events import SoundEvent
+            get_sound_manager().play(SoundEvent.SWORD_SLASH, volume_scale=0.9)
+        except Exception:
+            pass
+        return True
+
     def trigger_attack(self, aim_x: float = None, aim_y: float = None, **kwargs) -> bool:
-        """Alias para integração com controles genéricos."""
-        return self.trigger_spear_thrust(aim_x, aim_y, particles=kwargs.get("particles"))
+        """Dispara estocada de lança ou comuta para o corte de Makiri se dentro da janela de combo."""
+        particles = kwargs.get("particles")
+        if self.combo_step == 1 and self.combo_window > 0:
+            if self.trigger_makiri_slash(aim_x, aim_y, particles=particles):
+                return True
+        return self.trigger_spear_thrust(aim_x, aim_y, particles=particles)
+
+    def start_harpoon_charge(self, aim_x: float = None, aim_y: float = None) -> bool:
+        """Inicia o carregamento da Ação Secundária (Harponete à distância vs Armadilha de Urso)."""
+        if not self.can_act():
+            return False
+        if aim_x is not None and aim_y is not None:
+            self.set_facing(aim_x, aim_y)
+        self.is_charging_harpoon = True
+        self.harpoon_charge_timer = 0.0
+        return True
+
+    def update_harpoon_charge(self, dt: float, aim_x: float = None, aim_y: float = None):
+        """Atualiza a mira e o tempo de retenção do projétil."""
+        if not self.is_charging_harpoon:
+            return
+        self.harpoon_charge_timer += dt
+        if aim_x is not None and aim_y is not None:
+            self.set_facing(aim_x, aim_y)
+
+    def release_harpoon_or_trap(self, projectiles: list = None, particles: list = None, banners: list = None, game_map=None) -> bool:
+        """
+        Ao soltar a Ação Secundária:
+        - Se segurou >= 0.24s: arremessa Harponete perfurante (2 HP dano).
+        - Se apenas tocou (< 0.24s): planta a Bear Trap no solo com recuo ágil.
+        """
+        if not self.is_charging_harpoon:
+            return False
+        held_time = self.harpoon_charge_timer
+        self.is_charging_harpoon = False
+        self.harpoon_charge_timer = 0.0
+
+        if held_time >= 0.24:
+            return self.trigger_harpoon_throw(
+                self.wx + self.facing_x, self.wy + self.facing_y,
+                projectiles=projectiles, particles=particles, banners=banners
+            )
+        else:
+            return self.trigger_bear_trap(
+                self.wx + self.facing_x, self.wy + self.facing_y,
+                projectiles=projectiles, particles=particles, banners=banners, game_map=game_map
+            )
+
+    def trigger_harpoon_throw(self, aim_x: float = None, aim_y: float = None, projectiles: list = None, particles: list = None, banners: list = None) -> bool:
+        """Arremessa o dardo/harponete perfurante Ainu à distância."""
+        if not self.is_alive or projectiles is None:
+            return False
+        if aim_x is not None and aim_y is not None:
+            self.set_facing(aim_x, aim_y)
+
+        harpoon = AoiHarpoonProjectile(self.wx, self.wy, 0.65, self.facing_x, self.facing_y, owner=self)
+        projectiles.append(harpoon)
+
+        self.state = STATE_RECOVERY
+        self.state_timer = 0.22
+
+        if banners is not None:
+            banners.append(FloatingBanner("HARPOON THROW!", self.wx, self.wy, wz=1.6, color=(200, 235, 255), duration=0.7))
+
+        if particles is not None:
+            for _ in range(8):
+                particles.append(SparkParticle(
+                    self.wx + self.facing_x * 0.4 + random.uniform(-0.1, 0.1),
+                    self.wy + self.facing_y * 0.4 + random.uniform(-0.1, 0.1),
+                    0.65,
+                    color=(210, 240, 255)
+                ))
+
+        try:
+            from src.audio.sound_manager import get_sound_manager
+            from src.audio.sound_events import SoundEvent
+            get_sound_manager().play(SoundEvent.SWORD_SLASH, volume_scale=0.9)
+        except Exception:
+            pass
+
+        return True
 
     def trigger_bear_trap(self, aim_x: float = None, aim_y: float = None, projectiles: list = None, particles: list = None, banners: list = None, game_map=None) -> bool:
         """
@@ -230,6 +363,11 @@ class AoiHuntress(Samurai):
     def update(self, dt: float, game_map=None, particles: list = None, opponent=None, projectiles: list = None, banners: list = None, **kwargs):
         self.update_dodge_timers(dt)
 
+        if self.combo_window > 0:
+            self.combo_window = max(0.0, self.combo_window - dt)
+            if self.combo_window <= 0:
+                self.combo_step = 0
+
         if self.trap_timer > 0:
             self.trap_timer = max(0.0, self.trap_timer - dt)
 
@@ -248,8 +386,8 @@ class AoiHuntress(Samurai):
 
         if self.state == STATE_ATTACK:
             self.state_timer -= dt
-            # Avanço sutil e focado de estocada
-            adv = 2.4 * dt
+            # Avanço de ataque dinâmico (estocada longa vs corte rápido Makiri)
+            adv = 3.2 * dt if getattr(self, "attack_type", "spear") == "makiri" else 2.4 * dt
             if game_map is not None:
                 new_wx, new_wy = slide_movement_against_obstacles(self.wx, self.wy, self.facing_x * adv, self.facing_y * adv, self.radius, game_map)
                 self.wx, self.wy = new_wx, new_wy
@@ -257,13 +395,14 @@ class AoiHuntress(Samurai):
                 self.wx += self.facing_x * adv
                 self.wy += self.facing_y * adv
 
+            reach = 0.95 if getattr(self, "attack_type", "spear") == "makiri" else 1.35
             self.hitbox_center = (
-                self.wx + self.facing_x * 1.35,
-                self.wy + self.facing_y * 1.35
+                self.wx + self.facing_x * reach,
+                self.wy + self.facing_y * reach
             )
             if self.state_timer <= 0:
                 self.state = STATE_RECOVERY
-                self.state_timer = self.spear_recovery
+                self.state_timer = 0.16 if getattr(self, "attack_type", "spear") == "makiri" else self.spear_recovery
                 self.hitbox_active = False
             return
 
@@ -284,7 +423,8 @@ class AoiHuntress(Samurai):
 
     def get_extra_props(self) -> dict:
         """Garante propriedades extras e poses ricas para a renderização 3D."""
-        extra = {}
+        base_extra = getattr(self, "extra_props", {}) or {}
+        extra = {**base_extra}
         if self.state == STATE_ROLL:
             extra["pose"] = "tundra_hunt_slide"
             extra["is_roll"] = True
@@ -297,10 +437,19 @@ class AoiHuntress(Samurai):
             extra["pose"] = "hunter_guard"
             extra["is_parry"] = True
         elif self.state == STATE_ATTACK:
-            prog = 1.0 - max(0.0, self.state_timer) / max(0.001, self.spear_duration)
-            extra["pose"] = "spear_lunge"
+            dur = 0.14 if getattr(self, "attack_type", "spear") == "makiri" else self.spear_duration
+            prog = 1.0 - max(0.0, self.state_timer) / max(0.001, dur)
+            if getattr(self, "attack_type", "spear") == "makiri":
+                extra["pose"] = "makiri_slash"
+                extra["is_makiri"] = True
+            else:
+                extra["pose"] = "spear_lunge"
             extra["atk_progress"] = prog
             extra["p"] = prog
+        elif getattr(self, "is_charging_harpoon", False):
+            extra["pose"] = "harpoon_charge"
+            extra["is_charging"] = True
+            extra["p"] = min(1.0, self.harpoon_charge_timer / 0.24)
         elif self.state == STATE_RECOVERY and self.is_planting_trap:
             extra["pose"] = "bear_trap_place"
             extra["is_trap"] = True

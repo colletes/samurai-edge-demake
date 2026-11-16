@@ -9,8 +9,9 @@ Monge guerreiro sōhei colossal e inabalável da Ponte Gojō.
 - Terceira Ação / Esquiva: Adamantine Guard Push (Avanço Blindado & Empurrão com o Cabo):
   - 12 i-frames, deslize com ombro encouraçado, faíscas no piso.
   - Repulsão e destruição de projéteis hostis (raio 1.8m) e empurrão frontal com deslocamento forçado.
-- Ataque Secundário: Arremesso de Naginata a longa distância; crava no solo sem jamais cair em buracos ou água.
-- Desarmado: Ataque vira Investida com Guarda Alta (Tackle) de alta velocidade que causa 0 dano mas aplica STUN garantido (1.2s) e recupera a arma.
+- Ataque Secundário: Arremesso de Naginata: voa até 7.5m e crava-se no chão (acerta na ida). Novo toque no secundário a chama de volta
+  (voa até as mãos de Benkei, acertando também na volta); caminhar sobre ela também a recupera.
+- Enquanto a Naginata está fora ele fica sem ataque primário (só a esquiva Adamantine Guard Push e o recall).
 """
 import math
 import random
@@ -28,7 +29,6 @@ from src.entities.projectile import NaginataProjectile
 from src.effects.particles import SparkParticle, FloatingBanner
 
 STATE_NAGINATA_THROW = "NAGINATA_THROW"
-STATE_TACKLE_CHARGE = "TACKLE_CHARGE"
 
 
 class BenkeiSamurai(Samurai):
@@ -62,14 +62,6 @@ class BenkeiSamurai(Samurai):
         self.throw_cooldown = 1.8
         self.throw_timer = 0.0
 
-        # Parâmetros do Atropelamento / Tackle Desarmado
-        self.tackle_speed = 10.5
-        self.tackle_duration = 0.38
-        self.tackle_timer = 0.0
-        self.tackle_dir_x = 1.0
-        self.tackle_dir_y = 0.0
-        self.tackle_hit_target = False
-
         # Terceira Ação: Adamantine Guard Push (Avanço Blindado & Empurrão com o Cabo)
         self.is_agile_dodge = False
         self.roll_speed = 8.5
@@ -80,13 +72,9 @@ class BenkeiSamurai(Samurai):
         self.action_name = "Estocada Colossal"
 
     def take_hit(self, slash_dir: tuple[float, float], damage: int = 2) -> tuple[bool, bool]:
-        """Aplica dano ao Benkei com Hyper Armor durante o Tackle Charge contra ataques leves."""
+        """Aplica dano ao Benkei."""
         if not self.is_alive:
             return False, False
-        # Hyper Armor no Tackle Charge: ataques de 1 de dano não interrompem a investida
-        if self.state == STATE_TACKLE_CHARGE and damage < 2 and self.hp > 1:
-            self.hp -= damage
-            return True, False
         return super().take_hit(slash_dir, damage)
 
     @property
@@ -147,8 +135,8 @@ class BenkeiSamurai(Samurai):
             return False
 
         if not self.has_naginata:
-            # Desarmado: Tackle de atropelamento com stun
-            return self.trigger_tackle_charge(aim_x, aim_y)
+            # Desarmado (Naginata em voo): sem ataque até ela voltar
+            return False
 
         # Buffer durante golpe atual
         if self.state == STATE_ATTACK:
@@ -286,8 +274,8 @@ class BenkeiSamurai(Samurai):
             return False
 
         if not self.has_naginata:
-            # Já está desarmado: executar tackle de recuperação
-            return self.trigger_tackle_charge(aim_x, aim_y)
+            # A Naginata ainda está em voo (ida ou volta)
+            return False
 
         self.set_facing(aim_x, aim_y)
         self.state = STATE_NAGINATA_THROW
@@ -315,42 +303,20 @@ class BenkeiSamurai(Samurai):
                 particles.append(SparkParticle(self.wx, self.wy, 0.3))
         return True
 
-    def trigger_tackle_charge(self, aim_x: float, aim_y: float):
-        """Investida de alta velocidade desarmada: deal 0 lethal damage + STUN garantido (1.2s)."""
-        if not self.is_alive or self.state in (STATE_ROLL, STATE_STUNNED, STATE_DEAD):
+    def trigger_naginata_secondary(self, aim_x: float, aim_y: float, projectiles: list, particles: list = None):
+        """Ataque Secundário: 1º toque arremessa a Naginata; novo toque enquanto ela está fora a chama de volta."""
+        if self.has_naginata:
+            return self.trigger_naginata_throw(aim_x, aim_y, projectiles, particles=particles)
+        return self.trigger_naginata_recall(particles=particles)
+
+    def trigger_naginata_recall(self, particles: list = None):
+        """Chama a Naginata arremessada de volta (voa até as mãos de Benkei, acertando na volta)."""
+        if not self.is_alive or self.state in (STATE_STUNNED, STATE_DEAD):
             return False
-
-        # Se houver naginata fincada no solo, guiar na direção dela se o jogador mirar próximo
-        target_x, target_y = aim_x, aim_y
-        if self.active_naginata_projectile and getattr(self.active_naginata_projectile, "is_active", False):
-            if getattr(self.active_naginata_projectile, "state", "") == "ON_GROUND":
-                target_x = self.active_naginata_projectile.wx
-                target_y = self.active_naginata_projectile.wy
-
-        dx = target_x - self.wx
-        dy = target_y - self.wy
-        dist = math.hypot(dx, dy)
-        if dist > 0.01:
-            self.tackle_dir_x = dx / dist
-            self.tackle_dir_y = dy / dist
-        else:
-            self.tackle_dir_x = self.facing_x
-            self.tackle_dir_y = self.facing_y
-
-        self.set_facing(self.wx + self.tackle_dir_x, self.wy + self.tackle_dir_y)
-        self.state = STATE_TACKLE_CHARGE
-        self.state_timer = self.tackle_duration
-        self.tackle_timer = self.tackle_duration
-        self.tackle_hit_target = False
-        self.action_name = "Tackle Atropelo"
-
-        # Hitbox de impacto contundente (atordoante, sem letalidade direta)
-        self.hitbox_active = True
-        self.hitbox_damage = 0
-        self.hitbox_radius = 1.05
-        self.hitbox_center = (self.wx + self.facing_x * 0.70, self.wy + self.facing_y * 0.70)
-        self.slash_dir = (self.facing_x, self.facing_y)
-        return True
+        proj = self.active_naginata_projectile
+        if self.has_naginata or proj is None or not proj.is_active:
+            return False
+        return proj.recall(particles=particles)
 
     def recover_naginata(self):
         """Recupera a Naginata empunhada com sucesso."""
@@ -386,74 +352,6 @@ class BenkeiSamurai(Samurai):
             return
 
         if not self.is_alive:
-            return
-
-        # 1. Investida Desarmada (TACKLE_CHARGE)
-        if self.state == STATE_TACKLE_CHARGE:
-            self.state_timer -= dt
-            self.tackle_timer -= dt
-
-            # Deslocamento em alta velocidade
-            step = self.tackle_speed * dt
-            new_wx = self.wx + self.tackle_dir_x * step
-            new_wy = self.wy + self.tackle_dir_y * step
-
-            # Limites de arena
-            min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
-            new_wx = max(min_x, min(max_x, new_wx))
-            new_wy = max(min_y, min(max_y, new_wy))
-
-            # Colisão com rochas e construções
-            hit_solid = False
-            for rock in getattr(game_map, "rocks", []):
-                c, px, py = rock.check_collision(new_wx, new_wy, self.radius)
-                if c:
-                    new_wx += px; new_wy += py
-                    hit_solid = True
-            for bldg in getattr(game_map, "buildings", []):
-                c, px, py = bldg.check_collision(new_wx, new_wy, self.radius)
-                if c:
-                    new_wx += px; new_wy += py
-                    hit_solid = True
-
-            self.wx, self.wy = new_wx, new_wy
-            self.hitbox_center = (self.wx + self.facing_x * 0.70, self.wy + self.facing_y * 0.70)
-
-            # Partículas de atrito no solo
-            if particles is not None and random.random() < 0.6:
-                particles.append(SparkParticle(self.wx, self.wy, 0.2))
-
-            # Checar acerto no oponente durante a carga
-            if opponent and getattr(opponent, "is_alive", True) and not self.tackle_hit_target:
-                d_opp = math.hypot(opponent.wx - self.wx, opponent.wy - self.wy)
-                if d_opp < (self.hitbox_radius + getattr(opponent, "radius", 0.35)):
-                    self.tackle_hit_target = True
-                    # STUN absoluto de 1.2s no oponente
-                    opponent.stun(1.20)
-                    opponent.apply_forced_displacement(self.tackle_dir_x * 1.8, self.tackle_dir_y * 1.8, game_map)
-                    if banners is not None:
-                        banners.append(FloatingBanner("STUNNED! (1.2s)", opponent.wx, opponent.wy, wz=1.7, color=(240, 180, 50)))
-                    if particles is not None:
-                        for _ in range(12):
-                            particles.append(SparkParticle(opponent.wx, opponent.wy, 0.4))
-
-            # Checar se alcançou a naginata cravada no chão
-            if self.active_naginata_projectile and getattr(self.active_naginata_projectile, "is_active", False):
-                if getattr(self.active_naginata_projectile, "state", "") == "ON_GROUND":
-                    d_nag = math.hypot(self.active_naginata_projectile.wx - self.wx, self.active_naginata_projectile.wy - self.wy)
-                    if d_nag < 0.75:
-                        proj = self.active_naginata_projectile
-                        self.recover_naginata()
-                        if proj:
-                            proj.is_active = False
-                        if particles is not None:
-                            for _ in range(8):
-                                particles.append(SparkParticle(self.wx, self.wy, 0.3))
-
-            if self.state_timer <= 0 or hit_solid:
-                self.state = STATE_IDLE
-                self.hitbox_active = False
-                self.roll_recovery_timer = 0.16
             return
 
         # 2. Ataque Armado (ATTACK)
@@ -502,29 +400,18 @@ class BenkeiSamurai(Samurai):
                 self.state = STATE_IDLE
             return
 
-        # Checagem passiva de recolher a naginata andando sobre ela
-        if not self.has_naginata and self.active_naginata_projectile and getattr(self.active_naginata_projectile, "is_active", False):
-            if getattr(self.active_naginata_projectile, "state", "") == "ON_GROUND":
-                d_nag = math.hypot(self.active_naginata_projectile.wx - self.wx, self.active_naginata_projectile.wy - self.wy)
-                if d_nag < 0.65:
-                    proj = self.active_naginata_projectile
-                    self.recover_naginata()
-                    if proj:
-                        proj.is_active = False
-                    if particles is not None:
-                        for _ in range(6):
-                            particles.append(SparkParticle(self.wx, self.wy, 0.25))
-
     def render(self, surface: pygame.Surface, camera):
         """Renderiza o modelo voxel 3D do Benkei com armadura de ferro e naginata."""
         roll_p = 0.0
         if self.state == STATE_ROLL:
             roll_p = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration))))
 
+        base_extra = getattr(self, "extra_props", {}) or {}
         extra = {
+            **base_extra,
             "has_naginata": self.has_naginata,
             "is_throwing": (self.state == STATE_NAGINATA_THROW),
-            "is_charging": (self.state == STATE_TACKLE_CHARGE),
+            "is_charging": False,
             "is_roll": (self.state == STATE_ROLL),
             "roll_prog": roll_p,
             "combo_step": getattr(self, "combo_step", 1),
@@ -543,6 +430,6 @@ class BenkeiSamurai(Samurai):
             char_type="benkei",
             walk_timer=self.walk_cycle,
             alpha=self.alpha,
-            is_moving=(self.is_moving or self.state in (STATE_TACKLE_CHARGE, STATE_ROLL)),
+            is_moving=(self.is_moving or self.state == STATE_ROLL),
             extra_props=extra
         )

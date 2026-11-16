@@ -333,6 +333,90 @@ def test_character_select_arcade_mode():
     print("  [OK] Seleção de personagem no Arcade: 1P travado, confirma de uma vez, sem mudar a dificuldade.", flush=True)
 
 
+def test_konami_code_warp_to_boss():
+    from src.config import CHAR_KENSHIN
+    from src.arcade.arcade_screens import ArcadeBracketScreen
+    import time
+
+    # 1. Teclado: Setas + B + A
+    run = ArcadeRun(player_char=CHAR_KENSHIN)
+    assert run.index == 0
+    assert run.is_practice is False
+
+    bracket = ArcadeBracketScreen()
+    bracket.open(run)
+
+    def _press(k):
+        return pygame.event.Event(pygame.KEYDOWN, key=k)
+
+    def _btn(b):
+        return pygame.event.Event(pygame.JOYBUTTONDOWN, button=b)
+
+    def _hat(v):
+        return pygame.event.Event(pygame.JOYHATMOTION, value=v)
+
+    # Entrando sequência parcial
+    for k in (pygame.K_UP, pygame.K_UP, pygame.K_DOWN, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_LEFT, pygame.K_RIGHT):
+        res = bracket.handle_event(_press(k))
+        assert res is None, "Direcionais do Konami devem ser consumidos"
+
+    # Passo B: tecla B não deve cancelar nem acionar confirm_abandon
+    res_b = bracket.handle_event(_press(pygame.K_b))
+    assert res_b is None, "Tecla B não deve retornar ação"
+    assert bracket.confirm_abandon is False, "Tecla B não pode pedir abandono"
+
+    # Passo A: tecla A ativa o cheat e consome o evento sem iniciar luta
+    res_a = bracket.handle_event(_press(pygame.K_a))
+    assert res_a is None, "Tecla A finalizadora não deve iniciar luta automaticamente"
+    assert run.index == 11, "Jornada deve avançar imediatamente para a Luta 12 (Chefe)"
+    assert run.is_practice is True, "Run deve ser marcada como modo treino/prática"
+    assert bracket.cheat_banner_timer > 0, "Banner do Konami Code deve estar ativo"
+
+    # Agora sim, pressionar Confirmar (Enter) deve retornar FIGHT
+    res_confirm = bracket.handle_event(_press(pygame.K_RETURN))
+    assert res_confirm == "FIGHT", "Apertar Enter após o cheat deve iniciar a luta contra o chefe"
+
+    # 2. Gamepad: D-Pad + Círculo (1) + Cruz (0)
+    run2 = ArcadeRun(player_char=CHAR_KENSHIN)
+    bracket2 = ArcadeBracketScreen()
+    bracket2.open(run2)
+
+    dpad_seq = [(0, 1), (0, 1), (0, -1), (0, -1), (-1, 0), (1, 0), (-1, 0), (1, 0)]  # wait, hat in pygame: y positive is up
+    # Vamos verificar get_dpad_motion_from_event: hx, hy = event.value; dy = -1 if hy > 0 else (1 if hy < 0 else 0)
+    # Então hy=1 dá dy=-1 (UP), hy=-1 dá dy=1 (DOWN)
+    dpad_hats = [(0, 1), (0, 1), (0, -1), (0, -1), (-1, 0), (1, 0), (-1, 0), (1, 0)]
+    for h in dpad_hats:
+        bracket2.handle_event(_hat(h))
+
+    # Círculo (botão 1): CUIDADO PARA NÃO CANCELAR
+    res_circle = bracket2.handle_event(_btn(1))
+    assert res_circle is None, "Botão Círculo não deve retornar ação no código Konami"
+    assert bracket2.confirm_abandon is False, "Botão Círculo não deve acionar tela de abandonar"
+
+    # Cruz (botão 0): CUIDADO PARA NÃO PROSSEGUIR
+    res_cross = bracket2.handle_event(_btn(0))
+    assert res_cross is None, "Botão Cruz não deve prosseguir luta no código Konami"
+    assert run2.index == 11, "Deve ir para o Chefe Final via Gamepad"
+    assert run2.is_practice is True
+
+    # 3. Gamepad normal: Círculo fora do código aciona confirm_abandon
+    run3 = ArcadeRun(player_char=CHAR_KENSHIN)
+    bracket3 = ArcadeBracketScreen()
+    bracket3.open(run3)
+    res_norm_circle = bracket3.handle_event(_btn(1))
+    assert res_norm_circle is None and bracket3.confirm_abandon is True, "Círculo normal fora do código pede confirmação de abandono"
+
+    # 4. Timeout de 2.0s: se demorar mais que 2.0s, reseta a sequência
+    bracket4 = ArcadeBracketScreen()
+    bracket4.open(ArcadeRun(player_char=CHAR_KENSHIN))
+    bracket4.handle_event(_press(pygame.K_UP))
+    bracket4._konami_last_time -= 2.5  # simula passagem de tempo > 2.0s
+    bracket4.handle_event(_press(pygame.K_DOWN))
+    assert bracket4._konami_step == 0, "Timeout deve resetar a sequência"
+
+    print("  [OK] Konami Code: salto para o Chefe Final via Teclado e Gamepad sem falso cancel/confirm.", flush=True)
+
+
 if __name__ == "__main__":
     test_tables_are_complete()
     test_ladder_for_all_fighters()
@@ -347,4 +431,5 @@ if __name__ == "__main__":
     test_title_card_enabled()
     test_pause_menu_arcade_items()
     test_character_select_arcade_mode()
+    test_konami_code_warp_to_boss()
     print("Todos os testes do modo Arcade passaram.", flush=True)

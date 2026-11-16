@@ -45,6 +45,8 @@ class SolidProp:
         self.style = style
 
     def check_collision(self, px: float, py: float, p_radius: float = 0.3) -> tuple[bool, float, float]:
+        if getattr(self, "is_broken", False):
+            return False, 0.0, 0.0
         return aabb_circle_collision((self.wx, self.wy, self.wx + self.width, self.wy + self.depth), px, py, p_radius)
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):

@@ -109,6 +109,7 @@ class MachiyaFacade:
 
         rng = random.Random(seed)
         self.flame_spots: list[DynamicFlameSpot] = []
+        self._static_cache: dict[tuple, tuple[pygame.Surface, int, int]] = {}
         if self.burning:
             num_spots = 4
             for i in range(num_spots):
@@ -151,7 +152,7 @@ class MachiyaFacade:
             return True, nx * overlap, ny * overlap
         return False, 0.0, 0.0
 
-    def render(self, surface: pygame.Surface, camera, time_val: float):
+    def _draw_static_structure(self, surface: pygame.Surface, camera):
         alpha = 75 if self.is_transparent else 255
         roof_alpha = 65 if self.is_transparent else 255
 
@@ -200,6 +201,63 @@ class MachiyaFacade:
         # Onigawara (telhas de cumeeira esculpidas nas duas extremidades)
         for ox in (self.wx - 0.16, self.wx + self.width + 0.02):
             draw_voxel_box(surface, camera, ox, self.wy + roof_d * 0.30, roof_z + 0.28, 0.14, 0.34, 0.28, (76, 80, 88), outline=True, alpha=roof_alpha)
+
+    def render(self, surface: pygame.Surface, camera, time_val: float):
+        alpha = 75 if self.is_transparent else 255
+        roof_alpha = 65 if self.is_transparent else 255
+        engawa_d = 0.75
+
+        # Renderização da estrutura estática com cache inteligente (otimização de performance Kyoto)
+        az = getattr(camera, "azimuth", 0.0)
+        if abs(az) < 1e-4 and getattr(camera, "height_fn", None) is None:
+            zoom_q = round(camera.zoom, 1)
+            key = (zoom_q, self.is_transparent)
+            entry = self._static_cache.get(key)
+            if entry is None:
+                # Pre-bake da estrutura arquitetônica estática
+                sw = max(200, int((self.width * 80 + 160) * zoom_q))
+                sh = max(200, int((self.depth * 80 + 320) * zoom_q))
+                scratch = pygame.Surface((sw, sh), pygame.SRCALPHA)
+                scratch.fill((0, 0, 0, 0))
+                anc_x = sw // 2
+                anc_y = int(sh * 0.70)
+                from src.world.arena_cache import _BakingCamera
+                bcam = _BakingCamera(self.wx, self.wy, anc_x, anc_y, zoom_q)
+                self._draw_static_structure(scratch, bcam)
+                # Crop bounding box
+                min_x = max(0, bcam.min_x - 10)
+                min_y = max(0, bcam.min_y - 10)
+                max_x = min(sw, bcam.max_x + 10)
+                max_y = min(sh, bcam.max_y + 10)
+                cw = max(1, max_x - min_x)
+                ch = max(1, max_y - min_y)
+                baked = pygame.Surface((cw, ch), pygame.SRCALPHA)
+                baked.fill((0, 0, 0, 0))
+                baked.blit(scratch, (0, 0), (min_x, min_y, cw, ch))
+                entry = (baked, min_x - anc_x, min_y - anc_y)
+                self._static_cache[key] = entry
+
+            baked_surf, off_x, off_y = entry
+            bx, by = camera.apply(self.wx, self.wy, 0.0)
+            scale = camera.zoom / zoom_q
+            if abs(scale - 1.0) > 0.004:
+                dw = max(1, int(baked_surf.get_width() * scale))
+                dh = max(1, int(baked_surf.get_height() * scale))
+                scaled = pygame.transform.scale(baked_surf, (dw, dh))
+                surface.blit(scaled, (bx + int(off_x * scale), by + int(off_y * scale)))
+            else:
+                surface.blit(baked_surf, (bx + off_x, by + off_y))
+        else:
+            self._draw_static_structure(surface, camera)
+
+        footing_h = 0.12
+        p1_h = 1.35
+        p1_z = footing_h + 0.14
+        eave_z = p1_z + p1_h
+        p2_z = eave_z + 0.16
+        p2_h = 1.25
+        roof_z = p2_z + p2_h
+        roof_d = self.depth - 0.25
 
         # Cortina Noren de 3 panos no 1º andar balançando ao vento
         noren_base_y = self.wy + self.depth - engawa_d + 0.05

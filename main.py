@@ -1267,14 +1267,22 @@ def run_game():
         gained = arcade_run.stats[-1]["score"] if arcade_run.stats else 0
         if arcade_run.is_finished:
             data = arcade_save.load()
-            rank = arcade_save.add_high_score(data, arcade_run)
-            arcade_save.unlock_gallery(data)
+            rank = None
+            is_cheat = getattr(arcade_run, "is_practice", False)
+            if not is_cheat:
+                rank = arcade_save.add_high_score(data, arcade_run)
+                arcade_save.unlock_gallery(data)
             data["current_run"] = None
             arcade_save.save(data)
             sound_mgr.stop_music(fadeout_ms=300)
-            arcade_credits_screen.open(arcade_run, rank, data["high_scores"])
-            sound_mgr.play_music(MusicTrack.CLOSING_THEME, fade_ms=1200, loops=0)
-            game_state = STATE_ARCADE_CREDITS
+            if is_cheat:
+                arcade_run.score = -1000000
+                arcade_result_screen.open(arcade_run, None, data["high_scores"])
+                game_state = STATE_ARCADE_RESULT
+            else:
+                arcade_credits_screen.open(arcade_run, rank, data["high_scores"])
+                sound_mgr.play_music(MusicTrack.CLOSING_THEME, fade_ms=1200, loops=0)
+                game_state = STATE_ARCADE_CREDITS
         else:
             save_arcade_run()
             open_arcade_bracket("cleared", gained)
@@ -2326,7 +2334,7 @@ def run_game():
                     f.update_pit(f_dt, game_map, particles, banners)
                     continue
                 if isinstance(f, BossOni):
-                    if round_in_progress:
+                    if round_in_progress or f.state in ("BONE_COLLAPSE", "PURPLE_DISSOLVE", "DYING_FREEZE") or getattr(f, "dying", False) or not f.is_alive:
                         f.update(dt, game_map, opp, particles, banners, projectiles, camera)
                     else:
                         f.update(0.0)
@@ -3040,6 +3048,16 @@ def run_game():
         # Entregável 5.3: Tela final de partida Melhor-de-3 (com revanche rápida via Espaço)
         if match_winner is not None:
             round_result_screen.render(screen)
+
+        # Flash e Branqueamento suave de morte do Boss Gashadokuro
+        if isinstance(p2, BossOni) and getattr(p2, "whiteout_alpha", 0.0) > 0.5:
+            w_alpha = int(min(255, max(0, p2.whiteout_alpha)))
+            white_surf = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+            white_surf.fill((255, 255, 255, 0))
+            fade_m = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+            fade_m.fill((255, 255, 255, w_alpha))
+            white_surf.blit(fade_m, (0, 0))
+            screen.blit(white_surf, (0, 0))
 
         pygame.display.flip()
 

@@ -439,13 +439,22 @@ class RemoteMineEntity:
     def is_ready_to_detonate(self) -> bool:
         return self.is_active and self.age >= self.arm_delay
 
-    def update(self, dt: float, game_map, particles: list = None) -> bool:
+    def update(self, dt: float, game_map, particles: list = None, fighters: list = None, banners: list = None, cinematic_director = None, **kwargs) -> bool:
         if not self.is_active:
             return False
         self.game_map = game_map
         self.age += dt
         if self.age >= self.arm_delay:
             self.is_armed = True
+
+        # Mina de Chão Híbrida Inteligente: Detonação automática por proximidade (1.2m)
+        if self.is_armed and fighters:
+            for f in fighters:
+                if f and f != self.owner and getattr(f, "is_alive", True):
+                    dist = world_distance(self.wx, self.wy, f.wx, f.wy)
+                    if dist <= (1.2 + getattr(f, "radius", 0.35)):
+                        self.detonate(fighters, particles=particles, banners=banners, cinematic_director=cinematic_director, game_map=game_map)
+                        return False
         return True
 
     def detonate(self, fighters: list, particles: list = None, banners: list = None, cinematic_director = None, game_map = None):
@@ -1688,47 +1697,45 @@ class MusashiWaveProjectile:
         return True
     
     def render(self, surface: pygame.Surface, camera):
-        """Renderiza a onda azul semi-transparente."""
+        """Renderiza a onda cortante azul de alta visibilidade e brilho especular."""
         if not self.is_active:
             return
-        
-        # Posição isométrica
+
         sx, sy = camera.apply(self.wx, self.wy, self.wz)
-        
-        # Pulsação visual (cresce e diminui)
-        pulse = 0.8 + 0.3 * math.sin(self.pulse_timer * 12.0)
-        
-        # Largura e altura da onda
-        wave_w = int(self.width * 20 * pulse)
-        wave_h = int(8 * pulse)
-        
-        # Criar superfície com canal alfa para semi-transparência
-        wave_surf = pygame.Surface((wave_w, wave_h), pygame.SRCALPHA)
-        
-        # Cor azul com alpha semi-transparente
-        alpha = int(150 * pulse)
-        blue_wave = (*COLOR_BLUE_AURA, alpha)
-        
-        # Desenhar onda como elipse horizontal
-        pygame.draw.ellipse(wave_surf, blue_wave, (0, 0, wave_w, wave_h))
-        
-        # Brilho central (mais opaco)
-        bright_alpha = int(200 * pulse)
-        bright_blue = (min(255, COLOR_BLUE_AURA[0] + 50), 
-                      min(255, COLOR_BLUE_AURA[1] + 50), 
-                      min(255, COLOR_BLUE_AURA[2]), 
-                      bright_alpha)
-        pygame.draw.ellipse(wave_surf, bright_blue, 
-                           (wave_w // 4, wave_h // 3, wave_w // 2, wave_h // 3))
-        
-        # Blit no surface principal
-        surface.blit(wave_surf, (sx - wave_w // 2, sy - wave_h // 2))
+        pulse = 0.90 + 0.20 * math.sin(self.pulse_timer * 14.0)
+
+        # Dimensões ampliadas de alto impacto e visibilidade
+        wave_w = int(self.width * 46 * pulse)
+        wave_h = max(16, int(22 * pulse))
+
+        wave_surf = pygame.Surface((wave_w * 2, wave_h * 2), pygame.SRCALPHA)
+        wave_surf.fill((0, 0, 0, 0))
+        cx, cy = wave_w, wave_h
+
+        # 1. Aura externa brilhante azul-celeste (alta difusão em cenários escuros e cheios)
+        pygame.draw.ellipse(wave_surf, (0, 140, 255, 110), (cx - wave_w, cy - wave_h, wave_w * 2, wave_h * 2))
+        # 2. Lâmina crescente de vácuo cortante (Ki azul elétrico)
+        mid_w = int(wave_w * 0.85)
+        mid_h = int(wave_h * 0.70)
+        pygame.draw.ellipse(wave_surf, (80, 210, 255, 210), (cx - mid_w, cy - mid_h, mid_w * 2, mid_h * 2))
+        # 3. Núcleo branco incandescente de corte puro
+        core_w = int(wave_w * 0.65)
+        core_h = max(4, int(wave_h * 0.35))
+        pygame.draw.ellipse(wave_surf, (255, 255, 255, 255), (cx - core_w, cy - core_h, core_w * 2, core_h * 2))
+
+        # 4. Traço de ponta afiada e arco cortante
+        p_left = (cx - core_w, cy)
+        p_right = (cx + core_w, cy)
+        pygame.draw.line(wave_surf, (255, 255, 255, 255), p_left, p_right, 3)
+
+        # Blit centrado no projétil
+        surface.blit(wave_surf, (sx - cx, sy - cy))
 
 
 class NaginataProjectile:
     """Naginata arremessada por Benkei.
-    Projétil pesado e maciço que penetra oponentes.
-    Ao parar ou atingir um obstáculo, crava-se no chão.
+    Voa até o alcance máximo; ao parar, atingir alguém ou um obstáculo, crava-se no chão e aguarda.
+    Um novo toque no ataque secundário (recall) a faz voltar voando ao dono, acertando também na volta.
     Garante que nunca caia em buracos ou água (clamp de terreno firme)."""
 
     def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, max_range: float = 7.5):
@@ -1753,12 +1760,38 @@ class NaginataProjectile:
         self.damage = 2
         self.pulse_timer = 0.0
         self.has_hit_fighter = False
+        # O retorno só começa por recall() (2º toque no secundário); a ida termina cravada no chão
+        self.returning = False
+        self.return_timer = 0.0
+        self.hit_lockout = 0.0   # após virar, ignora lutadores por um instante (evita acerto duplo no mesmo frame)
+        self.return_speed = 15.5
+        self.return_max_time = 2.5
+
+    def recall(self, particles=None) -> bool:
+        """Chama a naginata de volta ao dono (em voo ou cravada). False se já está voltando ou o dono morreu."""
+        legit_owner = getattr(self, "original_owner", self.owner)
+        if not self.is_active or self.returning or not legit_owner or not getattr(legit_owner, "is_alive", True):
+            return False
+        self.state = "FLYING"
+        self.returning = True
+        self.return_timer = 0.0
+        self.has_hit_fighter = True   # liberado em update() quando hit_lockout zera
+        self.hit_lockout = 0.15
+        self.dist_traveled = 0.0
+        self.wz = 0.35
+        if particles is not None:
+            for _ in range(6):
+                particles.append(SparkParticle(self.wx, self.wy, 0.4, color=(220, 220, 235)))
+        return True
 
     def update(self, dt: float, game_map, particles: list) -> bool:
         if not self.is_active:
             return False
 
         self.pulse_timer += dt
+
+        if self.state == "FLYING" and self.returning:
+            return self._update_return(dt, game_map, particles)
 
         if self.state == "FLYING":
             step = math.hypot(self.vx * dt, self.vy * dt)
@@ -1810,7 +1843,7 @@ class NaginataProjectile:
             if hit_bound or hit_obstacle or self.dist_traveled >= self.max_range:
                 self._embed_into_ground(game_map, particles)
         else:
-            # ON_GROUND: Espera apenas o Benkei recuperar
+            # ON_GROUND: Espera apenas o Benkei recuperar (rede de segurança; o fluxo normal é o retorno em voo)
             if self.pickup_delay > 0:
                 self.pickup_delay -= dt
             else:
@@ -1828,7 +1861,46 @@ class NaginataProjectile:
 
         return self.is_active
 
+    def _update_return(self, dt: float, game_map, particles) -> bool:
+        """Volta em linha reta ao dono (ignora terreno e obstáculos) e rearma ao alcançá-lo."""
+        legit_owner = getattr(self, "original_owner", self.owner)
+        if not legit_owner or not getattr(legit_owner, "is_alive", True) or not hasattr(legit_owner, "recover_naginata"):
+            self._embed_into_ground_raw(game_map, particles)
+            return self.is_active
+        self.return_timer += dt
+        if self.hit_lockout > 0.0:
+            self.hit_lockout -= dt
+            if self.hit_lockout <= 0.0:
+                self.has_hit_fighter = False  # a volta também pode acertar
+        dx = legit_owner.wx - self.wx
+        dy = legit_owner.wy - self.wy
+        dist = math.hypot(dx, dy)
+        if dist <= 0.7 or self.return_timer >= self.return_max_time:
+            legit_owner.recover_naginata()
+            self.is_active = False
+            if particles is not None:
+                for _ in range(6):
+                    particles.append(SparkParticle(legit_owner.wx, legit_owner.wy, 0.5, color=(220, 220, 235)))
+            return False
+        self.dir_x, self.dir_y = dx / dist, dy / dist
+        self.vx, self.vy = self.dir_x * self.return_speed, self.dir_y * self.return_speed
+        self.wx += self.vx * dt
+        self.wy += self.vy * dt
+        self.wz = 0.35
+        if particles is not None and random.random() < 0.6:
+            particles.append(SparkParticle(self.wx, self.wy, 0.15))
+        return True
+
     def _embed_into_ground(self, game_map, particles):
+        """Fim da ida (alcance, obstáculo, parry ou acerto sem matar): crava no solo e aguarda recall.
+        Durante a volta, parry/acerto sem matar só trava acerto duplo e segue voltando."""
+        if self.returning:
+            self.has_hit_fighter = True
+            self.hit_lockout = 0.15
+            return
+        self._embed_into_ground_raw(game_map, particles)
+
+    def _embed_into_ground_raw(self, game_map, particles):
         """Crava a naginata no solo, garantindo que retroceda caso atinja buracos ou água."""
         self.state = "ON_GROUND"
         self.vx = 0.0
@@ -2267,7 +2339,8 @@ class EarthStompShockwave:
         # Apagar / dissipar projéteis inimigos na área de impacto sísmico (cone frontal de 120°)
         if projectiles:
             for p in projectiles:
-                if p is not self and getattr(p, "is_active", False) and getattr(p, "owner", None) != self.owner:
+                if (p is not self and getattr(p, "owner", None) != self.owner and not getattr(p, "is_obstacle", False)
+                        and (getattr(p, "is_active", False) or getattr(p, "state", "") == "FLYING")):
                     p_wx = getattr(p, "wx", None)
                     p_wy = getattr(p, "wy", None)
                     if p_wx is not None and p_wy is not None:
@@ -2281,7 +2354,7 @@ class EarthStompShockwave:
                             else:
                                 ndx_p, ndy_p = self.facing_x, self.facing_y
                             if ndx_p * self.facing_x + ndy_p * self.facing_y >= 0.40:
-                                p.is_active = False
+                                EarthClod.consume(p)
                                 if particles is not None:
                                     for _ in range(8):
                                         particles.append(SparkParticle(p_wx, p_wy, 0.30, color=(245, 215, 110)))
@@ -2397,6 +2470,89 @@ class EarthStompShockwave:
             fissure_col = (50, 35, 22)
             for j in range(len(front_points) - 1):
                 pygame.draw.line(surface, fissure_col, front_points[j], front_points[j + 1], 3)
+
+
+class EarthClod:
+    """Torrão de terra levantado pelo Pisotão Sísmico do Goro.
+    Obstáculo temporário: destrói (1 por torrão) projéteis inimigos em voo que o atingem e desmorona sozinho
+    depois de `lifetime` segundos. Não bloqueia o movimento de lutadores. Marcado com `is_obstacle` para que a IA
+    não o trate como ameaça."""
+
+    is_obstacle = True
+
+    def __init__(self, wx: float, wy: float, owner, lifetime: float = 2.0, radius: float = 0.42):
+        self.wx = wx
+        self.wy = wy
+        self.wz = 0.0
+        self.owner = owner
+        self.radius = radius
+        self.lifetime = lifetime
+        self.timer = 0.0
+        self.is_active = True
+        self.crumble = 0.0  # > 0: desmoronando após bloquear um projétil
+        self.shade = random.choice([(115, 85, 55), (145, 110, 75), (85, 60, 40), (160, 125, 85)])
+
+    @staticmethod
+    def _is_blockable(p, owner) -> bool:
+        """Projétil inimigo em voo (rápido) e bloqueável; ignora armadilhas/bombas paradas, obstáculos e do próprio dono."""
+        if getattr(p, "is_obstacle", False) or getattr(p, "owner", None) is owner:
+            return False
+        if getattr(p, "is_unblockable", False) or not getattr(p, "is_active", True):
+            return False
+        if hasattr(p, "state") and p.state != "FLYING":
+            return False
+        return math.hypot(getattr(p, "vx", 0.0), getattr(p, "vy", 0.0)) > 1.5
+
+    @staticmethod
+    def consume(p, particles=None):
+        """Remove o projétil do jogo (Kunai fica no chão, como no resto da colisão)."""
+        if p.__class__.__name__ == "KunaiProjectile":
+            p.state = "ON_GROUND"
+            p.wz = 0.05
+        else:
+            p.is_active = False
+        if particles is not None:
+            for _ in range(6):
+                particles.append(SparkParticle(p.wx, p.wy, 0.30, color=(140, 105, 65)))
+
+    def update(self, dt: float, *args, **kwargs) -> bool:
+        if not self.is_active:
+            return False
+        particles = kwargs.get("particles")
+        projectiles = kwargs.get("projectiles")
+        for a in args:
+            if isinstance(a, list) and particles is None:
+                particles = a
+        self.timer += dt
+        if self.crumble > 0.0:
+            self.crumble -= dt
+            if self.crumble <= 0.0:
+                self.is_active = False
+                return False
+            return True
+        if self.timer >= self.lifetime:
+            self.is_active = False
+            return False
+        if projectiles:
+            for p in projectiles:
+                if p is self or not self._is_blockable(p, self.owner):
+                    continue
+                if world_distance(self.wx, self.wy, p.wx, p.wy) <= self.radius + getattr(p, "radius", 0.2):
+                    self.consume(p, particles)
+                    self.crumble = 0.18
+                    break
+        return True
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+        from src.isometric.voxel_renderer import draw_voxel_box
+        rise = min(1.0, self.timer / 0.08)  # sobe do chão em ~0,08 s
+        fade = 1.0 if self.crumble <= 0.0 else max(0.0, self.crumble / 0.18)
+        h = (0.30 + 0.45 * rise) * (0.35 + 0.65 * fade)
+        sz = 0.48
+        draw_voxel_box(surface, camera, self.wx - sz * 0.5, self.wy - sz * 0.5, 0.0, sz, sz, h, self.shade, outline=True)
+        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy + 0.14, 0.0, 0.22, 0.22, h * 0.55, (75, 52, 34), outline=True)
 
 
 # =============================================================================
@@ -3461,5 +3617,142 @@ class AlchemicFlaskProjectile:
         draw_voxel_box(surface, camera, self.wx - 0.07, self.wy - 0.07, self.wz + 0.02, 0.14, 0.14, 0.15, self.col_core, outline=False)
         # Gargalo e rolha de cortiça
         draw_voxel_box(surface, camera, self.wx - 0.04, self.wy - 0.04, self.wz + 0.22, 0.08, 0.08, 0.08, (135, 95, 55), outline=False)
+
+
+# =====================================================================================================================
+# HARPONETE / DARDO DE CAÇA AINU (AOI)
+# =====================================================================================================================
+
+class AoiHarpoonProjectile:
+    """
+    Harponete / Dardo de Caça Ainu (Aoi):
+    Arremessado com alta velocidade e precisão perfurante.
+    Causa 2 de dano se atingir o adversário em cheio; pode ser defendido com parry.
+    """
+    def __init__(self, wx: float, wy: float, wz: float, dir_x: float, dir_y: float, owner, max_range: float = 8.5):
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.owner = owner
+        self.max_range = max_range
+        self.dist_traveled = 0.0
+
+        mag = math.hypot(dir_x, dir_y)
+        if mag > 0:
+            self.dir_x = dir_x / mag
+            self.dir_y = dir_y / mag
+        else:
+            self.dir_x = 1.0
+            self.dir_y = 0.0
+
+        self.speed = 16.5
+        self.vx = self.dir_x * self.speed
+        self.vy = self.dir_y * self.speed
+        self.damage = 2
+        self.width = 0.35
+        self.is_active = True
+        self.evaded_targets = set()
+        self.has_been_reflected = False
+
+    def update(self, dt: float, game_map, particles: list, opponent=None, **kwargs) -> bool:
+        if not self.is_active:
+            return False
+
+        step = math.hypot(self.vx * dt, self.vy * dt)
+        self.wx += self.vx * dt
+        self.wy += self.vy * dt
+        self.dist_traveled += step
+
+        # Rastro de partículas de gelo/geada
+        if particles is not None and random.random() < 0.65:
+            particles.append(SparkParticle(
+                self.wx - self.dir_x * 0.2 + random.uniform(-0.06, 0.06),
+                self.wy - self.dir_y * 0.2 + random.uniform(-0.06, 0.06),
+                self.wz + random.uniform(-0.04, 0.04),
+                color=(210, 240, 255)
+            ))
+
+        # Limites da arena
+        min_bound = 1.2
+        max_bound_x = (game_map.cols - 1.2) if (game_map and hasattr(game_map, "cols")) else 19.8
+        max_bound_y = (game_map.rows - 1.2) if (game_map and hasattr(game_map, "rows")) else 19.8
+        if self.wx <= min_bound or self.wx >= max_bound_x or self.wy <= min_bound or self.wy >= max_bound_y:
+            self.is_active = False
+            if particles is not None:
+                for _ in range(6):
+                    particles.append(SparkParticle(self.wx, self.wy, self.wz, color=(220, 240, 255)))
+            return False
+
+        # Corte de bambus no caminho
+        if game_map and hasattr(game_map, "bamboos"):
+            for b in game_map.bamboos:
+                if not b.is_cut and world_distance(self.wx, self.wy, b.wx, b.wy) < 0.45:
+                    part = b.cut((self.dir_x, self.dir_y))
+                    if part and particles is not None:
+                        particles.append(part)
+
+        # Colisão com rochas ou poço
+        if game_map:
+            hit_obstacle = False
+            for r in getattr(game_map, "rocks", []):
+                if hasattr(r, "break_panel") and not getattr(r, "is_broken", False):
+                    if world_distance(self.wx, self.wy, r.wx, r.wy) < (getattr(r, "radius", 0.5) + 0.15):
+                        r.break_panel((self.dir_x, self.dir_y), particles)
+                        hit_obstacle = True
+                        break
+                elif not getattr(r, "is_broken", False) and world_distance(self.wx, self.wy, r.wx, r.wy) < getattr(r, "radius", 0.6):
+                    hit_obstacle = True
+                    break
+            if getattr(game_map, "well", None) and world_distance(self.wx, self.wy, game_map.well.wx, game_map.well.wy) < game_map.well.radius:
+                hit_obstacle = True
+
+            if hit_obstacle:
+                self.is_active = False
+                if particles is not None:
+                    for _ in range(8):
+                        particles.append(SparkParticle(self.wx, self.wy, self.wz, color=(230, 245, 255)))
+                return False
+
+        if self.dist_traveled >= self.max_range:
+            self.is_active = False
+            return False
+
+        return True
+
+    def render(self, surface: pygame.Surface, camera):
+        if not self.is_active:
+            return
+        from src.isometric.mesh_primitives import draw_oriented_voxel_box, draw_voxel_box
+
+        # Sombra no solo
+        draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.12, 0.0, 0.24, 0.24, 0.015, (20, 24, 30), outline=False, alpha=85)
+
+        # Haste de madeira da lança/harponete
+        draw_oriented_voxel_box(
+            surface, camera,
+            self.wx - self.dir_x * 0.10, self.wy - self.dir_y * 0.10, self.wz,
+            self.dir_x, self.dir_y, 0.0,
+            0.65, 0.045, 0.045,
+            (115, 80, 50), outline=True
+        )
+
+        # Franja / borla de pele de lobo ártico branca (tassel) na união da ponta
+        draw_oriented_voxel_box(
+            surface, camera,
+            self.wx + self.dir_x * 0.18, self.wy + self.dir_y * 0.18, self.wz,
+            self.dir_x, self.dir_y, 0.0,
+            0.10, 0.08, 0.08,
+            (240, 240, 245), outline=False
+        )
+
+        # Ponta afiada esculpida em osso de urso polar
+        draw_oriented_voxel_box(
+            surface, camera,
+            self.wx + self.dir_x * 0.32, self.wy + self.dir_y * 0.32, self.wz,
+            self.dir_x, self.dir_y, 0.0,
+            0.24, 0.06, 0.035,
+            (245, 242, 230), outline=True
+        )
+
 
 

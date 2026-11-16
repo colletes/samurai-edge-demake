@@ -243,6 +243,10 @@ class Rifleman(Samurai):
         self.is_reloading = False
         self.reload_progress = 0.0
 
+        # Balística do tanegashima: bala mais lenta e de alcance menor dão janela de esquiva à distância (balanceamento)
+        self.bullet_speed = 18.0
+        self.bullet_max_range = 12.0
+
         # Mecânica de Mira (Windup antes do disparo para permitir esquiva)
         self.aim_duration = 0.22       # Calibrado: telegraph claro da queima da mecha antes do disparo
         self.target_aim_wx = 0.0
@@ -447,7 +451,8 @@ class Rifleman(Samurai):
         # Projétil supersônico balístico
         bx = self.wx + self.facing_x * 0.65
         by = self.wy + self.facing_y * 0.65
-        bullet = MusketBulletProjectile(bx, by, wz=0.55, dir_x=self.facing_x, dir_y=self.facing_y, owner=self)
+        bullet = MusketBulletProjectile(bx, by, wz=0.55, dir_x=self.facing_x, dir_y=self.facing_y, owner=self,
+                                        max_range=self.bullet_max_range, speed=self.bullet_speed)
         if projectiles is not None:
             projectiles.append(bullet)
 
@@ -663,16 +668,18 @@ class Rifleman(Samurai):
             pose_name = "ramrod_reload"
             pose_p = self.reload_progress
 
+        base_extra = getattr(self, "extra_props", {}) or {}
         extra_props = {
+            **base_extra,
             "ssaa_2x": True,
             "has_ammo": self.has_ammo,
             "is_reloading": (not self.has_ammo and self.state == STATE_IDLE),
             "is_rifle_butt": self.is_rifle_butt,
-            "pose": pose_name,
-            "p": pose_p,
+            "pose": base_extra.get("pose", pose_name),
+            "p": base_extra.get("p", pose_p),
             "pose_lerp_tracker": self.pose_lerp_tracker,
-            "somersault_angle": somersault_angle,
-            "somersault_pivot_z": somersault_pivot_z,
+            "somersault_angle": base_extra.get("somersault_angle", somersault_angle),
+            "somersault_pivot_z": base_extra.get("somersault_pivot_z", somersault_pivot_z),
             "is_roll": (self.state == STATE_RIFLE_ROLL),
             "roll_prog": roll_prog,
         }

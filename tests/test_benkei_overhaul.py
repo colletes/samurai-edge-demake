@@ -5,7 +5,7 @@ Valida:
 2. Combo de Inércia da Naginata: Varredura 170° (2.4m) conectando em Estocada Colossal (2.8m).
 3. Reset do combo após expiração da janela (0.55s).
 4. Adamantine Guard Push (Avanço blindado com 12 i-frames, deflexão de projéteis e empurrão frontal).
-5. Transição desarmada após arremesso da Naginata e Tackle com STUN de 1.2s.
+5. Naginata: secundário arremessa (cravando ao fim da ida); novo secundário a chama de volta (sem Tackle).
 6. Modelo 3D benkei_model: get_arms(c), materiais PBR e legacy, single-pass weapon rendering.
 7. Animações Contínuas: Intro e Victory em pose_scripts sem travamentos ($C^0/C^1$).
 8. Sincronização no Model Inspector: botões de animação interativos e notas De/Para.
@@ -25,7 +25,7 @@ import pygame
 pygame.init()
 pygame.display.set_mode((800, 600))
 
-from src.entities.benkei import BenkeiSamurai, STATE_ATTACK, STATE_ROLL, STATE_TACKLE_CHARGE
+from src.entities.benkei import BenkeiSamurai, STATE_ATTACK, STATE_ROLL
 from src.entities.samurai import STATE_IDLE, STATE_RECOVERY
 from src.entities.projectile import NaginataProjectile
 from src.entities import benkei_model, pose_scripts
@@ -151,39 +151,73 @@ class TestBenkeiOverhaul(unittest.TestCase):
         self.assertTrue(opp.displaced)
         self.assertGreater(opp.wx, 5.8)
 
-    def test_benkei_unarmed_tackle_and_recovery(self):
-        """Verifica transição desarmada após arremesso e tackle com stun de 1.2s."""
+    def test_benkei_naginata_throw_then_recall_with_secondary(self):
+        """1º secundário arremessa (cravando ao fim da ida); 2º secundário chama de volta e rearma."""
         benkei = BenkeiSamurai(5.0, 5.0)
         gmap = DummyMap()
-        opp = DummyOpponent(wx=6.5, wy=5.0)
         projectiles = []
 
-        # Arremesso da Naginata
-        success = benkei.trigger_naginata_throw(7.0, 5.0, projectiles=projectiles)
-        self.assertTrue(success)
+        self.assertTrue(benkei.trigger_naginata_secondary(7.0, 5.0, projectiles))
         self.assertFalse(benkei.has_naginata)
         self.assertTrue(benkei.is_unarmed)
         self.assertEqual(len(projectiles), 1)
+        self.assertFalse(hasattr(benkei, "trigger_tackle_charge"))
 
         benkei.update(0.25, gmap)  # sai de THROW
 
-        # Ataque primário enquanto desarmado dispara Tackle Charge
-        banners = []
-        particles = []
-        tackle_ok = benkei.trigger_naginata_thrust(7.0, 5.0, game_map=gmap)
-        self.assertTrue(tackle_ok)
-        self.assertEqual(benkei.state, STATE_TACKLE_CHARGE)
-        self.assertEqual(benkei.action_name, "Tackle Atropelo")
+        # Desarmado: o ataque primário e um novo arremesso não fazem nada
+        self.assertFalse(benkei.trigger_naginata_thrust(7.0, 5.0, game_map=gmap))
+        self.assertFalse(benkei.trigger_naginata_throw(7.0, 5.0, projectiles=projectiles))
 
-        # Avança tackle e atinge o oponente aplicando 1.2s de STUN
-        benkei.update(0.15, gmap, particles=particles, opponent=opp, banners=banners)
-        self.assertEqual(opp.stun_timer, 1.20)
-        self.assertTrue(opp.displaced)
+        # A Naginata voa até o alcance máximo e crava no chão: NÃO volta sozinha
+        nag = projectiles[0]
+        for _ in range(200):
+            nag.update(0.016, gmap, [])
+        self.assertTrue(nag.is_active)
+        self.assertEqual(nag.state, "ON_GROUND")
+        self.assertFalse(nag.returning)
+        self.assertFalse(benkei.has_naginata)
+        far_x = nag.wx
+        self.assertGreater(far_x, 8.0)
 
-        # Recupera a Naginata
-        benkei.recover_naginata()
+        # 2º toque no secundário: chama de volta, ela voa até Benkei e rearma
+        self.assertTrue(benkei.trigger_naginata_secondary(7.0, 5.0, projectiles))
+        self.assertTrue(nag.returning)
+        self.assertFalse(benkei.trigger_naginata_secondary(7.0, 5.0, projectiles))  # já voltando: sem efeito
+        for _ in range(400):
+            if not nag.update(0.016, gmap, []):
+                break
+        self.assertFalse(nag.is_active)
         self.assertTrue(benkei.has_naginata)
         self.assertFalse(benkei.is_unarmed)
+        self.assertEqual(len(projectiles), 1)
+
+    def test_benkei_naginata_recall_mid_flight_and_can_hit_on_return(self):
+        """Recall em pleno voo da ida vira a naginata de imediato; a volta pode acertar após breve trava."""
+        benkei = BenkeiSamurai(5.0, 5.0)
+        gmap = DummyMap()
+        projectiles = []
+        benkei.trigger_naginata_throw(9.0, 5.0, projectiles=projectiles)
+        nag = projectiles[0]
+        nag.update(0.1, gmap, [])
+        self.assertEqual(nag.state, "FLYING")
+        self.assertFalse(nag.returning)
+
+        self.assertTrue(benkei.trigger_naginata_recall())
+        self.assertTrue(nag.returning)
+        self.assertTrue(nag.has_hit_fighter)  # trava curta evita acerto duplo imediato
+        nag.wx = 10.0
+        for _ in range(20):
+            nag.update(0.016, gmap, [])
+        self.assertFalse(nag.has_hit_fighter)  # liberado: a volta pode acertar
+
+    def test_recall_rejected_when_armed_or_dead(self):
+        benkei = BenkeiSamurai(5.0, 5.0)
+        self.assertFalse(benkei.trigger_naginata_recall())  # armado
+        projectiles = []
+        benkei.trigger_naginata_throw(9.0, 5.0, projectiles=projectiles)
+        benkei.is_alive = False
+        self.assertFalse(benkei.trigger_naginata_recall())
 
     def test_benkei_model_and_materials(self):
         """Verifica interfaces modulares do modelo: get_arms, materiais PBR e legacy."""
@@ -221,7 +255,7 @@ class TestBenkeiOverhaul(unittest.TestCase):
         self.assertIn("NAGINATA_CLEAVE", button_ids)
         self.assertIn("NAGINATA_THRUST", button_ids)
         self.assertIn("NAGINATA_THROW", button_ids)
-        self.assertIn("TACKLE_CHARGE", button_ids)
+        self.assertNotIn("TACKLE_CHARGE", button_ids)
         self.assertIn("ADAMANTINE_PUSH", button_ids)
         self.assertIn("FINISHER_1", button_ids)
         self.assertIn("FINISHER_2", button_ids)

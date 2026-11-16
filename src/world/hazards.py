@@ -292,9 +292,27 @@ class ChainPendulum(TelegraphedHazard):
             if math.hypot(f.wx - wx, f.wy - wy) < self.hit_radius + getattr(f, "radius", 0.35) * 0.5 \
                     and getattr(f, "wz", 0.0) < wz + 0.5:
                 self._hit_ids.add(id(f))
-                hit, _ = f.take_hit((dx * direction, dy * direction), damage=self.damage)
-                if hit and f.is_alive:
-                    f.apply_forced_displacement(dx * 1.4, dy * 1.4, arena)
+                hit, dead = f.take_hit((dx * direction, dy * direction), damage=self.damage)
+                if hit:
+                    if f.is_alive:
+                        f.apply_forced_displacement(dx * 1.4, dy * 1.4, arena)
+                    else:
+                        # Morte por esmagamento da bola com espinhos: impacto brutal, esmagamento no solo e estilhaços
+                        f.wz = 0.02
+                        if hasattr(f, "apply_forced_displacement"):
+                            f.apply_forced_displacement(dx * 2.2, dy * 2.2, arena)
+                        if particles is not None:
+                            from src.effects.particles import BloodParticle, SparkParticle
+                            for _ in range(24):
+                                particles.append(BloodParticle(f.wx, f.wy, 0.3))
+                            for _ in range(16):
+                                particles.append(SparkParticle(wx, wy, 0.6, color=(240, 180, 255)))
+                        try:
+                            from src.audio.sound_events import SoundEvent
+                            from src.audio.sound_manager import SoundManager
+                            SoundManager.get_instance().play(SoundEvent.BONE_CRUSH)
+                        except Exception:
+                            pass
                 if hit and particles is not None:
                     from src.effects.particles import SparkParticle
                     for _ in range(10):
@@ -428,9 +446,26 @@ class FireworkMortars(TelegraphedHazard):
                         continue
                     d = math.hypot(f.wx - cx, f.wy - cy)
                     if d < r + getattr(f, "radius", 0.35) * 0.5:
-                        hit, _ = f.take_hit((f.wx - cx, f.wy - cy), damage=self.damage)
-                        if hit and f.is_alive and d > 0.01:
-                            f.apply_forced_displacement((f.wx - cx) / d * 1.5, (f.wy - cy) / d * 1.5, arena)
+                        hit, dead = f.take_hit((f.wx - cx, f.wy - cy), damage=self.damage)
+                        if hit:
+                            norm_d = max(0.01, d)
+                            dir_x = (f.wx - cx) / norm_d
+                            dir_y = (f.wy - cy) / norm_d
+                            if f.is_alive:
+                                f.apply_forced_displacement(dir_x * 1.5, dir_y * 1.5, arena)
+                            else:
+                                # Morte por morteiro: projeção balística explosiva pelo ar com fumaça e brasas
+                                f.wz = 0.85
+                                if hasattr(f, "apply_forced_displacement"):
+                                    f.apply_forced_displacement(dir_x * 3.4, dir_y * 3.4, arena)
+                                if particles is not None:
+                                    from src.effects.particles import BloodParticle, SmokeParticle, SparkParticle
+                                    for _ in range(16):
+                                        particles.append(BloodParticle(f.wx, f.wy, 0.8))
+                                    for _ in range(8):
+                                        particles.append(SmokeParticle(f.wx, f.wy, wz=0.6, color=(40, 36, 36), radius=0.45))
+                                    for _ in range(14):
+                                        particles.append(SparkParticle(f.wx, f.wy, 0.7, color=(255, 120, 40)))
         elif phase == PHASE_IDLE:
             self.circles = []
 

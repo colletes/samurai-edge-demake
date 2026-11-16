@@ -334,17 +334,19 @@ class PirateSwordswoman(Samurai):
             dip = math.sin(roll_prog * math.pi) * 0.12
             render_wz = max(0.0, self.wz - dip)
 
+        base_extra = getattr(self, "extra_props", {}) or {}
         extra_props = {
+            **base_extra,
             "ssaa_2x": True,
             "pose_lerp_tracker": self.pose_lerp_tracker,
-            "pose": pose_key,
-            "active_pose": pose_key,
-            "pose_progress": pose_progress,
-            "p": pose_progress,
+            "pose": base_extra.get("pose", pose_key),
+            "active_pose": base_extra.get("active_pose", pose_key),
+            "pose_progress": base_extra.get("pose_progress", pose_progress),
+            "p": base_extra.get("p", pose_progress),
             "roll_prog": roll_prog,
             "is_roll": (self.state == STATE_ROLL),
-            "somersault_angle": somersault_angle,
-            "somersault_pivot_z": somersault_pivot_z,
+            "somersault_angle": base_extra.get("somersault_angle", somersault_angle),
+            "somersault_pivot_z": base_extra.get("somersault_pivot_z", somersault_pivot_z),
         }
 
         render_voxel_humanoid(

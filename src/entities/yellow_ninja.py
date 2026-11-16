@@ -47,7 +47,7 @@ class YellowNinja(Samurai):
         # Salto Ninja Acrobático Parabólico (Botão 3)
         self.jump_duration = 0.48
         self.jump_max_height = 1.35
-        self.jump_speed = 6.4
+        self.jump_speed = 9.0   # esquiva mais rápida e longa (~4,3 m; antes 6,4 => ~3,1 m)
         self.jump_dir = (1.0, 0.0)
         self.jump_cooldown = 0.35
         self.jump_cooldown_timer = 0.0
@@ -142,7 +142,7 @@ class YellowNinja(Samurai):
             if next_step == 1:
                 self.state_timer = self.slash_duration
                 self.hitbox_active = True
-                self.hitbox_damage = 1
+                self.hitbox_damage = 2
                 self.hitbox_radius = 1.55  # Alcance ampliado para 1.55m no corte reverso
                 self.slash_dir = (self.facing_x, self.facing_y)
                 self.hitbox_center = (self.wx + self.facing_x * 1.05, self.wy + self.facing_y * 1.05)
@@ -184,6 +184,7 @@ class YellowNinja(Samurai):
             self.has_thrown_in_jump = True
             self.kunai_timer = self.kunai_cooldown
 
+            # Arremesso horizontal de alcance cheio durante a esquiva (antes: mergulho curto vz=-6.5, 3,5 m)
             kunai = KunaiProjectile(
                 wx=self.wx + self.facing_x * 0.35,
                 wy=self.wy + self.facing_y * 0.35,
@@ -191,8 +192,8 @@ class YellowNinja(Samurai):
                 dir_x=self.facing_x,
                 dir_y=self.facing_y,
                 owner=self,
-                vz=-6.5,
-                max_range=3.5
+                vz=0.0,
+                max_range=6.8
             )
             projectiles.append(kunai)
             play_sfx(SoundEvent.KUNAI_THROW)
@@ -472,7 +473,9 @@ class YellowNinja(Samurai):
             roll_prog = max(0.0, min(1.0, 1.0 - (self.state_timer / roll_dur)))
             somersault_angle = -360.0 * roll_prog  # Rolamento frontal de solo
 
+        base_extra = getattr(self, "extra_props", {}) or {}
         extra = {
+            **base_extra,
             "has_kunai": self.has_kunai,
             "combo_step": self.combo_step,
             "is_landing_cancel": self.is_landing_cancel,
@@ -480,8 +483,8 @@ class YellowNinja(Samurai):
             "pose_lerp_tracker": getattr(self, "_pose_lerp_tracker", None),
             "pose": getattr(self, "current_pose", ""),
             "is_jumping": (self.state == "JUMP"),
-            "somersault_angle": somersault_angle,
-            "somersault_pivot_z": somersault_pivot_z,
+            "somersault_angle": base_extra.get("somersault_angle", somersault_angle),
+            "somersault_pivot_z": base_extra.get("somersault_pivot_z", somersault_pivot_z),
         }
 
         render_voxel_humanoid(

@@ -250,12 +250,15 @@ def _hands(c):
         left = (bx + fx * 0.10 + px * 0.06, by + fy * 0.10 + py * 0.06, tz + 0.32)
         return left, right
 
-    # 9. Intro Fase 3: Postura Nobre de Duelista do Além (0.70 -> 1.00)
+    # 9. Intro Fase 3: Postura Nobre de Duelista do Além (0.70 -> 1.00 com Continuidade C0 e Respiração Contínua)
     if pose == "aristocrat_ready":
-        breathe = math.sin(u * math.pi * 4.0) * 0.008
+        breathe = math.sin(u * math.pi * 4.0 + getattr(c, "walk_timer", 0.0) * 2.5) * 0.008
+        start_l = (bx + fx * 0.10 + px * 0.06, by + fy * 0.10 + py * 0.06, tz + 0.32)
+        target_l = (bx + fx * 0.10 + px * 0.14, by + fy * 0.10 + py * 0.14, tz + 0.06)
+        from src.entities import model_kit as mk
+        left = mk.lerp(start_l, target_l, u)
         right = (bx + fx * 0.12 - px * 0.08, by + fy * 0.12 - py * 0.08, tz + 0.18 + breathe)
-        left = (bx + fx * 0.10 + px * 0.14, by + fy * 0.10 + py * 0.14, tz + 0.06 + breathe * 0.5)
-        return left, right
+        return (left[0], left[1], left[2] + breathe * 0.5), right
 
     # 10. Vitória Fase 1: Dissipação da Foice em Brasas (0.00 -> 0.38)
     if pose == "scythe_dissipate":
@@ -267,15 +270,29 @@ def _hands(c):
     # 11. Vitória Fase 2: Estalo de Dedos e Reverência Solene (0.38 -> 0.72)
     if pose == "finger_snap_bow":
         bow = math.sin(u * math.pi)
-        right = (bx - fx * 0.04 - px * 0.10, by - fy * 0.04 - py * 0.10, tz + 0.06 - bow * 0.08)
-        left = (bx + fx * 0.04 + px * 0.06, by + fy * 0.04 + py * 0.06, tz + 0.08 - bow * 0.08)
+        start_r = (bx + fx * 0.06 - px * 0.08, by + fy * 0.06 - py * 0.08, tz + 0.10)
+        target_r = (bx - fx * 0.04 - px * 0.10, by - fy * 0.04 - py * 0.10, tz + 0.06)
+        start_l = (bx + fx * 0.10 + px * 0.14, by + fy * 0.10 + py * 0.14, tz + 0.06)
+        target_l = (bx + fx * 0.04 + px * 0.06, by + fy * 0.04 + py * 0.06, tz + 0.08)
+        from src.entities import model_kit as mk
+        base_r = mk.lerp(start_r, target_r, u)
+        base_l = mk.lerp(start_l, target_l, u)
+        right = (base_r[0], base_r[1], base_r[2] - bow * 0.08)
+        left = (base_l[0], base_l[1], base_l[2] - bow * 0.08)
         return left, right
 
-    # 12. Vitória Fase 3: Olhar Condescendente (0.72 -> 1.00)
+    # 12. Vitória Fase 3: Olhar Condescendente (0.72 -> 1.00 com Respiração Contínua)
     if pose == "condescending_gaze":
-        breathe = math.sin(u * math.pi * 4.0) * 0.008
-        right = (bx + fx * 0.08 - px * 0.10, by + fy * 0.08 - py * 0.10, tz + 0.10 + breathe)
-        left = (bx + fx * 0.08 + px * 0.12, by + fy * 0.08 + py * 0.12, tz + 0.08 + breathe)
+        breathe = math.sin(u * math.pi * 4.0 + getattr(c, "walk_timer", 0.0) * 2.5) * 0.008
+        start_r = (bx - fx * 0.04 - px * 0.10, by - fy * 0.04 - py * 0.10, tz + 0.06)
+        start_l = (bx + fx * 0.04 + px * 0.06, by + fy * 0.04 + py * 0.06, tz + 0.08)
+        target_r = (bx + fx * 0.08 - px * 0.10, by + fy * 0.08 - py * 0.10, tz + 0.10)
+        target_l = (bx + fx * 0.08 + px * 0.12, by + fy * 0.08 + py * 0.12, tz + 0.08)
+        from src.entities import model_kit as mk
+        base_r = mk.lerp(start_r, target_r, u)
+        base_l = mk.lerp(start_l, target_l, u)
+        right = (base_r[0], base_r[1], base_r[2] + breathe)
+        left = (base_l[0], base_l[1], base_l[2] + breathe)
         return left, right
 
     # 13. Golpe Primário (Ceifada de Foice)

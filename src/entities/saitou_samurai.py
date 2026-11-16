@@ -436,17 +436,18 @@ class SaitouSamurai(Samurai):
             sx, sy = camera.apply(self.wx, self.wy, 1.4)
             pygame.draw.circle(surface, (120, 220, 100), (sx, sy), 3)
 
-        extra_props = {}
+        base_extra = getattr(self, "extra_props", {}) or {}
+        extra_props = {**base_extra}
         if self.state == STATE_ROLL:
             prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration))))
-            extra_props = {"pose": "haori_sidestep", "p": prog}
+            extra_props.update({"pose": "haori_sidestep", "p": prog})
         elif self.state == STATE_GATOTSU_CHARGE:
             prog = max(0.0, min(1.0, self.gatotsu_timer / max(0.001, self.gatotsu_max_duration)))
-            extra_props = {"pose": "gatotsu_lunge", "p": prog}
+            extra_props.update({"pose": "gatotsu_lunge", "p": prog})
         elif self.state == STATE_ZEROSHIKI:
             total_z = self.zeroshiki_windup + self.zeroshiki_active + self.zeroshiki_recovery
             prog = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, total_z))))
-            extra_props = {"pose": "zeroshiki_blast", "p": prog}
+            extra_props.update({"pose": "zeroshiki_blast", "p": prog})
 
         render_voxel_humanoid(
             surface, camera,

@@ -163,6 +163,12 @@ class JizoStatue(Rock):
         gx, gy = camera.apply(x, y, 0.0)
         pygame.draw.ellipse(surface, (12, 8, 18), (gx - 26, gy - 12, 52, 24))
 
+        if getattr(self, "is_broken", False):
+            # Estátua quebrada pelo Boss: pedestal arrebentado e pedras no solo
+            draw_voxel_box(surface, camera, x - 0.28, y - 0.28, 0.0, 0.56, 0.56, 0.08, self.c_stone_shadow, outline=True)
+            draw_voxel_box(surface, camera, x - 0.08, y + 0.06, 0.02, 0.18, 0.18, 0.06, self.c_stone, outline=False)
+            return
+
         # 1. Base octogonal de pedra e pedestal de lótus
         draw_voxel_box(surface, camera, x - 0.34, y - 0.34, 0.0, 0.68, 0.68, 0.16, self.c_stone_shadow, outline=True)
         draw_voxel_box(surface, camera, x - 0.28, y - 0.28, 0.16, 0.56, 0.56, 0.12, self.c_stone, outline=True)
@@ -2098,6 +2104,12 @@ class BoneMound(Rock):
         self.iron_rust = (62, 56, 58)
 
     def render(self, surface: pygame.Surface, camera):
+        if getattr(self, "is_broken", False):
+            # Ossos esmagados pelo Boss em pó e terra plana
+            draw_voxel_box(surface, camera, self.wx - 0.40, self.wy - 0.40, 0.0, 0.80, 0.80, 0.08, self.soil_col, outline=False)
+            draw_voxel_box(surface, camera, self.wx - 0.12, self.wy - 0.10, 0.02, 0.24, 0.20, 0.05, self.bone_dark, outline=False)
+            return
+
         # 1. Base de terra revirada e cinzas
         draw_voxel_box(surface, camera, self.wx - 0.52, self.wy - 0.48, 0.0, 1.04, 0.96, 0.22, self.soil_col, outline=True)
         draw_voxel_box(surface, camera, self.wx - 0.36, self.wy - 0.34, 0.20, 0.72, 0.68, 0.18, self.soil_col, outline=True)
@@ -2132,6 +2144,12 @@ class SpectralToro(Rock):
         self.flame_core = (255, 210, 255)
 
     def render(self, surface: pygame.Surface, camera, time_val: float = 0.0):
+        if getattr(self, "is_broken", False):
+            # Lanterna espectral destruída pelo Boss: restos de pedra e cinzas no chão
+            draw_voxel_box(surface, camera, self.wx - 0.26, self.wy - 0.26, 0.0, 0.52, 0.52, 0.08, self.stone_dark, outline=True)
+            draw_voxel_box(surface, camera, self.wx - 0.10, self.wy + 0.05, 0.02, 0.20, 0.16, 0.06, (32, 20, 36), outline=False)
+            return
+
         # 1. Base de pedra rachada
         draw_voxel_box(surface, camera, self.wx - 0.30, self.wy - 0.30, 0.0, 0.60, 0.60, 0.18, self.stone_dark, outline=True)
         # 2. Coluna central
@@ -2140,7 +2158,7 @@ class SpectralToro(Rock):
         draw_voxel_box(surface, camera, self.wx - 0.26, self.wy - 0.26, 0.64, 0.52, 0.52, 0.12, self.stone_dark, outline=True)
 
         # 4. Chama Espectral 3D oscilante no interior (Hibukuro)
-        flick = math.sin(time_val * 9.0 + self.wx * 2.3) * 0.04
+        flick = math.sin(time_val * 9.0 + self.wx * 2.3) * (0.09 if getattr(self, "is_cracked", False) else 0.04)
         draw_voxel_box(surface, camera, self.wx - 0.16, self.wy - 0.16, 0.76, 0.32, 0.32, 0.26, self.flame_violet, outline=False)
         draw_voxel_box(surface, camera, self.wx - 0.10 + flick, self.wy - 0.10, 0.80, 0.20, 0.20, 0.22, self.flame_crimson, outline=False)
         draw_voxel_box(surface, camera, self.wx - 0.05, self.wy - 0.05 + flick, 0.84, 0.10, 0.10, 0.16, self.flame_core, outline=False)

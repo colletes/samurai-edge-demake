@@ -145,6 +145,7 @@ class ArcadeRun:
     player_round_lives: int = 0
     fight_score: int = 0
     boss_phase: int = 0  # checkpoint do chefe: fase mais avançada alcançada (0 a 4)
+    is_practice: bool = False  # Modo treino / Konami Code (impede registro de recordes e galeria)
 
     def __post_init__(self):
         self.difficulty_start = max(0, min(2, self.difficulty_start))
@@ -266,13 +267,27 @@ class ArcadeRun:
             self.last_difficulty_change = -1
         self._reset_fight_state()
 
+    def warp_to_boss(self) -> bool:
+        """Avança a jornada imediatamente para o Chefe Final (Konami Code) em modo treino."""
+        boss_idx = None
+        for i, fight in enumerate(self.ladder):
+            if fight.kind == FightKind.BOSS:
+                boss_idx = i
+                break
+        if boss_idx is None:
+            boss_idx = max(0, len(self.ladder) - 1)
+        self.index = boss_idx
+        self.is_practice = True
+        self._reset_fight_state()
+        return True
+
     # ------------------------------------------------------------------ persistência
     def to_dict(self) -> dict:
         return {"player_char": self.player_char, "difficulty_start": self.difficulty_start, "seed": self.seed,
                 "order": self.order, "difficulty_level": self.difficulty_level, "clean_streak": self.clean_streak,
                 "continues": self.continues, "score": self.score, "points_lost_to_continues": self.points_lost_to_continues,
                 "index": self.index, "elapsed": round(self.elapsed, 2), "stats": list(self.stats),
-                "boss_phase": self.boss_phase}
+                "boss_phase": self.boss_phase, "is_practice": self.is_practice}
 
     @classmethod
     def from_dict(cls, data: dict) -> "ArcadeRun":
@@ -289,5 +304,6 @@ class ArcadeRun:
         run.elapsed = float(data.get("elapsed", 0.0))
         run.stats = list(data.get("stats", []))
         run.boss_phase = max(0, min(4, int(data.get("boss_phase", 0))))
+        run.is_practice = bool(data.get("is_practice", False))
         run._reset_fight_state()
         return run

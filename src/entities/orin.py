@@ -44,8 +44,8 @@ class OrinMinstrel(Samurai):
         self.combo_window_timer = 0.0
         self.combo_window = 0.50
         self.attack_duration = 0.16
-        self.attack_recovery = 0.22
-        self.kamaitachi_cooldown = 0.52
+        self.attack_recovery = 0.28   # Fire rate rebalanceado: recuperação ligeiramente ampliada
+        self.kamaitachi_cooldown = 0.62  # Cadência moderada anti-spam
         self.kamaitachi_timer = 0.0
 
         # Ação Secundária: Acorde de Ressonância Mortal com Repulsão 360°
@@ -410,7 +410,9 @@ class OrinMinstrel(Samurai):
         if self.state == STATE_ROLL:
             roll_p = max(0.0, min(1.0, 1.0 - (self.state_timer / max(0.001, self.roll_duration))))
 
+        base_extra = getattr(self, "extra_props", {}) or {}
         extra = {
+            **base_extra,
             "is_resonance": (self.state == STATE_RESONANCE),
             "is_roll": (self.state == STATE_ROLL),
             "roll_prog": roll_p,

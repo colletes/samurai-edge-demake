@@ -19,6 +19,8 @@ class Rock:
 
     def check_collision(self, px: float, py: float, p_radius: float = 0.3) -> tuple[bool, float, float]:
         """Retorna se colidiu e o vetor de repulsão normalizado."""
+        if getattr(self, "is_broken", False):
+            return False, 0.0, 0.0
         dist = math.hypot(px - self.wx, py - self.wy)
         min_dist = self.radius + p_radius
         if dist < min_dist:
@@ -86,6 +88,8 @@ class Well:
         self.height = 1.2
 
     def check_collision(self, px: float, py: float, p_radius: float = 0.3) -> tuple[bool, float, float]:
+        if getattr(self, "is_broken", False):
+            return False, 0.0, 0.0
         dist = math.hypot(px - self.wx, py - self.wy)
         min_dist = self.radius + p_radius
         if dist < min_dist:
@@ -147,6 +151,8 @@ class AncientTree:
         self.height = 3.6
 
     def check_collision(self, px: float, py: float, p_radius: float = 0.3) -> tuple[bool, float, float]:
+        if getattr(self, "is_broken", False):
+            return False, 0.0, 0.0
         dist = math.hypot(px - self.wx, py - self.wy)
         min_dist = self.radius + p_radius
         if dist < min_dist:
@@ -343,6 +349,8 @@ class StoneLantern:
         self.height = 1.05
 
     def check_collision(self, px: float, py: float, p_radius: float = 0.3) -> tuple[bool, float, float]:
+        if getattr(self, "is_broken", False):
+            return False, 0.0, 0.0
         dist = math.hypot(px - self.wx, py - self.wy)
         min_dist = self.radius + p_radius
         if dist < min_dist:

@@ -711,6 +711,65 @@ def generate_swing_shamisen() -> pygame.mixer.Sound:
     return _samples_to_sound(samples)
 
 
+def generate_shamisen_melody() -> pygame.mixer.Sound:
+    """
+    Riff de Shamisen tradicional (escala In-sen japonesa) para a intro e vitória de O-Rin:
+    Dedilhado expressivo com estalo percussivo de bachi (palheta de marfim) e ressonância ruidosa Sawari.
+    Sequência melódica: D4 (293.7 Hz) -> G4 (392.0 Hz) -> A4 (440.0 Hz) -> D5 (587.3 Hz).
+    """
+    from src.config import get_asset_path
+    shamisen_path = get_asset_path("assets/sounds/sfx/shamisen_melody.wav")
+    if os.path.exists(shamisen_path):
+        try:
+            return pygame.mixer.Sound(shamisen_path)
+        except Exception:
+            pass
+    duration = 1.15
+    num_samples = int(SAMPLE_RATE * duration)
+    samples = [0.0] * num_samples
+
+    # 4 notas em arpejo In-sen tradicional: (start_t, freq, dur_note, vol)
+    notes = [
+        (0.00, 293.66, 0.45, 0.85),  # D4
+        (0.24, 392.00, 0.40, 0.88),  # G4
+        (0.50, 440.00, 0.38, 0.92),  # A4
+        (0.74, 587.33, 0.40, 0.95),  # D5 (resolução aguda brilhante)
+    ]
+
+    for start_t, f0, note_dur, note_vol in notes:
+        start_idx = int(start_t * SAMPLE_RATE)
+        note_samples_len = int(note_dur * SAMPLE_RATE)
+        phase = 0.0
+        for i in range(note_samples_len):
+            idx = start_idx + i
+            if idx >= num_samples:
+                break
+            t_rel = i / SAMPLE_RATE
+            # Leve portamento / pitch bend característico de corda de seda pressionada no braço
+            freq = f0 * (1.0 + 0.04 * math.exp(-14.0 * t_rel))
+            phase += freq / SAMPLE_RATE
+
+            # Forma de onda de corda com buzz de Sawari (harmônicos não-lineares)
+            raw_saw = 2.0 * (phase % 1.0) - 1.0
+            buzz = math.sin(phase * 3.0 * math.tau) * 0.35 + math.sin(phase * 5.0 * math.tau) * 0.18
+            string_tone = raw_saw * 0.60 + buzz * 0.40
+
+            # Estalo percussivo inicial do bachi contra o couro (kawa-uchi)
+            bachi_percussion = (math.sin(1800.0 * math.tau * t_rel) * math.exp(-85.0 * t_rel) * 0.50) if t_rel < 0.035 else 0.0
+
+            # Envelope de decaimento natural de corda pinçada
+            env = math.exp(-7.5 * t_rel) * (1.0 - math.exp(-120.0 * t_rel))
+            sig = (string_tone * 0.70 + bachi_percussion) * env * note_vol
+            samples[idx] += sig
+
+    # Normalização suave
+    max_val = max((abs(s) for s in samples), default=1.0)
+    if max_val > 0.01:
+        samples = [s / max_val * 0.92 for s in samples]
+
+    return _samples_to_sound(samples)
+
+
 def generate_joe_banjo() -> pygame.mixer.Sound:
     """Riff clássico de banjo de Joe: dedilhado brilhante bluegrass ou áudio em disco."""
     from src.config import get_asset_path
@@ -913,6 +972,7 @@ _GENERATOR_MAP = {
     SoundEvent.SWING_BLUNT: generate_swing_blunt,
     SoundEvent.SLASH_CHAIN: generate_slash_chain,
     SoundEvent.SWING_SHAMISEN: generate_swing_shamisen,
+    SoundEvent.SHAMISEN_MELODY: generate_shamisen_melody,
     SoundEvent.SWORD_CLASH: generate_sword_clash,
     SoundEvent.PARRY: generate_parry,
     SoundEvent.FATAL_STRIKE: generate_fatal_strike,

@@ -49,6 +49,7 @@ class SoundEvent(str, Enum, metaclass=_SoundEventMeta):
     SWING_BLUNT = "swing_blunt"            # Golpe de bastão de madeira/punhos (Ren, Daiki)
     SLASH_CHAIN = "slash_chain"            # Zunido cortante de corrente e foice (Kasumi, Murasaki)
     SWING_SHAMISEN = "swing_shamisen"      # Acorde ressonante com lâmina oculta (O-Rin)
+    SHAMISEN_MELODY = "shamisen_melody"    # Riff tradicional de shamisen (In-sen pentatônico com bachi & sawari)
     SWORD_CLASH = "sword_clash"            # Choque simultâneo de lâminas
     CLASH_MUTUAL = "sword_clash"           # Alias para choque simultâneo
     PARRY = "parry"                        # Bloqueio perfeito / aparada frontal

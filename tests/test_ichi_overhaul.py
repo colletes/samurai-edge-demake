@@ -75,7 +75,7 @@ class TestIchiOverhaul(unittest.TestCase):
         self.assertEqual(self.ichi.hitbox_damage, 2)
         self.assertAlmostEqual(self.ichi.slash_reach, 1.80)
         self.assertAlmostEqual(self.ichi.slash_radius, 1.05)
-        self.assertAlmostEqual(self.ichi.attack_duration, 0.11)
+        self.assertAlmostEqual(self.ichi.attack_duration, 0.22)
 
     def test_03_listen_stance_and_counter_thrust(self):
         """Verifica Postura de Escuta e contra-ataque automático em golpe inimigo."""
@@ -119,8 +119,8 @@ class TestIchiOverhaul(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(self.ichi.state, STATE_ROLL)
         self.assertTrue(self.ichi.invincible)
-        self.assertAlmostEqual(self.ichi.invincible_timer, 0.22)
-        self.assertAlmostEqual(self.ichi.roll_speed, 7.2)
+        self.assertAlmostEqual(self.ichi.invincible_timer, 0.25)
+        self.assertAlmostEqual(self.ichi.roll_speed, 10.8)
         self.assertGreater(len(particles), 0)
 
         # Compatibilidade com alias trigger_roll
@@ -201,6 +201,13 @@ class TestIchiOverhaul(unittest.TestCase):
         self.assertIn("blind", model_inspector.OVERHAUL_DE_PARA_NOTES)
         self.assertIn("shikomizue", model_inspector.OVERHAUL_DE_PARA_NOTES)
         self.assertGreater(len(model_inspector.OVERHAUL_DE_PARA_NOTES["ichi"]), 0)
+
+    def test_09_full_render_all_states(self):
+        """Verifica renderização completa da Ichi em todos os estados sem erros de tupla/band."""
+        for state in [STATE_IDLE, STATE_ATTACK, STATE_ROLL, STATE_PARRY, STATE_RECOVERY]:
+            self.ichi.state = state
+            self.ichi.state_timer = 0.25
+            self.ichi.render(self.surface, self.camera)
 
 
 if __name__ == "__main__":

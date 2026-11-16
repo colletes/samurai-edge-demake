@@ -409,6 +409,9 @@ class KyudoArcher(Samurai):
             if self.state_timer <= 0:
                 self.state = STATE_IDLE
 
+        elif self.state == STATE_ROLL:
+            self.update_roll(dt, game_map)
+
         # Atualização dos cronômetros e efeitos da Barreira dos Ventos Kami
         if self.ofuda_cooldown_timer > 0:
             self.ofuda_cooldown_timer -= dt
@@ -559,7 +562,9 @@ class KyudoArcher(Samurai):
             pygame.draw.circle(surface, (255, 245, 180), (cx, cy), 3)
             pygame.draw.circle(surface, (220, 40, 30), (cx, cy), 1)
 
+        base_extra = getattr(self, "extra_props", {}) or {}
         extra_props = {
+            **base_extra,
             "ssaa_2x": True,
             "pose_lerp_tracker": getattr(self, "pose_lerp_tracker", None),
             "is_drawing": (self.state == STATE_BOW_DRAW or self.is_charging_rope or getattr(self, "is_aiming_volley", False)),

@@ -250,7 +250,9 @@ def _hands(c):
             u = _smooth(float(extra.get("seg_u", ((glo_p - 0.38) / 0.32) if glo_p < 0.70 else 1.0)))
             target_r = (bx + fx * 0.16 + px * 0.08, by + fy * 0.16 + py * 0.08, tz + 0.14)
             start_r = (bx + fx * 0.14 - px * 0.04, by + fy * 0.14 - py * 0.04, hz + 0.02)
-            left = (bx + fx * 0.18 + px * 0.12, by + fy * 0.18 + py * 0.12, tz + 0.16)
+            start_l = (bx + fx * 0.06 + px * 0.16, by + fy * 0.06 + py * 0.16, tz + 0.08)
+            target_l = (bx + fx * 0.18 + px * 0.12, by + fy * 0.18 + py * 0.12, tz + 0.16)
+            left = mk.lerp(start_l, target_l, u)
             return left, mk.lerp(start_r, target_r, u)
 
         # Fase 3: Transição estonteante para a postura horizontal definitiva do Gatotsu (100% Animado)
@@ -294,8 +296,8 @@ def _hands(c):
             target_r = (bx + fx * 0.14 - px * 0.04, by + fy * 0.14 - py * 0.04, hz + 0.02)
             start_r = (bx + fx * 0.12 - px * 0.14, by + fy * 0.12 - py * 0.14, tz + 0.08)
             base_r = mk.lerp(start_r, target_r, u)
-            puff = math.sin(glo_p * 18.0) * 0.012
-            breathe = math.cos(glo_p * 8.0) * 0.010
+            puff = math.sin(glo_p * 18.0 + c.walk_timer * 3.0) * 0.012
+            breathe = math.cos(glo_p * 8.0 + c.walk_timer * 2.2) * 0.010
             return (left[0], left[1], left[2] + breathe * 0.5), (base_r[0], base_r[1] + breathe, base_r[2] + puff)
 
     # 3. Ataque Primário: Gatotsu Lunge (Estocada Crescente)

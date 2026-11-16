@@ -82,7 +82,7 @@ class ValeriusUndeadSummon:
                 ))
         return True
 
-    def explode(self, particles: list = None, opponent=None, banners: list = None) -> bool:
+    def explode(self, particles: list = None, opponent=None, banners: list = None, cinematic_director=None) -> bool:
         """Detonação em chamas azuis espectrais (usada por Pyre Wight ou Detonação Cadavérica de Valerius)."""
         if not self.is_alive:
             return False
@@ -97,8 +97,10 @@ class ValeriusUndeadSummon:
             dist = math.hypot(dx, dy)
             if dist <= 1.60:
                 push_dir = (dx / max(0.001, dist), dy / max(0.001, dist))
-                target.take_hit(push_dir, damage=1)
-                if getattr(target, "is_alive", True):
+                hit, dead = target.take_hit(push_dir, damage=1)
+                if dead and cinematic_director:
+                    cinematic_director.trigger_fatal_strike(self.owner, target, "WIGHT_CORRUPTION_ROT", push_dir)
+                elif getattr(target, "is_alive", True):
                     target.stun(0.35)
 
         if banners is not None:
@@ -132,7 +134,7 @@ class ValeriusUndeadSummon:
 
         return True
 
-    def update(self, dt: float, game_map, opponent, particles: list = None, banners: list = None) -> bool:
+    def update(self, dt: float, game_map, opponent, particles: list = None, banners: list = None, cinematic_director=None) -> bool:
         """Atualiza a física, inteligência de perseguição e detecção de bote."""
         if not self.is_alive:
             return False
@@ -215,8 +217,11 @@ class ValeriusUndeadSummon:
                         return False
 
                     # Golpe cortante de sabre (1 de dano)
-                    self.opponent.take_hit((self.facing_x, self.facing_y), damage=1)
-                    if getattr(self.opponent, "is_alive", True):
+                    s_dir = (self.facing_x, self.facing_y)
+                    hit, dead = self.opponent.take_hit(s_dir, damage=1)
+                    if dead and cinematic_director:
+                        cinematic_director.trigger_fatal_strike(self.owner, self.opponent, "SKELETON_SWORD_EXECUTION", s_dir)
+                    elif getattr(self.opponent, "is_alive", True):
                         self.opponent.stun(0.25)
                     if banners is not None:
                         banners.append(FloatingBanner("SABER SLASH!", self.opponent.wx, self.opponent.wy, wz=1.6, color=(100, 180, 255)))
@@ -235,7 +240,7 @@ class ValeriusUndeadSummon:
                     ))
 
                 if dist <= 1.05 and getattr(self.opponent, "is_alive", True):
-                    self.explode(particles=particles, opponent=self.opponent, banners=banners)
+                    self.explode(particles=particles, opponent=self.opponent, banners=banners, cinematic_director=cinematic_director)
                     return False
 
         return self.is_alive
@@ -398,7 +403,7 @@ class ValeriusNecromancer(Samurai):
         self.scythe_timer = 0.0
 
         # Ação Secundária: Tríade dos Mortos & Detonação Cadavérica
-        self.summon_cooldown = 5.5
+        self.summon_cooldown = 3.6   # Recarga acelerada para combates mais dinâmicos (era 5.5s)
         self.summon_timer = 0.0
         self.summon_cycle = 0  # 0: Grasper, 1: Swordsman, 2: Wight
         self.summon: ValeriusUndeadSummon | None = None
@@ -604,14 +609,15 @@ class ValeriusNecromancer(Samurai):
 
         # Atualiza o servo invocado
         if self.summon and self.summon.is_alive:
-            still_active = self.summon.update(dt, game_map, opponent, particles=particles, banners=banners)
+            still_active = self.summon.update(dt, game_map, opponent, particles=particles, banners=banners, cinematic_director=cinematic_director)
             if not still_active:
                 self.summon = None
 
     def render(self, surface: pygame.Surface, camera):
-        extra = {}
+        base_extra = getattr(self, "extra_props", {}) or {}
+        extra = {**base_extra}
         if self.state in ("DEFEND", "PARRY") or getattr(self, "is_parrying", False):
-            extra = {"pose": "scythe_guard"}
+            extra["pose"] = "scythe_guard"
 
         render_voxel_humanoid(
             surface=surface,

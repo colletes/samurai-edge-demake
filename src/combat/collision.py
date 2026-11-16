@@ -16,7 +16,7 @@ from src.entities.projectile import (
     RemoteMineEntity, HamayaArrowProjectile, MusashiWaveProjectile,
     SacredArrowVolleyProjectile, NaginataProjectile, KamaitachiProjectile,
     SpiralResonanceProjectile, OfudaProjectile, TalismanWard, BearTrapProjectile,
-    AlchemicFlaskProjectile, ChemicalPoolHazard
+    AlchemicFlaskProjectile, ChemicalPoolHazard, AoiHarpoonProjectile
 )
 from src.entities.doberman import STATE_DOG_CHARGE, STATE_DOG_KNOCKED_OUT, STATE_DOG_BARK
 from src.i18n import t
@@ -224,7 +224,7 @@ class CombatSystem:
         if is_fighter_evading(target):
             # Murasaki: Escudo vertical de corrente giratória (Chain Whirl Backflip) deflete/destrói projéteis leves
             if getattr(target, "char_type", "") in ("murasaki", "purple") and target.state == STATE_ROLL:
-                if isinstance(proj, (KunaiProjectile, ShurikenProjectile, OfudaProjectile)):
+                if isinstance(proj, (KunaiProjectile, ShurikenProjectile, OfudaProjectile, AoiHarpoonProjectile)):
                     proj.is_active = False
                     self._play_sound("parry")
                     return True
@@ -422,7 +422,7 @@ class CombatSystem:
 
         active_projectiles = []
         for proj in projectiles:
-            if isinstance(proj, (TalismanWard, BearTrapProjectile)):
+            if isinstance(proj, (TalismanWard, BearTrapProjectile, RemoteMineEntity)):
                 p1_alive_before = p1.is_alive
                 p2_alive_before = p2.is_alive
                 still_valid = proj.update(
@@ -456,7 +456,7 @@ class CombatSystem:
                     winner = "P1_WINS"
                     self.hitstop_timer = 0.14
                     self._play_sound("fatal_strike")
-            elif isinstance(proj, HamayaArrowProjectile) or getattr(proj, "__class__", None).__name__ == "EarthStompShockwave":
+            elif isinstance(proj, HamayaArrowProjectile) or getattr(proj, "__class__", None).__name__ in ("EarthStompShockwave", "EarthClod"):
                 still_valid = proj.update(dt, game_map, particles, projectiles=projectiles)
             elif isinstance(proj, KunaiProjectile):
                 still_valid = proj.update(dt, game_map, particles, opponent=(p2 if getattr(proj, "owner", None) == p1 else p1))
@@ -549,7 +549,7 @@ class CombatSystem:
                             proj.vz = 0.0
                             proj.pickup_delay = 0.8
                         else:
-                            hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=2)
+                            hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=1)
                             # Interrompe o vôo imediatamente para não perfurar o alvo repetidamente em múltiplos frames
                             proj.state = "ON_GROUND"
                             proj.wz = 0.05
@@ -574,9 +574,9 @@ class CombatSystem:
                                     particles.append(BloodParticle(target.wx, target.wy, 0.4))
                                 self._play_sound("flesh_cleave")
                                 if banners is not None:
-                                    banners.append(FloatingBanner("-2 HP", target.wx, target.wy, wz=1.7, color=(255, 60, 60)))
+                                    banners.append(FloatingBanner("-1 HP", target.wx, target.wy, wz=1.7, color=(255, 60, 60)))
 
-            # Se for SHURIKEN (Não mata! Apenas aplica stun!)
+            # Se for SHURIKEN (Causa 1 HP de dano + micro-stun tático)
             elif isinstance(proj, ShurikenProjectile) and proj.is_active:
                 target = p2 if proj.owner == p1 else p1
 
@@ -596,26 +596,24 @@ class CombatSystem:
                             self._play_sound("parry")
                             proj.is_active = False
                         else:
-                            is_target_moving = getattr(target, "is_moving", False) or target.state in ("WALK", "RUN", "ROLL", "DASH", "SHUKUCHI")
-                            # Micro-stun tático perceptível de 0.42s (interrompe ataques ativos)
+                            # Micro-stun tático de 0.42s + 1 HP de dano universal
                             target.stun(0.42)
                             camera.add_shake(5.5)
                             for _ in range(10):
                                 particles.append(SparkParticle(target.wx, target.wy, 0.6))
 
-                            if is_target_moving:
-                                hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=1)
-                                for _ in range(12):
-                                    particles.append(BloodParticle(target.wx, target.wy, 0.5))
-                                if dead:
-                                    winner = "P1_WINS" if proj.owner == p1 else "P2_WINS"
-                                    self._play_sound("fatal_strike")
-                                    if cinematic_director:
-                                        death_style = _get_death_style_for_attacker(proj.owner, weapon="shuriken")
-                                        cinematic_director.trigger_fatal_strike(proj.owner, target, death_style, (proj.dir_x, proj.dir_y))
+                            hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=1)
+                            for _ in range(12):
+                                particles.append(BloodParticle(target.wx, target.wy, 0.5))
+                            if dead:
+                                winner = "P1_WINS" if proj.owner == p1 else "P2_WINS"
+                                self._play_sound("fatal_strike")
+                                if cinematic_director:
+                                    death_style = _get_death_style_for_attacker(proj.owner, weapon="shuriken")
+                                    cinematic_director.trigger_fatal_strike(proj.owner, target, death_style, (proj.dir_x, proj.dir_y))
                             else:
                                 if banners is not None:
-                                    banners.append(FloatingBanner("MICRO-STUN!", target.wx, target.wy, wz=1.7, color=(140, 220, 255)))
+                                    banners.append(FloatingBanner("-1 HP & STUN!", target.wx, target.wy, wz=1.7, color=(140, 220, 255)))
                             self._play_sound("obstacle_hit")
                             proj.is_active = False
 
@@ -910,6 +908,38 @@ class CombatSystem:
                                 self._play_sound("obstacle_hit")
                             proj.is_active = False
 
+            # Se for HARPONETE / DARDO DE CAÇA AINU (AoiHarpoonProjectile)
+            elif isinstance(proj, AoiHarpoonProjectile) and proj.is_active:
+                target = p2 if proj.owner == p1 else p1
+                winner_id = "P1_WINS" if proj.owner == p1 else "P2_WINS"
+
+                if target.is_alive and world_distance(proj.wx, proj.wy, target.wx, target.wy) < (0.35 + target.radius + proj.width):
+                    if not self.check_projectile_dodge_evasion(proj, target):
+                        if target.state == STATE_PARRY:
+                            for _ in range(12):
+                                particles.append(SparkParticle(proj.wx, proj.wy, 0.6, color=(220, 245, 255)))
+                            banners.append(FloatingBanner("PARRY!", target.wx, target.wy, wz=1.7, color=(150, 220, 255)))
+                            camera.add_shake(5.0)
+                            self._play_sound("parry")
+                            proj.is_active = False
+                        else:
+                            hit, dead = target.take_hit((proj.dir_x, proj.dir_y), damage=2)
+                            if dead:
+                                camera.add_shake(18.0)
+                                for _ in range(30):
+                                    particles.append(BloodParticle(target.wx, target.wy, 0.6))
+                                self.hitstop_timer = 0.12
+                                winner = winner_id
+                                self._play_sound("fatal_strike")
+                                if cinematic_director:
+                                    cinematic_director.trigger_fatal_strike(proj.owner, target, "SPEAR_HEART_SLIDE", (proj.dir_x, proj.dir_y))
+                            else:
+                                camera.add_shake(7.0)
+                                for _ in range(15):
+                                    particles.append(BloodParticle(target.wx, target.wy, 0.5))
+                                self._play_sound("obstacle_hit")
+                            proj.is_active = False
+
             # Se for BALA DE CANHÃO NAVAL (CannonballProjectile)
             elif isinstance(proj, CannonballProjectile) and proj.is_active:
                 if proj.has_exploded:
@@ -939,7 +969,11 @@ class CombatSystem:
                         if target.is_alive and target != proj.owner:
                             if world_distance(proj.target_wx, proj.target_wy, target.wx, target.wy) < (proj.radius + target.radius):
                                 if not self.check_projectile_dodge_evasion(proj, target):
-                                    hit, dead = target.take_hit((0, 0), damage=2)
+                                    dx = target.wx - getattr(proj, "start_wx", proj.target_wx)
+                                    dy = target.wy - getattr(proj, "start_wy", proj.target_wy)
+                                    mag = math.hypot(dx, dy)
+                                    s_dir = (dx / mag, dy / mag) if mag > 1e-4 else (1.0, 0.0)
+                                    hit, dead = target.take_hit(s_dir, damage=2)
                                     if dead:
                                         camera.add_shake(20.0)
                                         for _ in range(35):
@@ -951,7 +985,15 @@ class CombatSystem:
                                             winner = win_id
                                         self._play_sound("fatal_strike")
                                         if cinematic_director:
-                                            cinematic_director.trigger_fatal_strike(proj.owner, target, "HAMAYA_HOLY_PIERCE", (0, 0))
+                                            cinematic_director.trigger_fatal_strike(proj.owner, target, "HAMAYA_HOLY_PIERCE", s_dir)
+                                    elif hit:
+                                        camera.add_shake(10.0)
+                                        for _ in range(16):
+                                            particles.append(BloodParticle(target.wx, target.wy, 0.6))
+                                        for _ in range(12):
+                                            particles.append(SparkParticle(target.wx, target.wy, 0.6, color=(255, 230, 100)))
+                                        target.stun(0.45)
+                                        banners.append(FloatingBanner("SACRED VOLLEY!", target.wx, target.wy, wz=1.7, color=(255, 240, 120)))
 
             # Se for ARREMESSO DE NAGINATA (NaginataProjectile)
             elif isinstance(proj, NaginataProjectile) and proj.is_active and proj.state == "FLYING":

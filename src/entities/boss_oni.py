@@ -18,21 +18,21 @@ from src.entities.boss_model import layout_stand, layout_serpent, layout_torso, 
 from src.entities.samurai import Samurai, STATE_IDLE, resolve_playable_bounds
 from src.i18n import t
 
-# Valores de balanceamento (8.2.7): tempos em segundos, distâncias em unidades do mundo
+# Valores de balanceamento (8.2.7): cadência 25% mais rápida, agressiva e fluida pós-replanejamento
 BOSS_TUNING = {
     "hp_total": 10, "points_per_phase": 2,
-    "player_iframes": 1.2, "hit_cooldown": 0.7,
-    "p1_walk_speed": 2.2, "p1_gap": (0.2, 0.5), "p1_stomp_warn": 0.7, "p1_stomp_radius": 2.0, "p1_ring_speed": 5.5,
-    "p1_ring_max": 4.6, "p1_sweep_warn": 0.7, "p1_sweep_active": 0.3, "p1_sweep_radius": 3.6, "p1_recover": 0.45,
-    "p2_speed": 7.8, "p2_telegraph": 0.65, "p2_slow": 0.45, "p2_stun": 0.50, "p2_contact": 0.6,
-    "p3_speed": 6.8, "p3_speed_gain": 0.8, "p3_speed_max": 11.5, "p3_aim": 0.38, "p3_stun": 0.48, "p3_tired_after": 6.0,
-    "p4_idle": 0.25, "p4_warn": 0.8, "p4_radius": 2.2, "p4_aim_error": 0.8, "p4_jump": 0.4, "p4_stuck": 1.0,
-    "p5_warns": (0.55, 0.45, 0.4), "p5_radius": 1.6, "p5_direct": 0.6, "p5_jump": 0.4, "p5_rest": 0.9,
+    "player_iframes": 1.2, "hit_cooldown": 0.6,
+    "p1_walk_speed": 2.75, "p1_gap": (0.15, 0.40), "p1_stomp_warn": 0.52, "p1_stomp_radius": 2.0, "p1_ring_speed": 6.8,
+    "p1_ring_max": 4.6, "p1_sweep_warn": 0.52, "p1_sweep_active": 0.24, "p1_sweep_radius": 3.6, "p1_recover": 0.34,
+    "p2_speed": 9.6, "p2_telegraph": 0.48, "p2_slow": 0.36, "p2_stun": 0.42, "p2_contact": 0.6,
+    "p3_speed": 8.5, "p3_speed_gain": 1.0, "p3_speed_max": 13.8, "p3_aim": 0.28, "p3_stun": 0.40, "p3_tired_after": 5.0,
+    "p4_idle": 0.20, "p4_warn": 0.60, "p4_radius": 2.2, "p4_aim_error": 0.7, "p4_jump": 0.32, "p4_stuck": 0.75,
+    "p5_warns": (0.42, 0.34, 0.30), "p5_radius": 1.6, "p5_direct": 0.45, "p5_jump": 0.30, "p5_rest": 0.68,
     # Perigos do palco (a partir da fase 2): intervalo em segundos por fase (None = ainda não aparece)
-    "env_grace": 2.0,
-    "env_fire_every": (None, 5.0, 3.6, 2.8, 2.0), "env_fire_count": (0, 1, 1, 2, 3), "env_fire_warn": 1.0, "env_fire_radius": 1.3,
-    "env_lava_every": (None, None, 9.0, 6.5, 4.5), "env_lava_warn": 1.4, "env_lava_speed": 9.0, "env_lava_width": 1.6, "env_lava_slab": 3.5,
-    "env_trap_every": (None, None, None, 6.0, 4.0), "env_trap_count": (0, 0, 0, 3, 5), "env_trap_warn": 1.1, "env_trap_active": 0.7,
+    "env_grace": 1.6,
+    "env_fire_every": (None, 4.0, 2.9, 2.2, 1.6), "env_fire_count": (0, 1, 1, 2, 3), "env_fire_warn": 0.85, "env_fire_radius": 1.3,
+    "env_lava_every": (None, None, 7.5, 5.2, 3.6), "env_lava_warn": 1.1, "env_lava_speed": 10.5, "env_lava_width": 1.6, "env_lava_slab": 3.5,
+    "env_trap_every": (None, None, None, 4.8, 3.2), "env_trap_count": (0, 0, 0, 3, 5), "env_trap_warn": 0.9, "env_trap_active": 0.6,
     "env_trap_radius": 0.95,
 }
 TUNE = BOSS_TUNING
@@ -531,11 +531,19 @@ class BossOni(Samurai):
     # ------------------------------------------------------------------ laço principal
     def update(self, dt: float, game_map=None, target=None, particles=None, banners=None, projectiles=None, camera=None):
         self.time += dt
+        self._current_particles = particles
+        self._current_camera = camera
         was_transforming = self.model.transforming
         self.model.update(dt)
 
         if self.state in ("BONE_COLLAPSE", "PURPLE_DISSOLVE"):
             self._update_death_dissolve(dt, particles=particles, camera=camera)
+            return
+
+        if self.state == "DYING_FREEZE":
+            self.dying_freeze_timer = getattr(self, "dying_freeze_timer", 0.6) - dt
+            if self.dying_freeze_timer <= 0:
+                self.begin_collapse()
             return
 
         if was_transforming and not self.model.transforming and self.is_alive:
@@ -597,6 +605,15 @@ class BossOni(Samurai):
                     if self._hurt_player(target, (h.x, h.y), game_map, particles, banners, camera, h.damage):
                         h.hit_done = True
         self.hazards = [h for h in self.hazards if not h.done]
+
+        # Emissão de brasas áureas quando o ponto fraco estiver exposto
+        if getattr(self, "vulnerable", False) and self.is_alive and not self.dying and particles is not None and self.rng.random() < 0.28:
+            particles.append(SparkParticle(
+                self.wx + self.rng.uniform(-0.8, 0.8),
+                self.wy + self.rng.uniform(-0.8, 0.8),
+                self.wz + self.rng.uniform(0.1, 0.9),
+                color=self.rng.choice([(255, 215, 60), (255, 85, 45), (255, 235, 120)])
+            ))
 
     # ------------------------------------------------------------------ perigos do palco
     def _update_env(self, dt, game_map, target):
@@ -701,6 +718,13 @@ class BossOni(Samurai):
         elif sub == "sweep_active":
             k = min(1.0, self.sub_t / TUNE["p1_sweep_active"])
             self.pose["sweep"] = -math.pi / 2 + math.pi * k
+            if game_map is not None:
+                reach = TUNE.get("p1_sweep_radius", 3.6)
+                candidates = list(getattr(game_map, "rocks", [])) + list(getattr(game_map, "trees", [])) + list(getattr(game_map, "buildings", []))
+                for obj in candidates:
+                    if not getattr(obj, "is_broken", False):
+                        if math.hypot(obj.wx - self.wx, obj.wy - self.wy) <= reach + getattr(obj, "radius", 0.5):
+                            self._hit_obstacle(obj, self._current_particles, self._current_camera)
             if k >= 1.0:
                 self.pose["sweep"] = None
                 self.sub, self.sub_t = "recover", 0.0
@@ -710,6 +734,53 @@ class BossOni(Samurai):
                 self.sub, self.sub_t, self.sub_data = "idle", 0.0, {}
         self.vulnerable = self.sub != "sweep_active"
 
+    def _hit_obstacle(self, obstacle, particles=None, camera=None):
+        """Aplica dano a obstáculos rígidos (apenas Gashadokuro): racha no 1º acerto e quebra no 2º."""
+        if getattr(obstacle, "is_broken", False):
+            return
+        last_hit = getattr(obstacle, "boss_last_hit_time", -999.0)
+        if self.time - last_hit < 0.45:
+            return
+        obstacle.boss_last_hit_time = self.time
+        obstacle.boss_hits = getattr(obstacle, "boss_hits", 0) + 1
+
+        ox = getattr(obstacle, "wx", self.wx)
+        oy = getattr(obstacle, "wy", self.wy)
+
+        if obstacle.boss_hits == 1:
+            try:
+                from src.audio.sound_manager import get_sound_manager
+                from src.audio.sound_events import SoundEvent
+                get_sound_manager().play(SoundEvent.ARMOR_CLANG, volume_scale=0.85)
+            except Exception:
+                pass
+            if particles is not None:
+                from src.effects.particles import SparkParticle, SmokeParticle
+                for _ in range(8):
+                    particles.append(SparkParticle(ox, oy, 0.7, color=(220, 200, 180)))
+                for _ in range(6):
+                    particles.append(SmokeParticle(ox, oy, wz=0.2, color=(140, 130, 120), radius=0.35, lifetime=0.6))
+            if camera is not None:
+                camera.add_shake(3.0)
+            obstacle.is_cracked = True
+        else:
+            obstacle.is_broken = True
+            try:
+                from src.audio.sound_manager import get_sound_manager
+                from src.audio.sound_events import SoundEvent
+                get_sound_manager().play(SoundEvent.BONE_CRUSH, volume_scale=1.1)
+                get_sound_manager().play(SoundEvent.WOOD_SHATTER, volume_scale=0.9)
+            except Exception:
+                pass
+            if particles is not None:
+                from src.effects.particles import SparkParticle, SmokeParticle
+                for _ in range(16):
+                    particles.append(SparkParticle(ox, oy, 0.8, color=(240, 220, 200)))
+                for _ in range(14):
+                    particles.append(SmokeParticle(ox, oy, wz=0.4, color=(160, 140, 130), radius=0.55, lifetime=1.0))
+            if camera is not None:
+                camera.add_shake(7.0)
+
     def _walk_toward(self, target, speed, dt, game_map):
         dx, dy = target.wx - self.wx, target.wy - self.wy
         n = math.hypot(dx, dy) or 1.0
@@ -718,14 +789,20 @@ class BossOni(Samurai):
     def _move(self, x, y, game_map) -> bool:
         """Move respeitando os limites e as rochas (sólidos); devolve True se bateu em uma rocha."""
         min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
-        x, y = max(min_x, min(max_x, x)), max(min_y, min(max_y, y))
+        margin = 0.95
+        x = max(min_x + margin, min(max_x - margin, x))
+        y = max(min_y + margin, min(max_y - margin, y))
         hit_rock = False
-        for rock in game_map.rocks:
-            c, px, py = rock.check_collision(x, y, 0.6)
+        candidates = list(getattr(game_map, "rocks", [])) + list(getattr(game_map, "trees", [])) + list(getattr(game_map, "buildings", []))
+        for rock in candidates:
+            if getattr(rock, "is_broken", False):
+                continue
+            c, px, py = rock.check_collision(x, y, 0.85)
             if c:
                 x += px
                 y += py
                 hit_rock = True
+                self._hit_obstacle(rock, getattr(self, "_current_particles", None), getattr(self, "_current_camera", None))
         self.wx, self.wy = x, y
         return hit_rock
 
@@ -743,14 +820,18 @@ class BossOni(Samurai):
         dx, dy = target.wx - hx, target.wy - hy
         d = math.hypot(dx, dy)
         ux, uy = (dx / d, dy / d) if d > 0.5 else (self.facing_x, self.facing_y)
-        a = max(3.6, d / 2.0 + self.rng.uniform(0.0, 1.0))
-        b = self.rng.uniform(2.4, 3.6)
-        cx, cy = hx + ux * a, hy + uy * a
         min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
-        cx, cy = max(min_x + b, min(max_x - b, cx)), max(min_y + b, min(max_y - b, cy))
+        arena_w = max_x - min_x
+        arena_h = max_y - min_y
+        a = max(2.8, min(arena_w * 0.35, d / 2.0 + self.rng.uniform(0.0, 0.8)))
+        b = max(2.0, min(arena_h * 0.28, self.rng.uniform(2.2, 3.2)))
+        margin = max(a, b) + 0.6
+        cx, cy = hx + ux * a, hy + uy * a
+        cx = max(min_x + margin, min(max_x - margin, cx))
+        cy = max(min_y + margin, min(max_y - margin, cy))
         th = math.atan2(hy - cy, hx - cx)
         direction = self.rng.choice((-1, 1))
-        a = max(2.5, min(a, math.hypot(hx - cx, hy - cy)))
+        a = max(2.4, min(a, math.hypot(hx - cx, hy - cy)))
         return {"cx": cx, "cy": cy, "a": a, "b": b, "th": th, "dir": direction, "s": 0.0, "s0": 0.0}
 
     @staticmethod
@@ -765,6 +846,7 @@ class BossOni(Samurai):
         sub = self.sub
         self.pose["head_up"] = 1.0
         if sub == "idle":
+            self.hazards = [h for h in self.hazards if h.kind != "path"]
             e = self._new_ellipse(target, game_map)
             e["target_loops"] = 2
             e["loops"] = 0
@@ -792,11 +874,13 @@ class BossOni(Samurai):
             cur_loops = int(abs(e["s"]) / math.tau)
             if hit_rock:
                 self.sub, self.sub_t = "stun", 0.0
+                self.hazards = [h for h in self.hazards if h.kind != "path"]
                 if camera is not None:
                     camera.add_shake(10.0)
                 self._dust(particles, self.wx, self.wy, 10)
             elif abs(e["s"]) >= math.tau * target_loops - 0.05:
                 self.sub, self.sub_t = "slow", 0.0
+                self.hazards = [h for h in self.hazards if h.kind != "path"]
             elif cur_loops > e.get("loops", 0):
                 e["loops"] = cur_loops
                 self._dust(particles, self.wx, self.wy, 4)
@@ -835,6 +919,7 @@ class BossOni(Samurai):
         self.sub_t += dt
         sub = self.sub
         if sub == "idle":
+            self.hazards = [h for h in self.hazards if h.kind != "arrow"]
             dx, dy = target.wx - self.wx, target.wy - self.wy
             n = math.hypot(dx, dy) or 1.0
             ang = math.atan2(dy, dx) + self.rng.uniform(-0.35, 0.35)
@@ -855,11 +940,17 @@ class BossOni(Samurai):
             nx, ny = self.wx + vx * dt, self.wy + vy * dt
             min_x, min_y, max_x, max_y = resolve_playable_bounds(game_map)
             bounced = False
-            if nx < min_x or nx > max_x:
-                d["dir"] = (-d["dir"][0], d["dir"][1])
+            if nx <= min_x:
+                d["dir"] = (abs(d["dir"][0]), d["dir"][1])
                 bounced = True
-            if ny < min_y or ny > max_y:
-                d["dir"] = (d["dir"][0], -d["dir"][1])
+            elif nx >= max_x:
+                d["dir"] = (-abs(d["dir"][0]), d["dir"][1])
+                bounced = True
+            if ny <= min_y:
+                d["dir"] = (d["dir"][0], abs(d["dir"][1]))
+                bounced = True
+            elif ny >= max_y:
+                d["dir"] = (d["dir"][0], -abs(d["dir"][1]))
                 bounced = True
             hit_rock = self._move(nx, ny, game_map)
             if bounced:
@@ -881,6 +972,7 @@ class BossOni(Samurai):
                 if camera is not None and hit_rock:
                     camera.add_shake(12.0)
                 self.sub, self.sub_t = "stun", 0.0
+                self.hazards = [h for h in self.hazards if h.kind != "arrow"]
                 self.wz = 0.0
         elif sub == "stun":
             self.wz = 0.0
@@ -986,14 +1078,83 @@ class BossOni(Samurai):
         return self.model.poses(self.current_layout())
 
     def render_ground(self, surface, camera, game_time: float = 0.0):
-        """Sombra no chão sob o chefe."""
+        """Sombra no chão sob o chefe e retículo de vulnerabilidade quando exposto."""
         cx, cy = camera.apply(self.wx, self.wy, 0.0)
         zoom = getattr(camera, "zoom", 1.0)
         w = int((2.4 if self.phase != 1 else 1.4) * 64 * zoom)
         shadow = pygame.Surface((w, w // 2), pygame.SRCALPHA)
+        shadow.fill((0, 0, 0, 0))
         pygame.draw.ellipse(shadow, (0, 0, 0, 90), shadow.get_rect())
         surface.blit(shadow, (cx - w // 2, cy - w // 4))
 
+        # Retículo e beacon luminoso pulsante de vulnerabilidade no solo
+        if getattr(self, "vulnerable", False) and self.is_alive and not self.dying:
+            pulse = 0.5 + 0.5 * math.sin(game_time * 8.0)
+            rad_base = (1.6 if self.phase != 1 else 1.15) * 48 * zoom
+            rw = int(rad_base * (1.0 + 0.14 * pulse))
+            rh = int(rw * 0.48)
+            reticle_w = rw * 2 + 24
+            reticle_h = rh * 2 + 24
+            reticle_surf = pygame.Surface((reticle_w, reticle_h), pygame.SRCALPHA)
+            reticle_surf.fill((0, 0, 0, 0))
+            rc_x, rc_y = reticle_w // 2, reticle_h // 2
+
+            # Anel externo âmbar pulsante
+            pygame.draw.ellipse(reticle_surf, (255, 200, 50, int(70 + 55 * pulse)),
+                                (rc_x - rw, rc_y - rh, rw * 2, rh * 2), max(2, int(3 * zoom)))
+            # Anel interno carmim de alta tensão
+            rw_inner = int(rw * 0.76)
+            rh_inner = int(rh * 0.76)
+            pygame.draw.ellipse(reticle_surf, (255, 60, 45, int(90 + 70 * pulse)),
+                                (rc_x - rw_inner, rc_y - rh_inner, rw_inner * 2, rh_inner * 2), max(1, int(2 * zoom)))
+
+            # Ticks de mira giratórios (4 pontos cardeais em rotação lenta)
+            rot_base = game_time * 1.6
+            for i in range(4):
+                ang = rot_base + i * (math.tau / 4.0)
+                tx1 = rc_x + math.cos(ang) * (rw - 8 * zoom)
+                ty1 = rc_y + math.sin(ang) * (rh - 4 * zoom)
+                tx2 = rc_x + math.cos(ang) * (rw + 6 * zoom)
+                ty2 = rc_y + math.sin(ang) * (rh + 3 * zoom)
+                pygame.draw.line(reticle_surf, (255, 235, 110, int(180 + 75 * pulse)), (tx1, ty1), (tx2, ty2), max(2, int(2 * zoom)))
+
+            surface.blit(reticle_surf, (cx - rc_x, cy - rc_y))
+
     def render(self, surface, camera, game_time: float = 0.0):
-        self.render_ground(surface, camera)
+        self.render_ground(surface, camera, game_time)
         self.model.draw(surface, camera, self.poses(), self.alpha)
+
+        # Indicador visual superior flutuante de abertura (隙 / VULNERABLE)
+        if getattr(self, "vulnerable", False) and self.is_alive and not self.dying:
+            zoom = getattr(camera, "zoom", 1.0)
+            head_z = 2.45 if self.phase != 1 else 1.35
+            bx, by = camera.apply(self.wx, self.wy, head_z + self.wz)
+            pulse = 0.5 + 0.5 * math.sin(game_time * 8.0)
+            chevron_y = by - int((10 + 6 * pulse) * zoom)
+
+            # Chevron dourado estilizado apontando para a cabeça / ponto fraco
+            cw = int(8 * zoom)
+            ch = int(9 * zoom)
+            c_pts = [
+                (bx - cw, chevron_y - ch),
+                (bx + cw, chevron_y - ch),
+                (bx, chevron_y)
+            ]
+            pygame.draw.polygon(surface, (255, 215, 60), c_pts)
+            pygame.draw.polygon(surface, (180, 25, 20), c_pts, 1)
+
+            # Badge Sumi-e com o Kanji de abertura "隙"
+            badge_w = max(24, int(30 * zoom))
+            badge_h = max(16, int(18 * zoom))
+            badge_surf = pygame.Surface((badge_w, badge_h), pygame.SRCALPHA)
+            badge_surf.fill((0, 0, 0, 0))
+            pygame.draw.rect(badge_surf, (25, 18, 16, 215), (0, 0, badge_w, badge_h), border_radius=3)
+            pygame.draw.rect(badge_surf, (255, 215, 60, int(195 + 60 * pulse)), (0, 0, badge_w, badge_h), width=1, border_radius=3)
+            try:
+                from src.ui.kanji_cache import get_kanji_font
+                k_font = get_kanji_font(max(10, int(13 * zoom)))
+                text_s = k_font.render("隙", True, (255, 235, 130))
+                badge_surf.blit(text_s, text_s.get_rect(center=(badge_w // 2, badge_h // 2)))
+            except Exception:
+                pass
+            surface.blit(badge_surf, (bx - badge_w // 2, chevron_y - ch - badge_h - int(3 * zoom)))

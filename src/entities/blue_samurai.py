@@ -42,7 +42,7 @@ class BlueSamurai(Samurai):
         self.combo_step = 0               # 0, 1, 2 ou 3
         self.combo_buffered = False
         self.combo_window_timer = 0.0
-        self.recovery_duration = 0.15     # Recuperação sem embainhar (swords drawn)
+        self.recovery_duration = 0.24     # Recuperação sem embainhar (swords drawn) cadenciada e punível
         self.noto_walk_speed_mult = 0.50  # Pode caminhar a 50% durante a recuperação
 
         # Defesa / Cross Guard Parry & Contra-ataque
@@ -170,7 +170,7 @@ class BlueSamurai(Samurai):
             self.combo_step = 1
             self.combo_buffered = False
             self.state = STATE_ATTACK
-            self.state_timer = 0.18
+            self.state_timer = 0.26
             self.hitbox_active = True
             self.hitbox_radius = 1.60
             self.slash_dir = (self.facing_x, self.facing_y)
@@ -189,7 +189,7 @@ class BlueSamurai(Samurai):
             self.combo_step = 1
             self.combo_buffered = False
             self.state = STATE_ATTACK
-            self.state_timer = 0.18
+            self.state_timer = 0.26
             self.hitbox_active = True
             self.hitbox_radius = 1.45
             self.slash_dir = (self.facing_x, self.facing_y)
@@ -206,7 +206,7 @@ class BlueSamurai(Samurai):
             self.combo_step += 1
             self.combo_buffered = False
             self.state = STATE_ATTACK
-            self.state_timer = 0.18
+            self.state_timer = 0.28 if self.combo_step == 2 else 0.32
             self.hitbox_active = True
             self.hitbox_radius = 1.62 if self.combo_step == 2 else 2.06
             self.slash_dir = (self.facing_x, self.facing_y)
@@ -436,8 +436,8 @@ class BlueSamurai(Samurai):
 
         if self.state == STATE_ATTACK:
             self.state_timer -= dt
-            # Avanço de pressão do combo: 3º golpe projeta Musashi com lunge frontal vigoroso
-            step_speed = 3.2 if self.combo_step == 1 else (4.0 if self.combo_step == 2 else 6.2)
+            # Avanço de pressão do combo: golpes com passadas firmes e cadenciadas
+            step_speed = 2.4 if self.combo_step == 1 else (2.8 if self.combo_step == 2 else 4.2)
             if self.is_roll_cancel:
                 step_speed *= 1.20
             new_wx = self.wx + self.facing_x * step_speed * dt
@@ -471,7 +471,7 @@ class BlueSamurai(Samurai):
                 if self.combo_buffered and self.combo_step < 3:
                     self.combo_step += 1
                     self.combo_buffered = False
-                    self.state_timer = 0.18
+                    self.state_timer = 0.28 if self.combo_step == 2 else 0.32
                     self.hitbox_active = True
                     self.hitbox_radius = 1.62 if self.combo_step == 2 else 2.06
                     try:
@@ -493,7 +493,7 @@ class BlueSamurai(Samurai):
                 else:
                     self.state = STATE_RECOVERY
                     self.state_timer = self.recovery_duration
-                    self.combo_window_timer = 0.14
+                    self.combo_window_timer = 0.22
                     self.hitbox_active = False
 
         elif self.state == "CROSS_SHOCKWAVE":
@@ -548,15 +548,17 @@ class BlueSamurai(Samurai):
                 dip = (1.0 - (roll_prog - 0.75) / 0.25) * 0.12
             render_wz = max(0.0, self.wz - dip)
 
+        base_extra = getattr(self, "extra_props", {}) or {}
         extra = {
+            **base_extra,
             "combo_step": self.combo_step,
             "ssaa_2x": getattr(self, "ssaa_enabled", True),
             "pose_lerp_tracker": getattr(self, "_pose_lerp_tracker", None),
-            "pose": getattr(self, "current_pose", ""),
+            "pose": base_extra.get("pose", getattr(self, "current_pose", "")),
             "cross_shockwave": (self.state == "CROSS_SHOCKWAVE"),
             "is_roll": (self.state == STATE_ROLL),
-            "somersault_angle": somersault_angle,
-            "somersault_pivot_z": somersault_pivot_z,
+            "somersault_angle": base_extra.get("somersault_angle", somersault_angle),
+            "somersault_pivot_z": base_extra.get("somersault_pivot_z", somersault_pivot_z),
             "roll_prog": roll_prog,
         }
 

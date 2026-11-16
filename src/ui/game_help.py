@@ -185,7 +185,7 @@ FIGHTERS_GUIDE_DATA = [
             ),
             "habilidades": (
                 "• Ninjato 2-Golpes [E]: Combo de 2 tempos com corte reverso horizontal e estocada penetrante no plexo solar com avanço.\n"
-                "• Kunai Snipe [R]: Disparo de kunai a 24 m/s em trajetória horizontal no solo ou mergulho descendente íngreme no ar.\n"
+                "• Kunai Snipe [R]: Disparo de kunai a 24 m/s em trajetória horizontal, no solo ou durante o Salto Ninja (esquiva).\n"
                 "• Salto Ninja [Space/Roll]: Salto parabólico evasivo (wz até 1.35m) sem zanzou. Nos 40% finais da aterrissagem, pressionar ataque cancela o lag em estocada imediata!"
             ),
             "estrategia_ofensiva": (
@@ -214,7 +214,7 @@ FIGHTERS_GUIDE_DATA = [
             ),
             "habilidades": (
                 "• Ninjato 2-Step [E]: Agile 2-hit combo: horizontal reverse slash followed by a deep solar plexus thrust.\n"
-                "• Kunai Snipe [R]: High-speed 24 m/s throw traveling horizontally on ground or diving steeply downward from mid-air.\n"
+                "• Kunai Snipe [R]: High-speed 24 m/s throw traveling horizontally, from the ground or during the Ninja Jump (dodge).\n"
                 "• Shinobi Jump [Space/Roll]: High evasive vault (wz up to 1.35m). During the final 40% of landing, pressing attack cancels recovery into an immediate forward strike!"
             ),
             "estrategia_ofensiva": (
@@ -367,7 +367,7 @@ FIGHTERS_GUIDE_DATA = [
                 "Empunha um pesado arcabuz Tanegashima capaz de liquidar qualquer samurai à distância e controla o campo com minas de pólvora negra."
             ),
             "habilidades": (
-                "• Tiro de Arcabuz [E / Ataque]: Disparo supersônico balístico a 26 m/s com 1-Hit Kill fatal. Recarga automática fluida por vareta (ramrod).\n"
+                "• Tiro de Arcabuz [E / Ataque]: Disparo balístico a 18 m/s (alcance 12m) com 1-Hit Kill fatal. Recarga automática fluida por vareta (ramrod).\n"
                 "• Coronhada de Carvalho [E / sem bala]: Golpe pesado com a coronha que atordoa o rival por 0.65s e o arremessa 1.8m para trás.\n"
                 "• Mina de Pólvora Negra [R / Secundário]: Deposita uma carga de pólvora no solo que detona ao contato, bloqueando investidas de espadachins.\n"
                 "• Trench Ashigaru Dive [T / Esquiva]: Mergulho rústico rasante com i-frames completos que conclui a recarga do arcabuz ao levantar."
@@ -396,7 +396,7 @@ FIGHTERS_GUIDE_DATA = [
                 "Wields an authentic Tanegashima matchlock rifle capable of dropping any samurai at range, dominating space with explosive powder traps."
             ),
             "habilidades": (
-                "• Matchlock Shot [E / Attack]: Supersonic 26 m/s ballistic bullet with 1-Hit Kill fatality. Fluid automatic ramrod reload.\n"
+                "• Matchlock Shot [E / Attack]: 18 m/s ballistic bullet (12m range) with 1-Hit Kill fatality. Fluid automatic ramrod reload.\n"
                 "• Oak Rifle Butt [E / unloaded]: Heavy blunt smash that stuns the opponent for 0.65s and knocks them back 1.8m.\n"
                 "• Black Powder Ground Trap [R / Secondary]: Deploys a volatile powder charge on the ground that detonates on contact, shutting down rushes.\n"
                 "• Trench Ashigaru Dive [T / Dodge]: Prone tactical dive with full i-frames that automatically chambers a new bullet upon rising."
@@ -915,27 +915,26 @@ FIGHTERS_GUIDE_DATA = [
             "style": "Naginata & Armadura Pesada",
             "vel": "[2/5] Walking Tank",
             "dano": "Varredura 170° (2.4m) / Estocada (2.8m)",
-            "especial": "Adamantine Push, Arremesso & Tackle",
-            "keys_p1": "[E] Combo Naginata/Tackle | [R] Arremesso | [T] Adamantine Push",
-            "keys_p2": "[U] Combo Naginata/Tackle | [I] Arremesso | [O] Adamantine Push",
+            "especial": "Adamantine Push & Arremesso e Chamado",
+            "keys_p1": "[E] Combo Naginata | [R] Arremesso / Chamar | [T] Adamantine Push",
+            "keys_p2": "[U] Combo Naginata | [I] Arremesso / Chamar | [O] Adamantine Push",
             "conceito": (
                 "Monge guerreiro sōhei colossal e inabalável que acumulou 999 armas na Ponte Gojō. "
                 "Não possui aparo técnico, compensando com armadura maciça, alcance desmedido da naginata em combo de inércia, "
-                "um avanço blindado que repele projéteis e um tackle desarmado brutal de atropelamento."
+                "um avanço blindado que repele projéteis e uma naginata arremessável que ele chama de volta às mãos."
             ),
             "habilidades": (
                 "• Combo de Inércia da Naginata [E]: Passo 1 Varredura Circular em Arco (170°, 2.40m, rec 0.16s) conectando em Passo 2 Estocada Perfurante Monumental (2.8m com avanço de 0.45m).\n"
-                "• Arremesso de Naginata [R]: Lança a haste pesada a longa distância que se crava no solo sem jamais cair em buracos ou água.\n"
-                "• Tackle Atropelo [E desarmado]: Investida brutal que causa 0 dano letal, aplica STUN garantido (1.2s) e recupera a arma.\n"
+                "• Arremesso de Naginata [R]: Lança a haste pesada a até 7.5m; ela fere quem atinge e crava-se no chão. Aperte [R] de novo (mesmo em pleno voo) para chamá-la de volta: ela retorna às mãos de Benkei e fere também na volta. Enquanto está fora, ele fica sem ataque primário.\n"
                 "• Adamantine Guard Push [T]: Deslize firme com o ombro encouraçado (12 i-frames) que reflete/destrói projéteis em raio de 1.8m e empurra oponentes adjacentes."
             ),
             "estrategia_ofensiva": (
                 "• Domine o centro da arena e a ponte usando a varredura circular de 170° e encadeie de imediato na estocada colossal de 2.8m.\n"
                 "• Use o Adamantine Guard Push [T] para passar ileso por projéteis e empurrar rivais agressivos para trás.\n"
-                "• Se o adversário recuar, arremesse a naginata [R] e em seguida use o Tackle [E] para atordoá-lo e recuperar a haste."
+                "• Se o adversário recuar, arremesse a naginata [R] e chame-a de volta com [R] para acertá-lo na ida e na volta. Evite arremessar de perto, pois você fica sem ataque primário até ela voltar."
             ),
             "estrategia_defensiva": (
-                "• Como vencer Benkei: Benkei não tem parry e possui velocidade 4.35. Espere o fim de sua estocada colossal (recovery de 0.22s) ou flanqueie durante o arremesso para puni-lo antes do tackle."
+                "• Como vencer Benkei: Benkei não tem parry e possui velocidade 4.35. Espere o fim de sua estocada colossal (recovery de 0.22s) ou flanqueie enquanto a naginata está fora: sem ela, Benkei não pode atacar."
             )
         },
         "en": {
@@ -944,23 +943,22 @@ FIGHTERS_GUIDE_DATA = [
             "style": "Heavy Plate Armor & Naginata",
             "vel": "[2/5] Walking Tank",
             "dano": "170° Cleave (2.4m) / Thrust (2.8m)",
-            "especial": "Adamantine Push, Spear Throw & Tackle",
-            "keys_p1": "[E] Naginata Combo/Tackle | [R] Throw | [T] Adamantine Push",
-            "keys_p2": "[U] Naginata Combo/Tackle | [I] Throw | [O] Adamantine Push",
+            "especial": "Adamantine Push & Throw & Recall",
+            "keys_p1": "[E] Naginata Combo | [R] Throw / Recall | [T] Adamantine Push",
+            "keys_p2": "[U] Naginata Combo | [I] Throw / Recall | [O] Adamantine Push",
             "conceito": (
                 "Colossal warrior monk of legend on Gojō Bridge. Lacks technical parry, relying on heavy lacquered iron armor, "
-                "massive naginata reach in a 2-step inertia combo, a projectile-repelling armored shoulder push, and an unstoppable unarmed charging tackle."
+                "massive naginata reach in a 2-step inertia combo, a projectile-repelling armored shoulder push, and a throwable naginata that he recalls to his hands."
             ),
             "habilidades": (
                 "• Naginata Inertia Combo [E]: Step 1 Wide Cleave Arc (170°, 2.40m, 0.16s rec) linking into Step 2 Colossal Thrust (2.8m reach with 0.45m forward step).\n"
-                "• Naginata Throw [R]: Hurls the heavy spear across long range, embedding safely in solid ground.\n"
-                "• Stun Tackle [E unarmed]: High-speed kinetic charge that inflicts 0 lethal damage, applies guaranteed STUN (1.2s), and recovers the weapon.\n"
+                "• Naginata Throw [R]: Hurls the heavy spear up to 7.5m; it hurts whoever it hits and sticks into the ground. Press [R] again (even mid-flight) to recall it: it returns to Benkei's hands and hurts on the way back too. He cannot use his primary attack while it is away.\n"
                 "• Adamantine Guard Push [T]: Armored shoulder charge (12 i-frames) that deflects/destroys projectiles within 1.8m and displaces adjacent foes."
             ),
             "estrategia_ofensiva": (
                 "• Dominate corridors and bridge choke points with your 170° sweep, buffering directly into the 2.8m colossal thrust.\n"
                 "• Use Adamantine Guard Push [T] to slip invulnerably through enemy projectiles and shove aggressive rivals.\n"
-                "• Throw the naginata [R] to catch retreating foes, then tackle with [E] for guaranteed stun and weapon recovery."
+                "• Throw the naginata [R] to catch retreating foes, then press [R] again to recall it and hit them on the way back. Avoid throwing at close range, since you cannot use your primary attack until it returns."
             ),
             "estrategia_defensiva": (
                 "• How to defeat Benkei: Benkei cannot parry and has 4.35 movement speed. Sidestep his linear colossal thrust and punish during his 0.22s recovery window."
@@ -1043,7 +1041,7 @@ FIGHTERS_GUIDE_DATA = [
             ),
             "habilidades": (
                 "• Corte da Kuwa [E]: Pancada vertical demolidora com alcance de 2.40m e hiper-inércia. Quebra guardas e escudos adversários.\n"
-                "• Pisotão Sísmico [R]: Golpe violento no solo criando uma fissura telúrica de 4.2m que levanta pedras, dissipa projéteis e atordoa por 0.8s.\n"
+                "• Pisotão Sísmico [R]: Golpe violento no solo criando uma fissura telúrica de 4.2m que surge instantaneamente, atordoa por 0.8s e ergue torrões de terra (2s) que destroem projéteis inimigos. Durante o pisão Goro tem armadura: recebe 1 de dano a menos por golpe.\n"
                 "• Rolamento de Lavrador & Pocket Dirt [T]: Esquiva rente à terra com 13 i-frames. Pressionar ataque [E] durante o rolamento lança um punhado de terra no rosto do rival (micro-stun de 0.22s)."
             ),
             "estrategia_ofensiva": (
@@ -1069,7 +1067,7 @@ FIGHTERS_GUIDE_DATA = [
             ),
             "habilidades": (
                 "• Heavy Kuwa Cleave [E]: Downward crushing smash with 2.40m reach and hyper-inertia. Penetrates blocks and breaks guard.\n"
-                "• Seismic Earth Stomp [R]: Slams boot into the soil, creating a 4.2m fissure that raises earth, deflects ground projectiles, and stuns for 0.8s.\n"
+                "• Seismic Earth Stomp [R]: Slams boot into the soil, creating a 4.2m fissure that erupts instantly, stuns for 0.8s, and raises earth clods (2s) that destroy incoming projectiles. Goro has armor during the stomp: each hit deals 1 less damage.\n"
                 "• Peasant Mud Roll & Pocket Dirt [T]: Low dodge with 13 i-frames. Pressing attack [E] during the roll flings a handful of pocket dirt into the rival's eyes (0.22s micro-stun)."
             ),
             "estrategia_ofensiva": (

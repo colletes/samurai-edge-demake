@@ -9,16 +9,16 @@ import pygame
 
 BONE_TONES = ((228, 218, 190), (214, 203, 172), (196, 184, 154))
 BONE_BROW = (150, 138, 112)
-SOCKET = (34, 18, 16)
+SOCKET = (24, 12, 14)
 TOOTH = (238, 232, 208)
 GAP = (44, 32, 30)
-EYE_CORE = (255, 64, 36)
-EYE_SPARK = (255, 200, 130)
+EYE_CORE = (255, 32, 24)
+EYE_SPARK = (255, 230, 90)
 BRONZE, BRONZE_DARK = (142, 110, 58), (104, 82, 46)
 BRIM, BRIM_EDGE = (150, 132, 66), (196, 164, 64)
 GOLD, GOLD_LIGHT, GOLD_DARK = (214, 170, 50), (244, 206, 84), (152, 112, 30)
 GUARD_A, GUARD_B, GUARD_TRIM = (112, 76, 46), (176, 102, 52), (206, 130, 60)
-HORN, HORN_RIDGE = (45, 38, 32), (75, 62, 50)
+HORN, HORN_RIDGE = (28, 22, 26), (165, 30, 36)
 CORD = (176, 72, 44)
 
 EYE_CENTER = (0.30, 0.17, 0.05)  # f, |s|, h (antes de SCALE)
@@ -184,7 +184,7 @@ def _horn_cells(sign: int) -> dict:
     def color(f, s, h, n):
         t = n / 23.0
         if t > 0.82:
-            return (28, 22, 20)
+            return (18, 14, 16)
         return HORN_RIDGE if (int(t * 14) % 2 == 0) else HORN
     return _spheres(0.08, sph, color)
 

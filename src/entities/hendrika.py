@@ -430,7 +430,9 @@ class HendrikaAlchemist(Samurai):
 
     def get_extra_props(self) -> dict:
         """Garante propriedades extras, poses e reagente ativo para renderização 3D."""
+        base_extra = getattr(self, "extra_props", {}) or {}
         extra = {
+            **base_extra,
             "reagent": self.active_reagent,
             "reagent_tier": self.reagent_tier
         }
