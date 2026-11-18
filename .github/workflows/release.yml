@@ -81,10 +81,26 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Enable MSVC C/C++ Compiler (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Dependencies (macOS / Linux)
+        if: runner.os != 'Windows'
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
+
+      - name: Install Dependencies & Compile Clean PyInstaller Bootloader (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+          $env:PYINSTALLER_COMPILE_BOOTLOADER = "1"
+          python -m pip install --no-cache-dir --no-binary=pyinstaller pyinstaller
 
       - name: Build with PyInstaller (macOS / Linux)
         if: runner.os != 'Windows'
@@ -93,8 +109,14 @@ jobs:
 
       - name: Build with PyInstaller (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
           pyinstaller --clean -y samurai_edge.spec
+          $mpCmd = "C:\Program Files\Windows Defender\MpCmdRun.exe"
+          if (Test-Path $mpCmd) {
+            $exePath = (Resolve-Path "dist\SamuraiEdge\SamuraiEdge.exe").Path
+            & $mpCmd -Scan -ScanType 3 -File $exePath
+          }
 
       - name: Package Release (macOS)
         if: runner.os == 'macOS'

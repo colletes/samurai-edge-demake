@@ -4,16 +4,21 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag Name'
+        description: 'Release Tag Name (used only if publish_github_release is true)'
         required: false
-        default: 'v-windows-temp'
+        default: 'v3.1.0-win'
+      publish_github_release:
+        description: 'Create a GitHub Prerelease with the ZIP'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 jobs:
   build-windows:
-    name: Build (Windows)
+    name: Build (Windows - Clean MSVC Bootloader)
     runs-on: windows-latest
     steps:
       - name: Checkout Code
@@ -24,24 +29,62 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Enable MSVC C/C++ Compiler (x64)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Dependencies & Compile Clean PyInstaller Bootloader
+        shell: pwsh
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+          $env:PYINSTALLER_COMPILE_BOOTLOADER = "1"
+          python -m pip install --no-cache-dir --no-binary=pyinstaller pyinstaller
 
       - name: Build with PyInstaller (Windows)
+        shell: pwsh
         run: |
           pyinstaller --clean -y samurai_edge.spec
+          Write-Host "SHA256 of SamuraiEdge.exe:"
+          Get-FileHash dist\SamuraiEdge\SamuraiEdge.exe -Algorithm SHA256 | Format-List
+
+      - name: Scan Built Executable with Microsoft Defender
+        shell: pwsh
+        run: |
+          $mpCmd = "C:\Program Files\Windows Defender\MpCmdRun.exe"
+          if (Test-Path $mpCmd) {
+            $exePath = (Resolve-Path "dist\SamuraiEdge\SamuraiEdge.exe").Path
+            & $mpCmd -Scan -ScanType 3 -File $exePath
+          } else {
+            Write-Host "MpCmdRun.exe not present on runner, skipping local Defender scan."
+          }
 
       - name: Package Release (Windows)
+        shell: pwsh
         run: |
           Compress-Archive -Path dist\SamuraiEdge -DestinationPath Samurai-Edge-Demake-Windows.zip
 
+      - name: Upload Standalone SamuraiEdge.exe (For Microsoft Submission)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SamuraiEdge-exe-only
+          path: dist/SamuraiEdge/SamuraiEdge.exe
+          if-no-files-found: error
+
+      - name: Upload Full Windows Build ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Samurai-Edge-Demake-Windows
+          path: Samurai-Edge-Demake-Windows.zip
+          if-no-files-found: error
+
       - name: Create GitHub Release (Windows only, NO itch.io)
+        if: ${{ inputs.publish_github_release == true }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.tag_name }}
-          name: Samurai Edge Demake Windows (${{ github.event.inputs.tag_name }})
+          tag_name: ${{ inputs.tag_name }}
+          name: Samurai Edge Demake Windows (${{ inputs.tag_name }})
           draft: false
           prerelease: true
           files: Samurai-Edge-Demake-Windows.zip

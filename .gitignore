@@ -38,9 +38,10 @@ src/i18n_backup.py
 # Tournament result dumps
 tournament_results*.json
 
-# Distribution archives
+# Distribution archives & Windows binaries
 *.zip
 *.tar.gz
+*.exe
 
 # Local caches & tournament balance reports
 .cache/

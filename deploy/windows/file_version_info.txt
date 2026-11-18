@@ -1,0 +1,38 @@
+# UTF-8
+#
+# Windows PE Version Resource (VSVersionInfo) for SamuraiEdge.exe
+# Embedded by PyInstaller on Windows to establish executable identity and
+# reduce heuristic false positives in Microsoft Defender / SmartScreen.
+
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(3, 1, 0, 0),
+    prodvers=(3, 1, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          '040904B0',
+          [
+            StringStruct('CompanyName', 'Thiago Carvalho'),
+            StringStruct('FileDescription', 'Samurai Edge: Bakumatsu - Isometric 3D Sword Fighting Game'),
+            StringStruct('FileVersion', '3.1.0.0'),
+            StringStruct('InternalName', 'SamuraiEdge'),
+            StringStruct('LegalCopyright', 'Copyright (c) 2026 Thiago Carvalho. All rights reserved.'),
+            StringStruct('OriginalFilename', 'SamuraiEdge.exe'),
+            StringStruct('ProductName', 'Samurai Edge Demake'),
+            StringStruct('ProductVersion', '3.1.0')
+          ]
+        )
+      ]
+    ),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)

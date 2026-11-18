@@ -68,6 +68,17 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
+win_icon = (
+    'deploy/itch_assets/favicon.ico'
+    if sys.platform == 'win32' and os.path.isfile('deploy/itch_assets/favicon.ico')
+    else None
+)
+win_version = (
+    'deploy/windows/file_version_info.txt'
+    if sys.platform == 'win32' and os.path.isfile('deploy/windows/file_version_info.txt')
+    else None
+)
+
 exe = EXE(
     pyz,
     a.scripts,
@@ -84,6 +95,9 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    version=win_version,
+    icon=win_icon,
+    uac_admin=False,
 )
 
 coll = COLLECT(
